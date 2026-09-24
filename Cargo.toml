@@ -1,0 +1,10 @@
+
+[workspace]
+members = ["backend"]
+resolver = "3"
+
+[workspace.package]
+authors = ["Rémi Bezot"]
+license = "Apache-2.0"
+repository = "https://github.com/BezotCorp/ai-platform"
+edition = "2024"
