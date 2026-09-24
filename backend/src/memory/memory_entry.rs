@@ -1,0 +1,1 @@
+//! Responsabilité : memory entry.

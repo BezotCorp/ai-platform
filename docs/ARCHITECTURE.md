@@ -58,3 +58,167 @@ Les IA n'exécutent pas de SQL arbitraire. Elles appellent des outils métier à
 7. **Évaluation** : sur les mêmes tâches Rust, mesurer exactitude (tests), tokens, latence, pics de VRAM, collisions d'écriture et comportement en contexte insuffisant.
 
 **Règle de travail :** toute modification d'architecture revoit ce document et les tests correspondants. Ne pas marquer « implémenté » ce qui n'est que prévu. Ne jamais pousser directement sur `main` ou `dev` : développement sur `feature/backend-agent`, puis PR vers `dev`.
+
+## Arborescence du backend
+
+Le backend est un exécutable Rust dont le point
+d'entrée est `backend/src/main.rs`.
+
+Les modules sont organisés par responsabilité :
+
+- `providers` : fournisseurs de modèles et Ollama.
+- `agents` : agents et orchestration mono-IA/MoA.
+- `context` : récupération et assemblage du contexte.
+- `memory` : mémoire persistante et stockage SQLite.
+- `tools` : outils natifs, registre et permissions.
+- `sessions` : sessions et conversations.
+- `api` : interface du backend avec le frontend.
+
+Les intégrations MCP pourront utiliser les services
+communs du backend. Les dossiers racine `mcp/`
+et `frontend/` restent disponibles pour leur
+développement dans VS Code.
+
+### Conventions Rust
+
+- `main.rs` est le point d'entrée.
+- Aucun `lib.rs` n'est prévu pour cet exécutable.
+- Chaque fichier possède une responsabilité précise.
+- Les noms des fichiers contenant une structure ou
+  une énumération correspondent à leur nom Rust
+  converti en snake_case.
+- Les fichiers `mod.rs` déclarent leurs sous-modules.
+
+### État
+
+L'arborescence et les déclarations des modules sont
+créées. Les fonctionnalités ne sont pas encore
+implémentées.
+
+Aucun test n'est créé.
+
+Le code n'est pas considéré comme compilé ou validé
+par cette opération.
+
+## Configuration des agents — première implémentation
+
+Le modèle est identifié par son fournisseur et son nom.
+Un même modèle peut être partagé par plusieurs agents.
+
+Chaque agent possède un identifiant unique dans son
+exécution et un rôle configurable avec ses instructions.
+
+Le mode mono-IA contient un agent.
+
+Le mode MoA contient une ou plusieurs couches d'agents
+et un agrégateur final. Les identifiants des participants
+doivent être uniques. Plusieurs rôles peuvent utiliser
+le même modèle.
+
+Le planificateur fournit l'ordre logique des couches.
+Il n'exécute pas encore les modèles.
+
+Le budget de contexte distingue capacité, prompt
+système, génération et réserve pour les outils.
+Le comptage exact dépendra du fournisseur.
+
+Cette première implémentation ne réalise pas encore
+les appels Ollama, l'exécution MoA, MCP ou le stockage.
+
+Aucun test n'a été ajouté. Compilation non vérifiée.
+
+## Transport frontend — WebSocket
+
+Le frontend démarre le binaire Rust. Le backend ne
+propose aucune interface CLI, REST ou SSE destinée
+à l'application.
+
+Le point d'entrée `main.rs` démarre directement
+le serveur WebSocket.
+
+### Démarrage
+
+Le frontend fournit les variables d'environnement :
+
+- `AI_PLATFORM_TOKEN` : secret aléatoire fort.
+- `AI_PLATFORM_ORIGIN` : origine exacte du frontend.
+- `OLLAMA_HOST` : URL Ollama facultative.
+
+Le backend écoute exclusivement sur `127.0.0.1`.
+
+Le système attribue un port disponible.
+
+Le backend écrit une ligne JSON contenant son URL
+WebSocket sur stdout, pour son processus parent.
+
+Le frontend doit s'authentifier avant toute commande.
+
+### Protocole
+
+Tous les messages applicatifs sont au format JSON.
+
+Commandes :
+
+- `authenticate`
+- `models.list`
+- `run.start`
+- `run.cancel`
+
+Événements :
+
+- `authenticated`
+- `models.list`
+- `run.queued`
+- `run.started`
+- `agent.started`
+- `agent.delta`
+- `agent.completed`
+- `run.completed`
+- `run.failed`
+- `run.cancelled`
+- `error`
+
+Les demandes d'exécution comprennent un identifiant
+de corrélation et la configuration mono-IA ou MoA.
+
+### Exécution
+
+Le backend utilise le planificateur déjà défini.
+
+En mode mono-IA, un seul agent est exécuté.
+
+En mode MoA, les couches sont exécutées
+successivement, puis l'agrégateur.
+
+Les agents peuvent partager un modèle Ollama.
+
+Un sémaphore global limite cette implémentation
+à une génération simultanée par processus.
+
+Le client HTTP Ollama est asynchrone.
+
+Le streaming est retransmis au frontend par WebSocket.
+
+Les appels d'outils non encore raccordés ne sont
+jamais exécutés silencieusement.
+
+### Limites actuelles
+
+Cette étape ne termine pas l'application.
+
+Ne sont pas encore raccordés :
+
+- Le frontend graphique et son lanceur.
+- Les serveurs MCP et les outils.
+- Les autorisations détaillées des opérations.
+- La mémoire SQLite persistante.
+- La récupération intelligente du contexte.
+- La reprise des événements après reconnexion.
+- La gestion avancée de résidence GPU.
+
+Les limites de taille du transport ne remplacent
+pas un budget de contexte calculé en tokens.
+
+Aucun test n'a été créé.
+
+La compilation Rust doit être vérifiée séparément.
