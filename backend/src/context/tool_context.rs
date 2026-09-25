@@ -9,6 +9,7 @@ use crate::{
 pub(crate) struct ToolContext {
     system: Option<Value>,
     history: Vec<(usize, Value)>,
+    memory: Vec<(i64, Value)>,
     mandatory: Vec<Value>,
     exchanges: Vec<ToolExchange>,
     compacted: Vec<bool>,
@@ -18,6 +19,7 @@ impl ToolContext {
     pub(crate) fn new(
         messages: Vec<Message>,
         history_indices: Vec<usize>,
+        memory_ids: Vec<i64>,
     ) -> Result<Self> {
         let mut messages = messages.into_iter();
         let first = messages.next().ok_or_else(|| {
@@ -37,11 +39,12 @@ impl ToolContext {
                 .collect::<serde_json::Result<Vec<_>>>()?,
         );
 
-        if remaining.len() < history_indices.len() + 1 {
-            bail!("Historique et provenance incohérents");
+        if remaining.len() < history_indices.len() + memory_ids.len() + 1 {
+            bail!("Historique, mémoire et provenance incohérents");
         }
 
-        let mandatory = remaining.split_off(history_indices.len());
+        let mut recalled = remaining.split_off(history_indices.len());
+        let mandatory = recalled.split_off(memory_ids.len());
         if mandatory
             .last()
             .and_then(|message| message.get("role"))
@@ -57,6 +60,7 @@ impl ToolContext {
                 .into_iter()
                 .zip(remaining)
                 .collect(),
+            memory: memory_ids.into_iter().zip(recalled).collect(),
             mandatory,
             exchanges: Vec::new(),
             compacted: Vec::new(),
@@ -81,6 +85,7 @@ impl ToolContext {
             messages.push(system.clone());
         }
         messages.extend(self.history.iter().map(|(_, message)| message.clone()));
+        messages.extend(self.memory.iter().map(|(_, message)| message.clone()));
         messages.extend(self.mandatory.iter().cloned());
 
         for (exchange, compacted) in self.exchanges.iter().zip(&self.compacted) {
@@ -132,6 +137,7 @@ impl ToolContext {
 
         let mut compacted_rounds = Vec::new();
         let mut omitted_history_indices = Vec::new();
+        let mut omitted_memory_ids = Vec::new();
         let mut latest_round_compacted = false;
 
         loop {
@@ -141,17 +147,54 @@ impl ToolContext {
                     messages,
                     compacted_rounds,
                     omitted_history_indices,
+                    omitted_memory_ids,
                     latest_round_compacted,
                 });
             }
 
             // Condenser d'abord les anciennes lectures terminées.
             let earlier = self.exchanges.len().saturating_sub(1);
-            if let Some(index) = (0..earlier).find(|&index| {
-                !self.compacted[index] && !self.exchanges[index].contains_write
-            }) {
+            let query = self
+                .mandatory
+                .last()
+                .and_then(|message| message.get("content"))
+                .and_then(Value::as_str)
+                .unwrap_or("");
+            let role = self
+                .system
+                .as_ref()
+                .and_then(|message| message.get("content"))
+                .and_then(Value::as_str)
+                .unwrap_or("");
+            if let Some(index) = (0..earlier)
+                .filter(|&index| {
+                    !self.compacted[index] && !self.exchanges[index].contains_write
+                })
+                .min_by_key(|&index| {
+                    let content = self.exchanges[index]
+                        .summary
+                        .get("content")
+                        .and_then(Value::as_str)
+                        .unwrap_or("");
+                    (
+                        crate::context::ranking::relevance(query, content)
+                            .saturating_mul(4)
+                            .saturating_add(
+                                crate::context::ranking::relevance(role, content),
+                            ),
+                        index,
+                    )
+                })
+            {
                 self.compacted[index] = true;
                 compacted_rounds.push(index);
+                continue;
+            }
+
+            // Les souvenirs rappelés sont facultatifs. On retire en premier
+            // celui classé le moins pertinent lors de la récupération.
+            if let Some((id, _)) = self.memory.pop() {
+                omitted_memory_ids.push(id);
                 continue;
             }
 
@@ -165,13 +208,14 @@ impl ToolContext {
 
             // N'omettre la dernière lecture que si elle seule empêche
             // la génération. Son résumé exige explicitement une relecture.
-            if let Some(index) = self.exchanges.len().checked_sub(1) {
-                if !self.compacted[index] && !self.exchanges[index].contains_write {
-                    self.compacted[index] = true;
-                    compacted_rounds.push(index);
-                    latest_round_compacted = true;
-                    continue;
-                }
+            if let Some(index) = self.exchanges.len().checked_sub(1)
+                && !self.compacted[index]
+                && !self.exchanges[index].contains_write
+            {
+                self.compacted[index] = true;
+                compacted_rounds.push(index);
+                latest_round_compacted = true;
+                continue;
             }
 
             bail!(

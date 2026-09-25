@@ -494,3 +494,66 @@ obligatoires ou les échanges d'écriture excèdent la fenêtre, la
 génération s'interrompt explicitement au lieu de supprimer des données
 sensibles. Le budget reste une estimation en octets UTF-8 et non un
 comptage exact des tokens. Aucun test n'est ajouté à cette étape.
+
+## Gestion des données et mémoire SQLite facultative
+
+Le backend peut conserver des souvenirs de conversation entre deux
+exécutions avec SQLite. Cette fonctionnalité est **désactivée par
+défaut**. Le frontend doit fournir un chemin absolu dans la variable
+`AI_PLATFORM_MEMORY_DB`, situé hors du répertoire du projet autorisé.
+Son répertoire parent doit déjà exister. Le processus doit disposer
+des permissions nécessaires pour créer et écrire la base et les
+fichiers WAL associés. La base n'est ni chiffrée ni synchronisée
+avec un service distant par cette implémentation.
+
+Le schéma initial contient des souvenirs séparés par empreinte du
+chemin canonique du projet. Chaque entrée possède un identifiant,
+une question, une réponse, une source, une empreinte SHA-256, une
+révision et les dates de création et de mise à jour. Les migrations
+sont versionnées. Les connexions sont ouvertes dans des tâches
+bloquantes, avec WAL, délai d'attente sur les verrous et transaction
+pour l'enregistrement. Une version de schéma plus récente que celle
+prise en charge est refusée.
+
+Après une exécution réussie, la mémoire enregistre uniquement la
+dernière question utilisateur et la réponse finale de l'exécution,
+dans la limite de 1 024 et 4 096 caractères respectivement.
+Les contenus complets des outils, les aperçus d'écriture et les
+décisions d'approbation ne sont pas enregistrés. Une répétition
+exacte renouvelle l'horodatage et incrémente la révision. Une
+erreur d'enregistrement émet `memory.failed` sans transformer
+une réponse déjà produite en échec.
+
+Avant la génération de chaque agent, le stockage recherche dans
+les 256 souvenirs les plus récents du même projet. La sélection
+classe lexicalement les questions et réponses antérieures selon
+la requête actuelle, puis utilise les instructions du rôle comme
+critère complémentaire. Un souvenir sans recouvrement avec la
+requête courante n'est pas ajouté. Les quatre premiers résultats
+pertinents sont proposés à l'assembleur, qui n'utilise au maximum
+qu'un quart du budget non obligatoire, plafonné à 2 048 octets
+estimés. Le reste reste disponible pour la conversation récente,
+les instructions et les contributions MoA.
+
+Les souvenirs apparaissent comme des données historiques non
+vérifiées, jamais comme des instructions ou une preuve que le
+code du projet est encore identique. Les identifiants des souvenirs
+effectivement insérés sont indiqués par `recalled_memory_ids`
+dans l'événement `context.prepared`. Les empreintes des entrées
+sont vérifiées au chargement ; une entrée incohérente est ignorée.
+La récupération n'ouvre aucun fichier du projet et ne contourne
+aucune autorisation des outils natifs.
+
+La compaction des résultats d'outils privilégie désormais la
+suppression des lectures anciennes les moins pertinentes pour la
+demande et le rôle de l'agent, puis l'ancienneté lorsque leur
+pertinence est égale. Les échanges contenant une écriture restent
+non compactables. Le diagnostic Clippy sur le `if` imbriqué de
+`ToolContext` est également corrigé.
+
+Cette première mémoire est volontairement simple : recherche
+lexicale sur les souvenirs conversationnels, sans embeddings,
+sans indexation automatique du code, sans FTS SQLite, sans API de
+suppression, sans politique de rétention et sans synchronisation
+entre machines. Les propriétaires du chemin SQLite gèrent la
+confidentialité, la sauvegarde et la suppression de la base.

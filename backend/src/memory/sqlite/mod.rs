@@ -1,3 +1,3 @@
-mod connection;
+pub(crate) mod connection;
 mod migrations;
-mod search;
+pub(crate) mod search;

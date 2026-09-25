@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use tokio::sync::{Mutex, Semaphore};
 
-use crate::providers::Client;
+use crate::{memory::MemoryStore, providers::Client};
 
 #[derive(Clone)]
 pub(crate) struct ServerState {
@@ -13,4 +13,5 @@ pub(crate) struct ServerState {
     pub project_root: Arc<std::path::PathBuf>,
     pub writes: Arc<Mutex<()>>,
     pub approve_reads: bool,
+    pub memory: Option<MemoryStore>,
 }

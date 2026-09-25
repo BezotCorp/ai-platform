@@ -9,6 +9,7 @@ use crate::{
     agents::{ExecutionMode, Scheduler},
     api::Event,
     context::{ToolContext, assemble, limits},
+    memory::MemoryStore,
     providers::{Chat, Client},
     sessions::Message,
     tools::{self, ToolApprovalGate, WriteProposal},
@@ -32,6 +33,7 @@ impl AgentExecution {
         approvals: &ToolApprovalGate,
         approve_reads: bool,
         writes: &Arc<Mutex<()>>,
+        memory: Option<&MemoryStore>,
     ) -> Result<()> {
         let (context_tokens, output_tokens) = limits()?;
         let definitions = tools::definitions();
@@ -66,16 +68,28 @@ impl AgentExecution {
                      nécessite un aperçu et une \
                      approbation explicite."
                 );
+                let recalled = if let Some(store) = memory {
+                    store.recall(
+                        &history.last().context("Conversation vide")?.content,
+                        &instructions,
+                        4,
+                    ).await?
+                } else {
+                    Vec::new()
+                };
                 let assembled = assemble(
                     &instructions,
                     &previous_layer,
                     history,
+                    &recalled,
                     context_tokens,
                     output_tokens,
                     tool_tokens,
                 )?;
                 let history_indices =
                     assembled.provenance.history_message_indices.clone();
+                let recalled_memory_ids =
+                    assembled.provenance.memory_entry_ids.clone();
                 outbound
                     .send(Event::new(
                         "context.prepared",
@@ -94,6 +108,8 @@ impl AgentExecution {
                             "estimated_tool_tokens": tool_tokens,
                             "selected_history_indices":
                                 assembled.provenance.history_message_indices,
+                            "recalled_memory_ids":
+                                assembled.provenance.memory_entry_ids,
                             "unverified_agent_ids":
                                 assembled.provenance.unverified_agent_ids,
                             "selection": "lexical_relevance_then_recency",
@@ -101,7 +117,7 @@ impl AgentExecution {
                     ))
                     .await?;
                 let mut tool_context =
-                    ToolContext::new(assembled.messages, history_indices)?;
+                    ToolContext::new(assembled.messages, history_indices, recalled_memory_ids)?;
                 let mut total_calls = 0usize;
                 let mut complete_answer = String::new();
                 let mut finished = false;
@@ -117,6 +133,7 @@ impl AgentExecution {
                     let messages = prepared.messages;
                     if !prepared.compacted_rounds.is_empty()
                         || !prepared.omitted_history_indices.is_empty()
+                        || !prepared.omitted_memory_ids.is_empty()
                     {
                         outbound
                             .send(Event::new(
@@ -128,6 +145,8 @@ impl AgentExecution {
                                     "compacted_rounds": prepared.compacted_rounds,
                                     "omitted_history_indices":
                                         prepared.omitted_history_indices,
+                                    "omitted_memory_ids":
+                                        prepared.omitted_memory_ids,
                                     "latest_round_compacted":
                                         prepared.latest_round_compacted,
                                     "full_code_refetch_required":
@@ -356,6 +375,22 @@ impl AgentExecution {
                 current_layer.push((agent.identity.id.clone(), complete_answer));
             }
             previous_layer = current_layer;
+        }
+        if cancel.is_cancelled() {
+            bail!("Exécution annulée");
+        }
+        if let (Some(store), Some((_, answer)), Some(prompt)) =
+            (memory, previous_layer.last(), history.last())
+        {
+            if let Err(error) = store.remember(&prompt.content, answer).await {
+                outbound
+                    .send(Event::new(
+                        "memory.failed",
+                        request_id,
+                        json!({ "error": error.to_string() }),
+                    ))
+                    .await?;
+            }
         }
         outbound
             .send(Event::new(

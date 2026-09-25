@@ -15,6 +15,7 @@ use tokio_util::sync::CancellationToken;
 use crate::{
     agents::AgentExecution,
     api::{Command, Event, RunRequest, models::list},
+    memory::MemoryStore,
     providers::Client,
     tools::ToolApprovalGate,
 };
@@ -40,6 +41,7 @@ pub(crate) async fn serve(
     project_root: Arc<PathBuf>,
     writes: Arc<Mutex<()>>,
     approve_reads: bool,
+    memory: Option<MemoryStore>,
 ) {
     let approvals = ToolApprovalGate::new();
     let first = tokio::time::timeout(Duration::from_secs(5), socket.recv()).await;
@@ -165,6 +167,7 @@ pub(crate) async fn serve(
             let task_root = project_root.clone();
             let task_approvals = approvals.clone();
             let task_writes = writes.clone();
+            let task_memory = memory.clone();
             let id = request_id.clone();
             let handle = tokio::spawn(async move {
                 let _ = event_tx
@@ -205,6 +208,7 @@ pub(crate) async fn serve(
                     &task_approvals,
                     approve_reads,
                     &task_writes,
+                    task_memory.as_ref(),
                 )
                 .await;
                 if let Err(error) = result {

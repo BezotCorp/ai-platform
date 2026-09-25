@@ -20,6 +20,7 @@ use tokio::sync::{Mutex, Semaphore};
 
 use crate::{
     api::{ServerState, socket},
+    memory::MemoryStore,
     providers::Client,
 };
 
@@ -43,6 +44,7 @@ async fn upgrade(
             state.project_root,
             state.writes,
             state.approve_reads,
+            state.memory,
         )
     })
 }
@@ -73,6 +75,16 @@ pub(crate) async fn run() -> Result<()> {
             bail!("AI_PLATFORM_APPROVE_READS doit valoir 0 ou 1")
         }
     };
+    // Persistance facultative, explicitement configurée par le frontend.
+    // Un chemin absent laisse le backend sans mémoire persistante.
+    let memory = match env::var("AI_PLATFORM_MEMORY_DB") {
+        Ok(path) if !path.trim().is_empty() => {
+            Some(MemoryStore::open(path.into(), &project_root).await?)
+        }
+        Ok(_) => bail!("AI_PLATFORM_MEMORY_DB ne doit pas être vide"),
+        Err(env::VarError::NotPresent) => None,
+        Err(error) => return Err(error.into()),
+    };
     let state = ServerState {
         client,
         token: Arc::from(token),
@@ -81,6 +93,7 @@ pub(crate) async fn run() -> Result<()> {
         project_root: Arc::new(project_root),
         writes: Arc::new(Mutex::new(())),
         approve_reads,
+        memory,
     };
     let listener = tokio::net::TcpListener::bind((Ipv4Addr::LOCALHOST, 0)).await?;
     let url = format!("ws://{}/ws", listener.local_addr()?);
