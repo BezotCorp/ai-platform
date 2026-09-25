@@ -9,7 +9,7 @@ use crate::{
     agents::{ExecutionMode, Scheduler},
     api::Event,
     context::{assemble, limits},
-    providers::{Client, stream},
+    providers::{Chat, Client},
     sessions::Message,
     tools::{self, ToolApprovalGate, WriteProposal},
 };
@@ -123,15 +123,17 @@ impl AgentExecution {
                     let events = outbound.clone();
                     let correlation = request_id.to_owned();
                     let agent_id = agent.identity.id.clone();
-                    let turn = stream(
+                    let chat = Chat {
                         client,
-                        &agent.model.name,
-                        &messages,
-                        &definitions,
+                        model: &agent.model.name,
+                        messages: &messages,
+                        tools: &definitions,
                         context_tokens,
                         output_tokens,
                         cancel,
-                        move |delta| {
+                    };
+                    let turn = chat
+                        .stream(move |delta| {
                             let events = events.clone();
                             let correlation = correlation.clone();
                             let agent_id = agent_id.clone();
@@ -148,9 +150,8 @@ impl AgentExecution {
                                     .await?;
                                 Ok(())
                             }
-                        },
-                    )
-                    .await?;
+                        })
+                        .await?;
                     if !turn.content.is_empty() {
                         if !complete_answer.is_empty() {
                             complete_answer.push('\n');
@@ -207,8 +208,7 @@ impl AgentExecution {
                             let proposal =
                                 WriteProposal::prepare(project_root, name, &arguments).await?;
                             let preview = proposal.preview();
-                            let preview_sha256 =
-                                ToolApprovalGate::preview_sha256(&preview)?;
+                            let preview_sha256 = ToolApprovalGate::preview_sha256(&preview)?;
 
                             outbound
                                 .send(Event::new(

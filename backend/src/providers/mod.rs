@@ -3,4 +3,4 @@ mod ollama;
 mod provider;
 
 pub(crate) use model::Model;
-pub(crate) use ollama::{AvailableModel, Client, stream, ChatTurn};
+pub(crate) use ollama::{AvailableModel, Chat, ChatTurn, Client};

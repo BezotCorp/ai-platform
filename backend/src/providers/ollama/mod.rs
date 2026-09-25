@@ -6,6 +6,6 @@ mod embeddings;
 mod residency;
 
 pub(crate) use available_model::AvailableModel;
-pub(crate) use chat::stream;
+pub(crate) use chat::Chat;
 pub(crate) use chat_turn::ChatTurn;
 pub(crate) use client::Client;

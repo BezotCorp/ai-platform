@@ -4,13 +4,12 @@ use std::{
     path::{Component, Path, PathBuf},
 };
 
+use crate::tools::authorize_path;
 use anyhow::{Result, bail};
 use cap_std::{
     ambient_authority,
     fs::{Dir, MetadataExt},
 };
-
-use crate::tools::permissions;
 
 pub(crate) struct FileManager {
     filename: OsString,
@@ -21,8 +20,7 @@ pub(crate) struct FileManager {
 
 impl FileManager {
     pub(crate) fn new(root: &Path, relative: &str) -> Result<Self> {
-        permissions::authorize_path(relative)?;
-
+        authorize_path(relative)?;
         let components = Path::new(relative).components().collect::<Vec<_>>();
         if components.is_empty()
             || components
@@ -31,7 +29,6 @@ impl FileManager {
         {
             bail!("Chemin de fichier invalide");
         }
-
         let Component::Normal(filename) = components[components.len() - 1] else {
             bail!("Nom de fichier invalide");
         };
@@ -50,59 +47,6 @@ impl FileManager {
         })
     }
 
-    pub(crate) fn open_directory(root: &Path, relative: &Path) -> Result<Dir> {
-        let relative = relative
-            .to_str()
-            .ok_or_else(|| anyhow::anyhow!("Chemin non UTF-8 interdit"))?;
-        permissions::authorize_path(relative)?;
-
-        let mut directory = Dir::open_ambient_dir(root, ambient_authority())?;
-        if relative == "." {
-            return Ok(directory);
-        }
-
-        let components = Path::new(relative).components().collect::<Vec<_>>();
-        if components.is_empty()
-            || components
-                .iter()
-                .any(|component| !matches!(component, Component::Normal(_)))
-        {
-            bail!("Chemin de répertoire invalide");
-        }
-
-        for component in components {
-            let Component::Normal(name) = component else {
-                bail!("Composant de répertoire invalide");
-            };
-            directory = Self::open_child_directory(&directory, Path::new(name))?;
-        }
-
-        Ok(directory)
-    }
-
-    pub(crate) fn open_child_directory(parent: &Dir, name: &Path) -> Result<Dir> {
-        let before = parent.symlink_metadata(name)?;
-        if before.is_symlink() || !before.is_dir() {
-            bail!("Répertoire interdit ou invalide");
-        }
-
-        let child = parent.open_dir(name)?;
-        let opened = child.dir_metadata()?;
-        let after = parent.symlink_metadata(name)?;
-
-        if after.is_symlink()
-            || !after.is_dir()
-            || before.dev() != opened.dev()
-            || before.ino() != opened.ino()
-            || after.dev() != opened.dev()
-            || after.ino() != opened.ino()
-        {
-            bail!("Répertoire modifié pendant son ouverture");
-        }
-
-        Ok(child)
-    }
-
     pub(crate) fn filename(&self) -> &Path {
         Path::new(&self.filename)
     }
@@ -117,6 +61,52 @@ impl FileManager {
 
     pub(crate) fn parent(&self) -> &Dir {
         &self.parent
+    }
+
+    pub(crate) fn open_directory(root: &Path, relative: &Path) -> Result<Dir> {
+        let relative = relative
+            .to_str()
+            .ok_or_else(|| anyhow::anyhow!("Chemin non UTF-8 interdit"))?;
+        authorize_path(relative)?;
+        let mut directory = Dir::open_ambient_dir(root, ambient_authority())?;
+        if relative == "." {
+            return Ok(directory);
+        }
+        let components = Path::new(relative).components().collect::<Vec<_>>();
+        if components.is_empty()
+            || components
+                .iter()
+                .any(|component| !matches!(component, Component::Normal(_)))
+        {
+            bail!("Chemin de répertoire invalide");
+        }
+        for component in components {
+            let Component::Normal(name) = component else {
+                bail!("Composant de répertoire invalide");
+            };
+            directory = Self::open_child_directory(&directory, Path::new(name))?;
+        }
+        Ok(directory)
+    }
+
+    pub(crate) fn open_child_directory(parent: &Dir, name: &Path) -> Result<Dir> {
+        let before = parent.symlink_metadata(name)?;
+        if before.is_symlink() || !before.is_dir() {
+            bail!("Répertoire interdit ou invalide");
+        }
+        let child = parent.open_dir(name)?;
+        let opened = child.dir_metadata()?;
+        let after = parent.symlink_metadata(name)?;
+        if after.is_symlink()
+            || !after.is_dir()
+            || before.dev() != opened.dev()
+            || before.ino() != opened.ino()
+            || after.dev() != opened.dev()
+            || after.ino() != opened.ino()
+        {
+            bail!("Répertoire modifié pendant son ouverture");
+        }
+        Ok(child)
     }
 
     pub(crate) fn verify_parent(&self) -> Result<()> {
