@@ -1,4 +1,5 @@
 use sha2::{Digest, Sha256};
+use std::path;
 
 pub(crate) fn checksum(content: &str) -> String {
     Sha256::digest(content.as_bytes())
@@ -7,6 +8,6 @@ pub(crate) fn checksum(content: &str) -> String {
         .collect()
 }
 
-pub(crate) fn project_scope(path: &std::path::Path) -> String {
+pub(crate) fn project_scope(path: &path::Path) -> String {
     checksum(&path.to_string_lossy())
 }

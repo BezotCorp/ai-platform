@@ -11,7 +11,7 @@ use std::{
 };
 
 use crate::{
-    file_manager::FileManager,
+    file_manager::{FILE_TOO_LARGE, FileManager},
     tools::{file_snapshot::FileSnapshot, permissions},
 };
 
@@ -44,7 +44,7 @@ impl AnchoredPath {
             bail!("Fichier à plusieurs liens matériels");
         }
         if before.len() > MAX_FILE_BYTES as u64 {
-            bail!("Fichier trop volumineux");
+            bail!(FILE_TOO_LARGE);
         }
         // L'accès demeure relatif au répertoire
         // détenu par cap-std.
@@ -62,7 +62,7 @@ impl AnchoredPath {
             .take((MAX_FILE_BYTES + 1) as u64)
             .read_to_end(&mut bytes)?;
         if bytes.len() > MAX_FILE_BYTES {
-            bail!("Fichier trop volumineux");
+            bail!(FILE_TOO_LARGE);
         }
         let after = file.metadata()?;
         let final_path = self.file_manager.parent().symlink_metadata(name)?;

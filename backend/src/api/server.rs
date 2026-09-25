@@ -1,3 +1,4 @@
+use tokio_util::sync::CancellationToken;
 use anyhow::{Context, Result, bail};
 use axum::{
     Router,
@@ -47,6 +48,7 @@ async fn upgrade(
             state.writes,
             state.approve_reads,
             state.memory,
+            state.shutdown,
         )
     })
 }
@@ -87,7 +89,11 @@ pub(crate) async fn run() -> Result<()> {
         Err(env::VarError::NotPresent) => None,
         Err(error) => return Err(error.into()),
     };
+    let shutdown = CancellationToken::new();
+    let memory_for_shutdown = memory.clone();
+
     let state = ServerState {
+        shutdown: shutdown.clone(),
         client,
         token: Arc::from(token),
         origin: Arc::from(origin),
@@ -110,6 +116,27 @@ pub(crate) async fn run() -> Result<()> {
         })
     );
     io::stdout().flush()?;
-    axum::serve(listener, router).await?;
+    let signal = shutdown.clone();
+
+    let result = axum::serve(listener, router)
+        .with_graceful_shutdown(async move {
+            if tokio::signal::ctrl_c().await.is_ok() {
+                signal.cancel();
+            }
+        })
+        .await;
+
+    // Fermer les connexions WebSocket encore actives
+    // avant de demander l'arrêt de SQLite.
+    shutdown.cancel();
+
+    let shutdown_result = match memory_for_shutdown {
+        Some(memory) => memory.shutdown().await,
+        None => Ok(()),
+    };
+
+    result?;
+    shutdown_result?;
+
     Ok(())
 }

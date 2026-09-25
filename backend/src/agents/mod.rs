@@ -14,5 +14,5 @@ pub(crate) use context::{
     AssembledContext, PreparedToolContext, Provenance, ToolContext, ToolExchange, assemble,
     relevance,
 };
-pub(crate) use memory::{MemoryEntry, MemoryStore, apply, find, project_scope, checksum};
+pub(crate) use memory::{MemoryEntry, MemoryStore, apply, checksum, find, project_scope};
 pub(crate) use orchestration::{AgentLayer, Aggregation, ExecutionMode, Mixture, Scheduler};

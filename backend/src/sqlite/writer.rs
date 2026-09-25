@@ -18,7 +18,6 @@ impl Writer {
             connection,
             TransactionBehavior::Immediate,
         )?;
-
         Ok(Self { sender, handle })
     }
 
@@ -30,9 +29,7 @@ impl Writer {
         job::submit(&self.sender, operation).await
     }
 
-    pub(crate) fn into_parts(
-        self,
-    ) -> (mpsc::Sender<Job>, thread::JoinHandle<()>) {
+    pub(crate) fn into_parts(self) -> (mpsc::Sender<Job>, thread::JoinHandle<()>) {
         (self.sender, self.handle)
     }
 }

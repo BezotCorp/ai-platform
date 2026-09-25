@@ -33,7 +33,7 @@ impl MemoryEntry {
     }
 
     pub(crate) fn checksum_for(query: &str, content: &str) -> String {
-        checksum(&format!("{query}\\n{content}"))
+        checksum(&format!("{query}\n{content}"))
     }
 
     pub(crate) fn verify_checksum(&self) -> bool {

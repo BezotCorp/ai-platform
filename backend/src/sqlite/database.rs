@@ -22,29 +22,33 @@ impl Database {
         if !(1..=16).contains(&reader_count) {
             bail!("Le nombre de lecteurs SQLite doit être compris entre 1 et 16");
         }
-
         let inner = tokio::task::spawn_blocking(move || -> Result<DatabaseInner> {
             let mut writer_connection = connection::open_writer(&path)?;
-
-            // Le schéma est initialisé avant que des
-            // opérations concurrentes soient acceptées.
-            initialize(&mut writer_connection)?;
-
+            // Vérifier la base avant toute migration.
             connection::check_integrity(&writer_connection)?;
-
+            // Initialiser le schéma avant d'ouvrir les lecteurs.
+            initialize(&mut writer_connection)?;
             let mut reader_connections = Vec::with_capacity(reader_count);
-
             for _ in 0..reader_count {
                 reader_connections.push(connection::open_reader(&path)?);
             }
-
             let readers = Readers::start(reader_connections)?;
-            let writer = Writer::start(writer_connection)?;
-
+            let writer = match Writer::start(writer_connection) {
+                Ok(writer) => writer,
+                Err(error) => {
+                    let (senders, handles) = readers.into_parts();
+                    drop(senders);
+                    for handle in handles {
+                        handle.join().map_err(|_| {
+                            anyhow::anyhow!("Un lecteur SQLite s'est terminé anormalement")
+                        })?;
+                    }
+                    return Err(error);
+                }
+            };
             Ok(DatabaseInner { writer, readers })
         })
         .await??;
-
         Ok(Self {
             inner: Arc::new(inner),
         })
@@ -77,38 +81,38 @@ impl Database {
     /// Les demandes en attente dont le demandeur a disparu
     /// sont ignorées avant leur démarrage.
     pub(crate) async fn shutdown(self) -> Result<()> {
-        let inner = Arc::try_unwrap(self.inner).map_err(|_| {
+        let inner = self.inner;
+        tokio::time::timeout(std::time::Duration::from_secs(10), async {
+            while Arc::strong_count(&inner) != 1 {
+                tokio::time::sleep(std::time::Duration::from_millis(25)).await;
+            }
+        })
+        .await
+        .context("Des utilisateurs SQLite restent actifs")?;
+        let inner = Arc::try_unwrap(inner).map_err(|_| {
             anyhow::anyhow!(
                 "Impossible d'arrêter SQLite : des utilisateurs \
                 possèdent encore une référence à la base"
             )
         })?;
-
         let (writer_sender, writer_handle) = inner.writer.into_parts();
-
         let (reader_senders, reader_handles) = inner.readers.into_parts();
-
         // La fermeture des canaux permet aux threads
         // de terminer après les opérations déjà en file.
         drop(writer_sender);
         drop(reader_senders);
-
         tokio::task::spawn_blocking(move || -> Result<()> {
             let mut handles: Vec<thread::JoinHandle<()>> = reader_handles;
-
             handles.push(writer_handle);
-
             for handle in handles {
                 handle
                     .join()
                     .map_err(|_| anyhow::anyhow!("Un thread SQLite s'est terminé anormalement"))?;
             }
-
             Ok(())
         })
         .await
         .context("Impossible d'attendre l'arrêt de SQLite")??;
-
         Ok(())
     }
 }

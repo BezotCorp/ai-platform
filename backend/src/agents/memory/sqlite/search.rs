@@ -1,7 +1,7 @@
 use anyhow::Result;
 use rusqlite::{Connection, params};
 
-use crate::{agents::MemoryEntry};
+use crate::agents::MemoryEntry;
 
 pub(crate) fn find(
     connection: &Connection,
@@ -10,11 +10,10 @@ pub(crate) fn find(
     role: &str,
     limit: usize,
 ) -> Result<Vec<MemoryEntry>> {
-    let mut statement = connection.prepare(
-        "SELECT id, project, query, content, source, checksum, revision
+    const QUERY: &str = "SELECT id, project, query, content, source, checksum, revision
          FROM memory_entries WHERE project = ?1
-         ORDER BY updated_at DESC LIMIT 256",
-    )?;
+         ORDER BY updated_at DESC LIMIT 256";
+    let mut statement = connection.prepare(QUERY)?;
     let rows = statement.query_map(params![project], |row| {
         Ok(MemoryEntry::from_storage(
             row.get(0)?,
@@ -26,7 +25,6 @@ pub(crate) fn find(
             row.get(6)?,
         ))
     })?;
-
     let mut ranked = rows.collect::<rusqlite::Result<Vec<_>>>()?;
     ranked.sort_by(|left, right| {
         right
@@ -34,7 +32,6 @@ pub(crate) fn find(
             .cmp(&left.relevance_score(request, role))
             .then_with(|| right.id().cmp(&left.id()))
     });
-
     ranked.retain(|entry| entry.matches_request(request));
     ranked.truncate(limit);
     Ok(ranked)

@@ -11,6 +11,8 @@ use cap_std::{
     fs::{Dir, MetadataExt},
 };
 
+pub(crate) const FILE_TOO_LARGE: &str = "Fichier trop volumineux";
+
 pub(crate) struct FileManager {
     filename: OsString,
     root: PathBuf,

@@ -1,5 +1,4 @@
 use anyhow::{Context, Result};
-
 use serde::Serialize;
 
 use crate::providers::Client;

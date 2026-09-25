@@ -5,18 +5,15 @@ const SCHEMA_VERSION: i64 = 1;
 
 pub(crate) fn apply(connection: &mut Connection) -> Result<()> {
     let transaction = connection.transaction()?;
-
     transaction.execute_batch(
         "CREATE TABLE IF NOT EXISTS schema_version (
             version INTEGER PRIMARY KEY
         );",
     )?;
-
     let latest: Option<i64> =
         transaction.query_row("SELECT MAX(version) FROM schema_version", [], |row| {
             row.get(0)
         })?;
-
     match latest {
         Some(version) if version > SCHEMA_VERSION => {
             bail!("Version de schéma SQLite non prise en charge");
@@ -50,7 +47,6 @@ pub(crate) fn apply(connection: &mut Connection) -> Result<()> {
             bail!("Migration depuis la version {version} non implémentée");
         }
     }
-
     transaction.commit()?;
     Ok(())
 }

@@ -38,6 +38,7 @@ pub(crate) async fn serve(
     writes: Arc<Mutex<()>>,
     approve_reads: bool,
     memory: Option<MemoryStore>,
+    shutdown: CancellationToken,
 ) {
     let approvals = ToolApprovalGate::new();
     let first = tokio::time::timeout(Duration::from_secs(5), socket.recv()).await;
@@ -64,7 +65,16 @@ pub(crate) async fn serve(
     });
     let _ = tx.send(Event::new("authenticated", "", json!({}))).await;
     let mut active: Option<(String, CancellationToken, JoinHandle<()>)> = None;
-    while let Some(frame) = stream.next().await {
+    loop {
+        let frame = tokio::select! {
+            () = shutdown.cancelled() => break,
+            frame = stream.next() => frame,
+        };
+
+        let Some(frame) = frame else {
+            break;
+        };
+
         let Ok(WsMessage::Text(text)) = frame else {
             break;
         };

@@ -58,7 +58,6 @@ pub(crate) fn select_history(
             start = Some(index);
         }
     }
-
     if let Some(previous) = start {
         let group = &history[previous..];
         exchanges.push(Exchange {
