@@ -455,3 +455,42 @@ le contexte pendant un tour, l'exécution s'interrompt toujours :
 la compression incrémentale et la récupération sémantique ne sont
 pas implémentées par ce changement. La mémoire SQLite et MCP ne sont
 pas concernés. Aucun test n'est ajouté.
+
+## Budget de contexte après les résultats des outils
+
+Chaque génération d'un agent commence avec le contexte sélectionné
+par `assemble`. Les tours avec outils sont désormais conservés dans
+`ToolContext` comme des échanges complets : message d'appel de
+l'assistant et résultats correspondants. Les échanges non compactés
+préservent le protocole des appels d'outils d'Ollama.
+
+Avant chaque nouvelle génération, le gestionnaire compare la taille
+JSON effective de ces messages et les réserves pour les définitions
+d'outils et la sortie à la fenêtre configurée. Si le budget est dépassé,
+il condense d'abord les anciens tours de lecture terminés, puis retire
+les échanges de conversation historiques facultatifs les plus anciens.
+Si cela ne suffit toujours pas, il peut condenser la dernière lecture.
+Les tours contenant des appels d'écriture ne sont jamais compactés ;
+les instructions, le dernier message de l'utilisateur et les apports
+MoA obligatoires sont toujours conservés.
+
+Un registre compact remplace un tour de lecture écarté. Il contient
+le nom des outils et, lorsqu'elles existent, des métadonnées bornées :
+chemin, empreinte SHA-256, plages ou nombres de lignes, nombre de
+résultats et échantillons de chemins. Ce registre n'est pas présenté
+comme du code complet ni comme une preuve de fraîcheur : l'agent doit
+relire les informations absentes et vérifier leur empreinte avant de
+proposer une modification.
+
+L'événement WebSocket `context.compacted` signale les indices des tours
+condensés, les indices des messages historiques omis et les cas dans
+lesquels même la lecture la plus récente a été compactée. Aucune
+compression fondée sur un modèle, aucun nouvel outil, aucune lecture
+automatique, aucune mémoire SQLite et aucun changement aux accords
+d'écriture ne sont ajoutés.
+
+Le registre lui-même consomme du contexte : si les seules données
+obligatoires ou les échanges d'écriture excèdent la fenêtre, la
+génération s'interrompt explicitement au lieu de supprimer des données
+sensibles. Le budget reste une estimation en octets UTF-8 et non un
+comptage exact des tokens. Aucun test n'est ajouté à cette étape.

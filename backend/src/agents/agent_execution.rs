@@ -8,7 +8,7 @@ use tokio_util::sync::CancellationToken;
 use crate::{
     agents::{ExecutionMode, Scheduler},
     api::Event,
-    context::{assemble, limits},
+    context::{ToolContext, assemble, limits},
     providers::{Chat, Client},
     sessions::Message,
     tools::{self, ToolApprovalGate, WriteProposal},
@@ -74,6 +74,8 @@ impl AgentExecution {
                     output_tokens,
                     tool_tokens,
                 )?;
+                let history_indices =
+                    assembled.provenance.history_message_indices.clone();
                 outbound
                     .send(Event::new(
                         "context.prepared",
@@ -98,11 +100,8 @@ impl AgentExecution {
                         }),
                     ))
                     .await?;
-                let mut messages = assembled
-                    .messages
-                    .into_iter()
-                    .map(serde_json::to_value)
-                    .collect::<serde_json::Result<Vec<_>>>()?;
+                let mut tool_context =
+                    ToolContext::new(assembled.messages, history_indices)?;
                 let mut total_calls = 0usize;
                 let mut complete_answer = String::new();
                 let mut finished = false;
@@ -110,20 +109,33 @@ impl AgentExecution {
                     if cancel.is_cancelled() {
                         bail!("Exécution annulée");
                     }
-                    // Les retours d'outils doivent
-                    // encore tenir dans le contexte.
-                    // Aucune troncature silencieuse.
-                    let input_size = serde_json::to_vec(&messages)?.len();
-                    if input_size
-                        .saturating_add(tool_tokens)
-                        .saturating_add(output_tokens)
-                        .saturating_add(384)
-                        > context_tokens
+                    let prepared = tool_context.prepare(
+                        context_tokens,
+                        tool_tokens,
+                        output_tokens,
+                    )?;
+                    let messages = prepared.messages;
+                    if !prepared.compacted_rounds.is_empty()
+                        || !prepared.omitted_history_indices.is_empty()
                     {
-                        bail!(
-                            "Le contexte après les appels \
-                             d'outils dépasse le budget"
-                        );
+                        outbound
+                            .send(Event::new(
+                                "context.compacted",
+                                request_id,
+                                json!({
+                                    "agent_id": agent.identity.id,
+                                    "round": round,
+                                    "compacted_rounds": prepared.compacted_rounds,
+                                    "omitted_history_indices":
+                                        prepared.omitted_history_indices,
+                                    "latest_round_compacted":
+                                        prepared.latest_round_compacted,
+                                    "full_code_refetch_required":
+                                        prepared.latest_round_compacted,
+                                    "selection": "oldest_completed_read_then_oldest_optional_history",
+                                }),
+                            ))
+                            .await?;
                     }
                     let events = outbound.clone();
                     let correlation = request_id.to_owned();
@@ -173,11 +185,12 @@ impl AgentExecution {
                              atteinte"
                         );
                     }
-                    messages.push(json!({
+                    let assistant_message = json!({
                         "role": "assistant",
                         "content": turn.content,
                         "tool_calls": turn.tool_calls,
-                    }));
+                    });
+                    let mut tool_results = Vec::with_capacity(turn.tool_calls.len());
                     for (index, call) in turn.tool_calls.iter().enumerate() {
                         total_calls += 1;
                         let function = call
@@ -319,12 +332,13 @@ impl AgentExecution {
                                 })
                             }
                         };
-                        messages.push(json!({
+                        tool_results.push(json!({
                             "role": "tool",
                             "tool_name": name,
                             "content": payload.to_string(),
                         }));
                     }
+                    tool_context.append(assistant_message, tool_results, round)?;
                 }
                 if !finished {
                     bail!("Limite des tours avec outils atteinte");
