@@ -1,14 +1,17 @@
 use std::{
     collections::VecDeque,
-    path::{self, Path, PathBuf},
+    path::{Path, PathBuf},
 };
 
 use anyhow::{Context, Result, bail};
+use cap_std::fs::Dir;
 use serde_json::{Map, Value, json};
 use sha2::{Digest, Sha256};
-use tokio::fs;
 
-use super::permissions;
+use crate::{
+    file_manager::FileManager,
+    tools::{anchored_path::AnchoredPath, permissions},
+};
 
 const MAX_VISITED: usize = 4000;
 const MAX_FILE_BYTES: u64 = 128 * 1024;
@@ -31,70 +34,69 @@ fn required_string<'a>(object: &'a Map<String, Value>, key: &str) -> Result<&'a 
         .context(format!("Argument {key} manquant ou invalide"))
 }
 
-async fn confined_path(root: &Path, relative: &str) -> Result<PathBuf> {
-    permissions::authorize_path(relative)?;
-    // Refuser les liens symboliques, même lorsque
-    // leur cible demeure à l'intérieur du projet.
-    let mut cursor = root.to_path_buf();
-    for component in Path::new(relative).components() {
-        if let path::Component::Normal(part) = component {
-            cursor.push(part);
-            if fs::symlink_metadata(&cursor)
-                .await?
-                .file_type()
-                .is_symlink()
-            {
-                bail!("Lien symbolique interdit");
-            }
-        }
-    }
-    let resolved = fs::canonicalize(&cursor)
-        .await
-        .context("Chemin introuvable")?;
-    if !resolved.starts_with(root) {
-        bail!("Accès hors du projet interdit");
-    }
-    Ok(resolved)
+fn visit_directory(
+    pending: &mut VecDeque<(PathBuf, Dir)>,
+    directory: &Dir,
+    relative: PathBuf,
+) -> Result<()> {
+    let opened = FileManager::open_child_directory(
+        directory,
+        relative.file_name().map(Path::new).context("Nom de répertoire manquant")?,
+    )?;
+    pending.push_back((relative, opened));
+    Ok(())
 }
 
-async fn list_files(root: &Path, arguments: &Value) -> Result<Value> {
+fn list_files(root: &Path, arguments: &Value) -> Result<Value> {
     let object = parse_arguments(arguments, &["path"])?;
     let relative = required_string(object, "path")?;
-    let directory = confined_path(root, relative).await?;
-    if !fs::metadata(&directory).await?.is_dir() {
-        bail!("Le chemin n'est pas un répertoire");
-    }
-    let mut pending = VecDeque::from([directory]);
+    let initial = FileManager::open_directory(root, Path::new(relative))?;
+    let prefix = if relative == "." {
+        PathBuf::new()
+    } else {
+        PathBuf::from(relative)
+    };
+
+    let mut pending = VecDeque::from([(prefix, initial)]);
     let mut files = Vec::new();
     let mut visited = 0usize;
-    while let Some(directory) = pending.pop_front() {
-        let mut entries = fs::read_dir(directory).await?;
-        while let Some(entry) = entries.next_entry().await? {
+    let mut truncated = false;
+
+    'exploration: while let Some((directory_path, directory)) = pending.pop_front() {
+        for item in directory.entries()? {
+            let entry = item?;
             visited += 1;
             if visited > MAX_VISITED {
-                bail!("Limite d'exploration du projet atteinte");
+                truncated = true;
+                break 'exploration;
             }
-            let path = entry.path();
-            let relative = path.strip_prefix(root)?;
-            if permissions::authorize_path(&relative.to_string_lossy()).is_err() {
+
+            let name = entry.file_name();
+            let relative = directory_path.join(&name);
+            let Some(relative_text) = relative.to_str() else {
+                continue;
+            };
+            if permissions::authorize_path(relative_text).is_err() {
                 continue;
             }
-            let kind = entry.file_type().await?;
+
+            let kind = entry.file_type()?;
             if kind.is_symlink() {
                 continue;
             }
             if kind.is_dir() {
-                pending.push_back(path);
+                visit_directory(&mut pending, &directory, relative)?;
             } else if kind.is_file() {
-                files.push(relative.to_string_lossy().into_owned());
+                files.push(relative_text.to_owned());
+                if files.len() > 200 {
+                    truncated = true;
+                    break 'exploration;
+                }
             }
         }
-        if files.len() > 200 {
-            break;
-        }
     }
+
     files.sort();
-    let truncated = files.len() > 200 || !pending.is_empty();
     files.truncate(200);
     Ok(json!({
         "files": files,
@@ -102,14 +104,14 @@ async fn list_files(root: &Path, arguments: &Value) -> Result<Value> {
     }))
 }
 
-async fn read_file(root: &Path, arguments: &Value) -> Result<Value> {
+fn read_file(root: &Path, arguments: &Value) -> Result<Value> {
     let object = parse_arguments(arguments, &["path", "start_line", "max_lines"])?;
     let relative = required_string(object, "path")?;
-    let path = confined_path(root, relative).await?;
-    let metadata = fs::metadata(&path).await?;
-    if !metadata.is_file() || metadata.len() > MAX_FILE_BYTES {
-        bail!("Fichier absent ou trop volumineux");
+    let snapshot = AnchoredPath::open(root, relative)?.read_existing()?;
+    if snapshot.bytes.len() > MAX_FILE_BYTES as usize {
+        bail!("Fichier trop volumineux");
     }
+
     let start = object
         .get("start_line")
         .map(|value| value.as_u64().context("start_line invalide"))
@@ -123,9 +125,12 @@ async fn read_file(root: &Path, arguments: &Value) -> Result<Value> {
     if start == 0 || !(1..=120).contains(&limit) {
         bail!("Intervalle de lecture invalide");
     }
-    let content = fs::read_to_string(&path)
-        .await
-        .context("Le fichier n'est pas du texte UTF-8")?;
+
+    let sha256 = Sha256::digest(&snapshot.bytes)
+        .iter()
+        .map(|byte| format!("{byte:02x}"))
+        .collect::<String>();
+    let content = String::from_utf8(snapshot.bytes).context("Le fichier n'est pas du texte UTF-8")?;
     let mut lines = Vec::new();
     let mut bytes = 0usize;
     for (index, line) in content.lines().enumerate() {
@@ -150,70 +155,77 @@ async fn read_file(root: &Path, arguments: &Value) -> Result<Value> {
             "text": text,
         }));
     }
-    let checksum = Sha256::digest(content.as_bytes());
-    let sha256 = checksum
-        .iter()
-        .map(|byte| format!("{byte:02x}"))
-        .collect::<String>();
+
     Ok(json!({
         "path": relative,
         "sha256": sha256,
         "start_line": start,
         "lines": lines,
         "truncated": bytes >= MAX_RESULT_BYTES
-            || content.lines().count() as u64
-                >= start.saturating_add(limit),
+            || content.lines().count() as u64 >= start.saturating_add(limit),
     }))
 }
 
-async fn search_text(root: &Path, arguments: &Value) -> Result<Value> {
+fn search_text(root: &Path, arguments: &Value) -> Result<Value> {
     let object = parse_arguments(arguments, &["query"])?;
     let query = required_string(object, "query")?;
     if query.len() < 2 || query.len() > 128 {
         bail!("Longueur de recherche invalide");
     }
-    let mut pending = VecDeque::from([root.to_path_buf()]);
+
+    let initial = FileManager::open_directory(root, Path::new("."))?;
+    let mut pending = VecDeque::from([(PathBuf::new(), initial)]);
     let mut matches = Vec::new();
     let mut visited = 0usize;
     let mut truncated = false;
-    'exploration: while let Some(directory) = pending.pop_front() {
-        let mut entries = fs::read_dir(directory).await?;
-        while let Some(entry) = entries.next_entry().await? {
+
+    'exploration: while let Some((directory_path, directory)) = pending.pop_front() {
+        for item in directory.entries()? {
+            let entry = item?;
             visited += 1;
             if visited > MAX_VISITED {
                 truncated = true;
                 break 'exploration;
             }
-            let path = entry.path();
-            let relative = path.strip_prefix(root)?;
-            if permissions::authorize_path(&relative.to_string_lossy()).is_err() {
+
+            let name = entry.file_name();
+            let relative = directory_path.join(&name);
+            let Some(relative_text) = relative.to_str() else {
+                continue;
+            };
+            if permissions::authorize_path(relative_text).is_err() {
                 continue;
             }
-            let kind = entry.file_type().await?;
+
+            let kind = entry.file_type()?;
             if kind.is_symlink() {
                 continue;
             }
             if kind.is_dir() {
-                pending.push_back(path);
+                visit_directory(&mut pending, &directory, relative)?;
                 continue;
             }
             if !kind.is_file() {
                 continue;
             }
-            let metadata = entry.metadata().await?;
-            if metadata.len() > MAX_FILE_BYTES {
-                continue;
-            }
-            let Ok(content) = fs::read_to_string(entry.path()).await else {
+
+            let snapshot = match AnchoredPath::open(root, relative_text)
+                .and_then(|path| path.read_existing())
+            {
+                Ok(snapshot) => snapshot,
+                Err(_) => continue,
+            };
+            let Ok(content) = String::from_utf8(snapshot.bytes) else {
                 continue;
             };
+
             for (index, line) in content.lines().enumerate() {
                 if !line.contains(query) {
                     continue;
                 }
                 let preview: String = line.chars().take(300).collect();
                 matches.push(json!({
-                    "path": relative.to_string_lossy(),
+                    "path": relative_text,
                     "line": index + 1,
                     "text": preview,
                 }));
@@ -224,6 +236,7 @@ async fn search_text(root: &Path, arguments: &Value) -> Result<Value> {
             }
         }
     }
+
     Ok(json!({
         "matches": matches,
         "truncated": truncated,
@@ -233,10 +246,14 @@ async fn search_text(root: &Path, arguments: &Value) -> Result<Value> {
 
 pub(crate) async fn execute(root: &Path, name: &str, args: &Value) -> Result<Value> {
     permissions::authorize_tool(name)?;
-    match name {
-        "project.list_files" => list_files(root, args).await,
-        "project.read_file" => read_file(root, args).await,
-        "project.search_text" => search_text(root, args).await,
+    let root = root.to_path_buf();
+    let name = name.to_owned();
+    let args = args.clone();
+    tokio::task::spawn_blocking(move || match name.as_str() {
+        "project.list_files" => list_files(&root, &args),
+        "project.read_file" => read_file(&root, &args),
+        "project.search_text" => search_text(&root, &args),
         _ => bail!("Outil non autorisé"),
-    }
+    })
+    .await?
 }

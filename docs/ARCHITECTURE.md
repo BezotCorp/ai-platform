@@ -381,52 +381,37 @@ et aucune intégration MCP ne sont introduits ici.
 Aucun test n'a été créé.
 
 
-## Consolidation des écritures par descripteurs
+## Accès aux fichiers fondés sur les capacités
 
-Cette implémentation des écritures cible Linux.
+Les outils natifs de lecture et d'écriture utilisent `FileManager` pour
+résoudre les chemins relativement au répertoire du projet avec `cap-std`.
+Le code du backend n'effectue pas d'appels directs à `libc` et n'ajoute
+aucun bloc `unsafe` pour ces opérations.
 
-Les chemins d'écriture sont parcourus à l'aide de
-descripteurs de répertoires et de openat avec O_NOFOLLOW.
-Les liens symboliques sont refusés pendant la résolution.
+La lecture `project.read_file` utilise `AnchoredPath` et ses instantanés
+de fichiers : contrôle de la taille, refus des liens symboliques constatés,
+refus des fichiers à plusieurs liens matériels et vérification de l'identité
+et du contenu durant la lecture.
 
-Les fichiers de remplacement à plusieurs liens matériels
-sont refusés. L'identité et le contenu du fichier original
-sont vérifiés avant publication.
+`project.list_files` et `project.search_text` parcourent des répertoires
+ouverts par `FileManager` ; elles ne reconstruisent plus de chemins
+absolus pour ouvrir les éléments découverts. Les noms protégés restent
+filtrés avant toute traversée. Les parcours sont bornés et la lecture et
+la recherche s'exécutent dans une tâche bloquante, hors des threads
+asynchrones de Tokio. La racine du projet s'indique par `.` lors de
+l'appel à `project.list_files`.
 
-La création utilise linkat et ne remplace pas une destination
-existante. Le remplacement utilise renameat après une
-dernière vérification du fichier original.
+Les écritures conservent la préparation d'un aperçu et son empreinte
+SHA-256, l'approbation explicite liée à cet aperçu, les contrôles de
+conflits avant publication et le verrou global du backend. La création
+refuse de remplacer une destination déjà existante ; le remplacement
+publie un fichier temporaire synchronisé puis synchronise le répertoire.
 
-Les fichiers temporaires sont synchronisés avant leur
-publication. Le répertoire de destination est ensuite
-synchronisé.
+Les contrôles applicatifs et `cap-std` n'isolent pas le processus des
+autres ressources auxquelles le compte système a accès. Ils ne rendent
+pas non plus atomique la séquence « dernière vérification puis renommage »
+face à un processus extérieur qui modifie simultanément la destination.
+Aucune garantie absolue contre les courses externes n'est revendiquée.
 
-Le verrou des écritures internes au backend reste détenu
-par la tâche bloquante jusqu'à la fin de la publication.
-
-### Autorisation des écritures
-
-tool.preview contient preview_sha256, qui représente
-l'empreinte SHA-256 du JSON de l'aperçu.
-
-approval.required transmet la même empreinte.
-
-Une approbation positive avec approval.resolve doit
-contenir cette empreinte exacte. Un refus explicite
-reste possible sans elle.
-
-Les autorisations restent isolées par connexion WebSocket.
-
-### Limites
-
-Les processus externes ne sont pas obligés de respecter
-le verrou du backend. Une modification intervenant après
-la dernière vérification et avant renameat reste possible.
-
-L'implémentation ne revendique donc pas de garantie
-absolue contre les modifications concurrentes externes.
-
-La compilation Rust ne remplace pas la validation
-fonctionnelle du cycle de modification des fichiers.
-
-Aucun test n'est introduit par cette modification.
+Les limites de contexte et la récupération ciblée du code restent une
+étape distincte. Aucun test supplémentaire n'est ajouté par ce commit.
