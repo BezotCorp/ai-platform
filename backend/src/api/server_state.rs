@@ -1,8 +1,7 @@
 use std::sync::Arc;
-
 use tokio::sync::{Mutex, Semaphore};
 
-use crate::{memory::MemoryStore, providers::Client};
+use crate::{agents::MemoryStore, providers::Client};
 
 #[derive(Clone)]
 pub(crate) struct ServerState {

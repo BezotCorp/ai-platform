@@ -1,21 +1,17 @@
-use std::{path::PathBuf, sync::Arc, time::Duration};
-
 use axum::extract::ws::{Message as WsMessage, WebSocket};
-
 use futures_util::{SinkExt, StreamExt};
 use serde_json::{Value, json};
-
+use std::{path::PathBuf, sync::Arc, time::Duration};
 use tokio::{
     sync::{Mutex, Semaphore, mpsc},
     task::JoinHandle,
+    time,
 };
-
 use tokio_util::sync::CancellationToken;
 
 use crate::{
-    agents::AgentExecution,
+    agents::{AgentExecution, MemoryStore},
     api::{Command, Event, RunRequest, models::list},
-    memory::MemoryStore,
     providers::Client,
     tools::ToolApprovalGate,
 };
@@ -248,7 +244,6 @@ pub(crate) async fn serve(
                         break;
                     }
                 }
-
                 Ok(Command::RunCancel { request_id }) => match &active {
                     Some((id, cancel, handle)) if id == &request_id && !handle.is_finished() => {
                         cancel.cancel();
@@ -277,12 +272,7 @@ pub(crate) async fn serve(
                         .is_some_and(|(id, _, handle)| id == &request_id && !handle.is_finished());
                     let resolved = if belongs_to_run {
                         approvals
-                            .resolve(
-                                &request_id,
-                                &call_id,
-                                approved,
-                                preview_sha256.as_deref(),
-                            )
+                            .resolve(&request_id, &call_id, approved, preview_sha256.as_deref())
                             .await
                     } else {
                         false
@@ -319,7 +309,7 @@ pub(crate) async fn serve(
     }
     if let Some((_, token, mut handle)) = active {
         token.cancel();
-        if tokio::time::timeout(Duration::from_secs(5), &mut handle)
+        if time::timeout(Duration::from_secs(5), &mut handle)
             .await
             .is_err()
         {

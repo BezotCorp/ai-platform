@@ -15,7 +15,6 @@ impl ContextBudget {
             .system_tokens
             .checked_add(self.output_tokens)?
             .checked_add(self.tool_tokens)?;
-
         self.capacity_tokens.checked_sub(reserved)
     }
 }

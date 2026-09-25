@@ -1,4 +1,4 @@
-use crate::{context::ranking::relevance, sessions::Message};
+use crate::{agents::relevance, sessions::Message};
 
 use anyhow::{Result, anyhow};
 
@@ -30,7 +30,6 @@ pub(crate) fn select_history(
 ) -> Result<Vec<usize>> {
     let mut exchanges = Vec::new();
     let mut start = None;
-
     for (index, message) in history.iter().enumerate() {
         if message.role == "user" {
             if let Some(previous) = start {
@@ -39,16 +38,21 @@ pub(crate) fn select_history(
                     start: previous,
                     end: index,
                     cost: exchange_cost(group)?,
-                    relevance: 4 * relevance(query, &group
+                    relevance: 4 * relevance(
+                        query,
+                        &group
                             .iter()
                             .map(|message| message.content.as_str())
                             .collect::<Vec<_>>()
-                            .join("\n"))
-                        + relevance(role_instructions, &group
+                            .join("\n"),
+                    ) + relevance(
+                        role_instructions,
+                        &group
                             .iter()
                             .map(|message| message.content.as_str())
                             .collect::<Vec<_>>()
-                            .join("\n")),
+                            .join("\n"),
+                    ),
                 });
             }
             start = Some(index);
@@ -61,19 +65,23 @@ pub(crate) fn select_history(
             start: previous,
             end: history.len(),
             cost: exchange_cost(group)?,
-            relevance: 4 * relevance(query, &group
+            relevance: 4 * relevance(
+                query,
+                &group
                     .iter()
                     .map(|message| message.content.as_str())
                     .collect::<Vec<_>>()
-                    .join("\n"))
-                        + relevance(role_instructions, &group
+                    .join("\n"),
+            ) + relevance(
+                role_instructions,
+                &group
                     .iter()
                     .map(|message| message.content.as_str())
                     .collect::<Vec<_>>()
-                    .join("\n")),
+                    .join("\n"),
+            ),
         });
     }
-
     // Pertinence d'abord, récence ensuite. Si aucun échange ne partage
     // de termes avec la question, les échanges récents sont prioritaires.
     exchanges.sort_by(|left, right| {
@@ -82,17 +90,14 @@ pub(crate) fn select_history(
             .cmp(&left.relevance)
             .then_with(|| right.start.cmp(&left.start))
     });
-
     let mut remaining = capacity;
     let mut selected = Vec::new();
-
     for exchange in exchanges {
         if exchange.cost <= remaining {
             remaining -= exchange.cost;
             selected.extend(exchange.start..exchange.end);
         }
     }
-
     selected.sort_unstable();
     Ok(selected)
 }

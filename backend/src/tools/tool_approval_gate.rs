@@ -3,7 +3,11 @@ use std::{collections::HashMap, sync::Arc, time::Duration};
 use anyhow::{Result, bail};
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
-use tokio::sync::{Mutex, mpsc, oneshot};
+use tokio::{
+    select,
+    sync::{Mutex, mpsc, oneshot},
+    time,
+};
 use tokio_util::sync::CancellationToken;
 
 use crate::api::Event;
@@ -26,7 +30,6 @@ impl ToolApprovalGate {
 
     pub(crate) fn preview_sha256(preview: &Value) -> Result<String> {
         let encoded = serde_json::to_vec(preview)?;
-
         Ok(Sha256::digest(encoded)
             .iter()
             .map(|byte| format!("{byte:02x}"))
@@ -89,11 +92,11 @@ impl ToolApprovalGate {
         );
         let result = async {
             outbound.send(notification).await?;
-            let decision = tokio::select! {
+            let decision = select! {
                 () = cancel.cancelled() => {
                     bail!("Exécution annulée");
                 }
-                result = tokio::time::timeout(
+                result = time::timeout(
                     Duration::from_secs(120),
                     receiver,
                 ) => {

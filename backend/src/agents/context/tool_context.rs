@@ -2,7 +2,7 @@ use anyhow::{Result, bail};
 use serde_json::Value;
 
 use crate::{
-    context::{prepared_tool_context::PreparedToolContext, tool_exchange::ToolExchange},
+    agents::{PreparedToolContext, ToolExchange, relevance},
     sessions::Message,
 };
 
@@ -22,10 +22,9 @@ impl ToolContext {
         memory_ids: Vec<i64>,
     ) -> Result<Self> {
         let mut messages = messages.into_iter();
-        let first = messages.next().ok_or_else(|| {
-            anyhow::anyhow!("Contexte obligatoire absent")
-        })?;
-
+        let first = messages
+            .next()
+            .ok_or_else(|| anyhow::anyhow!("Contexte obligatoire absent"))?;
         let mut remaining = Vec::new();
         let system = if first.role == "system" {
             Some(serde_json::to_value(first)?)
@@ -38,11 +37,9 @@ impl ToolContext {
                 .map(serde_json::to_value)
                 .collect::<serde_json::Result<Vec<_>>>()?,
         );
-
         if remaining.len() < history_indices.len() + memory_ids.len() + 1 {
             bail!("Historique, mémoire et provenance incohérents");
         }
-
         let mut recalled = remaining.split_off(history_indices.len());
         let mandatory = recalled.split_off(memory_ids.len());
         if mandatory
@@ -53,13 +50,9 @@ impl ToolContext {
         {
             bail!("Dernier message utilisateur absent");
         }
-
         Ok(Self {
             system,
-            history: history_indices
-                .into_iter()
-                .zip(remaining)
-                .collect(),
+            history: history_indices.into_iter().zip(remaining).collect(),
             memory: memory_ids.into_iter().zip(recalled).collect(),
             mandatory,
             exchanges: Vec::new(),
@@ -87,7 +80,6 @@ impl ToolContext {
         messages.extend(self.history.iter().map(|(_, message)| message.clone()));
         messages.extend(self.memory.iter().map(|(_, message)| message.clone()));
         messages.extend(self.mandatory.iter().cloned());
-
         for (exchange, compacted) in self.exchanges.iter().zip(&self.compacted) {
             if *compacted {
                 messages.push(exchange.summary.clone());
@@ -103,22 +95,15 @@ impl ToolContext {
         if self.history.is_empty() {
             return Vec::new();
         }
-
         let end = self
             .history
             .iter()
             .enumerate()
             .skip(1)
-            .find(|(_, (_, message))| {
-                message.get("role").and_then(Value::as_str) == Some("user")
-            })
+            .find(|(_, (_, message))| message.get("role").and_then(Value::as_str) == Some("user"))
             .map(|(index, _)| index)
             .unwrap_or(self.history.len());
-
-        self.history
-            .drain(..end)
-            .map(|(index, _)| index)
-            .collect()
+        self.history.drain(..end).map(|(index, _)| index).collect()
     }
 
     pub(crate) fn prepare(
@@ -134,12 +119,10 @@ impl ToolContext {
         let available = capacity
             .checked_sub(reserve)
             .ok_or_else(|| anyhow::anyhow!("Réserves supérieures à la fenêtre de contexte"))?;
-
         let mut compacted_rounds = Vec::new();
         let mut omitted_history_indices = Vec::new();
         let mut omitted_memory_ids = Vec::new();
         let mut latest_round_compacted = false;
-
         loop {
             let messages = self.render();
             if serde_json::to_vec(&messages)?.len() <= available {
@@ -151,7 +134,6 @@ impl ToolContext {
                     latest_round_compacted,
                 });
             }
-
             // Condenser d'abord les anciennes lectures terminées.
             let earlier = self.exchanges.len().saturating_sub(1);
             let query = self
@@ -167,9 +149,7 @@ impl ToolContext {
                 .and_then(Value::as_str)
                 .unwrap_or("");
             if let Some(index) = (0..earlier)
-                .filter(|&index| {
-                    !self.compacted[index] && !self.exchanges[index].contains_write
-                })
+                .filter(|&index| !self.compacted[index] && !self.exchanges[index].contains_write)
                 .min_by_key(|&index| {
                     let content = self.exchanges[index]
                         .summary
@@ -177,11 +157,9 @@ impl ToolContext {
                         .and_then(Value::as_str)
                         .unwrap_or("");
                     (
-                        crate::context::ranking::relevance(query, content)
+                        relevance(query, content)
                             .saturating_mul(4)
-                            .saturating_add(
-                                crate::context::ranking::relevance(role, content),
-                            ),
+                            .saturating_add(relevance(role, content)),
                         index,
                     )
                 })
@@ -190,14 +168,12 @@ impl ToolContext {
                 compacted_rounds.push(index);
                 continue;
             }
-
             // Les souvenirs rappelés sont facultatifs. On retire en premier
             // celui classé le moins pertinent lors de la récupération.
             if let Some((id, _)) = self.memory.pop() {
                 omitted_memory_ids.push(id);
                 continue;
             }
-
             // Les échanges historiques sont facultatifs ; la question,
             // le rôle et les propositions MoA ne le sont jamais.
             let omitted = self.omit_oldest_exchange();
@@ -205,7 +181,6 @@ impl ToolContext {
                 omitted_history_indices.extend(omitted);
                 continue;
             }
-
             // N'omettre la dernière lecture que si elle seule empêche
             // la génération. Son résumé exige explicitement une relecture.
             if let Some(index) = self.exchanges.len().checked_sub(1)
@@ -217,7 +192,6 @@ impl ToolContext {
                 latest_round_compacted = true;
                 continue;
             }
-
             bail!(
                 "Le contexte obligatoire ou les résultats d'écriture dépassent le budget ; aucune donnée obligatoire n'a été supprimée"
             );

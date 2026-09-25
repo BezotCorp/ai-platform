@@ -7,8 +7,20 @@ fn terms(text: &str) -> BTreeSet<String> {
         .filter(|term| {
             !matches!(
                 term.as_str(),
-                "avec" | "dans" | "pour" | "cette" | "comme" | "mais" | "plus"
-                    | "the" | "and" | "for" | "with" | "from" | "that" | "this"
+                "avec"
+                    | "dans"
+                    | "pour"
+                    | "cette"
+                    | "comme"
+                    | "mais"
+                    | "plus"
+                    | "the"
+                    | "and"
+                    | "for"
+                    | "with"
+                    | "from"
+                    | "that"
+                    | "this"
             )
         })
         .collect()
@@ -19,7 +31,6 @@ pub(crate) fn relevance(query: &str, exchange: &str) -> usize {
     if query_terms.is_empty() {
         return 0;
     }
-
     let exchange_terms = terms(exchange);
     query_terms.intersection(&exchange_terms).count()
 }

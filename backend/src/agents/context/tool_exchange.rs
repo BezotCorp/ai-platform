@@ -25,7 +25,6 @@ impl ToolExchange {
         if calls.is_empty() || calls.len() != results.len() {
             bail!("Tour d'outils incomplet");
         }
-
         let mut observations = Vec::with_capacity(results.len());
         let mut contains_write = false;
 
@@ -34,32 +33,23 @@ impl ToolExchange {
                 .pointer("/function/name")
                 .and_then(Value::as_str)
                 .context("Nom d'outil absent")?;
-
             let write = matches!(name, "project.replace_text" | "project.create_file");
             contains_write |= write;
-
             let payload: Value = serde_json::from_str(
                 message
                     .get("content")
                     .and_then(Value::as_str)
                     .context("Résultat d'outil absent")?,
             )?;
-
             let result = payload.get("result").unwrap_or(&Value::Null);
             let arguments = call.pointer("/function/arguments");
-            let path = result
-                .get("path")
-                .and_then(Value::as_str)
-                .or_else(|| {
-                    arguments
-                        .and_then(|arguments| arguments.get("path"))
-                        .and_then(Value::as_str)
-                });
+            let path = result.get("path").and_then(Value::as_str).or_else(|| {
+                arguments
+                    .and_then(|arguments| arguments.get("path"))
+                    .and_then(Value::as_str)
+            });
             let sha256 = result.get("sha256").and_then(Value::as_str);
-            let line_count = result
-                .get("lines")
-                .and_then(Value::as_array)
-                .map(Vec::len);
+            let line_count = result.get("lines").and_then(Value::as_array).map(Vec::len);
             let last_line = result
                 .get("lines")
                 .and_then(Value::as_array)
@@ -95,7 +85,6 @@ impl ToolExchange {
                         .collect::<Vec<_>>()
                 })
                 .unwrap_or_default();
-
             observations.push(json!({
                 "tool": name,
                 "ok": payload.get("ok").and_then(Value::as_bool) == Some(true),
@@ -116,7 +105,6 @@ impl ToolExchange {
                 ),
             }));
         }
-
         let record = json!({
             "round": round,
             "source": "completed_native_tool_calls",
@@ -125,7 +113,6 @@ impl ToolExchange {
             "refetch_before_using_missing_code_or_stale_sha256": true,
             "observations": observations,
         });
-
         Ok(Self {
             assistant,
             results,

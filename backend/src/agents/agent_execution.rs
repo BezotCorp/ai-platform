@@ -6,10 +6,11 @@ use tokio::sync::{Mutex, mpsc};
 use tokio_util::sync::CancellationToken;
 
 use crate::{
-    agents::{ExecutionMode, Scheduler},
+    agents::{
+        ExecutionMode, MemoryStore, Scheduler, ToolContext,
+        context::{assemble, limits},
+    },
     api::Event,
-    context::{ToolContext, assemble, limits},
-    memory::MemoryStore,
     providers::{Chat, Client},
     sessions::Message,
     tools::{self, ToolApprovalGate, WriteProposal},
@@ -69,11 +70,13 @@ impl AgentExecution {
                      approbation explicite."
                 );
                 let recalled = if let Some(store) = memory {
-                    store.recall(
-                        &history.last().context("Conversation vide")?.content,
-                        &instructions,
-                        4,
-                    ).await?
+                    store
+                        .recall(
+                            &history.last().context("Conversation vide")?.content,
+                            &instructions,
+                            4,
+                        )
+                        .await?
                 } else {
                     Vec::new()
                 };
@@ -86,10 +89,8 @@ impl AgentExecution {
                     output_tokens,
                     tool_tokens,
                 )?;
-                let history_indices =
-                    assembled.provenance.history_message_indices.clone();
-                let recalled_memory_ids =
-                    assembled.provenance.memory_entry_ids.clone();
+                let history_indices = assembled.provenance.history_message_indices.clone();
+                let recalled_memory_ids = assembled.provenance.memory_entry_ids.clone();
                 outbound
                     .send(Event::new(
                         "context.prepared",
@@ -125,11 +126,8 @@ impl AgentExecution {
                     if cancel.is_cancelled() {
                         bail!("Exécution annulée");
                     }
-                    let prepared = tool_context.prepare(
-                        context_tokens,
-                        tool_tokens,
-                        output_tokens,
-                    )?;
+                    let prepared =
+                        tool_context.prepare(context_tokens, tool_tokens, output_tokens)?;
                     let messages = prepared.messages;
                     if !prepared.compacted_rounds.is_empty()
                         || !prepared.omitted_history_indices.is_empty()
@@ -381,16 +379,15 @@ impl AgentExecution {
         }
         if let (Some(store), Some((_, answer)), Some(prompt)) =
             (memory, previous_layer.last(), history.last())
+            && let Err(error) = store.remember(&prompt.content, answer).await
         {
-            if let Err(error) = store.remember(&prompt.content, answer).await {
-                outbound
-                    .send(Event::new(
-                        "memory.failed",
-                        request_id,
-                        json!({ "error": error.to_string() }),
-                    ))
-                    .await?;
-            }
+            outbound
+                .send(Event::new(
+                    "memory.failed",
+                    request_id,
+                    json!({ "error": error.to_string() }),
+                ))
+                .await?;
         }
         outbound
             .send(Event::new(

@@ -1,11 +1,10 @@
 mod agents;
 mod api;
-mod context;
 mod file_manager;
-mod memory;
 mod providers;
 mod sessions;
 mod tools;
+mod sqlite;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {

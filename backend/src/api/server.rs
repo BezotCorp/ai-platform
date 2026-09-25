@@ -1,12 +1,4 @@
-use std::{
-    env,
-    io::{self, Write},
-    net::Ipv4Addr,
-    sync::Arc,
-};
-
 use anyhow::{Context, Result, bail};
-
 use axum::{
     Router,
     extract::{State, ws::WebSocketUpgrade},
@@ -14,15 +6,25 @@ use axum::{
     response::{IntoResponse, Response},
     routing::get,
 };
-
 use serde_json::json;
-use tokio::sync::{Mutex, Semaphore};
+use std::{
+    env,
+    io::{self, Write},
+    net::Ipv4Addr,
+    sync::Arc,
+};
+use tokio::{
+    fs,
+    sync::{Mutex, Semaphore},
+};
 
 use crate::{
+    agents::MemoryStore,
     api::{ServerState, socket},
-    memory::MemoryStore,
     providers::Client,
 };
+
+const DEFAULT_OLLAMA_HOST: &str = "http://127.0.0.1:11434";
 
 async fn upgrade(
     State(state): State<ServerState>,
@@ -60,12 +62,12 @@ pub(crate) async fn run() -> Result<()> {
     if origin.trim().is_empty() || origin == "*" {
         bail!("Origine frontend invalide");
     }
-    let ollama_host = env::var("OLLAMA_HOST").unwrap_or_else(|_| "http://127.0.0.1:11434".into());
+    let ollama_host = env::var("OLLAMA_HOST").unwrap_or_else(|_| DEFAULT_OLLAMA_HOST.into());
     let client = Client::new(&ollama_host)?;
     let project_root = env::var("AI_PLATFORM_PROJECT_ROOT")
         .context("AI_PLATFORM_PROJECT_ROOT doit être fourni par le frontend")?;
-    let project_root = tokio::fs::canonicalize(&project_root).await?;
-    if !tokio::fs::metadata(&project_root).await?.is_dir() {
+    let project_root = fs::canonicalize(&project_root).await?;
+    if !fs::metadata(&project_root).await?.is_dir() {
         bail!("Le projet autorisé n'est pas un répertoire");
     }
     let approve_reads = match env::var("AI_PLATFORM_APPROVE_READS").as_deref() {
