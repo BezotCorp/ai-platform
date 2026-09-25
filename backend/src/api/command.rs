@@ -7,12 +7,10 @@ pub(crate) enum Command {
     Authenticate {
         token: String,
     },
-
     #[serde(rename = "models.list")]
     ModelsList {
         request_id: String,
     },
-
     #[serde(rename = "run.cancel")]
     RunCancel {
         request_id: String,

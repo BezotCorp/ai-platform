@@ -1,4 +1,4 @@
-use super::super::agent_config::AgentConfig;
+use crate::agents::AgentConfig;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct AgentLayer {
@@ -6,9 +6,7 @@ pub(crate) struct AgentLayer {
 }
 
 impl AgentLayer {
-    pub fn new(
-        agents: Vec<AgentConfig>,
-    ) -> Result<Self, &'static str> {
+    pub fn new(agents: Vec<AgentConfig>) -> Result<Self, &'static str> {
         if agents.is_empty() {
             return Err("An agent layer cannot be empty");
         }

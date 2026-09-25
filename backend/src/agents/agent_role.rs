@@ -9,7 +9,6 @@ impl AgentRole {
         if name.trim().is_empty() {
             return Err("Agent role cannot be empty");
         }
-
         Ok(Self { name, instructions })
     }
 }

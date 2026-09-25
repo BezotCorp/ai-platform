@@ -1,8 +1,6 @@
-use crate::providers::model::Model;
-
-use super::{
-    agent_identity::AgentIdentity,
-    agent_role::AgentRole,
+use crate::{
+    agents::{AgentIdentity, agent_role::AgentRole},
+    providers::Model,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]

@@ -1,6 +1,6 @@
 use serde::Deserialize;
 
-use super::agent_spec::AgentSpec;
+use crate::api::AgentSpec;
 
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]

@@ -1,12 +1,12 @@
-mod providers;
 mod agents;
+mod api;
 mod context;
 mod memory;
-mod tools;
+mod providers;
 mod sessions;
-mod api;
+mod tools;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    api::server::run().await
+    api::run().await
 }

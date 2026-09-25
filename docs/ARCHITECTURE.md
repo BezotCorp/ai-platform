@@ -222,3 +222,42 @@ pas un budget de contexte calculé en tokens.
 Aucun test n'a été créé.
 
 La compilation Rust doit être vérifiée séparément.
+
+## Assemblage du contexte — première intégration
+
+Le moteur d'exécution utilise ContextBudget avant
+chaque génération Ollama.
+
+Configuration facultative fournie au lancement
+par le frontend :
+
+- AI_PLATFORM_NUM_CTX : 4096 par défaut.
+- AI_PLATFORM_NUM_PREDICT : 768 par défaut.
+
+Ces paramètres sont transmis à Ollama via
+num_ctx et num_predict.
+
+L'assembleur préserve le dernier message utilisateur
+et les propositions de la couche MoA précédente.
+
+Il sélectionne les messages historiques récents
+dans la limite du budget disponible.
+
+Il refuse la génération lorsque les informations
+obligatoires dépassent ce budget.
+
+L'événement WebSocket context.prepared expose
+les limites, le volume estimé et le nombre de
+messages historiques retenus ou écartés.
+
+Le comptage utilise une estimation basée sur
+les octets UTF-8. Il ne s'agit pas d'un comptage
+exact des tokens propre au modèle.
+
+Les limites configurées ne prouvent pas que le
+modèle sélectionné accepte réellement cette
+fenêtre de contexte. La découverte de cette
+capacité reste à raccorder.
+
+La récupération depuis SQLite, les outils MCP
+et l'indexation sémantique restent à implémenter.

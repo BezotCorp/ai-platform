@@ -1,4 +1,4 @@
-use super::super::agent_config::AgentConfig;
+use crate::agents::AgentConfig;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct Aggregation {

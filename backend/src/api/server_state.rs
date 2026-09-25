@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use tokio::sync::Semaphore;
 
-use crate::providers::ollama::client::Client;
+use crate::providers::Client;
 
 #[derive(Clone)]
 pub(crate) struct ServerState {

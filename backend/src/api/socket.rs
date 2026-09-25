@@ -1,12 +1,6 @@
-use std::{
-    sync::Arc,
-    time::Duration,
-};
+use std::{sync::Arc, time::Duration};
 
-use axum::extract::ws::{
-    Message as WsMessage,
-    WebSocket,
-};
+use axum::extract::ws::{Message as WsMessage, WebSocket};
 
 use futures_util::{SinkExt, StreamExt};
 use serde_json::{Value, json};
@@ -19,21 +13,12 @@ use tokio::{
 use tokio_util::sync::CancellationToken;
 
 use crate::{
-    agents::agent_execution::AgentExecution,
-    providers::ollama::client::Client,
+    agents::AgentExecution,
+    api::{Command, Event, RunRequest, models::list},
+    providers::Client,
 };
 
-use super::{
-    command::Command,
-    event::Event,
-    models,
-    run_request::RunRequest,
-};
-
-fn match_token(
-    provided: &str,
-    expected: &str,
-) -> bool {
+fn match_token(provided: &str, expected: &str) -> bool {
     let left = provided.as_bytes();
     let right = expected.as_bytes();
 
@@ -56,20 +41,13 @@ pub(crate) async fn serve(
     expected_token: Arc<str>,
     gpu: Arc<Semaphore>,
 ) {
-    let first = tokio::time::timeout(
-        Duration::from_secs(5),
-        socket.recv(),
-    )
-    .await;
+    let first = tokio::time::timeout(Duration::from_secs(5), socket.recv()).await;
 
-    let Ok(Some(Ok(WsMessage::Text(text)))) = first
-    else {
+    let Ok(Some(Ok(WsMessage::Text(text)))) = first else {
         return;
     };
 
-    let Ok(Command::Authenticate { token }) =
-        serde_json::from_str::<Command>(&text)
-    else {
+    let Ok(Command::Authenticate { token }) = serde_json::from_str::<Command>(&text) else {
         return;
     };
 
@@ -83,39 +61,22 @@ pub(crate) async fn serve(
 
     let writer = tokio::spawn(async move {
         while let Some(event) = rx.recv().await {
-            let Ok(encoded) =
-                serde_json::to_string(&event)
-            else {
+            let Ok(encoded) = serde_json::to_string(&event) else {
                 break;
             };
 
-            if sink
-                .send(WsMessage::Text(encoded.into()))
-                .await
-                .is_err()
-            {
+            if sink.send(WsMessage::Text(encoded.into())).await.is_err() {
                 break;
             }
         }
     });
 
-    let _ = tx
-        .send(Event::new(
-            "authenticated",
-            "",
-            json!({}),
-        ))
-        .await;
+    let _ = tx.send(Event::new("authenticated", "", json!({}))).await;
 
-    let mut active: Option<(
-        String,
-        CancellationToken,
-        JoinHandle<()>,
-    )> = None;
+    let mut active: Option<(String, CancellationToken, JoinHandle<()>)> = None;
 
     while let Some(frame) = stream.next().await {
-        let Ok(WsMessage::Text(text)) = frame
-        else {
+        let Ok(WsMessage::Text(text)) = frame else {
             break;
         };
 
@@ -133,9 +94,7 @@ pub(crate) async fn serve(
             continue;
         }
 
-        let Ok(value) =
-            serde_json::from_str::<Value>(&text)
-        else {
+        let Ok(value) = serde_json::from_str::<Value>(&text) else {
             let _ = tx
                 .send(Event::new(
                     "error",
@@ -149,16 +108,10 @@ pub(crate) async fn serve(
             continue;
         };
 
-        if value
-            .get("type")
-            .and_then(Value::as_str)
-            == Some("run.start")
-        {
+        if value.get("type").and_then(Value::as_str) == Some("run.start") {
             if active
                 .as_ref()
-                .is_some_and(
-                    |(_, _, handle)| !handle.is_finished()
-                )
+                .is_some_and(|(_, _, handle)| !handle.is_finished())
             {
                 let _ = tx
                     .send(Event::new(
@@ -174,29 +127,26 @@ pub(crate) async fn serve(
                 continue;
             }
 
-            let request: RunRequest =
-                match serde_json::from_value(value) {
-                    Ok(request) => request,
+            let request: RunRequest = match serde_json::from_value(value) {
+                Ok(request) => request,
 
-                    Err(error) => {
-                        let _ = tx
-                            .send(Event::new(
-                                "error",
-                                "",
-                                json!({
-                                    "error":
-                                        error.to_string(),
-                                }),
-                            ))
-                            .await;
+                Err(error) => {
+                    let _ = tx
+                        .send(Event::new(
+                            "error",
+                            "",
+                            json!({
+                                "error":
+                                    error.to_string(),
+                            }),
+                        ))
+                        .await;
 
-                        continue;
-                    }
-                };
+                    continue;
+                }
+            };
 
-            if let Err(error) =
-                request.validate_messages()
-            {
+            if let Err(error) = request.validate_messages() {
                 let _ = tx
                     .send(Event::new(
                         "error",
@@ -242,11 +192,7 @@ pub(crate) async fn serve(
 
             let handle = tokio::spawn(async move {
                 let _ = event_tx
-                    .send(Event::new(
-                        "run.queued",
-                        &id,
-                        json!({}),
-                    ))
+                    .send(Event::new("run.queued", &id, json!({})))
                     .await;
 
                 let permit = tokio::select! {
@@ -263,11 +209,7 @@ pub(crate) async fn serve(
                 };
 
                 let _ = event_tx
-                    .send(Event::new(
-                        "run.started",
-                        &id,
-                        json!({}),
-                    ))
+                    .send(Event::new("run.started", &id, json!({})))
                     .await;
 
                 let result = AgentExecution::run(
@@ -281,12 +223,11 @@ pub(crate) async fn serve(
                 .await;
 
                 if let Err(error) = result {
-                    let kind =
-                        if task_cancel.is_cancelled() {
-                            "run.cancelled"
-                        } else {
-                            "run.failed"
-                        };
+                    let kind = if task_cancel.is_cancelled() {
+                        "run.cancelled"
+                    } else {
+                        "run.failed"
+                    };
 
                     let _ = event_tx
                         .send(Event::new(
@@ -303,24 +244,11 @@ pub(crate) async fn serve(
                 drop(permit);
             });
 
-            active = Some((
-                request_id,
-                cancel,
-                handle,
-            ));
+            active = Some((request_id, cancel, handle));
         } else {
-            match serde_json::from_value::<Command>(
-                value
-            ) {
-                Ok(Command::ModelsList {
-                    request_id,
-                }) => {
-                    let event = models::list(
-                        &client,
-                        &request_id,
-                    )
-                    .await
-                    .unwrap_or_else(|error| {
+            match serde_json::from_value::<Command>(value) {
+                Ok(Command::ModelsList { request_id }) => {
+                    let event = list(&client, &request_id).await.unwrap_or_else(|error| {
                         Event::new(
                             "error",
                             &request_id,
@@ -336,34 +264,24 @@ pub(crate) async fn serve(
                     }
                 }
 
-                Ok(Command::RunCancel {
-                    request_id,
-                }) => {
-                    match &active {
-                        Some((
-                            id,
-                            cancel,
-                            handle,
-                        )) if id == &request_id
-                            && !handle.is_finished() =>
-                        {
-                            cancel.cancel();
-                        }
-
-                        _ => {
-                            let _ = tx
-                                .send(Event::new(
-                                    "error",
-                                    &request_id,
-                                    json!({
-                                        "error":
-                                            "Aucune exécution active correspondante",
-                                    }),
-                                ))
-                                .await;
-                        }
+                Ok(Command::RunCancel { request_id }) => match &active {
+                    Some((id, cancel, handle)) if id == &request_id && !handle.is_finished() => {
+                        cancel.cancel();
                     }
-                }
+
+                    _ => {
+                        let _ = tx
+                            .send(Event::new(
+                                "error",
+                                &request_id,
+                                json!({
+                                    "error":
+                                        "Aucune exécution active correspondante",
+                                }),
+                            ))
+                            .await;
+                    }
+                },
 
                 _ => {
                     let _ = tx

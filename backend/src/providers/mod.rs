@@ -1,3 +1,6 @@
+mod model;
+mod ollama;
 mod provider;
-pub(crate) mod model;
-pub(crate) mod ollama;
+
+pub(crate) use model::Model;
+pub(crate) use ollama::{AvailableModel, Client, stream};

@@ -4,17 +4,11 @@ use tokio::sync::mpsc;
 use tokio_util::sync::CancellationToken;
 
 use crate::{
-    api::event::Event,
-    providers::ollama::{
-        chat,
-        client::Client,
-    },
-    sessions::message::Message,
-};
-
-use super::orchestration::{
-    execution_mode::ExecutionMode,
-    scheduler::Scheduler,
+    agents::{ExecutionMode, Scheduler},
+    api::Event,
+    context::{assemble, limits},
+    providers::{Client, stream},
+    sessions::Message,
 };
 
 pub(crate) struct AgentExecution;
@@ -28,19 +22,14 @@ impl AgentExecution {
         outbound: &mpsc::Sender<Event>,
         cancel: &CancellationToken,
     ) -> Result<()> {
-        let mut previous_layer:
-            Vec<(String, String)> = Vec::new();
-
-        for (layer_index, agents) in
-            Scheduler::plan(mode).iter().enumerate()
-        {
+        let (context_tokens, output_tokens) = limits()?;
+        let mut previous_layer: Vec<(String, String)> = Vec::new();
+        for (layer_index, agents) in Scheduler::plan(mode).iter().enumerate() {
             let mut current_layer = Vec::new();
-
             for agent in agents {
                 if cancel.is_cancelled() {
                     bail!("Exécution annulée");
                 }
-
                 outbound
                     .send(Event::new(
                         "agent.started",
@@ -53,57 +42,46 @@ impl AgentExecution {
                         }),
                     ))
                     .await?;
-
-                let mut messages = Vec::new();
-
-                if !agent.role.instructions
-                    .trim()
-                    .is_empty()
-                {
-                    messages.push(Message {
-                        role: "system".into(),
-                        content:
-                            agent.role.instructions.clone(),
-                    });
-                }
-
-                if !previous_layer.is_empty() {
-                    let references = previous_layer
-                        .iter()
-                        .map(|(id, result)| {
-                            format!("Agent {id} — proposition non vérifiée :\n{result}")
-                        })
-                        .collect::<Vec<_>>()
-                        .join("\n\n");
-
-                    if references.len() > 65_536 {
-                        bail!(
-                            "Résultats précédents trop volumineux"
-                        );
-                    }
-
-                    messages.push(Message {
-                        role: "user".into(),
-                        content: format!("Propositions non vérifiées de la couche précédente :\n{references}"),
-                    });
-                }
-
-                messages.extend_from_slice(history);
-
+                let assembled = assemble(
+                    &agent.role.instructions,
+                    &previous_layer,
+                    history,
+                    context_tokens,
+                    output_tokens,
+                )?;
+                outbound
+                    .send(Event::new(
+                        "context.prepared",
+                        request_id,
+                        json!({
+                            "agent_id": agent.identity.id,
+                            "context_tokens": context_tokens,
+                            "output_tokens": output_tokens,
+                            "estimated_input_tokens":
+                                assembled.estimated_input_tokens,
+                            "retained_history_messages":
+                                assembled.retained_history,
+                            "omitted_history_messages":
+                                assembled.omitted_history,
+                            "counting": "utf8_byte_estimate",
+                        }),
+                    ))
+                    .await?;
+                let messages = assembled.messages;
                 let agent_id = agent.identity.id.clone();
                 let events = outbound.clone();
                 let correlation = request_id.to_owned();
-
-                let answer = chat::stream(
+                let answer = stream(
                     client,
                     &agent.model.name,
                     &messages,
+                    context_tokens,
+                    output_tokens,
                     cancel,
                     move |delta| {
                         let events = events.clone();
                         let agent_id = agent_id.clone();
                         let correlation = correlation.clone();
-
                         async move {
                             events
                                 .send(Event::new(
@@ -121,7 +99,6 @@ impl AgentExecution {
                     },
                 )
                 .await?;
-
                 outbound
                     .send(Event::new(
                         "agent.completed",
@@ -132,16 +109,10 @@ impl AgentExecution {
                         }),
                     ))
                     .await?;
-
-                current_layer.push((
-                    agent.identity.id.clone(),
-                    answer,
-                ));
+                current_layer.push((agent.identity.id.clone(), answer));
             }
-
             previous_layer = current_layer;
         }
-
         outbound
             .send(Event::new(
                 "run.completed",
@@ -153,7 +124,6 @@ impl AgentExecution {
                 }),
             ))
             .await?;
-
         Ok(())
     }
 }

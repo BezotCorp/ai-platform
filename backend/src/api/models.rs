@@ -1,19 +1,13 @@
 use anyhow::Result;
 use serde_json::json;
 
-use crate::providers::ollama::{
-    client::Client,
-    models,
+use crate::{
+    api::Event,
+    providers::{AvailableModel, Client},
 };
 
-use super::event::Event;
-
-pub(crate) async fn list(
-    client: &Client,
-    request_id: &str,
-) -> Result<Event> {
-    let installed = models::list(client).await?;
-
+pub(crate) async fn list(client: &Client, request_id: &str) -> Result<Event> {
+    let installed = AvailableModel::list(client).await?;
     Ok(Event::new(
         "models.list",
         request_id,

@@ -1,6 +1,10 @@
-mod engine;
-mod retrieval;
-mod ranking;
 mod assembly;
 mod context_budget;
+mod engine;
 mod provenance;
+mod ranking;
+mod retrieval;
+
+pub(crate) use assembly::{AssembledContext, assemble};
+pub(crate) use context_budget::ContextBudget;
+pub(crate) use engine::limits;

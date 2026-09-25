@@ -1,9 +1,6 @@
 use std::collections::HashSet;
 
-use super::{
-    agent_layer::AgentLayer,
-    aggregation::Aggregation,
-};
+use crate::agents::{AgentLayer, Aggregation};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct Mixture {
@@ -12,10 +9,7 @@ pub(crate) struct Mixture {
 }
 
 impl Mixture {
-    pub fn new(
-        layers: Vec<AgentLayer>,
-        aggregation: Aggregation,
-    ) -> Result<Self, &'static str> {
+    pub fn new(layers: Vec<AgentLayer>, aggregation: Aggregation) -> Result<Self, &'static str> {
         if layers.is_empty() {
             return Err("A mixture requires at least one layer");
         }

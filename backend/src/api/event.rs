@@ -5,7 +5,6 @@ use serde_json::Value;
 pub(crate) struct Event {
     #[serde(rename = "type")]
     pub kind: String,
-
     pub request_id: String,
     pub data: Value,
 }

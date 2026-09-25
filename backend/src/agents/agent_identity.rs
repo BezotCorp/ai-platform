@@ -8,7 +8,6 @@ impl AgentIdentity {
         if id.trim().is_empty() {
             return Err("Agent identifier cannot be empty");
         }
-
         Ok(Self { id })
     }
 }

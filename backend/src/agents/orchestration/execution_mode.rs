@@ -1,7 +1,4 @@
-use super::{
-    super::agent_config::AgentConfig,
-    mixture::Mixture,
-};
+use crate::agents::{AgentConfig, Mixture};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum ExecutionMode {
