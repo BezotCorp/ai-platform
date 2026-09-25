@@ -1,8 +1,4 @@
-use std::{
-    collections::HashMap,
-    sync::Arc,
-    time::Duration,
-};
+use std::{collections::HashMap, sync::Arc, time::Duration};
 
 use anyhow::{Result, bail};
 use serde_json::{Value, json};
@@ -13,10 +9,7 @@ use crate::api::Event;
 
 #[derive(Clone, Default)]
 pub(crate) struct ToolApprovalGate {
-    pending: Arc<Mutex<HashMap<
-        String,
-        oneshot::Sender<bool>,
-    >>>,
+    pending: Arc<Mutex<HashMap<String, oneshot::Sender<bool>>>>,
 }
 
 impl ToolApprovalGate {
@@ -24,26 +17,13 @@ impl ToolApprovalGate {
         Self::default()
     }
 
-    fn key(
-        request_id: &str,
-        call_id: &str,
-    ) -> String {
+    fn key(request_id: &str, call_id: &str) -> String {
         format!("{request_id}:{call_id}")
     }
 
-    pub(crate) async fn resolve(
-        &self,
-        request_id: &str,
-        call_id: &str,
-        approved: bool,
-    ) -> bool {
+    pub(crate) async fn resolve(&self, request_id: &str, call_id: &str, approved: bool) -> bool {
         let key = Self::key(request_id, call_id);
-
-        let pending = self.pending
-            .lock()
-            .await
-            .remove(&key);
-
+        let pending = self.pending.lock().await.remove(&key);
         match pending {
             Some(sender) => sender.send(approved).is_ok(),
             None => false,
@@ -62,17 +42,12 @@ impl ToolApprovalGate {
     ) -> Result<()> {
         let key = Self::key(request_id, call_id);
         let (sender, receiver) = oneshot::channel();
-
         {
             let mut pending = self.pending.lock().await;
-
-            if pending.insert(key.clone(), sender)
-                .is_some()
-            {
+            if pending.insert(key.clone(), sender).is_some() {
                 bail!("Identifiant d'autorisation dupliqué");
             }
         }
-
         let notification = Event::new(
             "approval.required",
             request_id,
@@ -83,15 +58,12 @@ impl ToolApprovalGate {
                 "arguments": arguments,
             }),
         );
-
         let result = async {
             outbound.send(notification).await?;
-
             let decision = tokio::select! {
                 () = cancel.cancelled() => {
                     bail!("Exécution annulée");
                 }
-
                 result = tokio::time::timeout(
                     Duration::from_secs(120),
                     receiver,
@@ -99,17 +71,13 @@ impl ToolApprovalGate {
                     result??
                 }
             };
-
             if !decision {
                 bail!("Autorisation refusée");
             }
-
             Ok(())
         }
         .await;
-
         self.pending.lock().await.remove(&key);
-
         result
     }
 }

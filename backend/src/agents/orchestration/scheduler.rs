@@ -14,16 +14,13 @@ impl Scheduler {
             ExecutionMode::Single(agent) => {
                 vec![vec![agent]]
             }
-
             ExecutionMode::Mixture(mixture) => {
                 let mut layers: Vec<Vec<&AgentConfig>> = mixture
                     .layers
                     .iter()
                     .map(|layer| layer.agents.iter().collect())
                     .collect();
-
                 layers.push(vec![&mixture.aggregation.agent]);
-
                 layers
             }
         }

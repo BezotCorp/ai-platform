@@ -65,6 +65,60 @@ pub(crate) fn definitions() -> Vec<Value> {
                 }
             }
         }),
+        json!({
+            "type": "function",
+            "function": {
+                "name": "project.replace_text",
+                "description": "Replace exactly one literal passage in an existing UTF-8 file. Requires its SHA-256 and explicit user approval after a diff preview.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "path": {
+                            "type": "string"
+                        },
+                        "expected_sha256": {
+                            "type": "string"
+                        },
+                        "old": {
+                            "type": "string"
+                        },
+                        "new": {
+                            "type": "string"
+                        }
+                    },
+                    "required": [
+                        "path",
+                        "expected_sha256",
+                        "old",
+                        "new"
+                    ],
+                    "additionalProperties": false
+                }
+            }
+        }),
+        json!({
+            "type": "function",
+            "function": {
+                "name": "project.create_file",
+                "description": "Create a new UTF-8 file in an existing project directory. Requires user approval after a diff preview; cannot overwrite.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "path": {
+                            "type": "string"
+                        },
+                        "content": {
+                            "type": "string"
+                        }
+                    },
+                    "required": [
+                        "path",
+                        "content"
+                    ],
+                    "additionalProperties": false
+                }
+            }
+        }),
     ]
 }
 
@@ -74,5 +128,7 @@ pub(crate) fn contains(name: &str) -> bool {
         "project.list_files"
             | "project.read_file"
             | "project.search_text"
+            | "project.replace_text"
+            | "project.create_file"
     )
 }

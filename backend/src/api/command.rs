@@ -4,18 +4,11 @@ use serde::Deserialize;
 #[serde(tag = "type")]
 pub(crate) enum Command {
     #[serde(rename = "authenticate")]
-    Authenticate {
-        token: String,
-    },
+    Authenticate { token: String },
     #[serde(rename = "models.list")]
-    ModelsList {
-        request_id: String,
-    },
+    ModelsList { request_id: String },
     #[serde(rename = "run.cancel")]
-    RunCancel {
-        request_id: String,
-    },
-
+    RunCancel { request_id: String },
     #[serde(rename = "approval.resolve")]
     ApprovalResolve {
         request_id: String,

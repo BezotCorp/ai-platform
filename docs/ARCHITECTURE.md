@@ -330,3 +330,52 @@ Cette intégration ne comprend pas encore :
 Le frontend graphique reste à développer.
 
 Aucun test n'est ajouté par cette étape.
+
+## Outils d'écriture et consolidation
+
+Les outils `project.replace_text` et `project.create_file`
+complètent les trois outils de lecture.
+
+Toute écriture est préparée et présentée au frontend par
+`tool.preview`, avec son diff unifié, son chemin et les
+empreintes SHA-256 anciennes et nouvelles.
+
+Le frontend doit ensuite répondre à `approval.required`
+par `approval.resolve`. Cette autorisation est obligatoire
+pour toutes les écritures, même lorsque les lectures sont
+autorisées automatiquement.
+
+Le consentement concerne la modification déjà préparée :
+les arguments ne peuvent pas être remplacés après l'accord.
+
+`replace_text` exige le SHA-256 du fichier original et
+une occurrence unique du texte à remplacer.
+
+La version du fichier est recontrôlée immédiatement avant
+l'écriture. `create_file` refuse toute destination existante.
+
+Un verrou partagé coordonne les écritures du backend.
+Les fichiers temporaires sont créés dans le répertoire
+de destination, synchronisés puis publiés atomiquement.
+
+Les autorisations sont isolées par connexion WebSocket.
+
+Les chemins explicitement parcourus refusent les liens
+symboliques et les répertoires sensibles restent interdits.
+
+Ces vérifications applicatives n'éliminent pas toutes
+les courses avec des processus externes capables de
+modifier simultanément l'arborescence du projet.
+
+Les définitions d'outils sont prises en compte dans
+l'estimation prudente du budget de contexte, y compris
+après les résultats des outils.
+
+Un dépassement du budget interrompt l'exécution.
+La récupération sélective, le comptage exact des tokens
+et la mémoire SQLite restent à implémenter.
+
+Aucun outil de suppression, aucune exécution de commandes
+et aucune intégration MCP ne sont introduits ici.
+
+Aucun test n'a été créé.

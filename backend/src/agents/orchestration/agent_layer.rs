@@ -10,7 +10,6 @@ impl AgentLayer {
         if agents.is_empty() {
             return Err("An agent layer cannot be empty");
         }
-
         Ok(Self { agents })
     }
 }

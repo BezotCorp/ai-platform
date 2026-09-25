@@ -10,11 +10,7 @@ pub(crate) struct Event {
 }
 
 impl Event {
-    pub(crate) fn new(
-        kind: &str,
-        request_id: &str,
-        data: Value,
-    ) -> Self {
+    pub(crate) fn new(kind: &str, request_id: &str, data: Value) -> Self {
         Self {
             kind: kind.to_owned(),
             request_id: request_id.to_owned(),

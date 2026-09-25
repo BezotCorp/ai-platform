@@ -11,7 +11,8 @@ impl ContextBudget {
     ///
     /// Actual token counting belongs to the model provider.
     pub fn available_tokens(self) -> Option<usize> {
-        let reserved = self.system_tokens
+        let reserved = self
+            .system_tokens
             .checked_add(self.output_tokens)?
             .checked_add(self.tool_tokens)?;
 
