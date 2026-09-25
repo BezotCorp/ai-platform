@@ -15,4 +15,11 @@ pub(crate) enum Command {
     RunCancel {
         request_id: String,
     },
+
+    #[serde(rename = "approval.resolve")]
+    ApprovalResolve {
+        request_id: String,
+        call_id: String,
+        approved: bool,
+    },
 }

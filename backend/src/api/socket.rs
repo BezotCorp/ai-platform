@@ -1,4 +1,8 @@
-use std::{sync::Arc, time::Duration};
+use std::{
+    path::PathBuf,
+    sync::Arc,
+    time::Duration,
+};
 
 use axum::extract::ws::{Message as WsMessage, WebSocket};
 
@@ -16,6 +20,7 @@ use crate::{
     agents::AgentExecution,
     api::{Command, Event, RunRequest, models::list},
     providers::Client,
+    tools::ToolApprovalGate,
 };
 
 fn match_token(provided: &str, expected: &str) -> bool {
@@ -40,6 +45,9 @@ pub(crate) async fn serve(
     client: Client,
     expected_token: Arc<str>,
     gpu: Arc<Semaphore>,
+    project_root: Arc<PathBuf>,
+    approvals: ToolApprovalGate,
+    approve_reads: bool,
 ) {
     let first = tokio::time::timeout(Duration::from_secs(5), socket.recv()).await;
 
@@ -188,6 +196,8 @@ pub(crate) async fn serve(
             let event_tx = tx.clone();
             let task_client = client.clone();
             let task_gpu = gpu.clone();
+            let task_root = project_root.clone();
+            let task_approvals = approvals.clone();
             let id = request_id.clone();
 
             let handle = tokio::spawn(async move {
@@ -219,6 +229,9 @@ pub(crate) async fn serve(
                     &id,
                     &event_tx,
                     &task_cancel,
+                    &task_root,
+                    &task_approvals,
+                    approve_reads,
                 )
                 .await;
 
@@ -283,14 +296,50 @@ pub(crate) async fn serve(
                     }
                 },
 
+                Ok(Command::ApprovalResolve {
+                    request_id,
+                    call_id,
+                    approved,
+                }) => {
+                    let belongs_to_run = active
+                        .as_ref()
+                        .is_some_and(|(id, _, handle)| {
+                            id == &request_id
+                                && !handle.is_finished()
+                        });
+
+                    let resolved = if belongs_to_run {
+                        approvals.resolve(
+                            &request_id,
+                            &call_id,
+                            approved,
+                        ).await
+                    } else {
+                        false
+                    };
+
+                    let _ = tx.send(Event::new(
+                        "approval.resolved",
+                        &request_id,
+                        json!({
+                            "call_id": call_id,
+                            "accepted": resolved,
+                            "approved": if resolved {
+                                Some(approved)
+                            } else {
+                                None
+                            },
+                        }),
+                    )).await;
+                }
+
                 _ => {
                     let _ = tx
                         .send(Event::new(
                             "error",
                             "",
                             json!({
-                                "error":
-                                    "Commande inconnue",
+                                "error": "Commande inconnue",
                             }),
                         ))
                         .await;

@@ -1,5 +1,6 @@
 mod available_model;
 mod chat;
+mod chat_turn;
 mod client;
 mod embeddings;
 mod residency;

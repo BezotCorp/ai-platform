@@ -261,3 +261,72 @@ capacité reste à raccorder.
 
 La récupération depuis SQLite, les outils MCP
 et l'indexation sémantique restent à implémenter.
+
+
+## Outils natifs — première intégration
+
+Trois outils de lecture sont maintenant disponibles :
+
+- `project.list_files`
+- `project.read_file`
+- `project.search_text`
+
+Le frontend doit fournir `AI_PLATFORM_PROJECT_ROOT`
+au lancement du backend.
+
+Le backend résout ce chemin et interdit aux outils
+l'accès à des fichiers situés en dehors de ce projet.
+
+Les chemins absolus, la traversée avec `..`,
+les liens symboliques rencontrés pendant l'exploration
+et plusieurs répertoires sensibles sont interdits.
+
+Les recherches et lectures possèdent des limites
+explicites de taille et de nombre de résultats.
+
+Le modèle reçoit les définitions JSON des outils.
+Le backend reçoit ses appels, valide leurs arguments,
+exécute les opérations autorisées, lui retourne
+les résultats, puis reprend la génération.
+
+Le nombre de tours et d'appels d'outils est limité.
+Les résultats sont traités comme des données
+non fiables et ne sont pas promus en instructions.
+
+### Autorisations WebSocket
+
+La variable facultative `AI_PLATFORM_APPROVE_READS=1`
+impose une autorisation avant chaque outil de lecture.
+
+Le backend émet `approval.required` avec le
+`request_id`, le `call_id`, l'agent, le nom de l'outil
+et les arguments exacts.
+
+Le frontend répond :
+
+`{"type":"approval.resolve","request_id":"...","call_id":"...","approved":true}`
+
+L'autorisation expire après 120 secondes.
+L'annulation de l'exécution annule également
+la demande en attente.
+
+Lorsque cette variable est absente ou vaut zéro,
+les trois outils de lecture sont autorisés
+automatiquement, dans les limites du projet.
+
+Aucun outil d'écriture ni aucune commande système
+n'est accessible aux modèles.
+
+### Limites
+
+Cette intégration ne comprend pas encore :
+
+- les serveurs MCP ;
+- les outils d'écriture et leurs autorisations ;
+- la mémoire SQLite ;
+- le comptage exact des tokens ;
+- la persistance des événements WebSocket.
+
+Le frontend graphique reste à développer.
+
+Aucun test n'est ajouté par cette étape.
