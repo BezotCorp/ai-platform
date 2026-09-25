@@ -90,6 +90,11 @@ impl AgentExecution {
                                 assembled.omitted_history,
                             "counting": "utf8_byte_estimate",
                             "estimated_tool_tokens": tool_tokens,
+                            "selected_history_indices":
+                                assembled.provenance.history_message_indices,
+                            "unverified_agent_ids":
+                                assembled.provenance.unverified_agent_ids,
+                            "selection": "lexical_relevance_then_recency",
                         }),
                     ))
                     .await?;

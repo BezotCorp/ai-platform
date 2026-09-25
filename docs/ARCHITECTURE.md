@@ -415,3 +415,43 @@ Aucune garantie absolue contre les courses externes n'est revendiquée.
 
 Les limites de contexte et la récupération ciblée du code restent une
 étape distincte. Aucun test supplémentaire n'est ajouté par ce commit.
+
+## Sélection ciblée du contexte conversationnel
+
+L'assemblage du contexte est centralisé pour les agents mono-IA et MoA.
+Le dernier message utilisateur, les instructions du rôle et les
+propositions de la couche MoA précédente sont obligatoires ; si ces
+éléments ne tiennent pas dans le budget, la génération est refusée sans
+tronquer silencieusement ces données.
+
+Les échanges plus anciens sont regroupés par tours commençant par un
+message utilisateur. Le gestionnaire compare les termes significatifs
+de la question actuelle aux termes présents dans chaque échange,
+classe les groupes par pertinence lexicale pondérée (question actuelle
+prioritaire, instructions du rôle en complément) puis par récence, et insère
+les groupes retenus dans leur ordre chronologique d'origine. Un
+échange incomplet n'est pas ajouté uniquement pour remplir le budget.
+Cette première méthode est déterministe : elle ne prétend ni mesurer
+la pertinence sémantique ni identifier toutes les dépendances du code.
+
+Chaque préparation de contexte expose dans l'événement WebSocket
+`context.prepared` les indices des messages historiques retenus et
+les identifiants des agents dont les propositions non vérifiées ont été
+transmises. Ces indices se rapportent à l'historique soumis au backend ;
+ils ne constituent pas une mémoire durable. La présence de plusieurs
+extraits historiques n'implique pas qu'ils soient consécutifs.
+
+Les outils natifs existants restent le moyen autorisé d'obtenir du code
+à jour : le gestionnaire ne lit pas automatiquement le projet et ne
+contourne pas les demandes d'approbation des lectures. Les résultats
+de recherche et de lecture portent des chemins, lignes ou empreintes
+selon l'outil concerné ; les propositions MoA ne sont jamais marquées
+comme vérifiées.
+
+L'estimation du budget demeure fondée sur les octets UTF-8 ; les
+capacités réelles des modèles et le nombre exact de tokens ne sont
+pas encore interrogés. Lorsque de nouveaux résultats d'outils saturent
+le contexte pendant un tour, l'exécution s'interrompt toujours :
+la compression incrémentale et la récupération sémantique ne sont
+pas implémentées par ce changement. La mémoire SQLite et MCP ne sont
+pas concernés. Aucun test n'est ajouté.
