@@ -266,12 +266,20 @@ pub(crate) async fn serve(
                     request_id,
                     call_id,
                     approved,
+                    preview_sha256,
                 }) => {
                     let belongs_to_run = active
                         .as_ref()
                         .is_some_and(|(id, _, handle)| id == &request_id && !handle.is_finished());
                     let resolved = if belongs_to_run {
-                        approvals.resolve(&request_id, &call_id, approved).await
+                        approvals
+                            .resolve(
+                                &request_id,
+                                &call_id,
+                                approved,
+                                preview_sha256.as_deref(),
+                            )
+                            .await
                     } else {
                         false
                     };

@@ -14,5 +14,7 @@ pub(crate) enum Command {
         request_id: String,
         call_id: String,
         approved: bool,
+        #[serde(default)]
+        preview_sha256: Option<String>,
     },
 }

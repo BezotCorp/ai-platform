@@ -379,3 +379,54 @@ Aucun outil de suppression, aucune exécution de commandes
 et aucune intégration MCP ne sont introduits ici.
 
 Aucun test n'a été créé.
+
+
+## Consolidation des écritures par descripteurs
+
+Cette implémentation des écritures cible Linux.
+
+Les chemins d'écriture sont parcourus à l'aide de
+descripteurs de répertoires et de openat avec O_NOFOLLOW.
+Les liens symboliques sont refusés pendant la résolution.
+
+Les fichiers de remplacement à plusieurs liens matériels
+sont refusés. L'identité et le contenu du fichier original
+sont vérifiés avant publication.
+
+La création utilise linkat et ne remplace pas une destination
+existante. Le remplacement utilise renameat après une
+dernière vérification du fichier original.
+
+Les fichiers temporaires sont synchronisés avant leur
+publication. Le répertoire de destination est ensuite
+synchronisé.
+
+Le verrou des écritures internes au backend reste détenu
+par la tâche bloquante jusqu'à la fin de la publication.
+
+### Autorisation des écritures
+
+tool.preview contient preview_sha256, qui représente
+l'empreinte SHA-256 du JSON de l'aperçu.
+
+approval.required transmet la même empreinte.
+
+Une approbation positive avec approval.resolve doit
+contenir cette empreinte exacte. Un refus explicite
+reste possible sans elle.
+
+Les autorisations restent isolées par connexion WebSocket.
+
+### Limites
+
+Les processus externes ne sont pas obligés de respecter
+le verrou du backend. Une modification intervenant après
+la dernière vérification et avant renameat reste possible.
+
+L'implémentation ne revendique donc pas de garantie
+absolue contre les modifications concurrentes externes.
+
+La compilation Rust ne remplace pas la validation
+fonctionnelle du cycle de modification des fichiers.
+
+Aucun test n'est introduit par cette modification.

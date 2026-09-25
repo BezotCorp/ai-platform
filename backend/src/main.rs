@@ -1,6 +1,7 @@
 mod agents;
 mod api;
 mod context;
+mod file_manager;
 mod memory;
 mod providers;
 mod sessions;
