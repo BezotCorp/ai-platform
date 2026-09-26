@@ -2,9 +2,11 @@ mod agent_config;
 mod agent_execution;
 mod agent_identity;
 mod agent_role;
+mod agent_turn;
 mod context;
 mod memory;
 mod orchestration;
+mod tool_invocation;
 
 pub(crate) use agent_config::AgentConfig;
 pub(crate) use agent_execution::AgentExecution;
