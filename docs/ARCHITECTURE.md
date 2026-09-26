@@ -355,3 +355,64 @@ Les sections précédentes sont des jalons historiques ; les anciennes listes de
 Contrat WebSocket : `mode: { kind: "multi_agent", coordination: { kind: "layered_moa", layers: [...], aggregator: {...} }, population: { kind: "fixed" } }`. Le champ `population` est facultatif et vaut `fixed` par défaut. L'ancien `kind: "mixture"` est refusé sur cette nouvelle branche, avant le développement du frontend.
 
 L'orchestration supervisée et ses limites réelles sont décrites dans `docs/SUPERVISED_ORCHESTRATION.md`.
+
+
+## Population collaborative et adaptative
+
+`MultiAgentStrategy::Collaborative` organise une population de deux à
+quatre agents indépendants et un facilitateur distinct.
+
+Chaque agent conserve son historique pendant l'exécution. Les
+contributions du tour précédent sont transmises comme données non
+vérifiées aux participants du tour suivant. Pour préserver la fenêtre
+de contexte, chaque contribution partagée est limitée à 240 caractères.
+La réponse finale est confiée au facilitateur.
+
+Deux politiques sont disponibles :
+
+- `Fixed` : tous les agents participent à chacun des tours.
+- `Adaptive` : le facilitateur sélectionne les participants à chaque
+  tour, dans les limites `min_agents` et `max_agents`.
+
+Le nombre de tours est configurable de un à quatre. Les générations
+restent successives pour respecter la disponibilité du GPU.
+
+Les populations évolutionnaires, la mutation des configurations, la
+sélection intergénérationnelle et la communication directe entre
+agents en dehors des tours collaboratifs ne sont pas implémentées.
+
+Les événements WebSocket sont `population.round.started` et
+`population.round.completed`.
+
+La stratégie est configurée par `coordination.kind = "collaborative"`,
+avec `agents`, `facilitator` et `rounds`. La politique adaptative
+utilise `population.kind = "adaptive"`.
+
+
+## Architecture actuelle des populations
+
+`ExecutionMode` est un type métier Serde, indépendant du
+format de transport. Il contient soit un agent unique,
+soit une architecture `MultiAgent`.
+
+Les stratégies multi-agents sont :
+
+- `LayeredMoa` : couches et agrégateur ;
+- `Supervised` : délégations décidées par le superviseur ;
+- `Population` : collaboration sur plusieurs tours.
+
+La politique de participation appartient à `Population`,
+et non à l'ensemble des stratégies multi-agents.
+
+`Fixed` fait participer tous les agents à chaque tour.
+`Adaptive` laisse le facilitateur sélectionner les agents
+de chaque tour dans les limites configurées.
+
+Les types métier utilisent Serde. Le WebSocket existant
+continue à transmettre du JSON, mais ne définit plus
+de structures `Spec` dupliquant le modèle métier.
+RON ou un format binaire peuvent utiliser les mêmes
+objets métier via leurs propres sérialiseurs.
+
+La sélection évolutionnaire, les mutations et les
+générations ne sont pas encore implémentées.

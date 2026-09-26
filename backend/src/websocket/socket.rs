@@ -11,10 +11,11 @@ use tokio_util::sync::CancellationToken;
 
 use crate::{
     agents::{AgentExecution, MemoryStore},
+    event::Event,
     providers::Client,
     sessions::SessionStore,
     tools::ToolApprovalGate,
-    websocket::{Command, Event, RunRequest, models::list},
+    websocket::{Command, RunRequest, models::list},
 };
 
 fn match_token(provided: &str, expected: &str) -> bool {

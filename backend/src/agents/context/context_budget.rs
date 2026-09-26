@@ -10,7 +10,7 @@ impl ContextBudget {
     /// Returns the remaining estimated context budget.
     ///
     /// Actual token counting belongs to the model provider.
-    pub fn available_tokens(self) -> Option<usize> {
+    pub(crate) fn available_tokens(self) -> Option<usize> {
         let reserved = self
             .system_tokens
             .checked_add(self.output_tokens)?

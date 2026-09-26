@@ -1,12 +1,16 @@
 use std::collections::HashSet;
 
+use serde::{Deserialize, Serialize};
+
 use crate::agents::{AgentLayer, Aggregation};
 
 /// Fixed proposal layers followed by an aggregator. This is not a generic
 /// name for every multi-agent coordination strategy.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
 pub(crate) struct LayeredMoa {
     pub layers: Vec<AgentLayer>,
+    #[serde(rename = "aggregator")]
     pub aggregation: Aggregation,
 }
 
@@ -32,6 +36,9 @@ impl LayeredMoa {
         if !identifiers.insert(&aggregation.agent.identity.id) {
             return Err("Duplicate aggregator identifier");
         }
-        Ok(Self { layers, aggregation })
+        Ok(Self {
+            layers,
+            aggregation,
+        })
     }
 }

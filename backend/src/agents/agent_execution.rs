@@ -7,8 +7,8 @@ use tokio_util::sync::CancellationToken;
 
 use crate::{
     agents::{
-        ExecutionMode, MemoryStore, MultiAgentStrategy, Scheduler, SupervisedExecution,
-        agent_turn::AgentTurn, context::limits,
+        ExecutionMode, MemoryStore, MultiAgentStrategy, PopulationExecution, Scheduler,
+        SupervisedExecution, agent_turn::AgentTurn, context::limits,
     },
     event::Event,
     providers::Client,
@@ -37,8 +37,35 @@ impl AgentExecution {
             && let MultiAgentStrategy::Supervised(config) = &multi.strategy
         {
             return SupervisedExecution::run(
-                config, client, history, request_id, outbound, cancel, project_root,
-                approvals, approve_reads, writes, memory,
+                config,
+                client,
+                history,
+                request_id,
+                outbound,
+                cancel,
+                project_root,
+                approvals,
+                approve_reads,
+                writes,
+                memory,
+            )
+            .await;
+        }
+        if let ExecutionMode::MultiAgent(multi) = mode
+            && let MultiAgentStrategy::Population(config) = &multi.strategy
+        {
+            return PopulationExecution::run(
+                config,
+                client,
+                history,
+                request_id,
+                outbound,
+                cancel,
+                project_root,
+                approvals,
+                approve_reads,
+                writes,
+                memory,
             )
             .await;
         }

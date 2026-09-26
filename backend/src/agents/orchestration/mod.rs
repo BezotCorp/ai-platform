@@ -4,7 +4,7 @@ mod execution_mode;
 mod layered_moa;
 mod multi_agent;
 mod multi_agent_strategy;
-mod population_policy;
+mod population;
 mod scheduler;
 mod supervised;
 mod supervised_execution;
@@ -18,7 +18,9 @@ pub(crate) use execution_mode::ExecutionMode;
 pub(crate) use layered_moa::LayeredMoa;
 pub(crate) use multi_agent::MultiAgent;
 pub(crate) use multi_agent_strategy::MultiAgentStrategy;
-pub(crate) use population_policy::PopulationPolicy;
+pub(crate) use population::{
+    ParticipationPolicy, Population, PopulationExecution, PopulationSelection,
+};
 pub(crate) use scheduler::Scheduler;
 pub(crate) use supervised::Supervised;
 pub(crate) use supervised_execution::SupervisedExecution;

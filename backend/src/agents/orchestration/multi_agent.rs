@@ -1,19 +1,16 @@
-use crate::agents::{MultiAgentStrategy, PopulationPolicy};
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+use crate::agents::MultiAgentStrategy;
+
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
 pub(crate) struct MultiAgent {
+    #[serde(rename = "coordination")]
     pub strategy: MultiAgentStrategy,
-    pub population: PopulationPolicy,
 }
 
 impl MultiAgent {
-    pub(crate) fn new(
-        strategy: MultiAgentStrategy,
-        population: PopulationPolicy,
-    ) -> Result<Self, &'static str> {
-        if !matches!(population, PopulationPolicy::Fixed) {
-            return Err("Requested population policy is not implemented");
-        }
-        Ok(Self { strategy, population })
+    pub(crate) fn new(strategy: MultiAgentStrategy) -> Self {
+        Self { strategy }
     }
 }

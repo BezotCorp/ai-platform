@@ -1,8 +1,11 @@
-use crate::agents::{LayeredMoa, Supervised};
+use serde::{Deserialize, Serialize};
 
-/// Coordination is separate from population policy and resource scheduling.
-#[derive(Debug, Clone, PartialEq, Eq)]
+use crate::agents::{LayeredMoa, Population, Supervised};
+
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
 pub(crate) enum MultiAgentStrategy {
     LayeredMoa(LayeredMoa),
     Supervised(Supervised),
+    Population(Population),
 }

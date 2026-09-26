@@ -1,4 +1,4 @@
-use serde::{Deserialize, Deserializer, de::Error};
+use serde::{Deserialize, Deserializer, Serialize, Serializer, de::Error, ser::SerializeStruct};
 use serde_json::{Map, Value};
 
 use crate::{
@@ -49,5 +49,20 @@ impl<'de> Deserialize<'de> for AgentConfig {
             role: AgentRole::new(role, instructions).map_err(D::Error::custom)?,
             model: Model::new(provider, model).map_err(D::Error::custom)?,
         })
+    }
+}
+
+impl Serialize for AgentConfig {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let mut agent = serializer.serialize_struct("AgentConfig", 5)?;
+        agent.serialize_field("id", &self.identity.id)?;
+        agent.serialize_field("role", &self.role.name)?;
+        agent.serialize_field("instructions", &self.role.instructions)?;
+        agent.serialize_field("provider", &self.model.provider)?;
+        agent.serialize_field("model", &self.model.name)?;
+        agent.end()
     }
 }
