@@ -11,7 +11,7 @@ Elle permet à un ou plusieurs agents de travailler sur un projet logiciel avec 
 - une gestion centralisée du contexte ;
 - une mémoire conversationnelle persistante ;
 - des sessions sauvegardées ;
-- une orchestration mono-agent ou MoA ;
+- une orchestration mono-agent, MoA, supervisée ou populationnelle ;
 - une interface de communication WebSocket.
 
 L'architecture vise notamment les machines disposant d'au plus 16 Go de VRAM. L'exécution séquentielle, la sélection du contexte et la persistance limitent les besoins matériels sans remplacer les capacités d'un modèle plus grand.
@@ -43,7 +43,7 @@ Les données provenant des fichiers, de la mémoire, des outils et des futurs se
 
 ### 2.3. Services communs
 
-Les modes mono-agent et MoA utilisent les mêmes services de contexte, de mémoire, d'exécution et d'autorisation.
+Les différents modes d'exécution utilisent les mêmes services de contexte, de mémoire, d'exécution et d'autorisation.
 Le gestionnaire de contexte appartient au backend et reste indépendant du fournisseur IA, du transport WebSocket, du stockage et de MCP.
 Les futurs adaptateurs MCP devront réutiliser les services internes du backend sans dupliquer les règles métier.
 
@@ -63,7 +63,7 @@ Ses principaux modules sont :
 | ----------------------- | ------------------------------------------------------------- |
 | `providers/`            | Fournisseurs de modèles et Ollama                             |
 | `agents/`               | Configuration et exécution des agents                         |
-| `agents/orchestration/` | Modes mono-agent et MoA, couches et agrégation                |
+| `agents/orchestration/` | Modes d'exécution, supervision et populations                 |
 | `agents/context/`       | Récupération, sélection, assemblage et compaction du contexte |
 | `agents/memory/`        | Mémoire conversationnelle persistante                         |
 | `tools/`                | Outils natifs, registre et autorisations                      |
@@ -76,35 +76,96 @@ L'infrastructure SQLite est indépendante des schémas métier. Les opérations 
 
 ## 4. Agents et orchestration
 
-### 4.1. Configuration
+### 4.1. Configuration canonique
 
-`AgentConfig` constitue la configuration canonique d'un agent.
-Chaque agent possède une identité, un rôle, des instructions, un fournisseur et un modèle.
-Plusieurs agents peuvent utiliser le même modèle avec des rôles et des instructions différents.
-Les identifiants des participants d'une même exécution doivent être uniques.
+`AgentConfig` décrit l'identité, le rôle, les instructions,
+le fournisseur et le modèle d'un agent.
 
-### 4.2. Modes d'exécution
+`ExecutionMode` constitue l'entrée commune du moteur.
+Il distingue un agent unique d'une architecture multi-agents.
 
-Deux modes partagent le même moteur :
+Les configurations métier prennent en charge Serde.
+Elles ne dépendent pas du protocole WebSocket.
 
-- `ExecutionMode::Single` : exécution d'un agent ;
-- `ExecutionMode::Mixture` : exécution de plusieurs couches d'agents suivies d'un agrégateur final.
+### 4.2. Stratégies multi-agents
 
-Le MoA (_Mixture of Agents_) orchestre des agents complets. Il ne s'agit pas d'un MoE : le backend ne contrôle pas les experts neuronaux internes des modèles.
-Les agents d'une couche peuvent produire des contributions destinées à la couche suivante. Ces contributions restent non vérifiées tant qu'elles ne sont pas confrontées aux sources originales.
+`MultiAgentStrategy` comporte actuellement trois stratégies :
 
-### 4.3. Exécution séquentielle
+- `LayeredMoa` : plusieurs couches d'agents, suivies
+  d'un agrégateur final ;
+- `Supervised` : un superviseur choisit les travailleurs,
+  leur délègue des tâches et décide quand conclure ;
+- `Population` : plusieurs agents collaborent pendant
+  plusieurs tours, puis un facilitateur produit la synthèse.
 
-Le planificateur détermine l'ordre des couches.
-Les agents sont actuellement exécutés séquentiellement. Un sémaphore global limite les générations à une exécution simultanée par processus backend.
-Cette organisation permet de réutiliser un modèle entre plusieurs agents et évite d'imposer le chargement simultané de plusieurs modèles en VRAM.
+Les identifiants des participants sont validés pour
+éviter les doublons dans une même architecture.
 
-### 4.4. Répartition des responsabilités
+### 4.3. Population collaborative
 
-`AgentExecution` orchestre les couches, transmet leurs contributions et publie le résultat final. Il sollicite également l'enregistrement de la réponse finale dans la mémoire conversationnelle, lorsque celle-ci est activée.
-`AgentTurn` prend en charge l'exécution d'un agent : préparation du contexte, communication avec le fournisseur, streaming et cycles de génération avec outils.
-`ToolInvocation` centralise les appels d'outils, leurs aperçus, les demandes d'autorisation et la publication de leurs résultats.
-Les règles d'exécution des outils sont communes aux modes mono-agent et MoA.
+Une population possède entre deux et quatre agents,
+un facilitateur distinct et entre un et quatre tours.
+
+Sa politique de participation lui appartient :
+
+- `Fixed` : tous les agents participent à chaque tour ;
+- `Adaptive` : le facilitateur sélectionne les agents
+  de chaque tour entre `min_agents` et `max_agents`.
+
+Chaque agent conserve son propre historique pendant
+l'exécution. Les contributions du tour précédent
+sont transmises aux participants du tour suivant
+comme informations non vérifiées.
+
+Les contributions échangées sont limitées à
+240 caractères par agent. Le facilitateur reçoit
+les contributions du dernier tour pour sa synthèse.
+
+Les historiques individuels ne sont pas encore
+persistés entre plusieurs exécutions.
+
+La sélection adaptative utilise les rôles disponibles
+et des rapports récents limités en taille.
+Elle ne constitue pas un mécanisme évolutionnaire.
+
+### 4.4. Supervision autonome
+
+Le superviseur peut déléguer successivement plusieurs
+tâches aux travailleurs configurés, examiner leurs
+rapports et produire une réponse finale.
+
+Chaque travailleur conserve son historique pendant
+l'exécution. Les délégations et les décisions
+restent limitées par la configuration.
+
+Il n'existe pas encore de délégation hiérarchique
+permettant à un superviseur de lancer une population
+ou un autre superviseur comme sous-architecture.
+
+### 4.5. Exécution et ressources
+
+Les générations sont séquentielles. Un sémaphore
+global limite à une le nombre d'exécutions utilisant
+le GPU simultanément dans un processus backend.
+
+`AgentExecution` choisit le moteur adapté au mode.
+`AgentTurn` réalise la génération et les cycles
+d'utilisation des outils.
+
+Le contexte, les outils, les approbations,
+l'annulation et la mémoire sont mutualisés.
+
+Les contributions des autres agents et les souvenirs
+restent des données non fiables. Ils ne remplacent
+jamais une vérification des fichiers réels.
+
+### 4.6. Capacités non implémentées
+
+Les populations évolutionnaires, les mutations,
+la sélection intergénérationnelle, les échanges
+directs entre agents hors des tours collaboratifs
+et la persistance des historiques individuels
+restent à développer.
 
 ## 5. Fournisseurs de modèles
 
@@ -117,7 +178,7 @@ Un modèle ne prenant pas en charge les appels d'outils ne doit pas provoquer l'
 
 ## 6. Gestion du contexte
 
-Le gestionnaire de contexte est commun aux modes mono-agent et MoA.
+Le gestionnaire de contexte est commun à toutes les stratégies d'exécution.
 Il assemble les instructions de l'agent, la demande utilisateur, les messages historiques pertinents, les contributions des couches précédentes, les souvenirs récupérés et les échanges avec les outils.
 
 ### 6.1. Sélection et provenance
@@ -237,7 +298,8 @@ Les opérations de liste sont bornées.
 
 Les sessions et la mémoire conversationnelle remplissent des fonctions distinctes.
 Une session conserve un historique explicite. La mémoire conserve des informations réutilisables entre les exécutions.
-Le frontend fournit actuellement les messages à `run.start` et demande explicitement leur enregistrement.
+La commande run.start reçoit les messages de la conversation. Leur enregistrement reste une opération distincte, effectuée par session.save.
+Le futur frontend devra gérer explicitement cette sauvegarde.
 La sauvegarde automatique des exécutions interrompues et leur reprise après redémarrage ne sont pas implémentées.
 La persistance des sessions dépend actuellement de l'activation de la base SQLite facultative.
 
@@ -285,6 +347,11 @@ Les principaux événements sont :
 - `agent.started` ;
 - `agent.delta` ;
 - `agent.completed` ;
+- `orchestration.deciding` ;
+- `orchestration.delegated` ;
+- `orchestration.reported` ;
+- `population.round.started` ;
+- `population.round.completed` ;
 - `tool.requested` ;
 - `tool.preview` ;
 - `approval.required` ;
@@ -312,7 +379,7 @@ Le protocole ne garantit pas encore la reprise des événements après une déco
 
 Le frontend graphique reste à développer.
 Il devra permettre de lancer et arrêter le backend, configurer son environnement, s'authentifier, afficher les modèles disponibles et configurer les agents.
-Il devra également prendre en charge les modes mono-agent et MoA, les conversations persistantes, le streaming des réponses, les événements d'exécution et les demandes d'autorisation.
+Il devra également prendre en charge les modes mono-agent, MoA, supervisé et populationnel, les conversations persistantes, le streaming des réponses, les événements d'exécution et les demandes d'autorisation.
 Les aperçus d'écriture devront être présentés avant toute décision d'approbation.
 Les déconnexions, les annulations et la fermeture du backend devront être gérées explicitement.
 Le frontend ne doit pas contourner les validations du backend.
@@ -327,92 +394,104 @@ Un adaptateur exposant certains services internes à des clients MCP externes po
 
 ## 14. Limites techniques
 
-Les fonctionnalités suivantes restent à développer ou à évaluer :
+Les fonctionnalités suivantes restent à développer :
 
 - le frontend graphique et son lanceur ;
-- les clients MCP ;
-- la récupération sémantique et l'indexation vectorielle ;
+- les clients et adaptateurs MCP ;
+- les configurations permanentes des agents,
+  superviseurs, MoA et populations ;
+- la gestion des comptes utilisateurs ;
+- la récupération sémantique ;
 - le comptage exact des tokens selon les modèles ;
-- la découverte systématique des capacités réelles des modèles ;
+- la découverte des capacités réelles des modèles ;
 - la reprise des événements après reconnexion ;
 - la reprise d'une exécution après redémarrage ;
 - la sauvegarde automatique des sessions ;
+- les historiques d'agents persistants entre exécutions ;
+- les populations évolutionnaires ;
+- la composition hiérarchique des architectures ;
 - la politique de rétention et de sauvegarde ;
-- la gestion avancée de la résidence GPU ;
-- les formes d'orchestration plus élaborées que le MoA séquentiel.
+- la gestion avancée de la résidence GPU.
 
-Ces fonctionnalités ne sont pas considérées comme implémentées tant qu'elles ne sont pas effectivement intégrées au backend.
+Les stratégies actuelles compilent, mais leur comportement
+avec les différents modèles Ollama reste à valider
+en conditions réelles.
 
-## Diversité des stratégies multi-agents — contrat initial (26 septembre 2026)
+## 15. Communication et persistance
 
-Les sections précédentes sont des jalons historiques ; les anciennes listes de fonctionnalités manquantes ne constituent pas l'état actuel. Le nouveau contrat distingue `Single` et `MultiAgent`, puis la stratégie de coordination et la politique de population. Cette évolution conserve le MoA en couches et ajoute une orchestration supervisée dynamique. Elle introduit également des types explicites pour les politiques de population futures, sans prétendre implémenter la collaboration décentralisée ni l'évolution des populations.
+### 15.1. Structures Rust
 
-- `MultiAgentStrategy::LayeredMoa` : couches prédéfinies suivies d'un agrégateur, toujours exécutées séquentiellement afin de limiter la VRAM.
-- `PopulationPolicy::Fixed` : seule politique exécutable actuellement.
-- `PopulationPolicy::Adaptive` et `PopulationPolicy::Evolutionary` : choix distincts représentés dans le contrat mais explicitement refusés en attendant une implémentation réelle.
-- La stratégie `MultiAgentStrategy::Supervised` réutilise le moteur d'agent commun pour déléguer dynamiquement des tâches à des travailleurs indépendants pendant une exécution. La collaboration décentralisée reste à développer.
+Les configurations d'agents, les modes d'exécution
+et les populations sont des types métier Rust.
 
-Contrat WebSocket : `mode: { kind: "multi_agent", coordination: { kind: "layered_moa", layers: [...], aggregator: {...} }, population: { kind: "fixed" } }`. Le champ `population` est facultatif et vaut `fixed` par défaut. L'ancien `kind: "mixture"` est refusé sur cette nouvelle branche, avant le développement du frontend.
+Les modules internes échangent directement
+ces structures en mémoire. Aucune sérialisation
+n'est nécessaire pour ces échanges.
 
-L'orchestration supervisée et ses limites réelles sont décrites dans `docs/SUPERVISED_ORCHESTRATION.md`.
+Serde permet leur sérialisation et leur
+désérialisation sans imposer un format unique.
 
+La compatibilité effective avec RON ou un format binaire devra être vérifiée avant leur adoption. La prise en charge de Serde ne garantit pas que toutes les représentations des types métier soient compatibles avec tous les formats.
 
-## Population collaborative et adaptative
+### 15.2. Communication
 
-`MultiAgentStrategy::Collaborative` organise une population de deux à
-quatre agents indépendants et un facilitateur distinct.
+Le transport WebSocket actuel utilise JSON.
+Il transmet directement `ExecutionMode` dans
+les demandes `run.start`, sans structures `Spec`
+spécifiques au transport.
 
-Chaque agent conserve son historique pendant l'exécution. Les
-contributions du tour précédent sont transmises comme données non
-vérifiées aux participants du tour suivant. Pour préserver la fenêtre
-de contexte, chaque contribution partagée est limitée à 240 caractères.
-La réponse finale est confiée au facilitateur.
+Le fournisseur Ollama utilise également
+son protocole HTTP JSON.
 
-Deux politiques sont disponibles :
+Le format du transport peut évoluer
+indépendamment des structures métier.
 
-- `Fixed` : tous les agents participent à chacun des tours.
-- `Adaptive` : le facilitateur sélectionne les participants à chaque
-  tour, dans les limites `min_agents` et `max_agents`.
+### 15.3. SQLite
 
-Le nombre de tours est configurable de un à quatre. Les générations
-restent successives pour respecter la disponibilité du GPU.
+La mémoire conversationnelle et les sessions
+utilisent une infrastructure SQLite commune.
 
-Les populations évolutionnaires, la mutation des configurations, la
-sélection intergénérationnelle et la communication directe entre
-agents en dehors des tours collaboratifs ne sont pas implémentées.
+`rusqlite` est compilé avec la fonctionnalité
+`bundled`. Le déploiement du backend n'exige
+donc pas l'installation séparée de SQLite.
 
-Les événements WebSocket sont `population.round.started` et
-`population.round.completed`.
+La base reste facultative. Elle est ouverte
+lorsque `AI_PLATFORM_MEMORY_DB` est configurée.
+Les sessions utilisent cette même base.
 
-La stratégie est configurée par `coordination.kind = "collaborative"`,
-avec `agents`, `facilitator` et `rounds`. La politique adaptative
-utilise `population.kind = "adaptive"`.
+La mémoire et les sessions sont actuellement
+cloisonnées par projet. Aucune gestion de
+comptes utilisateurs n'est implémentée.
 
+Les messages des sessions sont enregistrés
+sous forme de JSON dans une colonne SQLite.
+La mémoire possède ses propres colonnes métier.
 
-## Architecture actuelle des populations
+### 15.4. Configurations persistantes
 
-`ExecutionMode` est un type métier Serde, indépendant du
-format de transport. Il contient soit un agent unique,
-soit une architecture `MultiAgent`.
+Les configurations des agents, des superviseurs,
+des MoA et des populations ne possèdent pas encore
+de mécanisme de sauvegarde permanent.
 
-Les stratégies multi-agents sont :
+Le prochain chantier doit permettre de créer,
+charger, modifier, lister et supprimer ces
+configurations, avec contrôle des révisions
+et cloisonnement adapté.
 
-- `LayeredMoa` : couches et agrégateur ;
-- `Supervised` : délégations décidées par le superviseur ;
-- `Population` : collaboration sur plusieurs tours.
+Le choix entre stockage SQLite et fichiers
+portables RON reste distinct du format
+des communications WebSocket.
 
-La politique de participation appartient à `Population`,
-et non à l'ensemble des stratégies multi-agents.
+Aucun stockage binaire de ces configurations
+n'est encore implémenté.
 
-`Fixed` fait participer tous les agents à chaque tour.
-`Adaptive` laisse le facilitateur sélectionner les agents
-de chaque tour dans les limites configurées.
+### 15.5. Frontières du runtime
 
-Les types métier utilisent Serde. Le WebSocket existant
-continue à transmettre du JSON, mais ne définit plus
-de structures `Spec` dupliquant le modèle métier.
-RON ou un format binaire peuvent utiliser les mêmes
-objets métier via leurs propres sérialiseurs.
+Les configurations persistantes ne doivent
+pas être confondues avec les données temporaires
+d'une exécution : historiques individuels,
+rapports, contributions et décisions.
 
-La sélection évolutionnaire, les mutations et les
-générations ne sont pas encore implémentées.
+Un éventuel mécanisme de reprise devra
+préciser quelles données temporaires conserver,
+comment les versionner et quand les supprimer.
