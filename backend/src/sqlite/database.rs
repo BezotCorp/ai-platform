@@ -1,4 +1,11 @@
-use std::{path::PathBuf, sync::Arc, thread};
+use std::{
+    path::PathBuf,
+    sync::{
+        Arc,
+        atomic::{AtomicBool, Ordering},
+    },
+    thread,
+};
 
 use anyhow::{Context, Result, bail};
 use rusqlite::Connection;
@@ -26,14 +33,17 @@ impl Database {
             let mut writer_connection = connection::open_writer(&path)?;
             // Vérifier la base avant toute migration.
             connection::check_integrity(&writer_connection)?;
+            connection::configure_writer(&writer_connection)?;
             // Initialiser le schéma avant d'ouvrir les lecteurs.
             initialize(&mut writer_connection)?;
             let mut reader_connections = Vec::with_capacity(reader_count);
             for _ in 0..reader_count {
                 reader_connections.push(connection::open_reader(&path)?);
             }
-            let readers = Readers::start(reader_connections)?;
-            let writer = match Writer::start(writer_connection) {
+            let healthy = Arc::new(AtomicBool::new(true));
+
+            let readers = Readers::start(reader_connections, Arc::clone(&healthy))?;
+            let writer = match Writer::start(writer_connection, Arc::clone(&healthy)) {
                 Ok(writer) => writer,
                 Err(error) => {
                     let (senders, handles) = readers.into_parts();
@@ -46,7 +56,12 @@ impl Database {
                     return Err(error);
                 }
             };
-            Ok(DatabaseInner { writer, readers })
+            Ok(DatabaseInner {
+                writer,
+                readers,
+                healthy,
+                closing: AtomicBool::new(false),
+            })
         })
         .await??;
         Ok(Self {
@@ -61,6 +76,12 @@ impl Database {
         T: Send + 'static,
         F: FnOnce(&Connection) -> Result<T> + Send + 'static,
     {
+        if self.inner.closing.load(Ordering::Acquire) {
+            bail!("Le gestionnaire SQLite est en cours d'arrêt");
+        }
+        if !self.inner.healthy.load(Ordering::Acquire) {
+            bail!("Le gestionnaire SQLite est indisponible");
+        }
         self.inner.writer.execute(operation).await
     }
 
@@ -71,6 +92,12 @@ impl Database {
         T: Send + 'static,
         F: FnOnce(&Connection) -> Result<T> + Send + 'static,
     {
+        if self.inner.closing.load(Ordering::Acquire) {
+            bail!("Le gestionnaire SQLite est en cours d'arrêt");
+        }
+        if !self.inner.healthy.load(Ordering::Acquire) {
+            bail!("Le gestionnaire SQLite est indisponible");
+        }
         self.inner.readers.execute(operation).await
     }
 
@@ -82,6 +109,7 @@ impl Database {
     /// sont ignorées avant leur démarrage.
     pub(crate) async fn shutdown(self) -> Result<()> {
         let inner = self.inner;
+        inner.closing.store(true, Ordering::Release);
         tokio::time::timeout(std::time::Duration::from_secs(10), async {
             while Arc::strong_count(&inner) != 1 {
                 tokio::time::sleep(std::time::Duration::from_millis(25)).await;

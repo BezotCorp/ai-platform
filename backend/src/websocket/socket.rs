@@ -11,9 +11,9 @@ use tokio_util::sync::CancellationToken;
 
 use crate::{
     agents::{AgentExecution, MemoryStore},
-    api::{Command, Event, RunRequest, models::list},
     providers::Client,
     tools::ToolApprovalGate,
+    websocket::{Command, Event, RunRequest, models::list},
 };
 
 fn match_token(provided: &str, expected: &str) -> bool {
@@ -70,11 +70,9 @@ pub(crate) async fn serve(
             () = shutdown.cancelled() => break,
             frame = stream.next() => frame,
         };
-
         let Some(frame) = frame else {
             break;
         };
-
         let Ok(WsMessage::Text(text)) = frame else {
             break;
         };

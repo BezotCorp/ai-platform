@@ -1,12 +1,13 @@
 mod agents;
-mod api;
+mod event;
 mod file_manager;
 mod providers;
 mod sessions;
-mod tools;
 mod sqlite;
+mod tools;
+mod websocket;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    api::run().await
+    websocket::run().await
 }

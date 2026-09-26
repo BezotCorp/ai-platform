@@ -1,6 +1,6 @@
-use tokio_util::sync::CancellationToken;
 use std::sync::Arc;
 use tokio::sync::{Mutex, Semaphore};
+use tokio_util::sync::CancellationToken;
 
 use crate::{agents::MemoryStore, providers::Client};
 

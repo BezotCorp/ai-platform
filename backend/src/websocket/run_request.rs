@@ -3,8 +3,8 @@ use serde::Deserialize;
 
 use crate::{
     agents::{AgentLayer, Aggregation, ExecutionMode, Mixture},
-    api::{AgentSpec, RunMode},
     sessions::Message,
+    websocket::RunMode,
 };
 
 #[derive(Debug, Deserialize)]
@@ -54,7 +54,7 @@ impl RunRequest {
 
     pub(crate) fn into_mode(self) -> Result<ExecutionMode> {
         match self.mode {
-            RunMode::Single { agent } => Ok(ExecutionMode::Single(agent.into_config()?)),
+            RunMode::Single { agent } => Ok(ExecutionMode::Single(agent)),
             RunMode::Mixture { mixture } => {
                 if mixture.layers.is_empty() || mixture.layers.len() > 6 {
                     bail!("Nombre de couches MoA invalide");
@@ -64,15 +64,12 @@ impl RunRequest {
                     if specs.len() > 8 {
                         bail!("Trop d'agents dans une couche");
                     }
-                    let agents = specs
-                        .into_iter()
-                        .map(AgentSpec::into_config)
-                        .collect::<Result<Vec<_>>>()?;
+                    let agents = specs;
                     let layer = AgentLayer::new(agents).map_err(anyhow::Error::msg)?;
                     layers.push(layer);
                 }
                 let aggregation = Aggregation {
-                    agent: mixture.aggregator.into_config()?,
+                    agent: mixture.aggregator,
                 };
                 let mixture = Mixture::new(layers, aggregation).map_err(anyhow::Error::msg)?;
                 Ok(ExecutionMode::Mixture(mixture))

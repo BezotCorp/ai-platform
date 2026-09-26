@@ -12,12 +12,16 @@ pub(crate) fn open_writer(path: &Path) -> Result<Connection> {
     let connection = Connection::open_with_flags(path, flags)
         .with_context(|| format!("Impossible d'ouvrir SQLite : {}", path.display()))?;
     connection.busy_timeout(BUSY_TIMEOUT)?;
+    connection.execute_batch("PRAGMA foreign_keys = ON;")?;
+    Ok(connection)
+}
+
+pub(crate) fn configure_writer(connection: &Connection) -> Result<()> {
     connection.execute_batch(
         "PRAGMA journal_mode = WAL;
-         PRAGMA synchronous = FULL;
-         PRAGMA foreign_keys = ON;",
+         PRAGMA synchronous = FULL;",
     )?;
-    Ok(connection)
+    Ok(())
 }
 
 pub(crate) fn open_reader(path: &Path) -> Result<Connection> {

@@ -1,10 +1,9 @@
 use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result, bail};
-use rusqlite::params;
 
 use crate::{
-    agents::{MemoryEntry, apply, find, project_scope},
+    agents::{MemoryEntry, apply, find, project_scope, save},
     sqlite::Database,
 };
 
@@ -88,33 +87,7 @@ impl MemoryStore {
         let checksum = MemoryEntry::checksum_for(&query, &content);
         let project = self.project.clone();
         self.database
-            .write(move |connection| {
-                connection
-                    .execute(
-                        "INSERT INTO memory_entries (
-                            project,
-                            query,
-                            content,
-                            source,
-                            checksum
-                        )
-                        VALUES (
-                            ?1,
-                            ?2,
-                            ?3,
-                            'agent_final_answer',
-                            ?4
-                        )
-                        ON CONFLICT(project, checksum)
-                        DO UPDATE SET
-                            updated_at = unixepoch(),
-                            revision = revision + 1",
-                        params![project, query, content, checksum],
-                    )
-                    .context("Écriture de la mémoire SQLite impossible")?;
-
-                Ok(())
-            })
+            .write(move |connection| save(connection, &project, &query, &content, &checksum))
             .await
     }
 

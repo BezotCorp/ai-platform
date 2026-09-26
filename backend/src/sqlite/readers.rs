@@ -1,5 +1,8 @@
 use std::{
-    sync::atomic::{AtomicUsize, Ordering},
+    sync::{
+        Arc,
+        atomic::{AtomicBool, AtomicUsize, Ordering},
+    },
     thread,
 };
 
@@ -7,7 +10,7 @@ use anyhow::{Result, bail};
 use rusqlite::{Connection, TransactionBehavior};
 use tokio::sync::mpsc;
 
-use crate::sqlite::job::{self, Job};
+use crate::sqlite::job::Job;
 
 pub(crate) struct Readers {
     senders: Vec<mpsc::Sender<Job>>,
@@ -16,17 +19,18 @@ pub(crate) struct Readers {
 }
 
 impl Readers {
-    pub(crate) fn start(connections: Vec<Connection>) -> Result<Self> {
+    pub(crate) fn start(connections: Vec<Connection>, healthy: Arc<AtomicBool>) -> Result<Self> {
         if connections.is_empty() {
             bail!("Au moins un lecteur SQLite est nécessaire");
         }
         let mut senders = Vec::with_capacity(connections.len());
         let mut handles: Vec<thread::JoinHandle<()>> = Vec::with_capacity(connections.len());
         for (index, connection) in connections.into_iter().enumerate() {
-            let started = job::start(
+            let started = Job::start(
                 format!("sqlite-reader-{index}"),
                 connection,
                 TransactionBehavior::Deferred,
+                Arc::clone(&healthy),
             );
             let (sender, handle) = match started {
                 Ok(started) => started,
@@ -57,7 +61,7 @@ impl Readers {
         F: FnOnce(&Connection) -> Result<T> + Send + 'static,
     {
         let index = self.next.fetch_add(1, Ordering::Relaxed) % self.senders.len();
-        job::submit(&self.senders[index], operation).await
+        Job::submit(&self.senders[index], operation).await
     }
 
     pub(crate) fn into_parts(self) -> (Vec<mpsc::Sender<Job>>, Vec<thread::JoinHandle<()>>) {

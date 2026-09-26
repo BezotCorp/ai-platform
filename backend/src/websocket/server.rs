@@ -1,4 +1,3 @@
-use tokio_util::sync::CancellationToken;
 use anyhow::{Context, Result, bail};
 use axum::{
     Router,
@@ -18,11 +17,12 @@ use tokio::{
     fs,
     sync::{Mutex, Semaphore},
 };
+use tokio_util::sync::CancellationToken;
 
 use crate::{
     agents::MemoryStore,
-    api::{ServerState, socket},
     providers::Client,
+    websocket::{ServerState, socket},
 };
 
 const DEFAULT_OLLAMA_HOST: &str = "http://127.0.0.1:11434";
@@ -91,7 +91,6 @@ pub(crate) async fn run() -> Result<()> {
     };
     let shutdown = CancellationToken::new();
     let memory_for_shutdown = memory.clone();
-
     let state = ServerState {
         shutdown: shutdown.clone(),
         client,
@@ -117,7 +116,6 @@ pub(crate) async fn run() -> Result<()> {
     );
     io::stdout().flush()?;
     let signal = shutdown.clone();
-
     let result = axum::serve(listener, router)
         .with_graceful_shutdown(async move {
             if tokio::signal::ctrl_c().await.is_ok() {
@@ -125,18 +123,14 @@ pub(crate) async fn run() -> Result<()> {
             }
         })
         .await;
-
     // Fermer les connexions WebSocket encore actives
     // avant de demander l'arrêt de SQLite.
     shutdown.cancel();
-
     let shutdown_result = match memory_for_shutdown {
         Some(memory) => memory.shutdown().await,
         None => Ok(()),
     };
-
     result?;
     shutdown_result?;
-
     Ok(())
 }

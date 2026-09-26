@@ -10,7 +10,7 @@ use tokio::{
 };
 use tokio_util::sync::CancellationToken;
 
-use crate::api::Event;
+use crate::event::Event;
 
 type Pending = (Option<String>, oneshot::Sender<bool>);
 

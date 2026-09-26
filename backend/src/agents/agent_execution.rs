@@ -10,7 +10,7 @@ use crate::{
         ExecutionMode, MemoryStore, Scheduler, ToolContext,
         context::{assemble, limits},
     },
-    api::Event,
+    event::Event,
     providers::{Chat, Client},
     sessions::Message,
     tools::{self, ToolApprovalGate, WriteProposal},
@@ -70,13 +70,29 @@ impl AgentExecution {
                      approbation explicite."
                 );
                 let recalled = if let Some(store) = memory {
-                    store
+                    match store
                         .recall(
                             &history.last().context("Conversation vide")?.content,
                             &instructions,
                             4,
                         )
-                        .await?
+                        .await
+                    {
+                        Ok(entries) => entries,
+                        Err(error) => {
+                            outbound
+                                .send(Event::new(
+                                    "memory.failed",
+                                    request_id,
+                                    json!({
+                                        "agent_id": agent.identity.id,
+                                        "error": error.to_string(),
+                                    }),
+                                ))
+                                .await?;
+                            Vec::new()
+                        }
+                    }
                 } else {
                     Vec::new()
                 };
@@ -186,13 +202,8 @@ impl AgentExecution {
                             }
                         })
                         .await?;
-                    if !turn.content.is_empty() {
-                        if !complete_answer.is_empty() {
-                            complete_answer.push('\n');
-                        }
-                        complete_answer.push_str(&turn.content);
-                    }
                     if turn.tool_calls.is_empty() {
+                        complete_answer = turn.content;
                         finished = true;
                         break;
                     }
@@ -244,7 +255,6 @@ impl AgentExecution {
                                 WriteProposal::prepare(project_root, name, &arguments).await?;
                             let preview = proposal.preview();
                             let preview_sha256 = ToolApprovalGate::preview_sha256(&preview)?;
-
                             outbound
                                 .send(Event::new(
                                     "tool.preview",
