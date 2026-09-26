@@ -2,16 +2,21 @@ use std::collections::HashSet;
 
 use crate::agents::{AgentLayer, Aggregation};
 
+/// Fixed proposal layers followed by an aggregator. This is not a generic
+/// name for every multi-agent coordination strategy.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) struct Mixture {
+pub(crate) struct LayeredMoa {
     pub layers: Vec<AgentLayer>,
     pub aggregation: Aggregation,
 }
 
-impl Mixture {
-    pub fn new(layers: Vec<AgentLayer>, aggregation: Aggregation) -> Result<Self, &'static str> {
+impl LayeredMoa {
+    pub(crate) fn new(
+        layers: Vec<AgentLayer>,
+        aggregation: Aggregation,
+    ) -> Result<Self, &'static str> {
         if layers.is_empty() {
-            return Err("A mixture requires at least one layer");
+            return Err("A layered MoA requires at least one layer");
         }
         let mut identifiers = HashSet::new();
         for layer in &layers {
@@ -27,9 +32,6 @@ impl Mixture {
         if !identifiers.insert(&aggregation.agent.identity.id) {
             return Err("Duplicate aggregator identifier");
         }
-        Ok(Self {
-            layers,
-            aggregation,
-        })
+        Ok(Self { layers, aggregation })
     }
 }

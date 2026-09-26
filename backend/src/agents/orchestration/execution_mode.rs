@@ -1,7 +1,7 @@
-use crate::agents::{AgentConfig, Mixture};
+use crate::agents::{AgentConfig, MultiAgent};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum ExecutionMode {
     Single(AgentConfig),
-    Mixture(Mixture),
+    MultiAgent(MultiAgent),
 }

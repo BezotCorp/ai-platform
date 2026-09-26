@@ -17,4 +17,7 @@ pub(crate) use context::{
     relevance,
 };
 pub(crate) use memory::{MemoryEntry, MemoryStore, apply, checksum, find, project_scope, save};
-pub(crate) use orchestration::{AgentLayer, Aggregation, ExecutionMode, Mixture, Scheduler};
+pub(crate) use orchestration::{
+    AgentLayer, Aggregation, ExecutionMode, LayeredMoa, MultiAgent, MultiAgentStrategy,
+    PopulationPolicy, Scheduler, Supervised, SupervisedExecution, SupervisorDecision, WorkerReport,
+};

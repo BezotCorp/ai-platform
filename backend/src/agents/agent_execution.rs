@@ -6,7 +6,10 @@ use tokio::sync::{Mutex, mpsc};
 use tokio_util::sync::CancellationToken;
 
 use crate::{
-    agents::{ExecutionMode, MemoryStore, Scheduler, agent_turn::AgentTurn, context::limits},
+    agents::{
+        ExecutionMode, MemoryStore, MultiAgentStrategy, Scheduler, SupervisedExecution,
+        agent_turn::AgentTurn, context::limits,
+    },
     event::Event,
     providers::Client,
     sessions::Message,
@@ -30,11 +33,20 @@ impl AgentExecution {
         writes: &Arc<Mutex<()>>,
         memory: Option<&MemoryStore>,
     ) -> Result<()> {
+        if let ExecutionMode::MultiAgent(multi) = mode
+            && let MultiAgentStrategy::Supervised(config) = &multi.strategy
+        {
+            return SupervisedExecution::run(
+                config, client, history, request_id, outbound, cancel, project_root,
+                approvals, approve_reads, writes, memory,
+            )
+            .await;
+        }
         let (context_tokens, output_tokens) = limits()?;
         let definitions = tools::definitions();
         let tool_tokens = serde_json::to_vec(&definitions)?.len().saturating_add(256);
         let mut previous_layer: Vec<(String, String)> = Vec::new();
-        for (layer_index, agents) in Scheduler::plan(mode).iter().enumerate() {
+        for (layer_index, agents) in Scheduler::plan(mode)?.iter().enumerate() {
             let mut current_layer = Vec::new();
             for agent in agents {
                 let answer = AgentTurn::run(

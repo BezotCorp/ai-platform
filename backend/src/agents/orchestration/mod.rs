@@ -1,11 +1,26 @@
 mod agent_layer;
 mod aggregation;
 mod execution_mode;
-mod mixture;
+mod layered_moa;
+mod multi_agent;
+mod multi_agent_strategy;
+mod population_policy;
 mod scheduler;
+mod supervised;
+mod supervised_execution;
+mod supervisor_decision;
+mod supervisor_turn;
+mod worker_report;
 
 pub(crate) use agent_layer::AgentLayer;
 pub(crate) use aggregation::Aggregation;
 pub(crate) use execution_mode::ExecutionMode;
-pub(crate) use mixture::Mixture;
+pub(crate) use layered_moa::LayeredMoa;
+pub(crate) use multi_agent::MultiAgent;
+pub(crate) use multi_agent_strategy::MultiAgentStrategy;
+pub(crate) use population_policy::PopulationPolicy;
 pub(crate) use scheduler::Scheduler;
+pub(crate) use supervised::Supervised;
+pub(crate) use supervised_execution::SupervisedExecution;
+pub(crate) use supervisor_decision::SupervisorDecision;
+pub(crate) use worker_report::WorkerReport;

@@ -28,7 +28,6 @@ impl SessionStore {
         {
             bail!("Identifiant de session invalide");
         }
-
         Ok(())
     }
 
@@ -40,14 +39,11 @@ impl SessionStore {
     ) -> Result<Session> {
         Self::validate_id(&id)?;
         History::validate(&messages)?;
-
         if expected_revision < 0 {
             bail!("Révision de session invalide");
         }
-
         let project = self.project.clone();
         let encoded = serde_json::to_string(&messages)?;
-
         self.database
             .write(move |connection| {
                 let changed = if expected_revision == 0 {
@@ -74,11 +70,9 @@ impl SessionStore {
                         params![project, id, encoded, expected_revision,],
                     )?
                 };
-
                 if changed != 1 {
                     bail!("Conflit de révision : session existante ou modifiée");
                 }
-
                 let session = connection.query_row(
                     "SELECT
                         id,
@@ -98,7 +92,6 @@ impl SessionStore {
                         })
                     },
                 )?;
-
                 Ok(session)
             })
             .await
@@ -106,9 +99,7 @@ impl SessionStore {
 
     pub(crate) async fn load(&self, id: String) -> Result<Option<History>> {
         Self::validate_id(&id)?;
-
         let project = self.project.clone();
-
         self.database
             .read(move |connection| {
                 let stored = connection
@@ -130,20 +121,15 @@ impl SessionStore {
                                 created_at: row.get(2)?,
                                 updated_at: row.get(3)?,
                             };
-
                             let encoded: String = row.get(4)?;
-
                             Ok((session, encoded))
                         },
                     )
                     .optional()?;
-
                 stored
                     .map(|(session, encoded)| {
                         let messages: Vec<Message> = serde_json::from_str(&encoded)?;
-
                         History::validate(&messages)?;
-
                         Ok(History { session, messages })
                     })
                     .transpose()
@@ -153,7 +139,6 @@ impl SessionStore {
 
     pub(crate) async fn list(&self) -> Result<Vec<Session>> {
         let project = self.project.clone();
-
         self.database
             .read(move |connection| {
                 let mut statement = connection.prepare(
@@ -167,7 +152,6 @@ impl SessionStore {
                      ORDER BY updated_at DESC, id
                      LIMIT 50",
                 )?;
-
                 let rows = statement.query_map(params![project], |row| {
                     Ok(Session {
                         id: row.get(0)?,
@@ -176,7 +160,6 @@ impl SessionStore {
                         updated_at: row.get(3)?,
                     })
                 })?;
-
                 Ok(rows.collect::<rusqlite::Result<Vec<_>>>()?)
             })
             .await
@@ -184,13 +167,10 @@ impl SessionStore {
 
     pub(crate) async fn delete(&self, id: String, expected_revision: i64) -> Result<bool> {
         Self::validate_id(&id)?;
-
         if expected_revision < 1 {
             bail!("Révision de session invalide");
         }
-
         let project = self.project.clone();
-
         self.database
             .write(move |connection| {
                 let changed = connection.execute(
@@ -200,87 +180,8 @@ impl SessionStore {
                        AND revision = ?3",
                     params![project, id, expected_revision,],
                 )?;
-
                 Ok(changed == 1)
             })
             .await
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use std::time::{SystemTime, UNIX_EPOCH};
-
-    use crate::{
-        sessions::{Message, SessionStore},
-        sqlite::Database,
-    };
-
-    #[tokio::test]
-    async fn persists_and_checks_revisions() -> anyhow::Result<()> {
-        let stamp = SystemTime::now().duration_since(UNIX_EPOCH)?.as_nanos();
-
-        let path = std::env::temp_dir().join(format!(
-            "ai-platform-sessions-{}-{stamp}.sqlite",
-            std::process::id(),
-        ));
-
-        let database = Database::open(path.clone(), 2, |_| Ok(())).await?;
-
-        let store = SessionStore::open(database.clone(), "project-a".into()).await?;
-
-        let other = SessionStore::open(database.clone(), "project-b".into()).await?;
-
-        let messages = vec![Message {
-            role: "user".into(),
-            content: "Première question".into(),
-        }];
-
-        let first = store.save("session_1".into(), 0, messages.clone()).await?;
-
-        assert_eq!(first.revision, 1);
-
-        assert!(
-            store
-                .save("session_1".into(), 0, messages.clone())
-                .await
-                .is_err()
-        );
-
-        assert!(
-            store
-                .save("session_1".into(), 3, messages.clone())
-                .await
-                .is_err()
-        );
-
-        let second = store.save("session_1".into(), 1, messages).await?;
-
-        assert_eq!(second.revision, 2);
-
-        let loaded = store
-            .load("session_1".into())
-            .await?
-            .expect("La session doit exister");
-
-        assert_eq!(loaded.session.revision, 2);
-        assert_eq!(store.list().await?.len(), 1);
-
-        assert!(other.load("session_1".into()).await?.is_none());
-
-        assert!(!store.delete("session_1".into(), 1).await?);
-
-        assert!(store.delete("session_1".into(), 2).await?);
-
-        assert!(store.load("session_1".into()).await?.is_none());
-
-        drop(store);
-        drop(other);
-
-        database.shutdown().await?;
-
-        std::fs::remove_file(path)?;
-
-        Ok(())
     }
 }

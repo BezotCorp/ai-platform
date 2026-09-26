@@ -1,28 +1,29 @@
-use crate::agents::{AgentConfig, ExecutionMode};
+use anyhow::{Result, bail};
+
+use crate::agents::{AgentConfig, ExecutionMode, MultiAgentStrategy};
 
 pub(crate) struct Scheduler;
 
 impl Scheduler {
-    /// Returns ordered execution layers.
-    ///
-    /// Agents within a layer are independent.
-    /// The aggregator runs after all proposal layers.
-    ///
-    /// This is a plan, not an execution engine.
-    pub fn plan(mode: &ExecutionMode) -> Vec<Vec<&AgentConfig>> {
+    /// A fixed execution plan for modes that support one. Future autonomous
+    /// coordinators must use their own runtime, not emulate a layered MoA.
+    pub(crate) fn plan(mode: &ExecutionMode) -> Result<Vec<Vec<&AgentConfig>>> {
         match mode {
-            ExecutionMode::Single(agent) => {
-                vec![vec![agent]]
-            }
-            ExecutionMode::Mixture(mixture) => {
-                let mut layers: Vec<Vec<&AgentConfig>> = mixture
-                    .layers
-                    .iter()
-                    .map(|layer| layer.agents.iter().collect())
-                    .collect();
-                layers.push(vec![&mixture.aggregation.agent]);
-                layers
-            }
+            ExecutionMode::Single(agent) => Ok(vec![vec![agent]]),
+            ExecutionMode::MultiAgent(multi) => match &multi.strategy {
+                MultiAgentStrategy::LayeredMoa(moa) => {
+                    let mut layers: Vec<Vec<&AgentConfig>> = moa
+                        .layers
+                        .iter()
+                        .map(|layer| layer.agents.iter().collect())
+                        .collect();
+                    layers.push(vec![&moa.aggregation.agent]);
+                    Ok(layers)
+                }
+                MultiAgentStrategy::Supervised(_) => {
+                    bail!("Supervised orchestration has a dynamic runtime")
+                }
+            },
         }
     }
 }

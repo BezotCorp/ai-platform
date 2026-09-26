@@ -342,3 +342,16 @@ Les fonctionnalités suivantes restent à développer ou à évaluer :
 - les formes d'orchestration plus élaborées que le MoA séquentiel.
 
 Ces fonctionnalités ne sont pas considérées comme implémentées tant qu'elles ne sont pas effectivement intégrées au backend.
+
+## Diversité des stratégies multi-agents — contrat initial (26 septembre 2026)
+
+Les sections précédentes sont des jalons historiques ; les anciennes listes de fonctionnalités manquantes ne constituent pas l'état actuel. Le nouveau contrat distingue `Single` et `MultiAgent`, puis la stratégie de coordination et la politique de population. Cette évolution conserve le MoA en couches et ajoute une orchestration supervisée dynamique. Elle introduit également des types explicites pour les politiques de population futures, sans prétendre implémenter la collaboration décentralisée ni l'évolution des populations.
+
+- `MultiAgentStrategy::LayeredMoa` : couches prédéfinies suivies d'un agrégateur, toujours exécutées séquentiellement afin de limiter la VRAM.
+- `PopulationPolicy::Fixed` : seule politique exécutable actuellement.
+- `PopulationPolicy::Adaptive` et `PopulationPolicy::Evolutionary` : choix distincts représentés dans le contrat mais explicitement refusés en attendant une implémentation réelle.
+- La stratégie `MultiAgentStrategy::Supervised` réutilise le moteur d'agent commun pour déléguer dynamiquement des tâches à des travailleurs indépendants pendant une exécution. La collaboration décentralisée reste à développer.
+
+Contrat WebSocket : `mode: { kind: "multi_agent", coordination: { kind: "layered_moa", layers: [...], aggregator: {...} }, population: { kind: "fixed" } }`. Le champ `population` est facultatif et vaut `fixed` par défaut. L'ancien `kind: "mixture"` est refusé sur cette nouvelle branche, avant le développement du frontend.
+
+L'orchestration supervisée et ses limites réelles sont décrites dans `docs/SUPERVISED_ORCHESTRATION.md`.
