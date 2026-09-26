@@ -2,7 +2,11 @@ use std::sync::Arc;
 use tokio::sync::{Mutex, Semaphore};
 use tokio_util::sync::CancellationToken;
 
-use crate::{agents::MemoryStore, providers::Client};
+use crate::{
+    agents::MemoryStore,
+    providers::Client,
+    sessions::SessionStore,
+};
 
 #[derive(Clone)]
 pub(crate) struct ServerState {
@@ -15,4 +19,5 @@ pub(crate) struct ServerState {
     pub writes: Arc<Mutex<()>>,
     pub approve_reads: bool,
     pub memory: Option<MemoryStore>,
+    pub sessions: Option<SessionStore>,
 }

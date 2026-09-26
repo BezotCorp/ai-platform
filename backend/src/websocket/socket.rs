@@ -12,6 +12,7 @@ use tokio_util::sync::CancellationToken;
 use crate::{
     agents::{AgentExecution, MemoryStore},
     providers::Client,
+    sessions::SessionStore,
     tools::ToolApprovalGate,
     websocket::{Command, Event, RunRequest, models::list},
 };
@@ -38,6 +39,7 @@ pub(crate) async fn serve(
     writes: Arc<Mutex<()>>,
     approve_reads: bool,
     memory: Option<MemoryStore>,
+    sessions: Option<SessionStore>,
     shutdown: CancellationToken,
 ) {
     let approvals = ToolApprovalGate::new();
@@ -248,6 +250,117 @@ pub(crate) async fn serve(
                             }),
                         )
                     });
+                    if tx.send(event).await.is_err() {
+                        break;
+                    }
+                }
+                Ok(Command::SessionSave {
+                    request_id,
+                    session_id,
+                    expected_revision,
+                    messages,
+                }) => {
+                    let result = match sessions.as_ref() {
+                        Some(store) => store.save(session_id, expected_revision, messages).await,
+
+                        None => Err(anyhow::anyhow!("Persistance des sessions désactivée")),
+                    };
+                    let event = match result {
+                        Ok(session) => {
+                            Event::new("session.saved", &request_id, json!({ "session": session }))
+                        }
+                        Err(error) => Event::new(
+                            "session.failed",
+                            &request_id,
+                            json!({
+                                "error": error.to_string(),
+                            }),
+                        ),
+                    };
+                    if tx.send(event).await.is_err() {
+                        break;
+                    }
+                }
+                Ok(Command::SessionLoad {
+                    request_id,
+                    session_id,
+                }) => {
+                    let result = match sessions.as_ref() {
+                        Some(store) => store.load(session_id).await,
+                        None => Err(anyhow::anyhow!("Persistance des sessions désactivée")),
+                    };
+                    let event = match result {
+                        Ok(Some(history)) => {
+                            Event::new("session.loaded", &request_id, json!({ "history": history }))
+                        }
+                        Ok(None) => Event::new(
+                            "session.failed",
+                            &request_id,
+                            json!({
+                                "error": "Session introuvable",
+                            }),
+                        ),
+                        Err(error) => Event::new(
+                            "session.failed",
+                            &request_id,
+                            json!({
+                                "error": error.to_string(),
+                            }),
+                        ),
+                    };
+                    if tx.send(event).await.is_err() {
+                        break;
+                    }
+                }
+                Ok(Command::SessionList { request_id }) => {
+                    let result = match sessions.as_ref() {
+                        Some(store) => store.list().await,
+
+                        None => Err(anyhow::anyhow!("Persistance des sessions désactivée")),
+                    };
+                    let event = match result {
+                        Ok(items) => {
+                            Event::new("session.list", &request_id, json!({ "sessions": items }))
+                        }
+                        Err(error) => Event::new(
+                            "session.failed",
+                            &request_id,
+                            json!({
+                                "error": error.to_string(),
+                            }),
+                        ),
+                    };
+                    if tx.send(event).await.is_err() {
+                        break;
+                    }
+                }
+                Ok(Command::SessionDelete {
+                    request_id,
+                    session_id,
+                    expected_revision,
+                }) => {
+                    let result = match sessions.as_ref() {
+                        Some(store) => store.delete(session_id, expected_revision).await,
+                        None => Err(anyhow::anyhow!("Persistance des sessions désactivée")),
+                    };
+                    let event = match result {
+                        Ok(true) => Event::new("session.deleted", &request_id, json!({})),
+                        Ok(false) => Event::new(
+                            "session.failed",
+                            &request_id,
+                            json!({
+                                "error":
+                                    "Session absente ou révision modifiée",
+                            }),
+                        ),
+                        Err(error) => Event::new(
+                            "session.failed",
+                            &request_id,
+                            json!({
+                                "error": error.to_string(),
+                            }),
+                        ),
+                    };
                     if tx.send(event).await.is_err() {
                         break;
                     }

@@ -22,6 +22,7 @@ use tokio_util::sync::CancellationToken;
 use crate::{
     agents::MemoryStore,
     providers::Client,
+    sessions::SessionStore,
     websocket::{ServerState, socket},
 };
 
@@ -48,6 +49,7 @@ async fn upgrade(
             state.writes,
             state.approve_reads,
             state.memory,
+            state.sessions,
             state.shutdown,
         )
     })
@@ -89,6 +91,12 @@ pub(crate) async fn run() -> Result<()> {
         Err(env::VarError::NotPresent) => None,
         Err(error) => return Err(error.into()),
     };
+    let sessions = match memory.as_ref() {
+        Some(memory) => {
+            Some(SessionStore::open(memory.database(), memory.project().to_owned()).await?)
+        }
+        None => None,
+    };
     let shutdown = CancellationToken::new();
     let memory_for_shutdown = memory.clone();
     let state = ServerState {
@@ -101,6 +109,7 @@ pub(crate) async fn run() -> Result<()> {
         writes: Arc::new(Mutex::new(())),
         approve_reads,
         memory,
+        sessions,
     };
     let listener = tokio::net::TcpListener::bind((Ipv4Addr::LOCALHOST, 0)).await?;
     let url = format!("ws://{}/ws", listener.local_addr()?);

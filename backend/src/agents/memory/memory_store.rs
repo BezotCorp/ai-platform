@@ -91,6 +91,14 @@ impl MemoryStore {
             .await
     }
 
+    pub(crate) fn database(&self) -> Database {
+        self.database.clone()
+    }
+
+    pub(crate) fn project(&self) -> &str {
+        &self.project
+    }
+
     pub(crate) async fn shutdown(self) -> Result<()> {
         self.database.shutdown().await
     }

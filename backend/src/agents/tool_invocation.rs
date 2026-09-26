@@ -1,6 +1,6 @@
 use std::{path::Path, sync::Arc};
 
-use anyhow::{Context, Result, bail};
+use anyhow::{Result, bail};
 use serde_json::{Value, json};
 use tokio::sync::{Mutex, mpsc};
 use tokio_util::sync::CancellationToken;

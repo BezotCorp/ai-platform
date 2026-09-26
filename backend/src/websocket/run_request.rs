@@ -3,7 +3,7 @@ use serde::Deserialize;
 
 use crate::{
     agents::{AgentLayer, Aggregation, ExecutionMode, Mixture},
-    sessions::Message,
+    sessions::{History, Message},
     websocket::RunMode,
 };
 
@@ -34,21 +34,7 @@ impl RunRequest {
         {
             bail!("Le dernier message doit venir de l'utilisateur");
         }
-        let mut total = 0usize;
-        for message in &self.messages {
-            if !matches!(message.role.as_str(), "user" | "assistant") {
-                bail!("Rôle de message non autorisé");
-            }
-            if message.content.trim().is_empty() || message.content.len() > 32_768 {
-                bail!("Contenu du message invalide");
-            }
-            total = total
-                .checked_add(message.content.len())
-                .ok_or_else(|| anyhow::anyhow!("Conversation trop volumineuse"))?;
-        }
-        if total > 131_072 {
-            bail!("Conversation trop volumineuse");
-        }
+        History::validate(&self.messages)?;
         Ok(())
     }
 

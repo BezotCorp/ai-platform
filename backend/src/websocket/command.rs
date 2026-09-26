@@ -1,5 +1,7 @@
 use serde::Deserialize;
 
+use crate::sessions::Message;
+
 #[derive(Debug, Deserialize)]
 #[serde(tag = "type")]
 pub(crate) enum Command {
@@ -7,6 +9,32 @@ pub(crate) enum Command {
     Authenticate { token: String },
     #[serde(rename = "models.list")]
     ModelsList { request_id: String },
+    #[serde(rename = "session.save")]
+    SessionSave {
+        request_id: String,
+        session_id: String,
+        expected_revision: i64,
+        messages: Vec<Message>,
+    },
+
+    #[serde(rename = "session.load")]
+    SessionLoad {
+        request_id: String,
+        session_id: String,
+    },
+
+    #[serde(rename = "session.list")]
+    SessionList {
+        request_id: String,
+    },
+
+    #[serde(rename = "session.delete")]
+    SessionDelete {
+        request_id: String,
+        session_id: String,
+        expected_revision: i64,
+    },
+
     #[serde(rename = "run.cancel")]
     RunCancel { request_id: String },
     #[serde(rename = "approval.resolve")]
