@@ -4,6 +4,7 @@ use tokio_util::sync::CancellationToken;
 
 use crate::{
     agents::MemoryStore,
+    configurations::ConfigurationStore,
     providers::Client,
     sessions::SessionStore,
 };
@@ -20,4 +21,5 @@ pub(crate) struct ServerState {
     pub approve_reads: bool,
     pub memory: Option<MemoryStore>,
     pub sessions: Option<SessionStore>,
+    pub configurations: Option<ConfigurationStore>,
 }

@@ -1,6 +1,9 @@
 use serde::Deserialize;
 
-use crate::sessions::Message;
+use crate::{
+    agents::ExecutionMode,
+    sessions::Message,
+};
 
 #[derive(Debug, Deserialize)]
 #[serde(tag = "type")]
@@ -9,6 +12,32 @@ pub(crate) enum Command {
     Authenticate { token: String },
     #[serde(rename = "models.list")]
     ModelsList { request_id: String },
+    #[serde(rename = "configuration.save")]
+    ConfigurationSave {
+        request_id: String,
+        configuration_id: String,
+        expected_revision: i64,
+        mode: ExecutionMode,
+    },
+
+    #[serde(rename = "configuration.load")]
+    ConfigurationLoad {
+        request_id: String,
+        configuration_id: String,
+    },
+
+    #[serde(rename = "configuration.list")]
+    ConfigurationList {
+        request_id: String,
+    },
+
+    #[serde(rename = "configuration.delete")]
+    ConfigurationDelete {
+        request_id: String,
+        configuration_id: String,
+        expected_revision: i64,
+    },
+
     #[serde(rename = "session.save")]
     SessionSave {
         request_id: String,

@@ -1,4 +1,5 @@
 mod agents;
+mod configurations;
 mod event;
 mod file_manager;
 mod providers;

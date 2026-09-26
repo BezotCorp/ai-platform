@@ -398,8 +398,6 @@ Les fonctionnalités suivantes restent à développer :
 
 - le frontend graphique et son lanceur ;
 - les clients et adaptateurs MCP ;
-- les configurations permanentes des agents,
-  superviseurs, MoA et populations ;
 - la gestion des comptes utilisateurs ;
 - la récupération sémantique ;
 - le comptage exact des tokens selon les modèles ;
@@ -469,21 +467,31 @@ La mémoire possède ses propres colonnes métier.
 
 ### 15.4. Configurations persistantes
 
-Les configurations des agents, des superviseurs,
-des MoA et des populations ne possèdent pas encore
-de mécanisme de sauvegarde permanent.
+Les configurations `ExecutionMode` peuvent être
+enregistrées dans la même base SQLite que les
+sessions et la mémoire, lorsque celle-ci est activée.
 
-Le prochain chantier doit permettre de créer,
-charger, modifier, lister et supprimer ces
-configurations, avec contrôle des révisions
-et cloisonnement adapté.
+`ConfigurationStore` permet de créer, modifier,
+charger, lister et supprimer les configurations.
+Chaque configuration est identifiée par projet,
+avec une révision empêchant les écrasements
+concurrents silencieux.
 
-Le choix entre stockage SQLite et fichiers
-portables RON reste distinct du format
-des communications WebSocket.
+Les configurations sont validées avant leur
+enregistrement et à leur chargement.
 
-Aucun stockage binaire de ces configurations
-n'est encore implémenté.
+Le contenu des configurations est actuellement
+encodé en JSON dans SQLite. Ce choix de stockage
+reste indépendant des structures métier Rust
+et du protocole WebSocket.
+
+Les commandes disponibles sont `configuration.save`,
+`configuration.load`, `configuration.list` et
+`configuration.delete`.
+
+L'import et l'export RON, la gestion de comptes
+utilisateurs et la reprise des exécutions après
+redémarrage ne sont pas encore implémentés.
 
 ### 15.5. Frontières du runtime
 

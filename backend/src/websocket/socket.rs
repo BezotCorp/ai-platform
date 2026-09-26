@@ -11,6 +11,7 @@ use tokio_util::sync::CancellationToken;
 
 use crate::{
     agents::{AgentExecution, MemoryStore},
+    configurations::ConfigurationStore,
     event::Event,
     providers::Client,
     sessions::SessionStore,
@@ -41,6 +42,7 @@ pub(crate) async fn serve(
     approve_reads: bool,
     memory: Option<MemoryStore>,
     sessions: Option<SessionStore>,
+    configurations: Option<ConfigurationStore>,
     shutdown: CancellationToken,
 ) {
     let approvals = ToolApprovalGate::new();
@@ -255,6 +257,178 @@ pub(crate) async fn serve(
                         break;
                     }
                 }
+                Ok(Command::ConfigurationSave {
+                    request_id,
+                    configuration_id,
+                    expected_revision,
+                    mode,
+                }) => {
+                    let result = match configurations.as_ref() {
+                        Some(store) => {
+                            store
+                                .save(
+                                    configuration_id,
+                                    expected_revision,
+                                    mode,
+                                )
+                                .await
+                        }
+
+                        None => Err(anyhow::anyhow!(
+                            "Persistance des configurations désactivée"
+                        )),
+                    };
+
+                    let event = match result {
+                        Ok(configuration) => Event::new(
+                            "configuration.saved",
+                            &request_id,
+                            json!({
+                                "configuration": configuration,
+                            }),
+                        ),
+
+                        Err(error) => Event::new(
+                            "configuration.failed",
+                            &request_id,
+                            json!({
+                                "error": error.to_string(),
+                            }),
+                        ),
+                    };
+
+                    if tx.send(event).await.is_err() {
+                        break;
+                    }
+                }
+
+                Ok(Command::ConfigurationLoad {
+                    request_id,
+                    configuration_id,
+                }) => {
+                    let result = match configurations.as_ref() {
+                        Some(store) => {
+                            store.load(configuration_id).await
+                        }
+
+                        None => Err(anyhow::anyhow!(
+                            "Persistance des configurations désactivée"
+                        )),
+                    };
+
+                    let event = match result {
+                        Ok(Some(configuration)) => Event::new(
+                            "configuration.loaded",
+                            &request_id,
+                            json!({
+                                "configuration": configuration,
+                            }),
+                        ),
+
+                        Ok(None) => Event::new(
+                            "configuration.failed",
+                            &request_id,
+                            json!({
+                                "error": "Configuration introuvable",
+                            }),
+                        ),
+
+                        Err(error) => Event::new(
+                            "configuration.failed",
+                            &request_id,
+                            json!({
+                                "error": error.to_string(),
+                            }),
+                        ),
+                    };
+
+                    if tx.send(event).await.is_err() {
+                        break;
+                    }
+                }
+
+                Ok(Command::ConfigurationList { request_id }) => {
+                    let result = match configurations.as_ref() {
+                        Some(store) => store.list().await,
+
+                        None => Err(anyhow::anyhow!(
+                            "Persistance des configurations désactivée"
+                        )),
+                    };
+
+                    let event = match result {
+                        Ok(configurations) => Event::new(
+                            "configuration.list",
+                            &request_id,
+                            json!({
+                                "configurations": configurations,
+                            }),
+                        ),
+
+                        Err(error) => Event::new(
+                            "configuration.failed",
+                            &request_id,
+                            json!({
+                                "error": error.to_string(),
+                            }),
+                        ),
+                    };
+
+                    if tx.send(event).await.is_err() {
+                        break;
+                    }
+                }
+
+                Ok(Command::ConfigurationDelete {
+                    request_id,
+                    configuration_id,
+                    expected_revision,
+                }) => {
+                    let result = match configurations.as_ref() {
+                        Some(store) => {
+                            store
+                                .delete(
+                                    configuration_id,
+                                    expected_revision,
+                                )
+                                .await
+                        }
+
+                        None => Err(anyhow::anyhow!(
+                            "Persistance des configurations désactivée"
+                        )),
+                    };
+
+                    let event = match result {
+                        Ok(true) => Event::new(
+                            "configuration.deleted",
+                            &request_id,
+                            json!({}),
+                        ),
+
+                        Ok(false) => Event::new(
+                            "configuration.failed",
+                            &request_id,
+                            json!({
+                                "error":
+                                    "Configuration absente ou révision modifiée",
+                            }),
+                        ),
+
+                        Err(error) => Event::new(
+                            "configuration.failed",
+                            &request_id,
+                            json!({
+                                "error": error.to_string(),
+                            }),
+                        ),
+                    };
+
+                    if tx.send(event).await.is_err() {
+                        break;
+                    }
+                }
+
                 Ok(Command::SessionSave {
                     request_id,
                     session_id,
