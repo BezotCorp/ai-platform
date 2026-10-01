@@ -1,52 +1,46 @@
 ---
 name: Bug report
-about: Create a report to help us improve
+about: Report a problem in BCAIP
 title: ''
 type: bug
 assignees: ''
 ---
 
-**Describe the bug**
+## Describe the bug
 
-💡 Before filing, please check common issues:  
-https://goose-docs.ai/docs/troubleshooting  
+Provide a clear and concise description of the problem.
 
-📦 To help us debug faster, attach your **diagnostics zip** if possible.  
-👉 How to capture it: https://goose-docs.ai/docs/troubleshooting/diagnostics-and-reporting/
+## To reproduce
 
-A clear and concise description of what the bug is.
-
----
-
-**To Reproduce**
 Steps to reproduce the behavior:
-1. Go to '...'
-2. Click on '....'
-3. Scroll down to '....'
-4. See error
 
----
+1. ...
+2. ...
+3. ...
 
-**Expected behavior**
-A clear and concise description of what you expected to happen.
+## Expected behavior
 
----
+Describe what you expected to happen.
 
-**Screenshots**
-If applicable, add screenshots to help explain your problem.
+## Actual behavior
 
----
+Describe what happened instead.
 
-**Please provide the following information**
-- **OS & Arch:** [e.g. Ubuntu 22.04 x86]
-- **Interface:** [UI / CLI]
-- **Version:** [e.g. v1.0.2]
-- **Extensions enabled:** [e.g. Computer Controller, Figma]
-- **Provider & Model:** [e.g. Google – gemini-1.5-pro]
+## Environment
 
----
+- OS & architecture:
+- Interface:
+- BCAIP version or commit:
+- Provider:
+- Model:
+- Relevant extensions or tools:
 
-**Additional context**
-Add any other context about the problem here.
+## Logs or diagnostics
 
-Do not begin implementation until the issue reaches **Ready** on the [Goose Issues board](https://github.com/orgs/aaif-goose/projects/1).
+Attach relevant logs, diagnostics, screenshots, or error messages when available.
+
+Do not include API keys, tokens, passwords, or other secrets.
+
+## Additional context
+
+Add any other information that may help reproduce or understand the issue.
