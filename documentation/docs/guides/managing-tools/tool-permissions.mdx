@@ -22,9 +22,9 @@ For example, the Developer extension includes multiple tools like:
 - Text editor tool for file editing
 - Shell tool for running commands
 - Screen capture tool for taking screenshots
-:::warning Performance Optimization
-goose performs best with fewer than 25 total tools enabled across all extensions. Consider enabling only the extensions you need for your current task.
-:::
+  :::warning Performance Optimization
+  goose performs best with fewer than 25 total tools enabled across all extensions. Consider enabling only the extensions you need for your current task.
+  :::
 
 ## Permission Levels
 
@@ -32,11 +32,11 @@ Tool permissions work alongside [goose permission modes](/docs/guides/managing-t
 
 Each tool can be set to one of three permission levels:
 
-| Permission Level | Description | Best For | Examples |
-|-----------------|-------------|-----------|----------|
-| **Always Allow** | Tool runs without requiring approval | Safe, read-only operations | • File reading<br></br>• Directory listing<br></br>• Information retrieval |
-| **Ask Before** | Requires confirmation | State-changing operations | • File writing/editing<br></br>• System commands<br></br>• Resource creation |
-| **Never Allow** | Tool cannot be used | Sensitive operations | • Credential access<br></br>• System-critical files<br></br>• Resource deletion |
+| Permission Level | Description                          | Best For                   | Examples                                                                      |
+| ---------------- | ------------------------------------ | -------------------------- | ----------------------------------------------------------------------------- |
+| **Always Allow** | Tool runs without requiring approval | Safe, read-only operations | • File reading <br /> • Directory listing <br /> • Information retrieval      |
+| **Ask Before**   | Requires confirmation                | State-changing operations  | • File writing/editing <br /> • System commands <br /> • Resource creation    |
+| **Never Allow**  | Tool cannot be used                  | Sensitive operations       | • Credential access <br /> • System-critical files <br /> • Resource deletion |
 
 ## Configuring Tool Permissions
 
@@ -62,7 +62,7 @@ Each tool can be set to one of three permission levels:
         7. Click `Save Changes`
       </TabItem>
     </Tabs>
-  
+
   </TabItem>
   <TabItem value="cli" label="goose CLI">
 
@@ -107,22 +107,23 @@ Each tool can be set to one of three permission levels:
     ┌   goose-configure
     │
     ◇  What setting would you like to configure?
-    │  Tool Permission 
+    │  Tool Permission
     │
     ◇  Choose an extension to configure tools
-    │  developer 
+    │  developer
     │
     ◇  Choose a tool to update permission
-    │  read_image 
+    │  read_image
     │
     ◆  Set permission level for tool read_image, current permission level: Not Set
-    │  ○ Always Allow 
+    │  ○ Always Allow
      // highlight-start
     │  ● Ask Before (Prompt before executing this tool)
     // highlight-end
-    │  ○ Never Allow 
+    │  ○ Never Allow
     └
     ```
+
   </TabItem>
 </Tabs>
 

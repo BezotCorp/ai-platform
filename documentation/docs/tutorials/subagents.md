@@ -28,7 +28,7 @@ By the end of the session, you'll have a working prototype and a clear understan
 Create apps in html, javascript, and css when possible.
 NEVER run blocking server commands (node server.js, npm start, etc.) - provide commands for user to run separately.
 ```
-4. (Optional) Install the [goose docs extension](/docs/mcp/goose-docs-mcp) in case you need to ask goose about itself
+4. (Optional) Install the goose docs extension in case you need to ask goose about itself
 
 ## Tasks
 

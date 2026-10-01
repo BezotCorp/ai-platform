@@ -4,29 +4,49 @@ import Link from "@docusaurus/Link";
 import Layout from "@theme/Layout";
 import Heading from "@theme/Heading";
 
-// Import community data
-import communityConfig from "./data/config.json";
-import april2025Data from "./data/april-2025.json";
-import may2025Data from "./data/may-2025.json";
-import june2025Data from "./data/june-2025.json";
-import july2025Data from "./data/july-2025.json";
-import august2025Data from "./data/august-2025.json";
-import september2025Data from "./data/september-2025.json";
-import october2025Data from "./data/october-2025.json";
-import november2025Data from "./data/november-2025.json";
+import useBaseUrl from "@docusaurus/useBaseUrl";
 import communityContentData from "./data/community-content.json";
 
-// Create a data map for easy access
-const communityDataMap = {
-  "april-2025": april2025Data,
-  "may-2025": may2025Data,
-  "june-2025": june2025Data,
-  "july-2025": july2025Data,
-  "august-2025": august2025Data,
-  "september-2025": september2025Data,
-  "october-2025": october2025Data,
-  "november-2025": november2025Data,
+type CommunityContributor = {
+  name: string;
+  handle: string;
+  avatarUrl?: string;
 };
+
+type CommunityMonthData = {
+  month: string;
+  communityStars: CommunityContributor[];
+};
+
+type CommunityMonthIndexEntry = {
+  id: string;
+  display: string;
+  file: string;
+};
+
+type CommunityYearIndex = {
+  year: number;
+  months: CommunityMonthIndexEntry[];
+};
+
+type CommunityYearIndexEntry = {
+  year: number;
+  index: string;
+};
+
+type CommunityIndex = {
+  years: CommunityYearIndexEntry[];
+};
+
+async function fetchJson<T>(url: string): Promise<T> {
+  const response = await fetch(url);
+
+  if (!response.ok) {
+    throw new Error(`Failed to load ${url}: ${response.status}`);
+  }
+
+  return response.json() as Promise<T>;
+}
 
 function UpcomingEventsSection() {
   return (
@@ -56,63 +76,237 @@ function UpcomingEventsSection() {
 }
 
 function CommunityAllStarsSection() {
-  const [activeMonth, setActiveMonth] = React.useState(communityConfig.defaultMonth);
-  
-  const currentData = communityDataMap[activeMonth];
+  const communityBaseUrl = useBaseUrl("/community/");
+  const [years, setYears] = React.useState<CommunityYearIndexEntry[]>([]);
+  const [activeYear, setActiveYear] = React.useState<number | null>(null);
+  const [months, setMonths] = React.useState<CommunityMonthIndexEntry[]>([]);
+  const [activeMonth, setActiveMonth] = React.useState("");
+  const [currentData, setCurrentData] =
+    React.useState<CommunityMonthData | null>(null);
+  const [loadError, setLoadError] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    let cancelled = false;
+
+    fetchJson<CommunityIndex>(`${communityBaseUrl}index.json`)
+      .then((index) => {
+        if (cancelled) {
+          return;
+        }
+
+        setYears(index.years);
+        setActiveYear(index.years[0]?.year ?? null);
+        setLoadError(null);
+      })
+      .catch((error: unknown) => {
+        if (cancelled) {
+          return;
+        }
+
+        setLoadError(
+          error instanceof Error
+            ? error.message
+            : "Unable to load the community index.",
+        );
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [communityBaseUrl]);
+
+  React.useEffect(() => {
+    if (activeYear === null) {
+      setMonths([]);
+      setActiveMonth("");
+      setCurrentData(null);
+      return;
+    }
+
+    let cancelled = false;
+
+    const yearEntry = years.find((entry) => entry.year === activeYear);
+
+    if (!yearEntry) {
+      return;
+    }
+
+    fetchJson<CommunityYearIndex>(
+      `${communityBaseUrl}${yearEntry.index}`,
+    )
+      .then((index) => {
+        if (cancelled) {
+          return;
+        }
+
+        setMonths(index.months);
+        setActiveMonth(index.months[0]?.id ?? "");
+        setCurrentData(null);
+        setLoadError(null);
+      })
+      .catch((error: unknown) => {
+        if (cancelled) {
+          return;
+        }
+
+        setLoadError(
+          error instanceof Error
+            ? error.message
+            : "Unable to load the community year index.",
+        );
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeYear, communityBaseUrl, years]);
+
+  React.useEffect(() => {
+    if (activeYear === null || activeMonth === "") {
+      setCurrentData(null);
+      return;
+    }
+
+    let cancelled = false;
+
+    const monthEntry = months.find((entry) => entry.id === activeMonth);
+
+    if (!monthEntry) {
+      return;
+    }
+
+    fetchJson<CommunityMonthData>(
+      `${communityBaseUrl}${activeYear}/${monthEntry.file}`,
+    )
+      .then((data) => {
+        if (cancelled) {
+          return;
+        }
+
+        setCurrentData(data);
+        setLoadError(null);
+      })
+      .catch((error: unknown) => {
+        if (cancelled) {
+          return;
+        }
+
+        setLoadError(
+          error instanceof Error
+            ? error.message
+            : "Unable to load community contributor data.",
+        );
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeMonth, activeYear, communityBaseUrl, months]);
 
   return (
     <section className="w-full flex flex-col items-center gap-8 my-8">
-      {/* Header with Month Dropdown */}
       <div className="w-full flex flex-col items-center gap-4">
         <div className="text-center w-full">
           <Heading as="h1">🏆 Community All-Stars</Heading>
-          <p>Every month, we take a moment and celebrate the open source community. Here are the top contributors and community champions!</p>
+          <p>
+            Every month, we take a moment and celebrate the open source
+            community. Here are the top contributors and community champions!
+          </p>
         </div>
-        
-        {/* Month Dropdown */}
-        <div className="flex items-center gap-2">
-          <label htmlFor="month-select" className="text-sm font-medium whitespace-nowrap">
-            📅 Select Month:
-          </label>
-          <select 
-            id="month-select"
-            className="button button--secondary"
-            value={activeMonth}
-            onChange={(e) => setActiveMonth(e.target.value)}
-            style={{
-              padding: '0.5rem 1rem',
-              fontSize: '0.9rem',
-              cursor: 'pointer',
-              minWidth: '150px'
-            }}
-          >
-            {communityConfig.availableMonths.map((month) => (
-              <option key={month.id} value={month.id}>
-                {month.display}
-              </option>
-            ))}
-          </select>
-        </div>
+
+        {years.length > 0 && (
+          <div className="flex flex-wrap items-center justify-center gap-2">
+            <label
+              htmlFor="year-select"
+              className="text-sm font-medium whitespace-nowrap"
+            >
+              📅 Select Year:
+            </label>
+
+            <select
+              id="year-select"
+              className="button button--secondary"
+              value={activeYear ?? ""}
+              onChange={(event) => setActiveYear(Number(event.target.value))}
+              style={{
+                padding: "0.5rem 1rem",
+                fontSize: "0.9rem",
+                cursor: "pointer",
+                minWidth: "120px",
+              }}
+            >
+              {years.map((year) => (
+                <option key={year.year} value={year.year}>
+                  {year.year}
+                </option>
+              ))}
+            </select>
+
+            {months.length > 0 && (
+              <>
+                <label
+                  htmlFor="month-select"
+                  className="text-sm font-medium whitespace-nowrap"
+                >
+                  Select Month:
+                </label>
+
+                <select
+                  id="month-select"
+                  className="button button--secondary"
+                  value={activeMonth}
+                  onChange={(event) => setActiveMonth(event.target.value)}
+                  style={{
+                    padding: "0.5rem 1rem",
+                    fontSize: "0.9rem",
+                    cursor: "pointer",
+                    minWidth: "150px",
+                  }}
+                >
+                  {months.map((month) => (
+                    <option key={month.id} value={month.id}>
+                      {month.display}
+                    </option>
+                  ))}
+                </select>
+              </>
+            )}
+          </div>
+        )}
       </div>
 
-      {/* Community All-Stars Cards */}
-      <div className="flex flex-wrap justify-center gap-4 w-full px-4">
-        {currentData.communityStars.map((contributor, index) => (
-          <StarsCard key={index} contributor={contributor} />
-        ))}
-      </div>
-      
-      <div className="text-center">
-        <p>
-          Thank you all for contributing! ❤️
-        </p>
-      </div>
-      
-      {/* Want to be featured section */}
+      {loadError && (
+        <div className="text-center">
+          <p className="text-textSubtle">{loadError}</p>
+        </div>
+      )}
+
+      {!loadError && years.length === 0 && (
+        <div className="text-center">
+          <p className="text-textSubtle">
+            No community contributor data has been published yet.
+          </p>
+        </div>
+      )}
+
+      {currentData && (
+        <>
+          <div className="flex flex-wrap justify-center gap-4 w-full px-4">
+            {currentData.communityStars.map((contributor, index) => (
+              <StarsCard key={index} contributor={contributor} />
+            ))}
+          </div>
+
+          <div className="text-center">
+            <p>Thank you all for contributing! ❤️</p>
+          </div>
+        </>
+      )}
+
       <div className="text-center">
         <Heading as="h2">Want to be featured?</Heading>
       </div>
-      
+
       <div className="card max-w-xl">
         <div className="card__header text-center">
           <div className="avatar avatar--vertical">
@@ -128,11 +322,14 @@ function CommunityAllStarsSection() {
             <small>Future Community Star</small>
           </div>
           <div className="text-sm">
-            Want to be a Community All Star? Just start contributing on{' '}
-            <Link href="https://github.com/aaif-goose/goose">GitHub</Link>, helping others on{' '}
-            <Link href="https://discord.gg/n8R5VaWDAn">Discord</Link>, or share your
-            goose projects with the community! You can check out the{' '}
-            <Link href="https://github.com/aaif-goose/goose/blob/main/CONTRIBUTING.md">contributing guide</Link>{' '}
+            Want to be a Community All Star? Just start contributing on{" "}
+            <Link href="https://github.com/aaif-goose/goose">GitHub</Link>,
+            helping others on{" "}
+            <Link href="https://discord.gg/n8R5VaWDAn">Discord</Link>, or share
+            your goose projects with the community! You can check out the{" "}
+            <Link href="https://github.com/aaif-goose/goose/blob/main/CONTRIBUTING.md">
+              contributing guide
+            </Link>{" "}
             for more tips.
           </div>
         </div>

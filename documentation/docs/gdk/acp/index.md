@@ -13,7 +13,7 @@ models. These clients can be code editors, desktop, web, or mobile apps,
 automated services, or other custom integrations.
 
 For methods provided by goose in addition to the standard ACP methods, see the
-[goose ACP Reference](/docs/gdk/acp/reference).
+goose ACP Reference.
 
 ## Install
 

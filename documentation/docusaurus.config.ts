@@ -270,143 +270,31 @@ const config: Config = {
             to: "/docs/guides/context-engineering/plugins",
           },
           // MCP tutorial redirects - moved from /docs/tutorials/ to /docs/mcp/
-          {
-            from: "/docs/tutorials/agentql-mcp",
-            to: "/docs/mcp/agentql-mcp",
-          },
-          {
-            from: "/docs/tutorials/asana-mcp",
-            to: "/docs/mcp/asana-mcp",
-          },
-          {
-            from: "/docs/tutorials/blender-mcp",
-            to: "/docs/mcp/blender-mcp",
-          },
-          {
-            from: "/docs/tutorials/brave-mcp",
-            to: "/docs/mcp/brave-mcp",
-          },
-          {
-            from: "/docs/tutorials/browserbase-mcp",
-            to: "/docs/mcp/browserbase-mcp",
-          },
-          {
+                                                            {
             from: "/docs/tutorials/computer-controller-mcp",
             to: "/docs/mcp/computer-controller-mcp",
           },
-          {
-            from: "/docs/tutorials/context7-mcp",
-            to: "/docs/mcp/context7-mcp",
-          },
-          {
+                    {
             from: "/docs/tutorials/developer-mcp",
             to: "/docs/mcp/developer-mcp",
           },
-          {
-            from: "/docs/tutorials/elevenlabs-mcp",
-            to: "/docs/mcp/elevenlabs-mcp",
-          },
-          {
-            from: "/docs/tutorials/fetch-mcp",
-            to: "/docs/mcp/fetch-mcp",
-          },
-          {
-            from: "/docs/tutorials/figma-mcp",
-            to: "/docs/mcp/figma-mcp",
-          },
-          {
+                                        {
             from: ["/docs/tutorials/filesystem-mcp", "/docs/mcp/filesystem-mcp"],
             to: "/docs/getting-started/using-extensions",
           },
-          {
-            from: "/docs/tutorials/github-mcp",
-            to: "/docs/mcp/github-mcp",
-          },
-          {
-            from: "/docs/tutorials/google-drive-mcp",
-            to: "/docs/mcp/google-drive-mcp",
-          },
-          {
-            from: "/docs/tutorials/google-maps-mcp",
-            to: "/docs/mcp/google-maps-mcp",
-          },
-          {
-            from: "/docs/tutorials/jetbrains-mcp",
-            to: "/docs/mcp/jetbrains-mcp",
-          },
-          {
-            from: "/docs/tutorials/knowledge-graph-mcp",
-            to: "/docs/mcp/knowledge-graph-mcp",
-          },
-          {
+                                                            {
             from: "/docs/tutorials/memory-mcp",
             to: "/docs/mcp/memory-mcp",
           },
-          {
-            from: "/docs/tutorials/nostrbook-mcp",
-            to: "/docs/mcp/nostrbook-mcp",
-          },
-          {
-            from: "/docs/tutorials/pdf-mcp",
-            to: "/docs/mcp/pdf-mcp",
-          },
-          {
-            from: "/docs/tutorials/pieces-mcp",
-            to: "/docs/mcp/pieces-mcp",
-          },
-          {
-            from: "/docs/tutorials/playwright-mcp",
-            to: "/docs/mcp/playwright-mcp",
-          },
-          {
-            from: "/docs/tutorials/postgres-mcp",
-            to: "/docs/mcp/postgres-mcp",
-          },
-          {
-            from: "/docs/tutorials/puppeteer-mcp",
-            to: "/docs/mcp/puppeteer-mcp",
-          },
-          {
-            from: "/docs/tutorials/reddit-mcp",
-            to: "/docs/mcp/reddit-mcp",
-          },
-          {
-            from: "/docs/tutorials/repomix-mcp",
-            to: "/docs/mcp/repomix-mcp",
-          },
-          {
+                                                                                          {
             from: "/docs/mcp/rube-mcp",
             to: "/docs/getting-started/using-extensions",
           },
-          {
-            from: "/docs/tutorials/selenium-mcp",
-            to: "/docs/mcp/selenium-mcp",
-          },
-          {
-            from: "/docs/tutorials/speech-mcp",
-            to: "/docs/mcp/speech-mcp",
-          },
-          {
-            from: "/docs/tutorials/square-mcp",
-            to: "/docs/mcp/square-mcp",
-          },
-          {
-            from: "/docs/tutorials/tavily-mcp",
-            to: "/docs/mcp/tavily-mcp",
-          },
-          {
+                                                  {
             from: "/docs/tutorials/tutorial-extension",
             to: "/docs/mcp/tutorial-mcp",
           },
-          {
-            from: "/docs/tutorials/vscode-mcp",
-            to: "/docs/mcp/vs-code-mcp",
-          },
-          {
-            from: "/docs/tutorials/youtube-transcript",
-            to: "/docs/mcp/youtube-transcript-mcp",
-          },
-          {
+                              {
             from: "/docs/guides/isolated-development-environments",
             to: "/docs/tutorials/isolated-development-environments",
           },

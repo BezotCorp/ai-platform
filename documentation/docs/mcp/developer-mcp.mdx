@@ -183,11 +183,11 @@ The Developer extension provides these tools:
 
 | Tool | Description | Use Cases | Risk Level |
 |------|-------------|-----------|------------|
-| `shell` | Execute shell commands | Running tests, installing packages, git operations | ⚠️ High<br />Can run any system command with your user privileges |
-| `write` | Create or overwrite files | Creating files, updating generated assets, writing configs | ⚠️ High<br />Can modify any accessible file |
-| `edit` | Replace exact text in files | Code refactoring, targeted edits, deleting matched text | ⚠️ High<br />Can modify any accessible file |
-| `tree` | List directory trees with line counts | Understanding project structure before reading files | ✅ Low<br />Read-only file listing |
-| `read_image` | Read a local or remote image for model inspection | Inspecting screenshots, diagrams, and visual assets | ✅ Low<br />Read-only image access |
+| `shell` | Execute shell commands | Running tests, installing packages, git operations | ⚠️ High Can run any system command with your user privileges |
+| `write` | Create or overwrite files | Creating files, updating generated assets, writing configs | ⚠️ High Can modify any accessible file |
+| `edit` | Replace exact text in files | Code refactoring, targeted edits, deleting matched text | ⚠️ High Can modify any accessible file |
+| `tree` | List directory trees with line counts | Understanding project structure before reading files | ✅ Low Read-only file listing |
+| `read_image` | Read a local or remote image for model inspection | Inspecting screenshots, diagrams, and visual assets | ✅ Low Read-only image access |
 
 For code structure analysis, use the separate [Analyze platform extension](/docs/guides/codebase-analysis).
 
@@ -199,10 +199,10 @@ You can layer multiple controls to match your risk tolerance and workflow:
 
   | Mode | Description | Use Cases |
   |------|-------------|-----------|
-  | Autonomous<br />CLI: `auto` | No approval required | Best for experienced users in safe environments |
-  | Manual Approval<br />CLI: `approve` | Review every action | Recommended for sensitive work or when you want maximum control |
-  | Smart Approval<br />CLI: `smart_approve` | AI decides what needs review | Balanced approach |
-  | Chat Only<br />CLI: `chat` | Disable all tools | For maximum security and models that don't support tool-calling |
+ | Autonomous CLI: `auto` | No approval required | Best for experienced users in safe environments |
+ | Manual Approval CLI: `approve` | Review every action | Recommended for sensitive work or when you want maximum control |
+ | Smart Approval CLI: `smart_approve` | AI decides what needs review | Balanced approach |
+ | Chat Only CLI: `chat` | Disable all tools | For maximum security and models that don't support tool-calling |
 
 - **[Tool Permissions](/docs/guides/managing-tools/tool-permissions)** let you set `Always allow`, `Ask before`, and `Never allow` permissions for individual extension tools when in Manual Approval or Smart Approval modes
 

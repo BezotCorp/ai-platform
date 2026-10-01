@@ -14,7 +14,7 @@ This guide covers:
 
 1. [Starting a `goose serve` server on a remote machine](#1-start-the-goose-serve-server)
 2. [Verifying it is reachable](#2-verify-the-server-is-up)
-3. [Locating the certificate fingerprint](#3-find-the-certificate-fingerprint)
+3. [Locating the certificate fingerprint](#3-optionally-find-the-certificate-fingerprint)
 4. [Configuring goose Desktop to connect to it](#4-configure-goose-desktop)
 5. [Running `goose serve` as a background service on macOS](#running-goose-serve-as-a-background-service-macos)
 6. [Troubleshooting](#troubleshooting)

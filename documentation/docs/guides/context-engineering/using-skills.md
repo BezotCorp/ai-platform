@@ -11,6 +11,7 @@ This functionality uses the built-in Skills platform extension, which is enabled
 :::
 
 When a session starts, goose adds discovered skill names and descriptions to its instructions. During the session, goose can load a skill's full instructions when:
+
 - Your request clearly matches a skill's purpose
 - You explicitly ask to use a skill, for example:
   - "Use the code-review skill to review this PR"
@@ -31,8 +32,8 @@ goose skills are compatible with Claude Desktop and other [agents that support A
 
 goose ships with a built-in skill that is always available without any installation:
 
-| Skill | Description |
-|-------|-------------|
+| Skill        | Description                                                                                 |
+| ------------ | ------------------------------------------------------------------------------------------- |
 | `web-search` | Search the web using DuckDuckGo (no API key), Tavily, or SearXNG, and extract page content. |
 
 For browser automation — navigating pages, clicking, filling forms, and capturing screenshots — install the upstream-maintained browser-use skill:
@@ -85,21 +86,25 @@ description: Comprehensive code review checklist for pull requests
 When reviewing code, check each of these areas:
 
 ## Functionality
+
 - [ ] Code does what the PR description claims
 - [ ] Edge cases are handled
 - [ ] Error handling is appropriate
 
 ## Code Quality
+
 - [ ] Follows project style guide
 - [ ] No hardcoded values that should be configurable
 - [ ] Functions are focused and well-named
 
 ## Testing
+
 - [ ] New functionality has tests
 - [ ] Tests are meaningful, not just for coverage
 - [ ] Existing tests still pass
 
 ## Security
+
 - [ ] No credentials or secrets in code
 - [ ] User input is validated
 - [ ] SQL queries are parameterized
@@ -128,6 +133,7 @@ When goose loads the skill, it sees the supporting files and can access them usi
 <summary>Example Skill with Supporting Files</summary>
 
 **SKILL.md:**
+
 ```markdown
 ---
 name: api-setup
@@ -148,6 +154,7 @@ This skill helps you set up a new API integration with our standard configuratio
 ## Configuration
 
 The config template includes:
+
 - `api_key`: Your API key (get from the provider's dashboard)
 - `endpoint`: API endpoint URL
 - `timeout`: Request timeout in seconds (default: 30)
@@ -155,12 +162,14 @@ The config template includes:
 ## Verification
 
 After setup, verify:
+
 - [ ] Config file is valid JSON
 - [ ] API key is set and not a placeholder
 - [ ] Test connection succeeds
 ```
 
 **setup.sh:**
+
 ```bash
 #!/bin/bash
 API_NAME=$1
@@ -171,6 +180,7 @@ echo "Edit integrations/$API_NAME/config.json with your credentials"
 ```
 
 **templates/config.template.json:**
+
 ```json
 {
   "api_key": "YOUR_API_KEY_HERE",
@@ -196,18 +206,22 @@ description: Safe deployment procedure for production environment
 # Production Deployment
 
 ## Pre-deployment
+
 1. Ensure all tests pass
 2. Get approval from at least 2 reviewers
 3. Notify #deployments channel
 
 ## Deploy
+
 1. Create release branch from main
 2. Run `npm run build:prod`
 3. Deploy to staging, verify, then production
 4. Monitor error rates for 30 minutes
 
 ## Rollback
+
 If error rate exceeds 1%:
+
 1. Revert to previous deployment
 2. Notify #incidents channel
 3. Create incident report
@@ -227,16 +241,19 @@ description: Guidelines for writing effective tests in this project
 # Testing Guidelines
 
 ## Unit Tests
+
 - Test one thing per test
 - Use descriptive test names: `test_user_creation_fails_with_invalid_email`
 - Mock external dependencies
 
 ## Integration Tests
+
 - Test API endpoints with realistic data
 - Verify database state changes
 - Clean up test data after each test
 
 ## Running Tests
+
 - `npm test` — Run all tests
 - `npm test:unit` — Unit tests only
 - `npm test:integration` — Integration tests (requires database)
@@ -256,23 +273,27 @@ description: How to integrate with our Square account
 # Square Integration
 
 ## Authentication
+
 - Test key: Use `SQUARE_TEST_KEY` from `.env.test`
 - Production key: In 1Password under "Square Production"
 
 ## Common Operations
 
 ### Create a customer
+
 ```javascript
 const customer = await squareup.customers.create({
   email: user.email,
-  metadata: { userId: user.id }
+  metadata: { userId: user.id },
 });
 ```
 
 ### Handle webhooks
+
 Always verify webhook signatures. See `src/webhooks/square.js` for our handler pattern.
 
 ## Error Handling
+
 - `card_declined`: Show user-friendly message, suggest different payment method
 - `rate_limit`: Implement exponential backoff
 - `invalid_request`: Log full error, likely a bug in our code
@@ -281,9 +302,10 @@ Always verify webhook signatures. See `src/webhooks/square.js` for our handler p
 </details>
 
 :::tip Other goose features that support reuse
+
 - [.goosehints](/docs/guides/context-engineering/using-goosehints): Best for general preferences, project context, and repeated instructions like "Always use TypeScript"
 - [recipes](/docs/guides/recipes/session-recipes): Shareable configurations that package instructions, prompts, and settings together
-:::
+  :::
 
 ## Best Practices
 
@@ -292,20 +314,3 @@ Always verify webhook signatures. See `src/webhooks/square.js` for our handler p
 - **Include verification steps** — Help goose confirm the workflow completed successfully.
 
 ## Additional Resources
-
-import ContentCardCarousel from '@site/src/components/ContentCardCarousel';
-import skillsvsmcp from '@site/blog/2025-12-22-agent-skills-vs-mcp/skills-vs-mcp.png';
-
-<ContentCardCarousel
-  items={[
-    {
-      type: 'blog',
-      title: 'Did Skills Kill MCP?',
-      description: 'An overview of Agent Skills vs MCP',
-      thumbnailUrl: skillsvsmcp,
-      linkUrl: '/blog/2025/12/22/agent-skills-vs-mcp',
-      date: '2025-12-22',
-      duration: '4 min read'
-    }
-  ]}
-/>

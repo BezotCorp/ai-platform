@@ -1,6 +1,6 @@
 import React from 'react';
-import Layout from '@docusaurus/theme-classic/lib/theme/Layout';
-import CodeBlock from '@docusaurus/theme-classic/lib/theme/CodeBlock';
+import Layout from "@theme/Layout";
+import CodeBlock from "@theme/CodeBlock";
 
 const Types: React.FC = () => {
   return (

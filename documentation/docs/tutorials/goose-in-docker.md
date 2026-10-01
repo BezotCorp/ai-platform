@@ -21,7 +21,7 @@ To begin, you will need to modify the [`Dockerfile` and `docker-compose.yml` fil
 - **Optional:** Mounting your personal goose settings and hints files in the `docker-compose.yml` file. This allows you to use your personal settings and hints files within the Docker container.
 
 :::tip Automated Alternative
-For an automated approach to running goose in containers, see the [Container-Use MCP extension](/docs/mcp/container-use-mcp), which creates and manages containers for you through conversation.
+For an automated approach to running goose in containers, see the Container-Use MCP extension, which creates and manages containers for you through conversation.
 :::
 
 After setting the credentials, you can build the Docker image using the following command:

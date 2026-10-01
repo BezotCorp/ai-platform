@@ -23,7 +23,7 @@ Parallel subrecipe execution uses an isolated worker system that automatically m
 | Scenario | Default Behavior | Override Options |
 |----------|------------------|------------------|
 | **Different subrecipes** | Sequential | Add "in parallel" to prompt |
-| **Same subrecipe** with different parameters | Parallel | • Set `sequential_when_repeated: true`<br />• Add "sequentially" to prompt |
+| **Same subrecipe** with different parameters | Parallel | • Set `sequential_when_repeated: true` • Add "sequentially" to prompt |
 
 ### Different Subrecipes
 

@@ -41,17 +41,17 @@ server; the connecting side is an ACP client. That's it.
 Everything that feels "session-shaped" is therefore just plain ACP that happens
 to run over a roaming connection — not a bespoke roaming feature:
 
-| You want to… | It's just ACP… | Command |
-|--------------|----------------|---------|
-| List the remote's sessions | `session/list` | `roam delegate <target> --list-sessions` |
-| Continue a specific session | `session/load` | `roam delegate <target> --session <id> "…"` |
-| Run a fresh one-shot task | `session/new` + `session/prompt` | `roam delegate <target> "…"` |
-| Drive a remote agent from a real UI | full ACP surface | `roam bridge` → Zed or another ACP editor |
-| Quick interactive peek | a built-in REPL | `roam connect` |
+| You want to…                        | It's just ACP…                   | Command                                     |
+| ----------------------------------- | -------------------------------- | ------------------------------------------- |
+| List the remote's sessions          | `session/list`                   | `roam delegate <target> --list-sessions`    |
+| Continue a specific session         | `session/load`                   | `roam delegate <target> --session <id> "…"` |
+| Run a fresh one-shot task           | `session/new` + `session/prompt` | `roam delegate <target> "…"`                |
+| Drive a remote agent from a real UI | full ACP surface                 | `roam bridge` → Zed or another ACP editor   |
+| Quick interactive peek              | a built-in REPL                  | `roam connect`                              |
 
 Because the connection carries the full ACP surface, the connecting side can
 enumerate, create, and resume the host's sessions with no roaming-specific
-protocol. Higher-level behaviours (saved peers) sit *above* the transport and
+protocol. Higher-level behaviours (saved peers) sit _above_ the transport and
 are described below.
 
 :::note
@@ -64,7 +64,7 @@ with the `roaming` feature (`cargo build -p goose-cli --features roaming`).
 Trust is a **mutual, public-key relationship** — like WireGuard or SSH
 known-hosts, and deliberately infrastructural. Each node has one long-lived
 identity and produces a **connection card**: a shareable string containing its
-public key and how to reach it (relay URLs). *Nothing in a card is secret* —
+public key and how to reach it (relay URLs). _Nothing in a card is secret_ —
 possessing one grants no access.
 
 To let a peer reach you, you each:
@@ -82,7 +82,7 @@ transport (iroh QUIC-TLS) proves each side holds the private key for the identit
 in its card, so no one can impersonate a key, and a leaked card lets no one in.
 There is no bearer token that grants access by possession.
 
-```
+```plain_text
 ┌────────────┐    swap cards     ┌────────────┐
 │  Machine A │ ◀───────────────▶ │  Machine B │
 │            │  each accepts the │            │
@@ -210,7 +210,7 @@ can embed it in any Rust application, with or without goose.
 
 The surface a consumer touches:
 
-- **`RoamingIdentity`** — a persisted ed25519 node key whose public half *is*
+- **`RoamingIdentity`** — a persisted ed25519 node key whose public half _is_
   the iroh endpoint id (`RoamingIdentity::generate()` for ephemeral,
   `default_key_path` for the on-disk one goose uses).
 - **`RoamingConfig`** — a builder for a node: `RoamingConfig::new(identity)`
@@ -282,7 +282,7 @@ A few notes for integrators:
 
 - **To expose a full goose backend**, you don't have to implement
   `AcpStreamServer` yourself: `goose serve --roam` runs goose's regular agent
-  server *and* exposes it over roam in one process. It works headless, writes
+  server _and_ exposes it over roam in one process. It works headless, writes
   its card to `<data-dir>/roam/serve.json`, and prints it on startup.
 - **For browser apps**, the same transport compiles to WebAssembly. The wasm
   bindings (`@aaif/goose-roam-web`, built from the `goose-roaming-web` crate in
@@ -359,7 +359,7 @@ sessions on this machine (new/list/load/prompt), which is effectively remote
 shell access. There are no finer-grained roles: acceptance is all-or-nothing.
 
 Acceptance is **durable** and **live**: it is stored on disk, and a running
-`share` re-reads it on each connection *and* polls the trust file (about every
+`share` re-reads it on each connection _and_ polls the trust file (about every
 two seconds) to enforce it against connections that are already open. Revoking
 a peer therefore takes effect within seconds even against a live peer — the
 share force-closes any of its open connections. No restart on either side.
@@ -397,7 +397,7 @@ so this composes into multi-machine workflows without any shared state.
 - `connect`, `delegate`, and `bridge` all accept either a saved peer name or a
   raw `goose+roam://…` card. Remember the peer must also have accepted your key.
 - A message sent to a session that has a run in flight **in the share process**
-  becomes a steer of that run. A loop running in a *different* process on the
+  becomes a steer of that run. A loop running in a _different_ process on the
   host (another CLI, or a host that does not have roam enabled) can't be steered
   remotely — the web client detects this and warns before sending.
 - Revoking a peer force-closes its connections within seconds and drops any
