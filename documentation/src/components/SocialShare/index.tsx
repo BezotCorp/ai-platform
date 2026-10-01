@@ -6,8 +6,6 @@ import { IconFacebook } from '@site/src/components/icons/facebook';
 import { IconReddit } from '@site/src/components/icons/reddit';
 import styles from './styles.module.css';
 
-const TWITTER_VIA = 'goose_oss';
-
 interface SocialShareProps {
   url: string;
   title: string;
@@ -26,7 +24,7 @@ const SocialShare: React.FC<SocialShareProps> = ({ url, title }) => {
       {
         name: 'Twitter / X',
         icon: <IconTwitter />,
-        url: `https://twitter.com/intent/tweet?url=${encodedUrl}&text=${encodedTitle}&via=${TWITTER_VIA}`,
+        url: `https://twitter.com/intent/tweet?url=${encodedUrl}&text=${encodedTitle}`,
       },
       {
         name: 'LinkedIn',

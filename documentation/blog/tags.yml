@@ -1,19 +1,14 @@
-facebook:
-  label: Facebook
-  permalink: /facebook
-  description: Facebook tag description
+bcaip:
+  label: BCAIP
+  permalink: /bcaip
+  description: News and updates about BCAIP.
 
-hello:
-  label: Hello
-  permalink: /hello
-  description: Hello tag description
+engineering:
+  label: Engineering
+  permalink: /engineering
+  description: Engineering notes, architecture, and technical work behind BCAIP.
 
-docusaurus:
-  label: Docusaurus
-  permalink: /docusaurus
-  description: Docusaurus tag description
-
-hola:
-  label: Hola
-  permalink: /hola
-  description: Hola tag description
+ai:
+  label: AI
+  permalink: /ai
+  description: AI agents, models, tools, and related technologies.

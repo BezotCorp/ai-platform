@@ -559,15 +559,7 @@ const config: Config = {
       theme: prismThemes.github,
       darkTheme: prismThemes.nightOwl,
     },
-    announcementBar: {
-      id: 'goose-aaif-announcement', // Increment on new announcements to reuse the bar
-      content:
-        '✨ goose has moved to the Agentic AI Foundation (AAIF): <a href="/blog/2026/04/07/goose-moves-to-aaif">Learn more</a>! ✨',
-      backgroundColor: '#20232a',
-      textColor: '#fff',
-      isCloseable: true,
-    },
-  } satisfies Preset.ThemeConfig,
+} satisfies Preset.ThemeConfig,
 };
 
 export default config;

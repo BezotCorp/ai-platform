@@ -545,22 +545,3 @@ Set a larger timeout for long-running hooks:
 ### My Script Cannot Find `jq` or Another Command
 
 Hooks run as local shell commands. Make sure any commands your script uses are installed and available on your shell `PATH`. For portability, prefer absolute paths for tools that may not be installed everywhere.
-
-## Additional Resources
-
-import ContentCardCarousel from '@site/src/components/ContentCardCarousel';
-import hooksBanner from '@site/static/img/blog/goose-hooks.jpg';
-
-<ContentCardCarousel
-  items={[
-    {
-      type: 'blog',
-      title: 'Hooks: run your own scripts on every goose event',
-      description: 'Learn how lifecycle hooks let you react to session, prompt, tool, file, and shell events with your own scripts.',
-      thumbnailUrl: hooksBanner,
-      linkUrl: '/blog/2026/05/14/goose-hooks',
-      date: '2026-05-14',
-      duration: '5 min read'
-    }
-  ]}
-/>
