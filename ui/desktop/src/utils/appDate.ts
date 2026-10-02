@@ -29,6 +29,10 @@ export class AppDate {
    * @throws {Error} When the provided string cannot be parsed as a valid date.
    */
   public static fromString(value: string): AppDate {
+    if (typeof value !== 'string') {
+      throw new Error('Date value must be a string');
+    }
+
     const date: Date = new Date(value);
 
     if (Number.isNaN(date.getTime())) {
@@ -47,13 +51,15 @@ export class AppDate {
    * @throws {Error} When the provided native date is invalid.
    */
   public static fromDate(value: Date): AppDate {
-    const date: Date = new Date(value);
+    if (!(value instanceof Date)) {
+      throw new Error('Date value must be a native Date');
+    }
 
-    if (Number.isNaN(date.getTime())) {
+    if (Number.isNaN(value.getTime())) {
       throw new Error('Invalid native Date');
     }
 
-    return new AppDate(date);
+    return new AppDate(new Date(value.getTime()));
   }
 
   /**
@@ -62,7 +68,7 @@ export class AppDate {
    * @throws {Error} When the timestamp is not finite or cannot produce a valid date.
    */
   public static fromTimestampSeconds(value: number): AppDate {
-    if (!Number.isFinite(value)) {
+    if (typeof value !== 'number' || !Number.isFinite(value)) {
       throw new Error(`Invalid timestamp: ${value}`);
     }
 

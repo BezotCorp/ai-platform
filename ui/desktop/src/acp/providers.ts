@@ -27,14 +27,16 @@ function throwIfAborted(signal?: globalThis.AbortSignal) {
 
 function waitForInventoryPoll(signal?: globalThis.AbortSignal): Promise<void> {
   return new Promise((resolve, reject) => {
-    const timeout = window.setTimeout(() => {
+    const timeout = globalThis.setTimeout(() => {
       signal?.removeEventListener('abort', abort);
       resolve();
     }, INVENTORY_REFRESH_POLL_INTERVAL_MS);
+
     const abort = () => {
-      window.clearTimeout(timeout);
+      globalThis.clearTimeout(timeout);
       reject(new DOMException('The operation was aborted', 'AbortError'));
     };
+
     signal?.addEventListener('abort', abort, { once: true });
   });
 }

@@ -1,3 +1,7 @@
+/**
+ * @vitest-environment jsdom
+ */
+
 import type { RequestPermissionRequest, SessionNotification } from '@agentclientprotocol/sdk';
 import { act, renderHook } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';

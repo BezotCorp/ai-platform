@@ -65,14 +65,14 @@ vi.mock('../acp/acpConnection', async (importOriginal) => ({
 // Mock the ACP providers module used by OnboardingGuard so it doesn't try to
 // open a real ACP client connection during tests. Returning null defaults
 // keeps the app in the "brand new" (no provider configured) onboarding state.
-vi.mock('./acp/providers', () => ({
+vi.mock('../acp/providers', () => ({
   acpReadDefaults: vi.fn().mockResolvedValue({ providerId: null, modelId: null }),
   acpSaveDefaults: vi.fn().mockResolvedValue(undefined),
   acpListProviderDetails: vi.fn().mockResolvedValue([]),
 }));
 
 // Mock the ConfigContext module
-vi.mock('./components/ConfigContext', () => ({
+vi.mock('../components/ConfigContext', () => ({
   useConfig: () => ({
     read: vi.fn().mockResolvedValue(null),
     update: vi.fn(),
@@ -85,11 +85,11 @@ vi.mock('./components/ConfigContext', () => ({
 }));
 
 // Mock other components to simplify testing
-vi.mock('./components/ErrorBoundary', () => ({
+vi.mock('../components/ErrorBoundary', () => ({
   ErrorUI: ({ error }: { error: Error }) => <div>Error: {error.message}</div>,
 }));
 
-vi.mock('./components/ModelAndProviderContext', () => ({
+vi.mock('../components/ModelAndProviderContext', () => ({
   ModelAndProviderProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   useModelAndProvider: () => ({
     provider: null,
@@ -101,7 +101,7 @@ vi.mock('./components/ModelAndProviderContext', () => ({
   }),
 }));
 
-vi.mock('./contexts/ChatContext', () => ({
+vi.mock('../contexts/ChatContext', () => ({
   ChatProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   useChatContext: () => ({
     chat: {
@@ -121,7 +121,7 @@ vi.mock('./contexts/ChatContext', () => ({
   DEFAULT_CHAT_TITLE: 'New Chat', // Keep this from HEAD
 }));
 
-vi.mock('./components/ui/ConfirmationModal', () => ({
+vi.mock('../components/ui/ConfirmationModal', () => ({
   ConfirmationModal: () => null,
 }));
 
@@ -132,11 +132,11 @@ vi.mock('react-toastify', () => ({
   },
 }));
 
-vi.mock('./components/GoosehintsModal', () => ({
+vi.mock('../components/GoosehintsModal', () => ({
   GoosehintsModal: () => null,
 }));
 
-vi.mock('./components/AnnouncementModal', () => ({
+vi.mock('../components/AnnouncementModal', () => ({
   default: () => null,
 }));
 

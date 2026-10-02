@@ -22,8 +22,8 @@ describe('ACP session extensions', () => {
     vi.clearAllMocks();
     vi.mocked(getAcpClient).mockResolvedValue({
       goose: {
-        sessionExtensionsList_unstable: list,
-        sessionExtensionsRemove_unstable: remove,
+        sessionExtensionsListUnstable: list,
+        sessionExtensionsRemoveUnstable: remove,
       },
     } as unknown as Awaited<ReturnType<typeof getAcpClient>>);
   });

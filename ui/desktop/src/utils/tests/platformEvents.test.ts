@@ -1,3 +1,7 @@
+/**
+ * @vitest-environment jsdom
+ */
+
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { listMcpApps } from '../../acp/mcp-apps';
 import type { GooseApp } from '../../types/apps';

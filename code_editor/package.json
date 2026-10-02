@@ -107,8 +107,7 @@
     "check:fix": "biome check --write",
     "ci": "biome ci",
     "package": "pnpm run build && vsce package --no-dependencies",
-    "clean": "rm -rf dist",
-    "prepare": "husky"
+    "clean": "rm -rf dist"
   },
   "dependencies": {
     "fp-ts": "^2.16.11",
@@ -119,8 +118,6 @@
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.15",
-    "@commitlint/cli": "^21.2.3",
-    "@commitlint/config-conventional": "^21.2.3",
     "@tailwindcss/cli": "^4.3.3",
     "@types/node": "^26.6.3",
     "@types/react": "^19.3.0",
@@ -130,7 +127,6 @@
     "@vscode/vsce": "^4.0.0",
     "autoprefixer": "^10.6.1",
     "esbuild": "^0.28.2",
-    "husky": "^9.1.7",
     "postcss": "^8.5.28",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",

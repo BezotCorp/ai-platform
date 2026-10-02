@@ -1,3 +1,7 @@
+/**
+ * @vitest-environment jsdom
+ */
+
 import { describe, it, expect, vi } from 'vitest';
 import { render, type RenderOptions, screen, fireEvent, waitFor } from '@testing-library/react';
 import ExtensionItem from '../ExtensionItem';

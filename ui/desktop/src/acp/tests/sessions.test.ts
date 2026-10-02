@@ -210,12 +210,12 @@ describe('ACP sessions', () => {
     const item = await acpGetSessionListItem('session-1');
 
     expect(client.goose.sessionInfoUnstable).toHaveBeenCalledWith({ sessionId: 'session-1' });
-    expect(item).toMatchObject({
+    expect(item.toData()).toMatchObject({
       id: 'session-1',
       name: 'Subagent session',
       workingDir: '/tmp',
       messageCount: 3,
-      lastMessageAt: '2026-01-01T00:01:00Z',
+      lastMessageAt: '2026-01-01T00:01:00.000Z',
       providerId: 'anthropic',
       modelId: 'claude-sonnet-4-5',
     });

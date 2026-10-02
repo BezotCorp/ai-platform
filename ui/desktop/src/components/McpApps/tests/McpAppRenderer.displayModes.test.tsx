@@ -1,3 +1,7 @@
+/**
+ * @vitest-environment jsdom
+ */
+
 import { render, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { IntlTestWrapper } from '../../../i18n/test-utils';
@@ -8,7 +12,7 @@ vi.mock('@mcp-ui/client', () => ({
   AppBridge: class {
     onmessage = null;
     connect = vi.fn(() => new Promise(() => {}));
-    close = vi.fn();
+    close = vi.fn(() => Promise.resolve());
   },
   PostMessageTransport: class {},
 }));

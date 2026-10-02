@@ -6,7 +6,7 @@ test.describe('Performance Tests', () => {
     await goosePage.context().tracing.start({
       screenshots: true,
       snapshots: true,
-      sources: true
+      sources: true,
     });
 
     console.log('\n=== Performance Test Started ===\n');
@@ -29,7 +29,7 @@ test.describe('Performance Tests', () => {
     // Wait for loading indicator to appear and check if it's "loading conversation..."
     await goosePage.waitForSelector('[data-testid="loading-indicator"]', {
       state: 'visible',
-      timeout: 5000
+      timeout: 5000,
     });
 
     const loadingText = await goosePage.locator('[data-testid="loading-indicator"]').textContent();
@@ -38,12 +38,15 @@ test.describe('Performance Tests', () => {
       console.log('✓ Loading conversation detected');
 
       // Wait for it to change or disappear
-      await goosePage.waitForFunction(() => {
-        const indicator = document.querySelector('[data-testid="loading-indicator"]');
-        if (!indicator) return true; // Disappeared
-        const text = indicator.textContent || '';
-        return !text.includes('loading conversation'); // Changed to different state
-      }, { timeout: 30000 });
+      await goosePage.waitForFunction(
+        () => {
+          const indicator = document.querySelector('[data-testid="loading-indicator"]');
+          if (!indicator) return true; // Disappeared
+          const text = indicator.textContent || '';
+          return !text.includes('loading conversation'); // Changed to different state
+        },
+        { timeout: 30000 }
+      );
 
       await goosePage.evaluate(() => performance.mark('loading-conversation-end'));
       console.log('✓ Loading conversation complete');
@@ -56,7 +59,9 @@ test.describe('Performance Tests', () => {
     const checkForFirstToken = async () => {
       while (!firstTokenDetected) {
         try {
-          const messageContainers = await goosePage.locator('[data-testid="message-container"]').all();
+          const messageContainers = await goosePage
+            .locator('[data-testid="message-container"]')
+            .all();
           if (messageContainers.length > 0) {
             const lastMessage = messageContainers[messageContainers.length - 1];
             const content = await lastMessage.textContent();
@@ -81,7 +86,7 @@ test.describe('Performance Tests', () => {
     // Wait for response to complete
     await goosePage.waitForSelector('[data-testid="loading-indicator"]', {
       state: 'hidden',
-      timeout: 60000
+      timeout: 60000,
     });
     await goosePage.evaluate(() => performance.mark('response-complete'));
     console.log('✓ Response complete');
@@ -89,9 +94,16 @@ test.describe('Performance Tests', () => {
     // Create performance measures
     await goosePage.evaluate(() => {
       // Measure loading conversation if it was detected
-      const marks = performance.getEntriesByType('mark').map(m => m.name);
-      if (marks.includes('loading-conversation-start') && marks.includes('loading-conversation-end')) {
-        performance.measure('loading-conversation-duration', 'loading-conversation-start', 'loading-conversation-end');
+      const marks = performance.getEntriesByType('mark').map((m) => m.name);
+      if (
+        marks.includes('loading-conversation-start') &&
+        marks.includes('loading-conversation-end')
+      ) {
+        performance.measure(
+          'loading-conversation-duration',
+          'loading-conversation-start',
+          'loading-conversation-end'
+        );
       }
 
       performance.measure('time-to-prompt-submit', 'prompt-submit-start', 'prompt-submitted');
@@ -105,7 +117,7 @@ test.describe('Performance Tests', () => {
     const metrics = await goosePage.evaluate(() => {
       const measures = performance.getEntriesByType('measure');
       const result: Record<string, number> = {};
-      measures.forEach(measure => {
+      measures.forEach((measure) => {
         result[measure.name] = Math.round(measure.duration);
       });
       return result;
@@ -163,12 +175,12 @@ test.describe('Performance Tests', () => {
 
     await goosePage.waitForSelector('[data-testid="loading-indicator"]', {
       state: 'visible',
-      timeout: 5000
+      timeout: 5000,
     });
 
     await goosePage.waitForSelector('[data-testid="loading-indicator"]', {
       state: 'hidden',
-      timeout: 60000
+      timeout: 60000,
     });
 
     await goosePage.evaluate(() => {
@@ -187,12 +199,12 @@ test.describe('Performance Tests', () => {
 
     await goosePage.waitForSelector('[data-testid="loading-indicator"]', {
       state: 'visible',
-      timeout: 5000
+      timeout: 5000,
     });
 
     await goosePage.waitForSelector('[data-testid="loading-indicator"]', {
       state: 'hidden',
-      timeout: 60000
+      timeout: 60000,
     });
 
     await goosePage.evaluate(() => {
@@ -206,7 +218,7 @@ test.describe('Performance Tests', () => {
     const metrics = await goosePage.evaluate(() => {
       const measures = performance.getEntriesByType('measure');
       const result: Record<string, number> = {};
-      measures.forEach(measure => {
+      measures.forEach((measure) => {
         result[measure.name] = Math.round(measure.duration);
       });
       return result;
@@ -214,7 +226,7 @@ test.describe('Performance Tests', () => {
 
     const coldDuration = metrics['cold-prompt-duration'];
     const warmDuration = metrics['warm-prompt-duration'];
-    const improvement = ((coldDuration - warmDuration) / coldDuration * 100).toFixed(1);
+    const improvement = (((coldDuration - warmDuration) / coldDuration) * 100).toFixed(1);
 
     console.log('\n=== Results ===');
     console.log(`Cold Prompt Duration: ${coldDuration}ms`);
@@ -229,11 +241,15 @@ test.describe('Performance Tests', () => {
 
     // Attach results
     await test.info().attach('cold-vs-warm.json', {
-      body: JSON.stringify({
-        coldDuration,
-        warmDuration,
-        improvement: `${improvement}%`
-      }, null, 2),
+      body: JSON.stringify(
+        {
+          coldDuration,
+          warmDuration,
+          improvement: `${improvement}%`,
+        },
+        null,
+        2
+      ),
       contentType: 'application/json',
     });
   });
@@ -277,12 +293,22 @@ test.describe('Performance Tests', () => {
     await goosePage.evaluate(() => performance.mark('user-interaction-start'));
     await chatInput.press('Enter');
 
-    await goosePage.waitForSelector('[data-testid="loading-indicator"]', { state: 'visible', timeout: 5000 });
-    await goosePage.waitForSelector('[data-testid="loading-indicator"]', { state: 'hidden', timeout: 60000 });
+    await goosePage.waitForSelector('[data-testid="loading-indicator"]', {
+      state: 'visible',
+      timeout: 5000,
+    });
+    await goosePage.waitForSelector('[data-testid="loading-indicator"]', {
+      state: 'hidden',
+      timeout: 60000,
+    });
 
     await goosePage.evaluate(() => {
       performance.mark('user-interaction-complete');
-      performance.measure('user-interaction-duration', 'user-interaction-start', 'user-interaction-complete');
+      performance.measure(
+        'user-interaction-duration',
+        'user-interaction-start',
+        'user-interaction-complete'
+      );
     });
 
     const interactionTime = await goosePage.evaluate(() => {
@@ -296,13 +322,13 @@ test.describe('Performance Tests', () => {
     const resourceStats = await goosePage.evaluate(() => {
       const resources = performance.getEntriesByType('resource');
       const types: Record<string, number> = {};
-      resources.forEach(resource => {
+      resources.forEach((resource) => {
         const type = (resource as PerformanceResourceTiming).initiatorType;
         types[type] = (types[type] || 0) + 1;
       });
       return {
         total: resources.length,
-        byType: types
+        byType: types,
       };
     });
 
@@ -318,12 +344,16 @@ test.describe('Performance Tests', () => {
 
     // Attach all metrics
     await test.info().attach('full-performance-profile.json', {
-      body: JSON.stringify({
-        navigationTiming,
-        appReadyTime,
-        interactionTime,
-        resourceStats
-      }, null, 2),
+      body: JSON.stringify(
+        {
+          navigationTiming,
+          appReadyTime,
+          interactionTime,
+          resourceStats,
+        },
+        null,
+        2
+      ),
       contentType: 'application/json',
     });
   });

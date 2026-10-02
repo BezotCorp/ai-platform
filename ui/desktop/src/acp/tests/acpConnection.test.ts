@@ -1,3 +1,7 @@
+/**
+ * @vitest-environment jsdom
+ */
+
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { GOOSE_SERVE_EXITED_USER_MESSAGE } from '../../gooseServeLeaseRegistry';
 

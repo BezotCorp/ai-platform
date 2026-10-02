@@ -1,3 +1,7 @@
+/**
+ * @vitest-environment jsdom
+ */
+
 import fs, { constants as fsConstants } from 'node:fs';
 import fsPromises from 'node:fs/promises';
 import os from 'node:os';

@@ -24,13 +24,15 @@ export class DateDayName {
    * @throws {Error} When the index does not represent a valid weekday.
    */
   public static fromIndex(index: number): DateDayName {
-    const value: string | undefined = DateDayName.VALUES[index];
-
-    if (value === undefined) {
+    if (
+      !Number.isInteger(index) ||
+      index < 0 ||
+      index >= DateDayName.VALUES.length
+    ) {
       throw new Error(`Invalid weekday index: ${index}`);
     }
 
-    return new DateDayName(value);
+    return new DateDayName(DateDayName.VALUES[index]);
   }
 
   /**
@@ -48,7 +50,10 @@ export class DateDayName {
    * Checks whether a string represents a valid weekday name.
    */
   public static isDayName(value: string): boolean {
-    return DateDayName.VALUES.includes(value.trim().toLowerCase());
+    return (
+      typeof value === 'string' &&
+      DateDayName.VALUES.includes(value.trim().toLowerCase())
+    );
   }
 
   /**
@@ -112,6 +117,10 @@ export class DateDayName {
   }
 
   private static normalize(value: string): string {
+    if (typeof value !== 'string') {
+      throw new Error('Weekday name must be a string');
+    }
+
     const normalizedValue: string = value.trim().toLowerCase();
 
     if (!DateDayName.VALUES.includes(normalizedValue)) {

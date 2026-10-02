@@ -1,3 +1,7 @@
+/**
+ * @vitest-environment jsdom
+ */
+
 import type { RequestRecipeParamsUnstable } from '@aaif/goose-acp-client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 

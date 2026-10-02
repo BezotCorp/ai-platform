@@ -1,3 +1,7 @@
+/**
+ * @vitest-environment jsdom
+ */
+
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { acpSaveProviderConfig } from '../../../../../../../acp/providers';
 import { providerConfigSubmitHandler } from '../DefaultSubmitHandler';

@@ -1,3 +1,7 @@
+/**
+ * @vitest-environment jsdom
+ */
+
 import type { SessionNotification } from '@agentclientprotocol/sdk';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AppEvents } from '../../constants/events';
@@ -22,7 +26,7 @@ vi.mock('../chatSessionStore', () => ({
   },
 }));
 
-vi.mock('../../utils/platform_events', () => ({
+vi.mock('../../utils/platformEvents', () => ({
   maybeHandlePlatformEvent: vi.fn(),
 }));
 

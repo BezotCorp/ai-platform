@@ -35,12 +35,14 @@ global.console = {
   error: vi.fn(),
 };
 
-// Mock window.navigator.clipboard for copy functionality tests
-Object.assign(navigator, {
-  clipboard: {
-    writeText: vi.fn(() => Promise.resolve()),
-  },
-});
+// Mock browser APIs only for tests running with a DOM environment.
+if (typeof navigator !== 'undefined') {
+  Object.assign(navigator, {
+    clipboard: {
+      writeText: vi.fn(() => Promise.resolve()),
+    },
+  });
+}
 
 // Mock settings store for tests
 const mockSettings: Record<string, unknown> = {
@@ -73,8 +75,10 @@ const mockSettings: Record<string, unknown> = {
   seenAnnouncementIds: [],
 };
 
-// Mock window.electron for renderer process
-Object.defineProperty(window, 'electron', {
+// Mock renderer APIs only when the test environment provides a window.
+if (typeof window !== 'undefined') {
+  Object.defineProperty(window, 'electron', {
+  configurable: true,
   writable: true,
   value: {
     platform: 'darwin',
@@ -91,4 +95,5 @@ Object.defineProperty(window, 'electron', {
     on: vi.fn(),
     off: vi.fn(),
   },
-});
+  });
+}

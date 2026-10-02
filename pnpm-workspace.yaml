@@ -11,6 +11,7 @@ packages:
 
 registry: https://registry.npmjs.org/
 preferOffline: true
+nodeLinker: hoisted
 blockExoticSubdeps: false
 
 supportedArchitectures:

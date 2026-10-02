@@ -1,7 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { showExtensionLoadResults } from '../extensionErrorUtils';
 
-vi.mock('../../toasts', () => ({
+vi.mock('../../toastService', () => ({
   toastService: {
     error: vi.fn(),
     extensionLoading: vi.fn(),

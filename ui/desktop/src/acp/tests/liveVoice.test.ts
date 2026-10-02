@@ -1,3 +1,7 @@
+/**
+ * @vitest-environment jsdom
+ */
+
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { getAcpClient } from '../acpConnection';
 import { acpGetLiveVoiceAvailability, acpStartLiveVoice, acpStopLiveVoice } from '../liveVoice';
@@ -17,7 +21,7 @@ describe('ACP Live voice', () => {
     });
     vi.mocked(getAcpClient).mockResolvedValue({
       goose: {
-        sessionLiveVoiceAvailability_unstable: sessionLiveVoiceAvailability,
+        sessionLiveVoiceAvailabilityUnstable: sessionLiveVoiceAvailability,
       },
     } as unknown as Awaited<ReturnType<typeof getAcpClient>>);
 
@@ -38,7 +42,7 @@ describe('ACP Live voice', () => {
     });
     vi.mocked(getAcpClient).mockResolvedValue({
       goose: {
-        sessionLiveVoiceAvailability_unstable: sessionLiveVoiceAvailability,
+        sessionLiveVoiceAvailabilityUnstable: sessionLiveVoiceAvailability,
       },
     } as unknown as Awaited<ReturnType<typeof getAcpClient>>);
 
@@ -59,7 +63,7 @@ describe('ACP Live voice', () => {
     });
     vi.mocked(getAcpClient).mockResolvedValue({
       goose: {
-        sessionLiveVoiceAvailability_unstable: sessionLiveVoiceAvailability,
+        sessionLiveVoiceAvailabilityUnstable: sessionLiveVoiceAvailability,
       },
     } as unknown as Awaited<ReturnType<typeof getAcpClient>>);
 
@@ -79,8 +83,8 @@ describe('ACP Live voice', () => {
     const stop = vi.fn().mockResolvedValue({});
     vi.mocked(getAcpClient).mockResolvedValue({
       goose: {
-        sessionLiveVoiceStart_unstable: start,
-        sessionLiveVoiceStop_unstable: stop,
+        sessionLiveVoiceStartUnstable: start,
+        sessionLiveVoiceStopUnstable: stop,
       },
     } as unknown as Awaited<ReturnType<typeof getAcpClient>>);
 

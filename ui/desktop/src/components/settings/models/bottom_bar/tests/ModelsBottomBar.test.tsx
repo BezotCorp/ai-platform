@@ -1,3 +1,7 @@
+/**
+ * @vitest-environment jsdom
+ */
+
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { fireEvent, render, type RenderOptions, screen } from '@testing-library/react';
 import ModelsBottomBar from '../ModelsBottomBar';

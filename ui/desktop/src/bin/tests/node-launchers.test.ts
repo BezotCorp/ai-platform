@@ -5,7 +5,10 @@ import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
 
-const launcherSourceDir = path.dirname(fileURLToPath(import.meta.url));
+const launcherSourceDir = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  '..'
+);
 const tempDirs: string[] = [];
 
 function makeLauncherHarness(launcherName: 'node' | 'npx') {

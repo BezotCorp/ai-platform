@@ -16,10 +16,10 @@ const recipe = {
 function createClient() {
   return {
     goose: {
-      recipesEncode_unstable: vi.fn(),
-      recipesList_unstable: vi.fn(),
-      recipesParse_unstable: vi.fn(),
-      recipesSave_unstable: vi.fn(),
+      recipesEncodeUnstable: vi.fn(),
+      recipesListUnstable: vi.fn(),
+      recipesParseUnstable: vi.fn(),
+      recipesSaveUnstable: vi.fn(),
     },
   };
 }
@@ -36,7 +36,7 @@ describe('ACP recipe helpers', () => {
   });
 
   it('surfaces ACP JSON-RPC error messages', async () => {
-    client.goose.recipesEncode_unstable.mockRejectedValue({
+    client.goose.recipesEncodeUnstable.mockRejectedValue({
       error: { message: 'recipe is invalid' },
     });
 
@@ -44,7 +44,7 @@ describe('ACP recipe helpers', () => {
   });
 
   it('prefers ACP JSON-RPC error data over generic messages', async () => {
-    client.goose.recipesSave_unstable.mockRejectedValue({
+    client.goose.recipesSaveUnstable.mockRejectedValue({
       error: {
         message: 'Invalid params',
         data: 'save recipe validation failed at recipe.extensions[0]: missing field `cmd`',
@@ -57,7 +57,7 @@ describe('ACP recipe helpers', () => {
   });
 
   it('prefers ACP JSON-RPC error data from Error instances', async () => {
-    client.goose.recipesParse_unstable.mockRejectedValue(
+    client.goose.recipesParseUnstable.mockRejectedValue(
       Object.assign(new Error('Invalid params'), {
         error: {
           message: 'Invalid params',
@@ -78,21 +78,21 @@ describe('ACP recipe helpers', () => {
         recipe,
       },
     ];
-    client.goose.recipesList_unstable.mockResolvedValue({ recipes });
+    client.goose.recipesListUnstable.mockResolvedValue({ recipes });
 
     const [first, second] = await Promise.all([listRecipes(), listRecipes()]);
 
-    expect(client.goose.recipesList_unstable).toHaveBeenCalledTimes(1);
+    expect(client.goose.recipesListUnstable).toHaveBeenCalledTimes(1);
     expect(first).toBe(recipes);
     expect(second).toBe(recipes);
   });
 
   it('fetches recipes again after a list request settles', async () => {
-    client.goose.recipesList_unstable.mockResolvedValue({ recipes: [] });
+    client.goose.recipesListUnstable.mockResolvedValue({ recipes: [] });
 
     await listRecipes();
     await listRecipes();
 
-    expect(client.goose.recipesList_unstable).toHaveBeenCalledTimes(2);
+    expect(client.goose.recipesListUnstable).toHaveBeenCalledTimes(2);
   });
 });

@@ -128,13 +128,16 @@ function createAcpChatSessionStoreInternal(): AcpChatSessionStoreInternal {
     if (!entry) {
       return undefined;
     }
-    // While a session-load replay is streaming in, serve the snapshot cached
-    // by the last notify() instead of deep-cloning the growing message array
-    // on every read (getSnapshot is called per replay notification).
-    if (entry.chatState === ChatState.LoadingConversation && entry.lastSnapshot) {
+    // useSyncExternalStore requires getSnapshot() to be referentially stable
+    // until the store changes. notify() creates and caches the next immutable
+    // snapshot whenever an entry is mutated.
+    if (entry.lastSnapshot) {
       return entry.lastSnapshot;
     }
-    return snapshotFromEntry(entry);
+
+    const snapshot = snapshotFromEntry(entry);
+    entry.lastSnapshot = snapshot;
+    return snapshot;
   };
 
   const subscribe: AcpChatSessionStoreInternal['subscribe'] = (sessionId, listener) => {

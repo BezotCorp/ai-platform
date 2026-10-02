@@ -1,20 +1,23 @@
 /**
  * @vitest-environment jsdom
  */
-import { act, render, waitFor } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import Hub from '../Hub';
-import { IntlTestWrapper } from '../../i18n/test-utils';
-import { createSession } from '../../sessions';
-import { Session as AppSession } from '../../types/session';
-import { UserInput } from '../../types/message';
-import { acpGetLiveVoiceAvailability } from '../../acp/liveVoice';
-import { subscribeToAcpRecovery } from '../../acp/acpConnection';
-import type { LiveVoiceController } from '../../liveVoice/useLiveVoice';
 
-type ChatInputCapture = {
+import { act, render, waitFor } from '@testing-library/react';
+import type { ComponentProps } from 'react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { subscribeToAcpRecovery } from '../../acp/acpConnection';
+import { acpGetLiveVoiceAvailability } from '../../acp/liveVoice';
+import { AppEvents } from '../../constants/events';
+import { IntlTestWrapper } from '../../i18n/test-utils';
+import type { LiveVoiceController } from '../../liveVoice/useLiveVoice';
+import { createSession } from '../../sessions';
+import type { UserInput } from '../../types/message';
+import { Session as AppSession } from '../../types/session';
+import Hub from '../Hub';
+
+type ChatInputProps = {
   draftRef?: { current: string };
-  handleSubmit: (input: UserInput) => void;
+  handleSubmit: (input: UserInput) => Promise<void>;
   liveVoice?: {
     availability: { status: string; message: string } | null;
     start: () => Promise<void>;
@@ -22,9 +25,66 @@ type ChatInputCapture = {
   onNextChatExtensionDraftChange?: (draft: { selectedNames: Set<string> }) => void;
 };
 
-type Session = Awaited<ReturnType<typeof createSession>>;
+type CreatedSession = Awaited<ReturnType<typeof createSession>>;
+type SetView = ComponentProps<typeof Hub>['setView'];
 
-function session(id: string = 'session-1'): AppSession {
+const captured = vi.hoisted(() => ({
+  chatInput: null as ChatInputProps | null,
+}));
+
+vi.mock('../ChatInput', () => ({
+  default: (props: ChatInputProps) => {
+    captured.chatInput = props;
+    return <div data-testid="chat-input" />;
+  },
+}));
+
+vi.mock('../LoadingGoose', () => ({
+  default: () => <div />,
+}));
+
+vi.mock('../ConfigContext', () => ({
+  useConfig: () => ({
+    extensionsList: [],
+  }),
+}));
+
+vi.mock('../../sessions', () => ({
+  createSession: vi.fn(),
+}));
+
+vi.mock('../../utils/workingDir', () => ({
+  getInitialWorkingDir: () => '/tmp/goose',
+  getEffectiveWorkingDir: () => Promise.resolve('/tmp/goose'),
+}));
+
+vi.mock('../../utils/nextChatExtensions', () => ({
+  createNextChatExtensionDraft: () => ({
+    selectedNames: new Set<string>(),
+  }),
+  selectNextChatExtensions: () => [],
+}));
+
+vi.mock('../../acp/errors', () => ({
+  formatAcpError: (error: unknown) => String(error),
+}));
+
+vi.mock('../../toastService', () => ({
+  toastError: vi.fn(),
+}));
+
+vi.mock('../../acp/liveVoice', () => ({
+  acpGetLiveVoiceAvailability: vi.fn(),
+}));
+
+vi.mock('../../acp/acpConnection', () => ({
+  subscribeToAcpRecovery: vi.fn(),
+}));
+
+const DRAFT = 'a half-written thought';
+const TYPED_WHILE_STARTING = 'and one more thought';
+
+function createSessionResult(id = 'session-1'): AppSession {
   return new AppSession({
     id,
     name: 'untitled',
@@ -36,215 +96,475 @@ function session(id: string = 'session-1'): AppSession {
   });
 }
 
-const liveVoice: LiveVoiceController = {
-  activeSessionId: null,
-  liveVoiceSessionId: null,
-  phase: 'idle',
-  muted: false,
-  start: vi.fn(),
-  stop: vi.fn(),
-  toggleMute: vi.fn(),
-};
-
-const captured = vi.hoisted(() => ({ chatInput: null as ChatInputCapture | null }));
-
-vi.mock('../ChatInput', () => ({
-  default: (props: ChatInputCapture) => {
-    captured.chatInput = props;
-    return <div data-testid="chat-input" />;
-  },
-}));
-
-vi.mock('../LoadingGoose', () => ({ default: () => <div /> }));
-
-vi.mock('../ConfigContext', () => ({
-  useConfig: () => ({ extensionsList: [] }),
-}));
-
-vi.mock('../../sessions', () => ({ createSession: vi.fn() }));
-
-vi.mock('../../utils/workingDir', () => ({
-  getInitialWorkingDir: () => '/tmp/goose',
-  getEffectiveWorkingDir: () => Promise.resolve('/tmp/goose'),
-}));
-
-vi.mock('../../utils/nextChatExtensions', () => ({
-  createNextChatExtensionDraft: () => ({}),
-  selectNextChatExtensions: () => [],
-}));
-
-vi.mock('../../acp/errors', () => ({ formatAcpError: (error: unknown) => String(error) }));
-
-vi.mock('../../toasts', () => ({ toastError: vi.fn() }));
-
-vi.mock('../../acp/liveVoice', () => ({ acpGetLiveVoiceAvailability: vi.fn() }));
-
-vi.mock('../../acp/acpConnection', () => ({ subscribeToAcpRecovery: vi.fn() }));
-
-const DRAFT = 'a half-written thought';
-const TYPED_WHILE_STARTING = 'and one more thought';
-
-/** Holds session creation open, so the test can edit the draft while it is pending. */
-function pendingSession() {
-  const settle: { started?: () => void; failed?: () => void } = {};
-  vi.mocked(createSession).mockImplementation(
-    () =>
-      new Promise<Session>((resolve, reject) => {
-        settle.started = () => resolve(session());
-        settle.failed = () => reject(new Error('no agent'));
-      })
-  );
-  return settle;
+function createLiveVoice(): LiveVoiceController {
+  return {
+    activeSessionId: null,
+    liveVoiceSessionId: null,
+    phase: 'idle',
+    muted: false,
+    start: vi.fn(),
+    stop: vi.fn(),
+    toggleMute: vi.fn(),
+  };
 }
 
-function renderHub(draftRef: { current: string }, setView = vi.fn()) {
-  return render(
-    <IntlTestWrapper>
-      <Hub setView={setView} draftRef={draftRef} liveVoice={liveVoice} />
-    </IntlTestWrapper>
-  );
-}
+/**
+ * Provides a real pending Promise to the mocked createSession dependency.
+ *
+ * resolve/reject exist immediately. The helper does not reproduce any Hub
+ * behaviour: Hub still decides when and how createSession is called.
+ */
+function createPendingSession() {
+  let resolve!: (session: CreatedSession) => void;
+  let reject!: (error: Error) => void;
 
-async function submit() {
-  await act(async () => {
-    captured.chatInput?.handleSubmit({ msg: DRAFT, images: [] });
+  const promise = new Promise<CreatedSession>((promiseResolve, promiseReject) => {
+    resolve = promiseResolve;
+    reject = promiseReject;
   });
+
+  vi.mocked(createSession).mockReturnValue(promise);
+
+  return {
+    resolve,
+    reject,
+  };
+}
+
+function getChatInput(): ChatInputProps {
+  if (!captured.chatInput) {
+    throw new Error('Hub did not render ChatInput');
+  }
+
+  return captured.chatInput;
 }
 
 describe('Hub', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    liveVoice.activeSessionId = null;
-    liveVoice.liveVoiceSessionId = null;
-    liveVoice.phase = 'idle';
     captured.chatInput = null;
-    vi.mocked(acpGetLiveVoiceAvailability).mockRejectedValue(new Error('ACP unavailable'));
+
+    vi.mocked(acpGetLiveVoiceAvailability).mockRejectedValue(
+      new Error('ACP unavailable')
+    );
+
     vi.mocked(subscribeToAcpRecovery).mockReturnValue(() => undefined);
   });
 
-  it('requests Live voice availability again after ACP recovers', async () => {
+  it('requests Live voice availability again after ACP recovery finishes', async () => {
     let recoveryChanged: ((recovering: boolean) => void) | undefined;
-    const available = { status: 'ready' as const, message: 'Start Live voice' };
+
+    const availability = {
+      status: 'ready' as const,
+      message: 'Start Live voice',
+    };
+
     vi.mocked(acpGetLiveVoiceAvailability)
       .mockRejectedValueOnce(new Error('ACP disconnected'))
-      .mockResolvedValueOnce(available);
+      .mockResolvedValueOnce(availability);
+
     vi.mocked(subscribeToAcpRecovery).mockImplementation((listener) => {
       recoveryChanged = listener;
       return () => undefined;
     });
 
-    renderHub({ current: '' });
-    await waitFor(() => expect(acpGetLiveVoiceAvailability).toHaveBeenCalledTimes(1));
+    render(
+      <IntlTestWrapper>
+        <Hub
+          setView={vi.fn()}
+          draftRef={{ current: '' }}
+          liveVoice={createLiveVoice()}
+        />
+      </IntlTestWrapper>
+    );
 
-    act(() => recoveryChanged?.(true));
-    act(() => recoveryChanged?.(false));
+    await waitFor(() => {
+      expect(acpGetLiveVoiceAvailability).toHaveBeenCalledTimes(1);
+    });
+
+    expect(recoveryChanged).toBeDefined();
+
+    act(() => {
+      recoveryChanged!(true);
+    });
+
+    expect(acpGetLiveVoiceAvailability).toHaveBeenCalledTimes(1);
+
+    act(() => {
+      recoveryChanged!(false);
+    });
 
     await waitFor(() => {
       expect(acpGetLiveVoiceAvailability).toHaveBeenCalledTimes(2);
-      expect(captured.chatInput?.liveVoice?.availability).toEqual(available);
+      expect(getChatInput().liveVoice?.availability).toEqual(availability);
     });
   });
 
-  it('returns to the session with the active Live voice interaction', async () => {
-    const setView = vi.fn();
-    liveVoice.activeSessionId = 'session-with-live-voice';
-    renderHub({ current: '' }, setView);
+  it('returns to the session that already owns the Live voice interaction', async () => {
+    const setView = vi.fn<SetView>();
+    const liveVoice = createLiveVoice();
 
-    await act(async () => captured.chatInput?.liveVoice?.start?.());
+    liveVoice.activeSessionId = 'session-with-live-voice';
+
+    render(
+      <IntlTestWrapper>
+        <Hub
+          setView={setView}
+          draftRef={{ current: '' }}
+          liveVoice={liveVoice}
+        />
+      </IntlTestWrapper>
+    );
+
+    const startLiveVoice = getChatInput().liveVoice?.start;
+
+    expect(startLiveVoice).toBeDefined();
+
+    await act(async () => {
+      await startLiveVoice!();
+    });
 
     expect(setView).toHaveBeenCalledWith('pair', {
       resumeSessionId: 'session-with-live-voice',
     });
+
     expect(createSession).not.toHaveBeenCalled();
   });
 
-  it('starts a chat with no extensions when the user cleared the picker', async () => {
-    vi.mocked(createSession).mockResolvedValue(session());
-    renderHub({ current: '' });
+  it('creates a chat with no extensions when the picker was explicitly cleared', async () => {
+    vi.mocked(createSession).mockResolvedValue(createSessionResult());
 
-    // Touching the picker is what turns "not specified" into a real choice, and
-    // clearing it is the case the composer already promises in a toast.
-    await act(async () => {
-      captured.chatInput?.onNextChatExtensionDraftChange?.({ selectedNames: new Set() });
+    render(
+      <IntlTestWrapper>
+        <Hub
+          setView={vi.fn()}
+          draftRef={{ current: DRAFT }}
+          liveVoice={createLiveVoice()}
+        />
+      </IntlTestWrapper>
+    );
+
+    expect(getChatInput().onNextChatExtensionDraftChange).toBeDefined();
+
+    act(() => {
+      getChatInput().onNextChatExtensionDraftChange!({
+        selectedNames: new Set(),
+      });
     });
-    await submit();
 
-    expect(createSession).toHaveBeenCalledWith('/tmp/goose', { extensionConfigs: [] });
+    /*
+     * The state change above re-renders Hub and therefore creates a new
+     * handleSubmit closure. Read ChatInput again instead of using props from
+     * the previous render.
+     */
+    await act(async () => {
+      await getChatInput().handleSubmit({
+        msg: DRAFT,
+        images: [],
+      });
+    });
+
+    expect(createSession).toHaveBeenCalledWith('/tmp/goose', {
+      extensionConfigs: [],
+    });
   });
 
-  it('leaves the set unspecified when the picker was never touched', async () => {
-    vi.mocked(createSession).mockResolvedValue(session());
-    renderHub({ current: '' });
+  it('leaves extensions unspecified when the picker was never touched', async () => {
+    vi.mocked(createSession).mockResolvedValue(createSessionResult());
 
-    await submit();
+    render(
+      <IntlTestWrapper>
+        <Hub
+          setView={vi.fn()}
+          draftRef={{ current: DRAFT }}
+          liveVoice={createLiveVoice()}
+        />
+      </IntlTestWrapper>
+    );
 
-    expect(createSession).toHaveBeenCalledWith('/tmp/goose', { allExtensions: [] });
+    await act(async () => {
+      await getChatInput().handleSubmit({
+        msg: DRAFT,
+        images: [],
+      });
+    });
+
+    expect(createSession).toHaveBeenCalledWith('/tmp/goose', {
+      allExtensions: [],
+    });
   });
 
-  it('hands the draft to the input', () => {
-    const draftRef = { current: DRAFT };
-    renderHub(draftRef);
+  it('passes the real draft ref to ChatInput', () => {
+    const draftRef = {
+      current: DRAFT,
+    };
 
-    expect(captured.chatInput?.draftRef).toBe(draftRef);
+    render(
+      <IntlTestWrapper>
+        <Hub
+          setView={vi.fn()}
+          draftRef={draftRef}
+          liveVoice={createLiveVoice()}
+        />
+      </IntlTestWrapper>
+    );
+
+    expect(getChatInput().draftRef).toBe(draftRef);
   });
 
-  it('drops the draft once the chat starts', async () => {
-    const session = pendingSession();
-    const draftRef = { current: DRAFT };
-    renderHub(draftRef);
+  it('clears an unchanged draft after the session starts', async () => {
+    const pending = createPendingSession();
+    const draftRef = {
+      current: DRAFT,
+    };
 
-    await submit();
-    await act(async () => session.started?.());
+    render(
+      <IntlTestWrapper>
+        <Hub
+          setView={vi.fn()}
+          draftRef={draftRef}
+          liveVoice={createLiveVoice()}
+        />
+      </IntlTestWrapper>
+    );
+
+    let submission!: Promise<void>;
+
+    act(() => {
+      submission = getChatInput().handleSubmit({
+        msg: DRAFT,
+        images: [],
+      });
+    });
+
+    await waitFor(() => {
+      expect(createSession).toHaveBeenCalledOnce();
+    });
+
+    await act(async () => {
+      pending.resolve(createSessionResult());
+      await submission;
+    });
 
     expect(draftRef.current).toBe('');
   });
 
-  it('keeps the draft when the chat fails to start', async () => {
-    const session = pendingSession();
-    const draftRef = { current: DRAFT };
-    renderHub(draftRef);
+  it('keeps the draft when session creation fails', async () => {
+    const pending = createPendingSession();
+    const draftRef = {
+      current: DRAFT,
+    };
 
-    await submit();
-    await act(async () => session.failed?.());
+    render(
+      <IntlTestWrapper>
+        <Hub
+          setView={vi.fn()}
+          draftRef={draftRef}
+          liveVoice={createLiveVoice()}
+        />
+      </IntlTestWrapper>
+    );
+
+    let submission!: Promise<void>;
+
+    act(() => {
+      submission = getChatInput().handleSubmit({
+        msg: DRAFT,
+        images: [],
+      });
+    });
+
+    await waitFor(() => {
+      expect(createSession).toHaveBeenCalledOnce();
+    });
+
+    await act(async () => {
+      pending.reject(new Error('no agent'));
+      await submission;
+    });
 
     expect(draftRef.current).toBe(DRAFT);
   });
 
-  // The input stays editable while the session is being created, so what is in the
-  // draft when creation ends is not necessarily what was submitted.
-  it('keeps text typed while the chat was starting', async () => {
-    const session = pendingSession();
-    const draftRef = { current: DRAFT };
-    renderHub(draftRef);
+  it('preserves text typed while session creation is pending', async () => {
+    const pending = createPendingSession();
+    const draftRef = {
+      current: DRAFT,
+    };
 
-    await submit();
+    render(
+      <IntlTestWrapper>
+        <Hub
+          setView={vi.fn()}
+          draftRef={draftRef}
+          liveVoice={createLiveVoice()}
+        />
+      </IntlTestWrapper>
+    );
+
+    let submission!: Promise<void>;
+
+    act(() => {
+      submission = getChatInput().handleSubmit({
+        msg: DRAFT,
+        images: [],
+      });
+    });
+
+    await waitFor(() => {
+      expect(createSession).toHaveBeenCalledOnce();
+    });
+
     draftRef.current = TYPED_WHILE_STARTING;
-    await act(async () => session.started?.());
+
+    await act(async () => {
+      pending.resolve(createSessionResult());
+      await submission;
+    });
 
     expect(draftRef.current).toBe(TYPED_WHILE_STARTING);
   });
 
-  it('keeps text typed while a failing chat was starting', async () => {
-    const session = pendingSession();
-    const draftRef = { current: DRAFT };
-    renderHub(draftRef);
+  it('preserves text typed while a failing session creation is pending', async () => {
+    const pending = createPendingSession();
+    const draftRef = {
+      current: DRAFT,
+    };
 
-    await submit();
+    render(
+      <IntlTestWrapper>
+        <Hub
+          setView={vi.fn()}
+          draftRef={draftRef}
+          liveVoice={createLiveVoice()}
+        />
+      </IntlTestWrapper>
+    );
+
+    let submission!: Promise<void>;
+
+    act(() => {
+      submission = getChatInput().handleSubmit({
+        msg: DRAFT,
+        images: [],
+      });
+    });
+
+    await waitFor(() => {
+      expect(createSession).toHaveBeenCalledOnce();
+    });
+
     draftRef.current = TYPED_WHILE_STARTING;
-    await act(async () => session.failed?.());
+
+    await act(async () => {
+      pending.reject(new Error('no agent'));
+      await submission;
+    });
 
     expect(draftRef.current).toBe(TYPED_WHILE_STARTING);
   });
 
-  it('leaves the draft empty when the input was cleared while the chat was starting', async () => {
-    const session = pendingSession();
-    const draftRef = { current: DRAFT };
-    renderHub(draftRef);
+  it('keeps the draft empty when it is cleared while session creation is pending', async () => {
+    const pending = createPendingSession();
+    const draftRef = {
+      current: DRAFT,
+    };
 
-    await submit();
+    render(
+      <IntlTestWrapper>
+        <Hub
+          setView={vi.fn()}
+          draftRef={draftRef}
+          liveVoice={createLiveVoice()}
+        />
+      </IntlTestWrapper>
+    );
+
+    let submission!: Promise<void>;
+
+    act(() => {
+      submission = getChatInput().handleSubmit({
+        msg: DRAFT,
+        images: [],
+      });
+    });
+
+    await waitFor(() => {
+      expect(createSession).toHaveBeenCalledOnce();
+    });
+
     draftRef.current = '';
-    await act(async () => session.failed?.());
+
+    await act(async () => {
+      pending.reject(new Error('no agent'));
+      await submission;
+    });
 
     expect(draftRef.current).toBe('');
+  });
+
+  it('dispatches session events and navigates after a successful submission', async () => {
+    const setView = vi.fn<SetView>();
+    const sessionCreated = vi.fn();
+    const activeSessionAdded = vi.fn();
+
+    window.addEventListener(AppEvents.SESSION_CREATED, sessionCreated);
+    window.addEventListener(AppEvents.ADD_ACTIVE_SESSION, activeSessionAdded);
+
+    try {
+      vi.mocked(createSession).mockResolvedValue(
+        createSessionResult('created-session')
+      );
+
+      const draftRef = {
+        current: DRAFT,
+      };
+
+      render(
+        <IntlTestWrapper>
+          <Hub
+            setView={setView}
+            draftRef={draftRef}
+            liveVoice={createLiveVoice()}
+          />
+        </IntlTestWrapper>
+      );
+
+      await act(async () => {
+        await getChatInput().handleSubmit({
+          msg: DRAFT,
+          images: [],
+        });
+      });
+
+      expect(sessionCreated).toHaveBeenCalledOnce();
+      expect(activeSessionAdded).toHaveBeenCalledOnce();
+
+      const event = activeSessionAdded.mock.calls[0][0];
+
+      expect(event).toBeInstanceOf(CustomEvent);
+
+      expect((event as CustomEvent).detail).toEqual({
+        sessionId: 'created-session',
+        initialMessage: {
+          msg: DRAFT,
+          images: [],
+        },
+      });
+
+      expect(setView).toHaveBeenCalledWith('pair', {
+        disableAnimation: true,
+        resumeSessionId: 'created-session',
+        initialMessage: {
+          msg: DRAFT,
+          images: [],
+        },
+      });
+
+      expect(draftRef.current).toBe('');
+    } finally {
+      window.removeEventListener(AppEvents.SESSION_CREATED, sessionCreated);
+      window.removeEventListener(AppEvents.ADD_ACTIVE_SESSION, activeSessionAdded);
+    }
   });
 });

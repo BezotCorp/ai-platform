@@ -1,3 +1,7 @@
+/**
+ * @vitest-environment jsdom
+ */
+
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, type RenderOptions, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -8,7 +12,7 @@ import { acpUpsertConfig } from '../../../../../acp/config';
 
 vi.mock('../../../../../acp/config', async () => {
   const actual =
-    await vi.importActual<typeof import('../../../../../acp/config')>('../../../../acp/config');
+    await vi.importActual<typeof import('../../../../../acp/config')>('../../../../../acp/config');
   return {
     ...actual,
     acpUpsertConfig: vi.fn().mockResolvedValue(undefined),

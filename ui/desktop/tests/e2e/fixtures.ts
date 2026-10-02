@@ -3,8 +3,8 @@ import { exec, spawn, ChildProcess } from 'child_process';
 import { join } from 'path';
 import { promisify } from 'util';
 
-import * as path from "node:path";
-import { fileURLToPath } from "node:url";
+import * as path from 'node:path';
+import { fileURLToPath } from 'node:url';
 const moduleDir = path.dirname(fileURLToPath(import.meta.url));
 const execAsync = promisify(exec);
 
@@ -41,7 +41,7 @@ export const test = base.extend<GooseTestFixtures>({
     try {
       // Assign a unique debug port for this test to enable parallel execution
       // Base port 9222, offset by worker index * 100 + parallel slot
-      const debugPort = 9222 + (testInfo.parallelIndex * 10);
+      const debugPort = 9222 + testInfo.parallelIndex * 10;
       console.log(`Using debug port ${debugPort} for parallel test execution`);
 
       // Start the electron-forge process with Playwright remote debugging enabled
@@ -58,7 +58,7 @@ export const test = base.extend<GooseTestFixtures>({
           ENABLE_PLAYWRIGHT: 'true',
           PLAYWRIGHT_DEBUG_PORT: debugPort.toString(), // Unique port per test for parallel execution
           RUST_LOG: 'info', // Enable info-level logging for goosed backend
-        }
+        },
       });
 
       // Log process output for debugging
@@ -81,15 +81,19 @@ export const test = base.extend<GooseTestFixtures>({
       for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
           browser = await chromium.connectOverCDP(`http://127.0.0.1:${debugPort}`);
-          console.log(`Connected to Electron app on attempt ${attempt} (~${(attempt * retryDelay) / 1000}s)`);
+          console.log(
+            `Connected to Electron app on attempt ${attempt} (~${(attempt * retryDelay) / 1000}s)`
+          );
           break;
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : String(error);
           if (attempt === maxRetries) {
-            throw new Error(`Failed to connect to Electron app after ${maxRetries} attempts (${(maxRetries * retryDelay) / 1000}s). Last error: ${errorMessage}`);
+            throw new Error(
+              `Failed to connect to Electron app after ${maxRetries} attempts (${(maxRetries * retryDelay) / 1000}s). Last error: ${errorMessage}`
+            );
           }
           // Wait before next retry
-          await new Promise(resolve => setTimeout(resolve, retryDelay));
+          await new Promise((resolve) => setTimeout(resolve, retryDelay));
         }
       }
 
@@ -123,16 +127,18 @@ export const test = base.extend<GooseTestFixtures>({
       }
 
       // Wait for React app to be ready
-      await page.waitForFunction(() => {
-        const root = document.getElementById('root');
-        return root && root.children.length > 0;
-      }, { timeout: 30000 });
+      await page.waitForFunction(
+        () => {
+          const root = document.getElementById('root');
+          return root && root.children.length > 0;
+        },
+        { timeout: 30000 }
+      );
 
       console.log('App ready, starting test...');
 
       // Provide the page to the test
       await providePage(page);
-
     } finally {
       console.log('Cleaning up Electron app for this test...');
 
@@ -152,7 +158,7 @@ export const test = base.extend<GooseTestFixtures>({
             try {
               // First try SIGTERM for graceful shutdown
               process.kill(-appProcess.pid, 'SIGTERM');
-              await new Promise(resolve => setTimeout(resolve, 2000));
+              await new Promise((resolve) => setTimeout(resolve, 2000));
             } catch {
               // Process might already be dead
             }

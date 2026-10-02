@@ -1,3 +1,7 @@
+/**
+ * @vitest-environment jsdom
+ */
+
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, type RenderOptions, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -75,7 +79,11 @@ describe('ScheduleModal', () => {
     rerender(<ScheduleModal {...baseProps} isOpen schedule={existingSchedule} />);
 
     expect(screen.getByText('Edit Schedule')).toBeInTheDocument();
-    expect(screen.queryByText('Please provide a valid recipe source.')).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(
+        screen.queryByText('Please provide a valid recipe source.')
+      ).not.toBeInTheDocument();
+    });
   });
 
   it('loads saved recipes into a picker and creates a schedule from the selected one', async () => {
