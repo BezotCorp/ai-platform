@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, test } from 'bun:test';
+import { beforeEach, describe, expect, test } from 'vitest';
 import * as E from 'fp-ts/Either';
 import { isJsonRpcError, isJsonRpcTimeoutError } from '../shared/errors';
 import { createMockStreams, MockStreams } from '../test/mocks/streams';
@@ -46,7 +46,7 @@ describe('createJsonRpcClient', () => {
       const requestPromise = requestTask();
 
       // Wait a tick for the write to complete
-      await new Promise(resolve => setTimeout(resolve, 0));
+      await new Promise((resolve) => setTimeout(resolve, 0));
 
       // Check what was written
       expect(mockStreams.written.length).toBe(1);
@@ -72,7 +72,7 @@ describe('createJsonRpcClient', () => {
       const promise2 = request2();
 
       // Wait for writes
-      await new Promise(resolve => setTimeout(resolve, 0));
+      await new Promise((resolve) => setTimeout(resolve, 0));
 
       expect(mockStreams.written.length).toBe(2);
       const msg1 = JSON.parse(mockStreams.written[0].trim());
@@ -93,7 +93,7 @@ describe('createJsonRpcClient', () => {
       const requestTask = client.request('no.params');
       const requestPromise = requestTask();
 
-      await new Promise(resolve => setTimeout(resolve, 0));
+      await new Promise((resolve) => setTimeout(resolve, 0));
 
       const sentMessage = JSON.parse(mockStreams.written[0].trim());
       expect(sentMessage.params).toBeUndefined();
@@ -108,7 +108,7 @@ describe('createJsonRpcClient', () => {
       const requestPromise = requestTask();
 
       // Wait for write
-      await new Promise(resolve => setTimeout(resolve, 0));
+      await new Promise((resolve) => setTimeout(resolve, 0));
 
       // Send success response
       const expectedResult = { data: 'hello world' };
@@ -126,7 +126,7 @@ describe('createJsonRpcClient', () => {
       const requestTask = client.request('failing.method');
       const requestPromise = requestTask();
 
-      await new Promise(resolve => setTimeout(resolve, 0));
+      await new Promise((resolve) => setTimeout(resolve, 0));
 
       // Send error response
       mockStreams.pushResponse(
@@ -138,7 +138,7 @@ describe('createJsonRpcClient', () => {
             message: 'Method not found',
             data: { details: 'unknown method' },
           },
-        })
+        }),
       );
 
       const result = await requestPromise;
@@ -201,11 +201,11 @@ describe('createJsonRpcClient', () => {
       const requestTask = client.request<string>('long.stream', undefined, { timeoutMs: null });
       const requestPromise = requestTask();
 
-      await new Promise(resolve => setTimeout(resolve, 0));
+      await new Promise((resolve) => setTimeout(resolve, 0));
       expect(mockStreams.written.length).toBe(1);
 
       // Wait past the default timeout before responding.
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      await new Promise((resolve) => setTimeout(resolve, 1500));
 
       mockStreams.pushResponse(JSON.stringify({ jsonrpc: '2.0', id: 1, result: 'late-but-valid' }));
 
@@ -224,7 +224,7 @@ describe('createJsonRpcClient', () => {
       const promise1 = request1();
       const promise2 = request2();
 
-      await new Promise(resolve => setTimeout(resolve, 0));
+      await new Promise((resolve) => setTimeout(resolve, 0));
 
       // Send responses out of order
       mockStreams.pushResponse(JSON.stringify({ jsonrpc: '2.0', id: 2, result: 'result2' }));
@@ -281,7 +281,7 @@ describe('createJsonRpcClient', () => {
     test('invokes callback for incoming notifications', async () => {
       const receivedNotifications: unknown[] = [];
 
-      client.onNotification(notification => {
+      client.onNotification((notification) => {
         receivedNotifications.push(notification);
       });
 
@@ -291,11 +291,11 @@ describe('createJsonRpcClient', () => {
           jsonrpc: '2.0',
           method: 'server.event',
           params: { event: 'something_happened' },
-        })
+        }),
       );
 
       // Wait for event processing
-      await new Promise(resolve => setTimeout(resolve, 10));
+      await new Promise((resolve) => setTimeout(resolve, 10));
 
       expect(receivedNotifications.length).toBe(1);
       expect(receivedNotifications[0]).toEqual({
@@ -320,10 +320,10 @@ describe('createJsonRpcClient', () => {
         JSON.stringify({
           jsonrpc: '2.0',
           method: 'broadcast',
-        })
+        }),
       );
 
-      await new Promise(resolve => setTimeout(resolve, 10));
+      await new Promise((resolve) => setTimeout(resolve, 10));
 
       expect(callback1Called).toBe(true);
       expect(callback2Called).toBe(true);
@@ -332,19 +332,19 @@ describe('createJsonRpcClient', () => {
     test('does not invoke callback for response messages', async () => {
       const receivedNotifications: unknown[] = [];
 
-      client.onNotification(notification => {
+      client.onNotification((notification) => {
         receivedNotifications.push(notification);
       });
 
       // Start a request
       const requestPromise = client.request('test')();
-      await new Promise(resolve => setTimeout(resolve, 0));
+      await new Promise((resolve) => setTimeout(resolve, 0));
 
       // Push a response (has ID field)
       mockStreams.pushResponse(JSON.stringify({ jsonrpc: '2.0', id: 1, result: 'ok' }));
 
       await requestPromise;
-      await new Promise(resolve => setTimeout(resolve, 10));
+      await new Promise((resolve) => setTimeout(resolve, 10));
 
       // Notification callback should not be invoked for responses
       expect(receivedNotifications.length).toBe(0);
@@ -353,7 +353,7 @@ describe('createJsonRpcClient', () => {
     test('handles notification without params', async () => {
       const receivedNotifications: unknown[] = [];
 
-      client.onNotification(notification => {
+      client.onNotification((notification) => {
         receivedNotifications.push(notification);
       });
 
@@ -361,10 +361,10 @@ describe('createJsonRpcClient', () => {
         JSON.stringify({
           jsonrpc: '2.0',
           method: 'ping',
-        })
+        }),
       );
 
-      await new Promise(resolve => setTimeout(resolve, 10));
+      await new Promise((resolve) => setTimeout(resolve, 10));
 
       expect(receivedNotifications.length).toBe(1);
       expect(receivedNotifications[0]).toEqual({
@@ -385,7 +385,7 @@ describe('createJsonRpcClient', () => {
 
       mockStreams.pushResponse(JSON.stringify({ jsonrpc: '2.0', method: 'event' }));
 
-      await new Promise(resolve => setTimeout(resolve, 10));
+      await new Promise((resolve) => setTimeout(resolve, 10));
 
       // Second callback should still be called despite first throwing
       expect(callback2Called).toBe(true);
@@ -397,7 +397,7 @@ describe('createJsonRpcClient', () => {
       // Start a request that won't be answered
       const requestPromise = client.request('pending.method')();
 
-      await new Promise(resolve => setTimeout(resolve, 0));
+      await new Promise((resolve) => setTimeout(resolve, 0));
 
       // Dispose the client
       client.dispose();
@@ -416,7 +416,7 @@ describe('createJsonRpcClient', () => {
       const promise2 = client.request('method2')();
       const promise3 = client.request('method3')();
 
-      await new Promise(resolve => setTimeout(resolve, 0));
+      await new Promise((resolve) => setTimeout(resolve, 0));
 
       client.dispose();
 
@@ -450,7 +450,7 @@ describe('createJsonRpcClient', () => {
     test('stops receiving notifications after disposal', async () => {
       const receivedNotifications: unknown[] = [];
 
-      client.onNotification(notification => {
+      client.onNotification((notification) => {
         receivedNotifications.push(notification);
       });
 
@@ -459,7 +459,7 @@ describe('createJsonRpcClient', () => {
       // Push notification after disposal
       mockStreams.pushResponse(JSON.stringify({ jsonrpc: '2.0', method: 'late.event' }));
 
-      await new Promise(resolve => setTimeout(resolve, 10));
+      await new Promise((resolve) => setTimeout(resolve, 10));
 
       // No notifications should be received after disposal
       expect(receivedNotifications.length).toBe(0);
@@ -467,7 +467,7 @@ describe('createJsonRpcClient', () => {
 
     test('is idempotent (can be called multiple times)', async () => {
       const requestPromise = client.request('test')();
-      await new Promise(resolve => setTimeout(resolve, 0));
+      await new Promise((resolve) => setTimeout(resolve, 0));
 
       // Call dispose multiple times
       client.dispose();
@@ -484,7 +484,7 @@ describe('createJsonRpcClient', () => {
     test('handles partial lines', async () => {
       const receivedNotifications: unknown[] = [];
 
-      client.onNotification(notification => {
+      client.onNotification((notification) => {
         receivedNotifications.push(notification);
       });
 
@@ -492,7 +492,7 @@ describe('createJsonRpcClient', () => {
       mockStreams.stdout.push('{"jsonrpc":"2.0",');
       mockStreams.stdout.push('"method":"partial"}\n');
 
-      await new Promise(resolve => setTimeout(resolve, 10));
+      await new Promise((resolve) => setTimeout(resolve, 10));
 
       expect(receivedNotifications.length).toBe(1);
       expect(receivedNotifications[0]).toEqual({ jsonrpc: '2.0', method: 'partial' });
@@ -501,7 +501,7 @@ describe('createJsonRpcClient', () => {
     test('handles multiple lines in single chunk', async () => {
       const receivedNotifications: unknown[] = [];
 
-      client.onNotification(notification => {
+      client.onNotification((notification) => {
         receivedNotifications.push(notification);
       });
 
@@ -509,7 +509,7 @@ describe('createJsonRpcClient', () => {
       const multiLine = '{"jsonrpc":"2.0","method":"first"}\n{"jsonrpc":"2.0","method":"second"}\n';
       mockStreams.stdout.push(multiLine);
 
-      await new Promise(resolve => setTimeout(resolve, 10));
+      await new Promise((resolve) => setTimeout(resolve, 10));
 
       expect(receivedNotifications.length).toBe(2);
     });
@@ -517,13 +517,13 @@ describe('createJsonRpcClient', () => {
     test('ignores empty lines', async () => {
       const receivedNotifications: unknown[] = [];
 
-      client.onNotification(notification => {
+      client.onNotification((notification) => {
         receivedNotifications.push(notification);
       });
 
       mockStreams.stdout.push('\n\n{"jsonrpc":"2.0","method":"test"}\n\n');
 
-      await new Promise(resolve => setTimeout(resolve, 10));
+      await new Promise((resolve) => setTimeout(resolve, 10));
 
       expect(receivedNotifications.length).toBe(1);
     });
@@ -533,14 +533,14 @@ describe('createJsonRpcClient', () => {
     test('handles malformed JSON gracefully', async () => {
       const receivedNotifications: unknown[] = [];
 
-      client.onNotification(notification => {
+      client.onNotification((notification) => {
         receivedNotifications.push(notification);
       });
 
       // Send invalid JSON
       mockStreams.pushResponse('not valid json');
 
-      await new Promise(resolve => setTimeout(resolve, 10));
+      await new Promise((resolve) => setTimeout(resolve, 10));
 
       // Should not crash, just log error and continue
       expect(receivedNotifications.length).toBe(0);
@@ -549,7 +549,7 @@ describe('createJsonRpcClient', () => {
     test('continues processing after malformed JSON', async () => {
       const receivedNotifications: unknown[] = [];
 
-      client.onNotification(notification => {
+      client.onNotification((notification) => {
         receivedNotifications.push(notification);
       });
 
@@ -557,7 +557,7 @@ describe('createJsonRpcClient', () => {
       mockStreams.pushResponse('bad json');
       mockStreams.pushResponse(JSON.stringify({ jsonrpc: '2.0', method: 'valid' }));
 
-      await new Promise(resolve => setTimeout(resolve, 10));
+      await new Promise((resolve) => setTimeout(resolve, 10));
 
       // Should process the valid message
       expect(receivedNotifications.length).toBe(1);
@@ -569,7 +569,7 @@ describe('createJsonRpcClient', () => {
       // by not throwing and continuing operation
 
       const receivedNotifications: unknown[] = [];
-      client.onNotification(notification => {
+      client.onNotification((notification) => {
         receivedNotifications.push(notification);
       });
 
@@ -579,7 +579,7 @@ describe('createJsonRpcClient', () => {
       // Push a valid notification after
       mockStreams.pushResponse(JSON.stringify({ jsonrpc: '2.0', method: 'after.orphan' }));
 
-      await new Promise(resolve => setTimeout(resolve, 10));
+      await new Promise((resolve) => setTimeout(resolve, 10));
 
       // Should still process subsequent messages
       expect(receivedNotifications.length).toBe(1);

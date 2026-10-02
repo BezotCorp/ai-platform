@@ -14,7 +14,7 @@ GOOSE_REPO=${GOOSE_REPO:-"$HOME/Development/goose"}
 
 # Function to get release tags using gh CLI
 get_latest_release() {
-    if command -v gh &> /dev/null; then
+    if command -v gh &>/dev/null; then
         gh release list --repo aaif-goose/goose --limit 1 --json tagName --jq '.[0].tagName' 2>/dev/null
     else
         # Fallback: get latest version tag from git
@@ -23,7 +23,7 @@ get_latest_release() {
 }
 
 get_previous_release() {
-    if command -v gh &> /dev/null; then
+    if command -v gh &>/dev/null; then
         gh release list --repo aaif-goose/goose --limit 2 --json tagName --jq '.[].tagName' 2>/dev/null | sed -n '2p'
     else
         # Fallback: get second-latest version tag from git
@@ -74,7 +74,7 @@ LOG_DIR=$(mktemp -d)
 trap 'rm -rf "$LOG_DIR"' EXIT
 
 echo "Step 1: Extracting CLI structure from $OLD_VERSION..."
-if ! ../scripts/extract-cli-structure.sh "$OLD_VERSION" > old-cli-structure.json 2>"$LOG_DIR/extract-old.log"; then
+if ! ../scripts/extract-cli-structure.sh "$OLD_VERSION" >old-cli-structure.json 2>"$LOG_DIR/extract-old.log"; then
     echo "✗ Failed to extract CLI structure from $OLD_VERSION" >&2
     echo "Error output:" >&2
     cat "$LOG_DIR/extract-old.log" >&2
@@ -84,7 +84,7 @@ echo "✓ Extracted $(jq '.commands | length' old-cli-structure.json) commands"
 
 echo ""
 echo "Step 2: Extracting CLI structure from $NEW_VERSION..."
-if ! ../scripts/extract-cli-structure.sh "$NEW_VERSION" > new-cli-structure.json 2>"$LOG_DIR/extract-new.log"; then
+if ! ../scripts/extract-cli-structure.sh "$NEW_VERSION" >new-cli-structure.json 2>"$LOG_DIR/extract-new.log"; then
     echo "✗ Failed to extract CLI structure from $NEW_VERSION" >&2
     echo "Error output:" >&2
     cat "$LOG_DIR/extract-new.log" >&2
@@ -94,7 +94,7 @@ echo "✓ Extracted $(jq '.commands | length' new-cli-structure.json) commands"
 
 echo ""
 echo "Step 3: Comparing CLI structures..."
-python3 ../scripts/diff-cli-structures.py old-cli-structure.json new-cli-structure.json > cli-changes.json 2>"$LOG_DIR/diff.log"
+python3 ../scripts/diff-cli-structures.py old-cli-structure.json new-cli-structure.json >cli-changes.json 2>"$LOG_DIR/diff.log"
 
 HAS_CHANGES=$(jq -r '.has_changes' cli-changes.json)
 echo "✓ Comparison complete. Has changes: $HAS_CHANGES"
@@ -106,71 +106,71 @@ if [ "$HAS_CHANGES" = "true" ]; then
     echo "  - Commands removed: $(jq '.summary.commands_removed' cli-changes.json)"
     echo "  - Commands modified: $(jq '.summary.commands_modified' cli-changes.json)"
     echo "  - Breaking changes: $(jq '.summary.breaking_changes' cli-changes.json)"
-    
+
     echo ""
     echo "Step 4: Synthesizing CLI changes documentation..."
-    
+
     # Run goose and capture output, filtering out session logs
-    goose run --recipe ../recipes/synthesize-cli-changes.yaml 2>&1 | \
-        sed -E 's/\x1B\[[0-9;]*[mK]//g' | \
-        grep -v "^starting session" | \
-        grep -v "^    session id:" | \
-        grep -v "^    working directory:" | \
-        grep -v "^─── text_editor" | \
-        grep -v "^path:" | \
-        grep -v "^command:" | \
-        grep -v "^Closing session" | \
-        grep -v "^Loading recipe:" | \
-        grep -v "^Description:" | \
-        cat -s > cli-changes.md.tmp
+    goose run --recipe ../recipes/synthesize-cli-changes.yaml 2>&1 |
+        sed -E 's/\x1B\[[0-9;]*[mK]//g' |
+        grep -v "^starting session" |
+        grep -v "^    session id:" |
+        grep -v "^    working directory:" |
+        grep -v "^─── text_editor" |
+        grep -v "^path:" |
+        grep -v "^command:" |
+        grep -v "^Closing session" |
+        grep -v "^Loading recipe:" |
+        grep -v "^Description:" |
+        cat -s >cli-changes.md.tmp
 
     # If the pipeline fails, surface the goose error (grep can exit 1 when it matches nothing)
     if [ ${PIPESTATUS[0]} -ne 0 ]; then
         echo "✗ Failed to synthesize CLI changes (goose run failed)" >&2
         exit 1
     fi
-    
+
     # Check if we got meaningful content
     if [ -s cli-changes.md.tmp ] && grep -q "# CLI Command Changes" cli-changes.md.tmp; then
         mv cli-changes.md.tmp cli-changes.md
-        echo "✓ Generated cli-changes.md ($(wc -l < cli-changes.md) lines)"
+        echo "✓ Generated cli-changes.md ($(wc -l <cli-changes.md) lines)"
     elif [ -f cli-changes.md ] && [ -s cli-changes.md ]; then
         # File was written directly by goose
         rm -f cli-changes.md.tmp
-        echo "✓ Generated cli-changes.md ($(wc -l < cli-changes.md) lines)"
+        echo "✓ Generated cli-changes.md ($(wc -l <cli-changes.md) lines)"
     else
         echo "✗ Failed to generate cli-changes.md"
         rm -f cli-changes.md.tmp
         exit 1
     fi
-    
+
     echo ""
     echo "Step 5: Updating CLI commands documentation..."
-    
+
     # Set environment variables for the update recipe
     export CLI_COMMANDS_PATH="${GOOSE_REPO}/documentation/docs/guides/goose-cli-commands.md"
-    
+
     # Run the update recipe
-    goose run --recipe ../recipes/update-cli-commands.yaml 2>&1 | \
-        sed -E 's/\x1B\[[0-9;]*[mK]//g' | \
-        grep -v "^starting session" | \
-        grep -v "^    session id:" | \
-        grep -v "^    working directory:" | \
-        grep -v "^─── text_editor" | \
-        grep -v "^path:" | \
-        grep -v "^command:" | \
-        grep -v "^Closing session" | \
-        grep -v "^Loading recipe:" | \
-        grep -v "^Description:" | \
+    goose run --recipe ../recipes/update-cli-commands.yaml 2>&1 |
+        sed -E 's/\x1B\[[0-9;]*[mK]//g' |
+        grep -v "^starting session" |
+        grep -v "^    session id:" |
+        grep -v "^    working directory:" |
+        grep -v "^─── text_editor" |
+        grep -v "^path:" |
+        grep -v "^command:" |
+        grep -v "^Closing session" |
+        grep -v "^Loading recipe:" |
+        grep -v "^Description:" |
         cat -s
 
     if [ ${PIPESTATUS[0]} -ne 0 ]; then
         echo "✗ Failed to update documentation (goose run failed)" >&2
         exit 1
     fi
-    
+
     echo "✓ Documentation update complete"
-    
+
     echo ""
     echo "=========================================="
     echo "Pipeline Complete!"

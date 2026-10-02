@@ -27,7 +27,7 @@ function formatArgs(args: unknown[]): string {
   return (
     ' ' +
     args
-      .map(arg => {
+      .map((arg) => {
         if (typeof arg === 'string') return arg;
         try {
           return JSON.stringify(arg);
@@ -40,11 +40,7 @@ function formatArgs(args: unknown[]): string {
 }
 
 /** Create a logger that writes to a VS Code OutputChannel */
-export function createLogger(
-  outputChannel: vscode.OutputChannel,
-  initialLevel: LogLevel,
-  source?: string
-): Logger {
+export function createLogger(outputChannel: vscode.OutputChannel, initialLevel: LogLevel, source?: string): Logger {
   let currentLevel = initialLevel;
 
   const log = (level: LogLevel, message: string, ...args: unknown[]): void => {

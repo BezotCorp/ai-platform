@@ -136,13 +136,13 @@ those identities with the Buzz `bot` role.
 The current roster is:
 
 - Douwe Osinga as an owner
-    - Doose as their bot
+  - Doose as their bot
 - Alex Hancock as a member
 - filip as a member
 - jasper as a member
 - Mic as a member
 - lifei as a member
-    - Lifei goose agent as their bot
+  - Lifei goose agent as their bot
 - Jack Amadeo as a member
 
 Edit the checked-in file when the permanent team changes. Set
@@ -249,14 +249,14 @@ request channels are reported and skipped instead of being treated as closed
 issues. When more than one name points at an issue, an explicit GitHub issue URL
 in the channel description wins over a legacy or bare numeric name:
 
-| GitHub phase | Buzz topic marker |
-| --- | --- |
-| Inbox | ⚪ |
-| Needs info | 🟡 |
-| Accepted / design | 🟣 |
-| Ready | 🟢 |
-| Verification | 🔵 |
-| Done | ✅ |
+| GitHub phase      | Buzz topic marker |
+| ----------------- | ----------------- |
+| Inbox             | ⚪                |
+| Needs info        | 🟡                |
+| Accepted / design | 🟣                |
+| Ready             | 🟢                |
+| Verification      | 🔵                |
+| Done              | ✅                |
 
 Topics use this format:
 

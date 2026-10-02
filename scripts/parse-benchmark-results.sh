@@ -34,36 +34,36 @@ FAILED_METRICS=0
 PASSED_METRICS=0
 
 # Process each suite
-for i in $(seq 0 $((SUITE_COUNT-1))); do
+for i in $(seq 0 $((SUITE_COUNT - 1))); do
   SUITE_NAME=$(jq -r ".suites[$i].name" "$RESULT_FILE")
   EVAL_COUNT=$(jq ".suites[$i].evaluations | length" "$RESULT_FILE")
   TOTAL_EVALS=$((TOTAL_EVALS + EVAL_COUNT))
-  
+
   echo "Suite: $SUITE_NAME ($EVAL_COUNT evaluations)"
-  
+
   # Process each evaluation in this suite
-  for j in $(seq 0 $((EVAL_COUNT-1))); do
+  for j in $(seq 0 $((EVAL_COUNT - 1))); do
     EVAL_NAME=$(jq -r ".suites[$i].evaluations[$j].name" "$RESULT_FILE")
     METRIC_COUNT=$(jq ".suites[$i].evaluations[$j].metrics | length" "$RESULT_FILE")
     TOTAL_METRICS=$((TOTAL_METRICS + METRIC_COUNT))
-    
+
     # Check for failures in this evaluation
-    # This assumes metrics with names containing "success", "pass", or "correct" 
+    # This assumes metrics with names containing "success", "pass", or "correct"
     # and boolean values of false indicate failures
-    FAILURES=$(jq -r ".suites[$i].evaluations[$j].metrics[] | 
+    FAILURES=$(jq -r ".suites[$i].evaluations[$j].metrics[] |
       select(
-        (.[0] | test(\"success|pass|correct\"; \"i\")) and 
+        (.[0] | test(\"success|pass|correct\"; \"i\")) and
         (.[1] == false or .[1] == \"false\" or .[1] == 0 or .[1] == \"0\")
       ) | .[0]" "$RESULT_FILE" | wc -l | tr -d ' ')
-    
+
     if [ "$FAILURES" -gt 0 ]; then
       FAILED_METRICS=$((FAILED_METRICS + FAILURES))
       echo "  ❌ $EVAL_NAME: $FAILURES failures detected"
-      
+
       # Print the specific failing metrics
-      FAILING_METRICS=$(jq -r ".suites[$i].evaluations[$j].metrics[] | 
+      FAILING_METRICS=$(jq -r ".suites[$i].evaluations[$j].metrics[] |
         select(
-          (.[0] | test(\"success|pass|correct\"; \"i\")) and 
+          (.[0] | test(\"success|pass|correct\"; \"i\")) and
           (.[1] == false or .[1] == \"false\" or .[1] == 0 or .[1] == \"0\")
         ) | \"    - \" + .[0]" "$RESULT_FILE")
       echo "$FAILING_METRICS"

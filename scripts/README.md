@@ -38,6 +38,7 @@ This script runs Goose benchmarks across multiple provider:model pairs and analy
 ### How It Works
 
 The script:
+
 1. Parses the provider:model pairs and benchmark suites
 2. Determines whether to use the debug or release binary
 3. For each provider:model pair:

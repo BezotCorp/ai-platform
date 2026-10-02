@@ -13,7 +13,7 @@ measure of how much agent time a run cost regardless of host concurrency.
 `turns` is the total number of agent turns across all trials (one per
 assistant message / harness step).
 
-```
+```text
 job_name                            model                         rate  compute     in     out  turns     cost  pass/fail/err/tout
 -----------------------------------------------------------------------------------------------------------------------------------
 claude-sonnet46-full                claude-sonnet-4-6            55.1%    20.2h  102.3M    1.2M     3k   $42.83          49/23/1/16
@@ -34,7 +34,7 @@ Quick read:
   the latter also enabling summon) lead at **57.3%**.
 - Stock goose (`sonnet46-full`, `developer,todo`) lands at **50.6%**, roughly
   on par with `opencode` (52.8%) and ahead of `pi` (47.2%) on the same model.
-  Notably, `pi` also burned the most compute (24.4h) — slowest *and* lowest
+  Notably, `pi` also burned the most compute (24.4h) — slowest _and_ lowest
   scoring of the sonnet runs.
 - `claude-sonnet46-full` at **55.1%** is harbor's vanilla `Goose` harness
   (curl-installed) — useful sanity check that our `GooseBinaryAgent` adapter
@@ -101,6 +101,7 @@ flipped on, runs the recipe, and streams JSON output.
 ```
 
 Defaults:
+
 - dataset: `terminal-bench/terminal-bench-2`
 - model: `anthropic/claude-sonnet-4-6`
 - extensions: `developer,todo`
@@ -120,7 +121,7 @@ secrets from env. Write a harbor YAML config directly and call `harbor run`:
 ```yaml
 # opencode-sonnet46-full.yaml
 job_name: opencode-sonnet46-full
-jobs_dir: /path/to/goose/evals/harbor/runs    # so cmd.py picks it up
+jobs_dir: /path/to/goose/evals/harbor/runs # so cmd.py picks it up
 n_attempts: 1
 n_concurrent_trials: 4
 environment:
@@ -153,7 +154,7 @@ agents:
   - import_path: harbor.agents.installed.pi:Pi
     model_name: anthropic/claude-sonnet-4-6
     kwargs:
-      thinking: "off"
+      thinking: 'off'
 ```
 
 ## Inspecting results
@@ -235,4 +236,3 @@ task?), see the `compare-tasks` skill under `.agents/skills/`. Delegate to
 it with the two job names and a task name and it will read both
 trajectories, the task spec, and the verifier output, then explain the
 mechanism behind the divergence.
-

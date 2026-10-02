@@ -1,4 +1,4 @@
-import { marked } from "marked";
+import { marked } from 'marked';
 
 const MAX_DISCORD_LENGTH = 2000;
 
@@ -11,10 +11,7 @@ const MAX_DISCORD_LENGTH = 2000;
  * @param maxLength - Maximum length per chunk (default: 2000 for Discord)
  * @returns Array of markdown chunks
  */
-export function chunkMarkdown(
-  markdown: string,
-  maxLength: number = MAX_DISCORD_LENGTH,
-): string[] {
+export function chunkMarkdown(markdown: string, maxLength: number = MAX_DISCORD_LENGTH): string[] {
   // If text is short enough, return as-is
   if (markdown.length <= maxLength) {
     return [markdown];
@@ -22,7 +19,7 @@ export function chunkMarkdown(
 
   const tokens = marked.lexer(markdown);
   const chunks: string[] = [];
-  let currentChunk = "";
+  let currentChunk = '';
 
   for (const token of tokens) {
     const tokenText = token.raw;
@@ -32,7 +29,7 @@ export function chunkMarkdown(
       // Save current chunk if it has content
       if (currentChunk) {
         chunks.push(currentChunk);
-        currentChunk = "";
+        currentChunk = '';
       }
 
       // If the token itself is too large, we have to split it
@@ -77,7 +74,7 @@ function characterSplit(text: string, maxLength: number): string[] {
 
   while (remaining.length > maxLength) {
     let splitIndex = maxLength;
-    const spaceIndex = remaining.lastIndexOf(" ", maxLength);
+    const spaceIndex = remaining.lastIndexOf(' ', maxLength);
 
     // If there's a space in the last 20% of the chunk, split there
     if (spaceIndex > maxLength * 0.8) {

@@ -63,13 +63,13 @@ validate_compaction() {
     return 1
   fi
 
-  if ! command -v jq &> /dev/null; then
+  if ! command -v jq &>/dev/null; then
     echo "⚠ WARNING: jq not available, cannot validate compaction structure"
     return 0
   fi
 
   # Check basic structure
-  echo "$session_json" | jq -e '.conversation' > /dev/null 2>&1
+  echo "$session_json" | jq -e '.conversation' >/dev/null 2>&1
   if [ $? -ne 0 ]; then
     echo "✗ FAILED: Session JSON missing 'conversation' field"
     return 1
@@ -123,7 +123,7 @@ echo "TEST 1: Manual Compaction via trigger prompt"
 echo "---------------------------------------------------"
 
 TESTDIR=$(mktemp -d)
-echo "hello world" > "$TESTDIR/hello.txt"
+echo "hello world" >"$TESTDIR/hello.txt"
 echo "Test directory: $TESTDIR"
 echo ""
 
@@ -132,7 +132,7 @@ OUTPUT=$(mktemp)
 echo "Step 1: Creating session with initial messages..."
 (cd "$TESTDIR" && "$GOOSE_BIN" run --with-builtin developer --text "list files and read hello.txt" 2>&1) | tee "$OUTPUT"
 
-if ! command -v jq &> /dev/null; then
+if ! command -v jq &>/dev/null; then
   echo "✗ FAILED: jq is required for this test"
   RESULTS+=("✗ Manual Compaction (jq required)")
   rm -f "$OUTPUT"
@@ -183,7 +183,7 @@ echo "TEST 2: Auto Compaction via threshold (0.005)"
 echo "---------------------------------------------------"
 
 TESTDIR=$(mktemp -d)
-echo "test content" > "$TESTDIR/test.txt"
+echo "test content" >"$TESTDIR/test.txt"
 echo "Test directory: $TESTDIR"
 echo ""
 
@@ -197,7 +197,7 @@ LONG_RESPONSE_PROMPT="Count from 1 to 200, one number per line."
 echo "Step 1: Creating session with first message (generating tokens for threshold)..."
 (cd "$TESTDIR" && "$GOOSE_BIN" run --text "$LONG_RESPONSE_PROMPT" 2>&1) | tee "$OUTPUT"
 
-if ! command -v jq &> /dev/null; then
+if ! command -v jq &>/dev/null; then
   echo "✗ FAILED: jq is required for this test"
   RESULTS+=("✗ Auto Compaction (jq required)")
 else
@@ -250,7 +250,7 @@ echo "TEST 3: Compaction via out-of-context error (proxy)"
 echo "---------------------------------------------------"
 
 TESTDIR=$(mktemp -d)
-echo "test content" > "$TESTDIR/test.txt"
+echo "test content" >"$TESTDIR/test.txt"
 echo "Test directory: $TESTDIR"
 echo ""
 
@@ -285,7 +285,7 @@ else
   # is not a scenario worth asserting; a higher count just consumes the
   # summarizer's own calls and prevents the summary this test exists to check.
   echo "Starting error proxy on port $PROXY_PORT with context-length error mode..."
-  (cd "$PROXY_DIR" && UV_INDEX_URL="https://pypi.org/simple" uv run proxy.py --port "$PROXY_PORT" --mode "c 1" --no-stdin > "$PROXY_LOG" 2>&1) &
+  (cd "$PROXY_DIR" && UV_INDEX_URL="https://pypi.org/simple" uv run proxy.py --port "$PROXY_PORT" --mode "c 1" --no-stdin >"$PROXY_LOG" 2>&1) &
   PROXY_PID=$!
 
   # Wait for proxy to be ready (check if port is listening)

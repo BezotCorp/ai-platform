@@ -12,11 +12,12 @@ For detailed architecture documentation, see the knowledge base:
 
 The extension is a **thin UI bridge** connecting VS Code to Goose via the **Agent Communication Protocol (ACP)**:
 
-```
+```text
 VS Code Webview (React) ←→ Extension Host ←→ goose subprocess (JSON-RPC 2.0 over stdin/stdout)
 ```
 
 Key architectural decisions:
+
 - **No business logic** in the extension - pure orchestration
 - **Message-driven** webview communication (24 typed message types)
 - **Version-gated activation** (requires goose >= 1.16.0)

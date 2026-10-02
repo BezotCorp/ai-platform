@@ -63,10 +63,7 @@ function sessionReducer(state: SessionState, action: SessionAction): SessionStat
     case 'ADD_SESSION':
       return {
         ...state,
-        sessions: [
-          action.payload,
-          ...state.sessions.filter(s => s.sessionId !== action.payload.sessionId),
-        ],
+        sessions: [action.payload, ...state.sessions.filter((s) => s.sessionId !== action.payload.sessionId)],
         activeSessionId: action.payload.sessionId,
         isPanelOpen: false,
       };
@@ -131,7 +128,7 @@ export function useSession(): UseSessionReturn {
   }, []);
 
   useEffect(() => {
-    const unsubscribe = onMessage(message => {
+    const unsubscribe = onMessage((message) => {
       if (isSessionsListMessage(message)) {
         dispatch({
           type: 'SET_SESSIONS',
@@ -190,7 +187,7 @@ export function useSession(): UseSessionReturn {
   const groupedSessions = groupSessionsByDate(state.sessions);
 
   const activeSession = state.activeSessionId
-    ? (state.sessions.find(s => s.sessionId === state.activeSessionId) ?? null)
+    ? (state.sessions.find((s) => s.sessionId === state.activeSessionId) ?? null)
     : null;
 
   return {

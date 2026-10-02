@@ -1,6 +1,6 @@
 # goose Documentation Map
 
-> Auto-generated. Last updated: 2026-10-01
+> Auto-generated. Last updated: 2026-10-02
 
 ## Getting Started
 

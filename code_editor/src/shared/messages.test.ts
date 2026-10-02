@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'bun:test';
+import { describe, expect, test } from 'vitest';
 import {
   buildErrorBlockContent,
   createVersionStatusMessage,
@@ -41,12 +41,9 @@ describe('isWebviewMessage', () => {
 
   test('returns false for array', () => {
     expect(isWebviewMessage([], WebviewMessageType.STATUS_UPDATE)).toBe(false);
-    expect(
-      isWebviewMessage(
-        [{ type: WebviewMessageType.STATUS_UPDATE }],
-        WebviewMessageType.STATUS_UPDATE
-      )
-    ).toBe(false);
+    expect(isWebviewMessage([{ type: WebviewMessageType.STATUS_UPDATE }], WebviewMessageType.STATUS_UPDATE)).toBe(
+      false,
+    );
   });
 });
 
@@ -138,35 +135,27 @@ describe('buildErrorBlockContent', () => {
       message: 'Failed to send message: Internal error — Missing provider',
     });
 
-    expect(content).toBe(
-      'Message Send Failed: Failed to send message: Internal error — Missing provider'
-    );
+    expect(content).toBe('Message Send Failed: Failed to send message: Internal error — Missing provider');
   });
 
   test('returns title when message is empty', () => {
-    expect(buildErrorBlockContent({ title: 'Message Send Failed', message: '' })).toBe(
-      'Message Send Failed'
-    );
+    expect(buildErrorBlockContent({ title: 'Message Send Failed', message: '' })).toBe('Message Send Failed');
   });
 
   test('returns title when message is whitespace', () => {
-    expect(buildErrorBlockContent({ title: 'Message Send Failed', message: '   ' })).toBe(
-      'Message Send Failed'
-    );
+    expect(buildErrorBlockContent({ title: 'Message Send Failed', message: '   ' })).toBe('Message Send Failed');
   });
 
   test('returns message when title is empty', () => {
-    expect(buildErrorBlockContent({ title: '', message: 'Something failed' })).toBe(
-      'Something failed'
-    );
+    expect(buildErrorBlockContent({ title: '', message: 'Something failed' })).toBe('Something failed');
   });
 
   test('returns static fallback when both title and message are blank', () => {
     expect(buildErrorBlockContent({ title: '', message: '' })).toBe(
-      'Something went wrong. Check the Goose output log for details.'
+      'Something went wrong. Check the Goose output log for details.',
     );
     expect(buildErrorBlockContent({ title: '  ', message: ' ' })).toBe(
-      'Something went wrong. Check the Goose output log for details.'
+      'Something went wrong. Check the Goose output log for details.',
     );
   });
 });

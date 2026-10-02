@@ -14,19 +14,14 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
 
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@3d267786b128fe76c2f16a390aa2448b815359f3  # v2.1.2
-        with:
-          bun-version: latest
-
       - name: Install Dependencies
-        run: bun install --frozen-lockfile
+        run: pnpm install --frozen-lockfile
 
       - name: Lint & Format Check
-        run: bun run ci
+        run: pnpm run ci
 
       - name: Run Tests
-        run: bun test
+        run: pnpm run test
 
       - name: Build
-        run: bun run build
+        run: pnpm run build

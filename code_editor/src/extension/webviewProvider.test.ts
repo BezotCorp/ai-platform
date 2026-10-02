@@ -1,10 +1,6 @@
-import { beforeAll, beforeEach, describe, expect, mock, test } from 'bun:test';
+import { beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
 import type * as vscode from 'vscode';
-import {
-  AnyWebviewMessage,
-  createWebviewReadyMessage,
-  WebviewMessageType,
-} from '../shared/messages';
+import { AnyWebviewMessage, createWebviewReadyMessage, WebviewMessageType } from '../shared/messages';
 import { ProcessStatus } from '../shared/types';
 import { Logger } from './logger';
 import type { WebviewProvider } from './webviewProvider';
@@ -12,13 +8,13 @@ import type { WebviewProvider } from './webviewProvider';
 // The vscode package only exists inside the extension host, so it must be
 // mocked before webviewProvider is (dynamically) imported. Only `Uri.joinPath`
 // is used at runtime (inside getWebviewContent); everything else is types.
-mock.module('vscode', () => ({
+vi.mock('vscode', () => ({
   Uri: {
     joinPath: (...parts: unknown[]) => ({ toString: () => parts.join('/') }),
   },
 }));
 
-let createWebviewProvider: typeof import('./webviewProvider')['createWebviewProvider'];
+let createWebviewProvider: (typeof import('./webviewProvider'))['createWebviewProvider'];
 
 beforeAll(async () => {
   ({ createWebviewProvider } = await import('./webviewProvider'));
@@ -73,16 +69,12 @@ function createFakeWebviewView(): FakeWebviewView {
 
 function resolveView(provider: WebviewProvider): FakeWebviewView {
   const fake = createFakeWebviewView();
-  provider.resolveWebviewView(
-    fake.view,
-    {} as vscode.WebviewViewResolveContext,
-    {} as vscode.CancellationToken
-  );
+  provider.resolveWebviewView(fake.view, {} as vscode.WebviewViewResolveContext, {} as vscode.CancellationToken);
   return fake;
 }
 
 function messagesOfType(posted: AnyWebviewMessage[], type: WebviewMessageType) {
-  return posted.filter(message => message.type === type);
+  return posted.filter((message) => message.type === type);
 }
 
 describe('webviewProvider version status caching', () => {
@@ -115,15 +107,13 @@ describe('webviewProvider version status caching', () => {
 
     const versionMessages = messagesOfType(second.posted, WebviewMessageType.VERSION_STATUS);
     const blocked = versionMessages.filter(
-      message => (message.payload as { status: string }).status !== 'compatible'
+      (message) => (message.payload as { status: string }).status !== 'compatible',
     );
     expect(blocked).toHaveLength(0);
 
     const statusMessages = messagesOfType(second.posted, WebviewMessageType.STATUS_UPDATE);
     expect(statusMessages).toHaveLength(1);
-    expect((statusMessages[0].payload as { status: ProcessStatus }).status).toBe(
-      ProcessStatus.RUNNING
-    );
+    expect((statusMessages[0].payload as { status: ProcessStatus }).status).toBe(ProcessStatus.RUNNING);
   });
 
   test('still-blocked status is re-sent on reconnect with configuredPath intact', () => {

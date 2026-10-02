@@ -6,7 +6,7 @@ description: Compare how two harbor benchmark runs performed on a single shared 
 # Compare two harbor runs on one task
 
 Use when given two harbor run names and a task name, and the goal is to understand
-*why* the two runs differ on that task — not just *that* they differ.
+_why_ the two runs differ on that task — not just _that_ they differ.
 
 ## Inputs
 
@@ -81,7 +81,7 @@ Derive status from those:
 - `error` if reward is 0/null **and** `error_type` is set (non-timeout)
 - `no-reward` if neither `verifier_result.rewards` nor `exception_info` is set
 
-Reward wins over errors: harbor can record an `AgentTimeoutError` *after* the
+Reward wins over errors: harbor can record an `AgentTimeoutError` _after_ the
 verifier already scored a pass (the agent finished the work then the harness
 timed out during teardown, or it timed out after writing the correct answer).
 If we got points, count them. See `reporter.trial_status` for the canonical

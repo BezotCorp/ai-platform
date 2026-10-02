@@ -69,7 +69,7 @@ const MOCK_RESPONSES = [
 function setupMockStreaming(provider: WebviewProvider, log: Logger): void {
   let currentResponseId: string | null = null;
 
-  provider.onMessage(message => {
+  provider.onMessage((message) => {
     if (isSendMessageMessage(message)) {
       const { content, responseId } = message.payload;
       log.info(`[Mock] Received message: ${content.substring(0, 50)}...`);
@@ -96,9 +96,7 @@ function setupMockStreaming(provider: WebviewProvider, log: Logger): void {
         }
 
         if (currentResponseId) {
-          provider.postMessage(
-            createStreamTokenMessage(currentResponseId, tokens[tokenIndex], false)
-          );
+          provider.postMessage(createStreamTokenMessage(currentResponseId, tokens[tokenIndex], false));
         }
         tokenIndex++;
 
@@ -179,8 +177,7 @@ interface AcpInitializeResponse {
 
 /** ACP prompt content block types */
 type AcpContentBlock =
-  | { type: 'text'; text: string }
-  | { type: 'resource_link'; uri: string; name: string; mimeType?: string };
+  { type: 'text'; text: string } | { type: 'resource_link'; uri: string; name: string; mimeType?: string };
 
 /** Get MIME type from file path */
 function getMimeType(filePath: string): string {
@@ -211,11 +208,7 @@ function getMimeType(filePath: string): string {
 }
 
 /** Read specific lines from a file */
-async function readFileLines(
-  filePath: string,
-  startLine: number,
-  endLine: number
-): Promise<string> {
+async function readFileLines(filePath: string, startLine: number, endLine: number): Promise<string> {
   const content = await fs.readFile(filePath, 'utf-8');
   const lines = content.split('\n');
   // Lines are 1-indexed in UI, convert to 0-indexed
@@ -228,7 +221,7 @@ async function readFileLines(
 async function buildPromptBlocks(
   content: string,
   chips: readonly ContextChipData[] | undefined,
-  log: Logger
+  log: Logger,
 ): Promise<AcpContentBlock[]> {
   const blocks: AcpContentBlock[] = [];
 
@@ -239,11 +232,7 @@ async function buildPromptBlocks(
       if (chip.range) {
         // Line range selection: read and send the specific lines as text
         try {
-          const selectedContent = await readFileLines(
-            chip.filePath,
-            chip.range.startLine,
-            chip.range.endLine
-          );
+          const selectedContent = await readFileLines(chip.filePath, chip.range.startLine, chip.range.endLine);
           const header = `${chip.filePath}:${chip.range.startLine}-${chip.range.endLine}`;
           blocks.push({
             type: 'text',
@@ -278,7 +267,7 @@ async function initializeAcpSession(
   client: JsonRpcClient,
   workingDirectory: string,
   manager: SessionManager,
-  log: Logger
+  log: Logger,
 ): Promise<SessionEntry | null> {
   log.info('Initializing ACP connection...');
 
@@ -317,7 +306,7 @@ async function initializeAcpSession(
         },
       };
       log.info(
-        `Agent capabilities: loadSession=${capabilities.loadSession}, embeddedContext=${capabilities.promptCapabilities.embeddedContext}`
+        `Agent capabilities: loadSession=${capabilities.loadSession}, embeddedContext=${capabilities.promptCapabilities.embeddedContext}`,
       );
     }
   } else {
@@ -366,9 +355,9 @@ async function initializeAcpSession(
 function registerHistoryForwarding(
   provider: WebviewProvider,
   manager: SessionManager,
-  suppressHistoryReplay: { current: boolean }
+  suppressHistoryReplay: { current: boolean },
 ): void {
-  manager.onHistoryMessage(message => {
+  manager.onHistoryMessage((message) => {
     if (suppressHistoryReplay.current) return;
     provider.postMessage(createHistoryMessage(message));
   });
@@ -390,7 +379,7 @@ function setupAcpWebviewHandlers(
   subprocess: SubprocessManager,
   manager: SessionManager,
   log: Logger,
-  responseIdRef: { current: string | null }
+  responseIdRef: { current: string | null },
 ): void {
   const getActiveSessionId = (): string | null => {
     return manager.getActiveSessionId();
@@ -407,7 +396,7 @@ function setupAcpWebviewHandlers(
     return op(clientResult.right);
   };
 
-  provider.onMessage(message => {
+  provider.onMessage((message) => {
     if (isSendMessageMessage(message)) {
       const { content, responseId, contextChips } = message.payload;
       responseIdRef.current = responseId;
@@ -415,9 +404,7 @@ function setupAcpWebviewHandlers(
 
       if (!activeSessionId) {
         log.error('No active session');
-        provider.postMessage(
-          createErrorMessage('No Active Session', 'Please create or select a session first.')
-        );
+        provider.postMessage(createErrorMessage('No Active Session', 'Please create or select a session first.'));
         return;
       }
 
@@ -446,7 +433,7 @@ function setupAcpWebviewHandlers(
             createErrorMessage('Message Send Failed', body, {
               label: 'View Logs',
               command: 'goose.showLogs',
-            })
+            }),
           );
           showErrorToast(body);
           responseIdRef.current = null;
@@ -463,7 +450,7 @@ function setupAcpWebviewHandlers(
             sessionId: activeSessionId,
             prompt: promptBlocks,
           },
-          { timeoutMs: null }
+          { timeoutMs: null },
         )();
 
         if (E.isLeft(result)) {
@@ -477,7 +464,7 @@ function setupAcpWebviewHandlers(
             createErrorMessage('Message Send Failed', body, {
               label: 'View Logs',
               command: 'goose.showLogs',
-            })
+            }),
           );
           showErrorToast(body);
           responseIdRef.current = null;
@@ -502,15 +489,15 @@ function setupAcpWebviewHandlers(
       if (activeSessionId) {
         log.info('Sending cancel request to ACP');
         withClient(
-          client => {
+          (client) => {
             const cancelResult = client.notify('session/cancel', { sessionId: activeSessionId });
             if (E.isLeft(cancelResult)) {
               log.error('Failed to send cancel notification:', cancelResult.left);
             }
           },
-          err => {
+          (err) => {
             log.warn('Cannot cancel: no ACP client available', err);
-          }
+          },
         );
       }
     }
@@ -519,27 +506,21 @@ function setupAcpWebviewHandlers(
       log.info('Creating new session...');
       manager
         .createSession()()
-        .then(result => {
+        .then((result) => {
           if (E.isRight(result)) {
             provider.postMessage(createSessionCreatedMessage(result.right));
-            provider.postMessage(
-              createSessionsListMessage(manager.getSessions(), result.right.sessionId)
-            );
+            provider.postMessage(createSessionsListMessage(manager.getSessions(), result.right.sessionId));
             log.info(`New session created: ${result.right.sessionId}`);
           } else {
             log.error('Failed to create session:', result.left);
-            provider.postMessage(
-              createErrorMessage('Session Creation Failed', formatErrorDetail(result.left))
-            );
+            provider.postMessage(createErrorMessage('Session Creation Failed', formatErrorDetail(result.left)));
           }
         });
     }
 
     if (isGetSessionsMessage(message)) {
       log.debug('Sending session list');
-      provider.postMessage(
-        createSessionsListMessage(manager.getSessions(), manager.getActiveSessionId())
-      );
+      provider.postMessage(createSessionsListMessage(manager.getSessions(), manager.getActiveSessionId()));
     }
 
     if (isSelectSessionMessage(message)) {
@@ -551,18 +532,14 @@ function setupAcpWebviewHandlers(
 
       manager
         .loadSession(sessionId)()
-        .then(result => {
+        .then((result) => {
           if (E.isRight(result)) {
-            provider.postMessage(
-              createSessionLoadedMessage(sessionId, !manager.hasLoadSessionCapability())
-            );
+            provider.postMessage(createSessionLoadedMessage(sessionId, !manager.hasLoadSessionCapability()));
             provider.postMessage(createSessionsListMessage(manager.getSessions(), sessionId));
             log.info(`Session loaded: ${sessionId}`);
           } else {
             log.error('Failed to load session:', result.left);
-            provider.postMessage(
-              createErrorMessage('Session Load Failed', formatErrorDetail(result.left))
-            );
+            provider.postMessage(createErrorMessage('Session Load Failed', formatErrorDetail(result.left)));
           }
         });
     }
@@ -585,7 +562,7 @@ async function reinitializeAcpOnRestart(
   manager: SessionManager,
   workingDirectory: string,
   log: Logger,
-  suppressHistoryReplay: { current: boolean }
+  suppressHistoryReplay: { current: boolean },
 ): Promise<void> {
   const clientResult = subprocess.getClient();
   if (E.isLeft(clientResult)) {
@@ -639,7 +616,7 @@ function subscribeSessionUpdates(
   responseIdRef: { current: string | null },
   log: Logger,
   lastSubscribedClient: { current: JsonRpcClient | null },
-  suppressHistoryReplay: { current: boolean }
+  suppressHistoryReplay: { current: boolean },
 ): void {
   const clientResult = subprocess.getClient();
   if (E.isLeft(clientResult)) {
@@ -683,7 +660,7 @@ function getWorkspaceFolder(): string {
 }
 
 function setupExternalLinkHandler(provider: WebviewProvider, log: Logger): void {
-  provider.onMessage(message => {
+  provider.onMessage((message) => {
     if (isOpenExternalLinkMessage(message)) {
       const { url } = message.payload;
       log.info(`Opening external link: ${url}`);
@@ -693,12 +670,8 @@ function setupExternalLinkHandler(provider: WebviewProvider, log: Logger): void 
   log.debug('External link handler registered');
 }
 
-function setupFileSearchHandler(
-  provider: WebviewProvider,
-  searchService: FileSearchService,
-  log: Logger
-): void {
-  provider.onMessage(async message => {
+function setupFileSearchHandler(provider: WebviewProvider, searchService: FileSearchService, log: Logger): void {
+  provider.onMessage(async (message) => {
     if (isFileSearchMessage(message)) {
       const { query } = message.payload;
       log.debug(`File search request: "${query}"`);
@@ -718,7 +691,7 @@ function setupFileSearchHandler(
 
 /** Show an error notification with a "View Logs" action that opens the Goose output channel. */
 function showErrorToast(message: string): void {
-  vscode.window.showErrorMessage(message, 'View Logs').then(selection => {
+  vscode.window.showErrorMessage(message, 'View Logs').then((selection) => {
     if (selection === 'View Logs') {
       vscode.commands.executeCommand('goose.showLogs');
     }
@@ -746,7 +719,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   context.subscriptions.push(
     vscode.window.registerWebviewViewProvider('goose.chatView', webviewProvider, {
       webviewOptions: { retainContextWhenHidden: true },
-    })
+    }),
   );
 
   registerCommands(context, {
@@ -839,9 +812,7 @@ async function runBootstrapSequence(): Promise<void> {
 
   if (E.isLeft(versionResult)) {
     const error = versionResult.left;
-    log.error(
-      `Goose version check failed: detected ${error.detectedVersion}, requires ${error.minimumVersion}`
-    );
+    log.error(`Goose version check failed: detected ${error.detectedVersion}, requires ${error.minimumVersion}`);
 
     provider.updateVersionStatus({
       status: 'blocked_outdated',
@@ -854,9 +825,7 @@ async function runBootstrapSequence(): Promise<void> {
     return;
   }
 
-  log.info(
-    `Goose version ${versionResult.right.version} detected (meets minimum ${MINIMUM_VERSION})`
-  );
+  log.info(`Goose version ${versionResult.right.version} detected (meets minimum ${MINIMUM_VERSION})`);
 
   // Version gate passed: tell the webview so a blocked view from a previous
   // failed bootstrap (e.g. binary not found at activation) is dismissed.
@@ -885,7 +854,7 @@ async function runBootstrapSequence(): Promise<void> {
 
   const acpLogger = log.child('ACP');
 
-  subprocess.onStatusChange(status => {
+  subprocess.onStatusChange((status) => {
     log.info(`Subprocess status: ${status}`);
 
     // Never broadcast RUNNING from here: the webview must not enable send
@@ -907,9 +876,7 @@ async function runBootstrapSequence(): Promise<void> {
     // both a COMPLETE and an ERROR for the same bubble.
 
     if (status === ProcessStatus.ERROR) {
-      vscode.window.showWarningMessage(
-        'Goose subprocess crashed. Use "Goose: Restart" to reconnect.'
-      );
+      vscode.window.showWarningMessage('Goose subprocess crashed. Use "Goose: Restart" to reconnect.');
     }
 
     // On every transition into RUNNING (initial start + every restart), attach
@@ -924,7 +891,7 @@ async function runBootstrapSequence(): Promise<void> {
         responseIdRef,
         acpLogger,
         lastSubscribedClient,
-        suppressHistoryReplay
+        suppressHistoryReplay,
       );
 
       if (acpInitialized) {
@@ -934,13 +901,13 @@ async function runBootstrapSequence(): Promise<void> {
           manager,
           getWorkspaceFolder(),
           acpLogger,
-          suppressHistoryReplay
+          suppressHistoryReplay,
         )
           .then(() => {
             // Safe to open the gate now: session is attached server-side.
             provider.updateStatus(ProcessStatus.RUNNING);
           })
-          .catch(err => {
+          .catch((err) => {
             acpLogger.error('ACP re-init after restart threw:', err);
             provider.updateStatus(ProcessStatus.ERROR);
           });
@@ -983,7 +950,7 @@ async function runBootstrapSequence(): Promise<void> {
         responseIdRef,
         acpLogger,
         lastSubscribedClient,
-        suppressHistoryReplay
+        suppressHistoryReplay,
       );
 
       const session = await initializeAcpSession(client, getWorkspaceFolder(), manager, acpLogger);
@@ -1017,7 +984,7 @@ async function runBootstrapSequence(): Promise<void> {
 
 function registerConfigChangeHandler(context: vscode.ExtensionContext): void {
   context.subscriptions.push(
-    onConfigChange(e => {
+    onConfigChange((e) => {
       if (affectsSetting(e, 'logLevel')) {
         logger?.setLevel(getLogLevel());
         logger?.info('Log level updated');
@@ -1025,17 +992,14 @@ function registerConfigChangeHandler(context: vscode.ExtensionContext): void {
       if (affectsSetting(e, 'binaryPath')) {
         logger?.info('Binary path setting changed - use "Goose: Restart" to apply');
         vscode.window
-          .showInformationMessage(
-            'Goose binary path setting changed. Restart Goose to apply it.',
-            'Restart Goose'
-          )
-          .then(selection => {
+          .showInformationMessage('Goose binary path setting changed. Restart Goose to apply it.', 'Restart Goose')
+          .then((selection) => {
             if (selection === 'Restart Goose') {
               vscode.commands.executeCommand('goose.restart');
             }
           });
       }
-    })
+    }),
   );
 }
 

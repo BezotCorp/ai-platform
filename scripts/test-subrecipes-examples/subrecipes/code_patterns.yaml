@@ -20,20 +20,20 @@ parameters:
 prompt: |
   {% if fast_mode == "true" %}
   Write code_patterns.json with a single shell command:
-  
+
   cat > code_patterns.json << 'JSON'
   {"todos":[{"file":"README.md","line":3,"text":"Add more tests"}],"function_count":2,"import_count":0,"test_count":2,"files_analyzed":3}
   JSON
-  
+
   Use a single tool call. Do not scan the filesystem.
   {% else %}
   Analyze source code files in {{ directory }} and identify patterns:
-  
+
   1. Find all TODO/FIXME comments
   2. Count function/method definitions (look for 'fn ', 'def ', 'function ')
   3. Find import/use statements
   4. Identify test functions (names containing 'test')
-  
+
   Write your findings to a file named code_patterns.json with this structure:
   ```json
   {
@@ -46,7 +46,7 @@ prompt: |
     "files_analyzed": <number>
   }
   ```
-  
+
   Use grep and other shell tools to find these patterns efficiently.
   Only analyze source code files (.rs, .py, .js, .go, etc.), skip binaries and build artifacts.
   {% if include_tests == "true" %}

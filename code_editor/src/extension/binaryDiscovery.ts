@@ -23,12 +23,7 @@ import { BinaryDiscoveryConfig } from '../shared/types';
 const SEARCH_PATHS: Partial<Record<NodeJS.Platform, readonly string[]>> = {
   darwin: ['~/.local/bin/goose', '/usr/local/bin/goose', '/opt/homebrew/bin/goose'],
   win32: ['%LOCALAPPDATA%\\Goose\\goose.exe', '%PROGRAMFILES%\\Goose\\goose.exe'],
-  linux: [
-    '~/.local/bin/goose',
-    '/usr/local/bin/goose',
-    '/usr/bin/goose',
-    '/usr/share/goose/bin/goose',
-  ],
+  linux: ['~/.local/bin/goose', '/usr/local/bin/goose', '/usr/bin/goose', '/usr/share/goose/bin/goose'],
 };
 
 // ============================================================================
@@ -93,7 +88,7 @@ export function findInPath(env: NodeJS.ProcessEnv): string | undefined {
 export function findInPlatformPaths(
   platform: NodeJS.Platform,
   homeDir: string,
-  env: NodeJS.ProcessEnv
+  env: NodeJS.ProcessEnv,
 ): string | undefined {
   const paths = SEARCH_PATHS[platform] ?? [];
 
@@ -119,12 +114,10 @@ export function findInPlatformPaths(
  * than silently falling back to PATH or platform search. A whitespace-only
  * configured path is treated as unset, so auto-discovery proceeds.
  */
-export function discoverBinary(
-  config: BinaryDiscoveryConfig
-): E.Either<BinaryNotFoundError, string> {
+export function discoverBinary(config: BinaryDiscoveryConfig): E.Either<BinaryNotFoundError, string> {
   const searchedPaths: string[] = [];
 
-  return pipe(config.userConfiguredPath?.trim(), userPath => {
+  return pipe(config.userConfiguredPath?.trim(), (userPath) => {
     if (userPath !== undefined && userPath.length > 0) {
       const expanded = expandPath(userPath, config.homeDir, config.env);
       if (checkPathExists(expanded)) {

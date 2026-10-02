@@ -41,10 +41,7 @@ export interface UseFilePickerReturn {
  * Detects @ trigger at word boundary and extracts query text.
  * Returns the position of @ and the query text, or null if no trigger found.
  */
-function detectAtTrigger(
-  value: string,
-  cursorPosition: number
-): { atPosition: number; query: string } | null {
+function detectAtTrigger(value: string, cursorPosition: number): { atPosition: number; query: string } | null {
   // Look backwards from cursor to find @
   let atPosition = -1;
   for (let i = cursorPosition - 1; i >= 0; i--) {
@@ -75,7 +72,7 @@ function detectAtTrigger(
 export function useFilePicker(
   onAddChip: (result: FileSearchResult) => void,
   inputRef: RefObject<HTMLTextAreaElement>,
-  onInputChange?: (value: string) => void
+  onInputChange?: (value: string) => void,
 ): UseFilePickerReturn {
   const [state, setState] = useState<FilePickerState>(initialState);
   const debounceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -83,9 +80,9 @@ export function useFilePicker(
 
   // Subscribe to SEARCH_RESULTS messages
   useEffect(() => {
-    const unsubscribe = onMessage(message => {
+    const unsubscribe = onMessage((message) => {
       if (isSearchResultsMessage(message)) {
-        setState(prev => ({
+        setState((prev) => ({
           ...prev,
           results: message.payload.results,
           selectedIndex: 0,
@@ -116,7 +113,7 @@ export function useFilePicker(
       if (trigger) {
         const { atPosition, query } = trigger;
 
-        setState(prev => ({
+        setState((prev) => ({
           ...prev,
           isOpen: true,
           query,
@@ -145,7 +142,7 @@ export function useFilePicker(
         }
       }
     },
-    [state.isOpen, sendSearchRequest]
+    [state.isOpen, sendSearchRequest],
   );
 
   const close = useCallback(() => {
@@ -184,7 +181,7 @@ export function useFilePicker(
       // Close picker
       close();
     },
-    [onAddChip, inputRef, state.atPosition, state.query, close, onInputChange]
+    [onAddChip, inputRef, state.atPosition, state.query, close, onInputChange],
   );
 
   const handleKeyDown = useCallback(
@@ -196,7 +193,7 @@ export function useFilePicker(
       switch (e.key) {
         case 'ArrowDown':
           e.preventDefault();
-          setState(prev => ({
+          setState((prev) => ({
             ...prev,
             selectedIndex: Math.min(prev.selectedIndex + 1, prev.results.length - 1),
           }));
@@ -204,7 +201,7 @@ export function useFilePicker(
 
         case 'ArrowUp':
           e.preventDefault();
-          setState(prev => ({
+          setState((prev) => ({
             ...prev,
             selectedIndex: Math.max(prev.selectedIndex - 1, 0),
           }));
@@ -237,7 +234,7 @@ export function useFilePicker(
           return false;
       }
     },
-    [state.isOpen, state.results, state.selectedIndex, selectResult, close]
+    [state.isOpen, state.results, state.selectedIndex, selectResult, close],
   );
 
   return {

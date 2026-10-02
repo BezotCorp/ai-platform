@@ -70,7 +70,7 @@ export function createFileSearchService(logger: Logger): FileSearchService {
   const recentFiles: Map<string, number> = new Map();
 
   // Track recently opened files
-  const disposable = vscode.workspace.onDidOpenTextDocument(doc => {
+  const disposable = vscode.workspace.onDidOpenTextDocument((doc) => {
     // Only track workspace files (not untitled, git, etc.)
     if (doc.uri.scheme === 'file') {
       recentFiles.set(doc.uri.fsPath, Date.now());
@@ -102,7 +102,7 @@ export function createFileSearchService(logger: Logger): FileSearchService {
 
       // Deduplicate by path
       const seen = new Set<string>();
-      uris = allUris.filter(uri => {
+      uris = allUris.filter((uri) => {
         if (seen.has(uri.fsPath)) return false;
         seen.add(uri.fsPath);
         return true;
@@ -113,7 +113,7 @@ export function createFileSearchService(logger: Logger): FileSearchService {
       uris = await vscode.workspace.findFiles('**/*', exclude, 10000);
     }
 
-    let results: FileSearchResult[] = uris.map(uri => {
+    let results: FileSearchResult[] = uris.map((uri) => {
       const fileName = path.basename(uri.fsPath);
       const relativePath = vscode.workspace.asRelativePath(uri, false);
       // Get directory part of relative path (exclude filename)
@@ -131,7 +131,7 @@ export function createFileSearchService(logger: Logger): FileSearchService {
     // Additional case-insensitive filtering when query is provided
     // (glob patterns may be case-sensitive on some platforms)
     if (query) {
-      results = results.filter(r => r.fileName.toLowerCase().includes(lowerQuery));
+      results = results.filter((r) => r.fileName.toLowerCase().includes(lowerQuery));
     }
 
     // Sort by recent score descending (most recently opened first)

@@ -43,6 +43,7 @@ jq '.commands[].name' output/test-extraction.json | grep -v term
 ```
 
 **Expected output:**
+
 - Valid JSON structure
 - Version number extracted correctly
 - All commands captured (14+ commands, excluding skipped ones like `term`)
@@ -50,6 +51,7 @@ jq '.commands[].name' output/test-extraction.json | grep -v term
 - Options parsed with all fields
 
 **Common issues:**
+
 - Rust not installed: Install via rustup
 - Build fails: Check Cargo.toml dependencies
 - Timeout errors: Increase timeout in script if needed
@@ -80,6 +82,7 @@ jq '.breaking_changes' output/cli-changes.json
 ```
 
 **Expected output:**
+
 - `has_changes: true` if versions differ
 - Summary with counts of changes
 - Detailed changes in structured format
@@ -101,6 +104,7 @@ head -50 cli-changes.md
 ```
 
 **Expected output:**
+
 - `cli-changes.md` file created
 - Markdown formatted properly
 - Breaking changes listed first
@@ -146,6 +150,7 @@ ls -lh output/
 ```
 
 **Expected output:**
+
 - All intermediate files created
 - Pipeline completes without errors
 - Summary shows changes detected
@@ -158,10 +163,11 @@ ls -lh output/
 1. **Fork the repository** (if not already done)
 
 2. **Copy automation files** to your fork:
+
    ```bash
    cp -r /path/to/cli-command-tracking \
          /path/to/forked-goose/documentation/automation/
-   
+
    cp /path/to/goose/.github/workflows/docs-update-cli-ref.yml \
       /path/to/forked-goose/.github/workflows/
    ```
@@ -191,11 +197,11 @@ Test without creating PR:
 
 ### Workflow Inputs
 
-| Input | Description | Default |
-|-------|-------------|---------|
-| `old_version` | Previous version tag | Auto-detect from releases |
-| `new_version` | New version tag | HEAD |
-| `dry_run` | Generate files but don't create PR | true |
+| Input         | Description                        | Default                   |
+| ------------- | ---------------------------------- | ------------------------- |
+| `old_version` | Previous version tag               | Auto-detect from releases |
+| `new_version` | New version tag                    | HEAD                      |
+| `dry_run`     | Generate files but don't create PR | true                      |
 
 ### Reviewing Artifacts
 
@@ -259,6 +265,7 @@ jq '.has_changes' output/cli-changes.json
 Before considering the automation complete:
 
 ### Extraction Script
+
 - [ ] Handles all command types (simple, with subcommands, with aliases)
 - [ ] Parses all option types (short, long, with values, flags)
 - [ ] Captures defaults and possible values
@@ -267,6 +274,7 @@ Before considering the automation complete:
 - [ ] Builds goose from git tags correctly
 
 ### Diff Script
+
 - [ ] Detects added commands
 - [ ] Detects removed commands
 - [ ] Detects modified options
@@ -276,6 +284,7 @@ Before considering the automation complete:
 - [ ] Categorizes breaking changes correctly
 
 ### AI Recipes
+
 - [ ] Generates readable documentation
 - [ ] Provides migration guidance
 - [ ] Uses correct markdown formatting
@@ -284,12 +293,14 @@ Before considering the automation complete:
 - [ ] Uses text_editor tool to write files
 
 ### Pipeline
+
 - [ ] Runs end-to-end without errors
 - [ ] Handles "no changes" case
 - [ ] Creates all expected output files
 - [ ] Filters goose session output correctly
 
 ### GitHub Actions
+
 - [ ] Workflow triggers correctly
 - [ ] Builds goose for both versions
 - [ ] Uploads artifacts
@@ -354,6 +365,7 @@ jq empty output/cli-changes.json  # Validates JSON
 ### Workflow fails in fork
 
 Ensure:
+
 - `ANTHROPIC_API_KEY` secret is set
 - Upstream tags are fetched (workflow does this automatically)
 - Rust toolchain is available

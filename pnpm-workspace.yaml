@@ -5,12 +5,12 @@ packages:
   - "ui/goose-acp"
   - "ui/goose-acp-client"
   - "ui/goose-binary/*"
+  - "code_editor"
   - "services/ask-ai-bot"
   - "oidc-proxy"
 
 registry: https://registry.npmjs.org/
 preferOffline: true
-nodeLinker: hoisted
 blockExoticSubdeps: false
 
 supportedArchitectures:
@@ -26,9 +26,12 @@ supportedArchitectures:
 
 allowBuilds:
   "@modelcontextprotocol/ext-apps": true
+  "@parcel/watcher": true
+  "@vscode/vsce-sign": true
   core-js: true
   electron: true
   electron-winstaller: true
   esbuild: true
+  keytar: true
   sharp: true
   workerd: true

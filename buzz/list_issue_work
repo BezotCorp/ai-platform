@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 
-import { accessSync, chmodSync, constants, readFileSync } from "node:fs";
-import { homedir } from "node:os";
-import { dirname, join } from "node:path";
-import { spawnSync } from "node:child_process";
-import { fileURLToPath } from "node:url";
+import { accessSync, chmodSync, constants, readFileSync } from 'node:fs';
+import { homedir } from 'node:os';
+import { dirname, join } from 'node:path';
+import { spawnSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 
 import {
   bestMatchingIssueChannels,
@@ -12,7 +12,7 @@ import {
   getProjectIssues,
   readCoreTeam,
   selectRecentQueueEntries,
-} from "./github_manager.mjs";
+} from './github_manager.mjs';
 
 const scriptDirectory = dirname(fileURLToPath(import.meta.url));
 const options = parseArguments(process.argv.slice(2));
@@ -21,17 +21,13 @@ if (options.help) {
   process.exit(0);
 }
 
-const relayUrl = process.env.BUZZ_RELAY_URL || "https://buzz.gdk.so";
-const configHome = process.env.XDG_CONFIG_HOME || join(homedir(), ".config");
-const buzzHome =
-  process.env.GOOSE_BUZZ_HOME || join(configHome, "goose", "buzz");
-const privateKey = readRequiredFile(
-  join(buzzHome, "github-manager", "private-key.nsec"),
-);
-const coreTeamPath =
-  process.env.BUZZ_CORE_TEAM_FILE || join(scriptDirectory, "core-team.json");
+const relayUrl = process.env.BUZZ_RELAY_URL || 'https://buzz.gdk.so';
+const configHome = process.env.XDG_CONFIG_HOME || join(homedir(), '.config');
+const buzzHome = process.env.GOOSE_BUZZ_HOME || join(configHome, 'goose', 'buzz');
+const privateKey = readRequiredFile(join(buzzHome, 'github-manager', 'private-key.nsec'));
+const coreTeamPath = process.env.BUZZ_CORE_TEAM_FILE || join(scriptDirectory, 'core-team.json');
 const coreTeam = readCoreTeamOrFail();
-const gh = process.env.GH_BIN || "gh";
+const gh = process.env.GH_BIN || 'gh';
 const recentAssignmentLoad = getRecentAssignmentLoad();
 const buzz = findBuzz();
 const buzzEnvironment = {
@@ -41,9 +37,7 @@ const buzzEnvironment = {
 };
 
 const { project, byNumber: projectItemsByIssueNumber } = getProjectIssuesOrFail();
-const openIssuesByNumber = new Map(
-  getOpenIssuesOrFail().map((issue) => [issue.number, issue]),
-);
+const openIssuesByNumber = new Map(getOpenIssuesOrFail().map((issue) => [issue.number, issue]));
 
 const channels = getAllIssueChannels();
 const channelByIssueNumber = new Map();
@@ -63,26 +57,21 @@ const issueWork = new Map();
 const inboxIssues = project.items
   .filter(
     (item) =>
-      item.content?.type === "Issue" &&
+      item.content?.type === 'Issue' &&
       item.content.repository === options.repository &&
-      item.status === "Inbox" &&
+      item.status === 'Inbox' &&
       openIssuesByNumber.has(item.content.number),
   )
-  .filter(
-    (item) =>
-      !item.assignees ||
-      item.assignees.length === 0 ||
-      !channelByIssueNumber.has(item.content.number),
-  );
+  .filter((item) => !item.assignees || item.assignees.length === 0 || !channelByIssueNumber.has(item.content.number));
 for (const item of inboxIssues) {
-  issueWork.set(item.content.number, issueRecord(item, ["inbox"]));
+  issueWork.set(item.content.number, issueRecord(item, ['inbox']));
 }
 
 const queue = readIssueQueue();
 for (const queued of queue.issues) {
   const details = openIssuesByNumber.get(queued.number);
   if (!details) {
-    queue.ignored.push({ ...queued, reason: "issue-is-closed" });
+    queue.ignored.push({ ...queued, reason: 'issue-is-closed' });
     continue;
   }
 
@@ -91,7 +80,7 @@ for (const queued of queue.issues) {
     fail(`More than one Buzz channel matches GitHub issue #${queued.number}.`);
   }
   if (matchingChannels.length === 1) {
-    queue.ignored.push({ ...queued, reason: "already-has-channel" });
+    queue.ignored.push({ ...queued, reason: 'already-has-channel' });
     continue;
   }
 
@@ -101,21 +90,16 @@ for (const queued of queue.issues) {
   };
   const existing = issueWork.get(queued.number);
   if (existing) {
-    existing.sources.push("issues-to-add");
+    existing.sources.push('issues-to-add');
     existing.queue_messages = queued.message_ids;
     existing.queue_links = queued.links;
     existing.queue_requesters = queued.requester_pubkeys;
   } else {
-    issueWork.set(
-      queued.number,
-      issueRecord(projectItem, ["issues-to-add"], queued),
-    );
+    issueWork.set(queued.number, issueRecord(projectItem, ['issues-to-add'], queued));
   }
 }
 
-const issues = [...issueWork.values()].sort(
-  (left, right) => left.number - right.number,
-);
+const issues = [...issueWork.values()].sort((left, right) => left.number - right.number);
 
 console.log(
   JSON.stringify(
@@ -138,12 +122,12 @@ console.log(
 
 function parseArguments(arguments_) {
   const parsed = {
-    repository: "aaif-goose/goose",
-    projectOwner: "aaif-goose",
+    repository: 'aaif-goose/goose',
+    projectOwner: 'aaif-goose',
     projectNumber: 1,
     projectLimit: 1000,
     channelLimit: 500,
-    queueChannel: "issues to add",
+    queueChannel: 'issues to add',
     queueCount: 20,
     messageLimit: 1000,
     help: false,
@@ -151,54 +135,39 @@ function parseArguments(arguments_) {
 
   for (let index = 0; index < arguments_.length; index += 1) {
     const argument = arguments_[index];
-    if (argument === "--repo") {
+    if (argument === '--repo') {
       parsed.repository = requiredValue(arguments_, ++index, argument);
       continue;
     }
-    if (argument === "--project-owner") {
+    if (argument === '--project-owner') {
       parsed.projectOwner = requiredValue(arguments_, ++index, argument);
       continue;
     }
-    if (argument === "--project-number") {
-      parsed.projectNumber = positiveInteger(
-        requiredValue(arguments_, ++index, argument),
-        argument,
-      );
+    if (argument === '--project-number') {
+      parsed.projectNumber = positiveInteger(requiredValue(arguments_, ++index, argument), argument);
       continue;
     }
-    if (argument === "--project-limit") {
-      parsed.projectLimit = positiveInteger(
-        requiredValue(arguments_, ++index, argument),
-        argument,
-      );
+    if (argument === '--project-limit') {
+      parsed.projectLimit = positiveInteger(requiredValue(arguments_, ++index, argument), argument);
       continue;
     }
-    if (argument === "--channel-limit") {
-      parsed.channelLimit = positiveInteger(
-        requiredValue(arguments_, ++index, argument),
-        argument,
-      );
+    if (argument === '--channel-limit') {
+      parsed.channelLimit = positiveInteger(requiredValue(arguments_, ++index, argument), argument);
       continue;
     }
-    if (argument === "--queue-channel") {
+    if (argument === '--queue-channel') {
       parsed.queueChannel = requiredValue(arguments_, ++index, argument);
       continue;
     }
-    if (argument === "--queue-count") {
-      parsed.queueCount = positiveInteger(
-        requiredValue(arguments_, ++index, argument),
-        argument,
-      );
+    if (argument === '--queue-count') {
+      parsed.queueCount = positiveInteger(requiredValue(arguments_, ++index, argument), argument);
       continue;
     }
-    if (argument === "--message-limit") {
-      parsed.messageLimit = positiveInteger(
-        requiredValue(arguments_, ++index, argument),
-        argument,
-      );
+    if (argument === '--message-limit') {
+      parsed.messageLimit = positiveInteger(requiredValue(arguments_, ++index, argument), argument);
       continue;
     }
-    if (argument === "--help" || argument === "-h") {
+    if (argument === '--help' || argument === '-h') {
       parsed.help = true;
       continue;
     }
@@ -210,7 +179,7 @@ function parseArguments(arguments_) {
 
 function requiredValue(arguments_, index, option) {
   const value = arguments_[index];
-  if (!value || value.startsWith("--")) {
+  if (!value || value.startsWith('--')) {
     fail(`${option} requires a value.`);
   }
   return value;
@@ -258,20 +227,20 @@ function getOpenIssuesOrFail() {
 }
 
 function getRecentAssignmentLoad() {
-  const repositoryParts = options.repository.split("/");
+  const repositoryParts = options.repository.split('/');
   if (repositoryParts.length !== 2 || repositoryParts.some((part) => !part)) {
     fail(`Invalid GitHub repository: ${options.repository}`);
   }
   const [owner, name] = repositoryParts;
 
   const result = runJson(gh, [
-    "api",
-    "graphql",
-    "-f",
-    "query=query($owner:String!,$name:String!){repository(owner:$owner,name:$name){issues(first:100,states:[OPEN,CLOSED],orderBy:{field:CREATED_AT,direction:DESC}){nodes{number createdAt assignees(first:100){nodes{login}}}}}}",
-    "-F",
+    'api',
+    'graphql',
+    '-f',
+    'query=query($owner:String!,$name:String!){repository(owner:$owner,name:$name){issues(first:100,states:[OPEN,CLOSED],orderBy:{field:CREATED_AT,direction:DESC}){nodes{number createdAt assignees(first:100){nodes{login}}}}}}',
+    '-F',
     `owner=${owner}`,
-    "-F",
+    '-F',
     `name=${name}`,
   ]);
   const issues = result.data?.repository?.issues?.nodes;
@@ -279,9 +248,7 @@ function getRecentAssignmentLoad() {
     fail(`Could not read the 100 newest issues from ${options.repository}.`);
   }
 
-  const counts = new Map(
-    coreTeam.people.map((person) => [person.github.toLowerCase(), 0]),
-  );
+  const counts = new Map(coreTeam.people.map((person) => [person.github.toLowerCase(), 0]));
   for (const issue of issues) {
     for (const assignee of issue.assignees?.nodes || []) {
       const handle = assignee.login?.toLowerCase();
@@ -294,12 +261,8 @@ function getRecentAssignmentLoad() {
   return {
     window: 100,
     issues_considered: issues.length,
-    newest_issue: issues[0]
-      ? { number: issues[0].number, created_at: issues[0].createdAt }
-      : null,
-    oldest_issue: issues.at(-1)
-      ? { number: issues.at(-1).number, created_at: issues.at(-1).createdAt }
-      : null,
+    newest_issue: issues[0] ? { number: issues[0].number, created_at: issues[0].createdAt } : null,
+    oldest_issue: issues.at(-1) ? { number: issues.at(-1).number, created_at: issues.at(-1).createdAt } : null,
     people: coreTeam.people.map((person) => {
       const assignments = counts.get(person.github.toLowerCase());
       return {
@@ -315,13 +278,9 @@ function getRecentAssignmentLoad() {
 
 function issueRecord(item, sources, queued = null) {
   const assignees = Array.isArray(item.assignees)
-    ? item.assignees.map((assignee) =>
-        typeof assignee === "string" ? assignee : assignee.login,
-      )
+    ? item.assignees.map((assignee) => (typeof assignee === 'string' ? assignee : assignee.login))
     : [];
-  const teamOwners = assignees
-    .map((handle) => coreTeam.byGithub.get(handle.toLowerCase()))
-    .filter(Boolean);
+  const teamOwners = assignees.map((handle) => coreTeam.byGithub.get(handle.toLowerCase())).filter(Boolean);
   const channel = channelByIssueNumber.get(item.content.number);
   return {
     number: item.content.number,
@@ -354,24 +313,20 @@ function issueRecord(item, sources, queued = null) {
 
 function readIssueQueue() {
   const channels = runBuzz([
-    "channels",
-    "search",
-    "--query",
+    'channels',
+    'search',
+    '--query',
     options.queueChannel,
-    "--exact",
-    "--include-archived",
-    "--limit",
+    '--exact',
+    '--include-archived',
+    '--limit',
     String(options.channelLimit),
   ]);
   if (channels.length >= options.channelLimit) {
-    fail(
-      `Buzz returned ${channels.length} channels at the --channel-limit boundary. Raise the limit.`,
-    );
+    fail(`Buzz returned ${channels.length} channels at the --channel-limit boundary. Raise the limit.`);
   }
   const matches = channels.filter(
-    (channel) =>
-      channel.name?.trim().toLowerCase() ===
-      options.queueChannel.trim().toLowerCase(),
+    (channel) => channel.name?.trim().toLowerCase() === options.queueChannel.trim().toLowerCase(),
   );
   if (matches.length !== 1) {
     fail(
@@ -381,23 +336,19 @@ function readIssueQueue() {
 
   const channel = matches[0];
   const messages = runBuzz([
-    "messages",
-    "get",
-    "--channel",
+    'messages',
+    'get',
+    '--channel',
     channel.channel_id,
-    "--limit",
+    '--limit',
     String(options.messageLimit),
   ]);
   if (messages.length >= options.messageLimit) {
-    fail(
-      `Buzz returned ${messages.length} queue messages at the --message-limit boundary. Raise the limit.`,
-    );
+    fail(`Buzz returned ${messages.length} queue messages at the --message-limit boundary. Raise the limit.`);
   }
 
-  const { entries, ignored } = selectRecentQueueEntries(
-    messages,
-    options.queueCount,
-    (message) => queueLinks(message.content || ""),
+  const { entries, ignored } = selectRecentQueueEntries(messages, options.queueCount, (message) =>
+    queueLinks(message.content || ''),
   );
   const queuedByIssue = new Map();
   const unresolved = [];
@@ -407,7 +358,7 @@ function readIssueQueue() {
       unresolved.push({
         message_id: message.id,
         link,
-        reason: "pull-request-does-not-close-exactly-one-issue",
+        reason: 'pull-request-does-not-close-exactly-one-issue',
       });
       continue;
     }
@@ -424,7 +375,7 @@ function readIssueQueue() {
       queued.links.push(link);
     }
     if (
-      /^[0-9a-f]{64}$/i.test(message.pubkey || "") &&
+      /^[0-9a-f]{64}$/i.test(message.pubkey || '') &&
       !queued.requester_pubkeys.includes(message.pubkey.toLowerCase())
     ) {
       queued.requester_pubkeys.push(message.pubkey.toLowerCase());
@@ -433,12 +384,8 @@ function readIssueQueue() {
   }
 
   for (const queued of queuedByIssue.values()) {
-    queued.ignored_requester_pubkeys = queued.requester_pubkeys.filter(
-      (pubkey) => !coreTeam.byPubkey.has(pubkey),
-    );
-    queued.requester_pubkeys = queued.requester_pubkeys.filter((pubkey) =>
-      coreTeam.byPubkey.has(pubkey),
-    );
+    queued.ignored_requester_pubkeys = queued.requester_pubkeys.filter((pubkey) => !coreTeam.byPubkey.has(pubkey));
+    queued.requester_pubkeys = queued.requester_pubkeys.filter((pubkey) => coreTeam.byPubkey.has(pubkey));
   }
 
   return {
@@ -460,58 +407,40 @@ function queueLinks(content) {
 }
 
 function githubLinks(content) {
-  const escapedRepository = options.repository.replace(
-    /[.*+?^${}()|[\]\\]/g,
-    "\\$&",
-  );
-  const pattern = new RegExp(
-    `https://github\\.com/${escapedRepository}/(?:issues|pull)/[1-9]\\d*`,
-    "g",
-  );
+  const escapedRepository = options.repository.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const pattern = new RegExp(`https://github\\.com/${escapedRepository}/(?:issues|pull)/[1-9]\\d*`, 'g');
   return [...new Set(content.match(pattern) || [])];
 }
 
 function resolveIssueLink(link) {
   const parsed = new URL(link);
-  const parts = parsed.pathname.split("/").filter(Boolean);
+  const parts = parsed.pathname.split('/').filter(Boolean);
   const number = Number.parseInt(parts[3], 10);
-  if (parts[2] === "issues") {
+  if (parts[2] === 'issues') {
     return { number };
   }
 
-  const pullRequest = runJson(gh, [
-    "pr",
-    "view",
-    link,
-    "--json",
-    "closingIssuesReferences",
-  ]);
+  const pullRequest = runJson(gh, ['pr', 'view', link, '--json', 'closingIssuesReferences']);
   const matchingIssues = pullRequest.closingIssuesReferences.filter(
-    (issue) =>
-      `${issue.repository.owner.login}/${issue.repository.name}` ===
-      options.repository,
+    (issue) => `${issue.repository.owner.login}/${issue.repository.name}` === options.repository,
   );
-  return matchingIssues.length === 1
-    ? { number: matchingIssues[0].number }
-    : null;
+  return matchingIssues.length === 1 ? { number: matchingIssues[0].number } : null;
 }
 
 function getAllIssueChannels() {
   const channelsById = new Map();
-  for (const digit of "0123456789") {
+  for (const digit of '0123456789') {
     const matches = runBuzz([
-      "channels",
-      "search",
-      "--query",
+      'channels',
+      'search',
+      '--query',
       digit,
-      "--include-archived",
-      "--limit",
+      '--include-archived',
+      '--limit',
       String(options.channelLimit),
     ]);
     if (matches.length >= options.channelLimit) {
-      fail(
-        `Buzz returned ${matches.length} channels at the --channel-limit boundary. Raise the limit.`,
-      );
+      fail(`Buzz returned ${matches.length} channels at the --channel-limit boundary. Raise the limit.`);
     }
     for (const channel of matches) {
       channelsById.set(channel.channel_id, channel);
@@ -526,7 +455,7 @@ function runBuzz(arguments_) {
 
 function runJson(command, arguments_, options = {}) {
   const result = spawnSync(command, arguments_, {
-    encoding: "utf8",
+    encoding: 'utf8',
     maxBuffer: 32 * 1024 * 1024,
     ...options,
   });
@@ -535,7 +464,7 @@ function runJson(command, arguments_, options = {}) {
   }
   if (result.status !== 0) {
     const message = result.stderr.trim() || result.stdout.trim();
-    fail(`${command} failed${message ? `: ${message}` : "."}`);
+    fail(`${command} failed${message ? `: ${message}` : '.'}`);
   }
   try {
     return JSON.parse(result.stdout);
@@ -548,19 +477,19 @@ function findBuzz() {
   if (process.env.BUZZ_BIN) {
     return process.env.BUZZ_BIN;
   }
-  const bundledBuzz = "/Applications/Buzz.app/Contents/MacOS/buzz";
+  const bundledBuzz = '/Applications/Buzz.app/Contents/MacOS/buzz';
   try {
     accessSync(bundledBuzz, constants.X_OK);
     return bundledBuzz;
   } catch {
-    return "buzz";
+    return 'buzz';
   }
 }
 
 function readRequiredFile(path) {
   try {
     chmodSync(path, 0o600);
-    return readFileSync(path, "utf8").trim();
+    return readFileSync(path, 'utf8').trim();
   } catch (error) {
     fail(`Could not read ${path}: ${error.message}`);
   }

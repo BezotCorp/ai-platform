@@ -1,37 +1,23 @@
 #!/usr/bin/env node
 
-import { createECDH, randomBytes } from "node:crypto";
-import {
-  accessSync,
-  chmodSync,
-  constants,
-  existsSync,
-  mkdirSync,
-  readFileSync,
-  writeFileSync,
-} from "node:fs";
-import { homedir } from "node:os";
-import { dirname, join } from "node:path";
-import { spawnSync } from "node:child_process";
-import { fileURLToPath } from "node:url";
+import { createECDH, randomBytes } from 'node:crypto';
+import { accessSync, chmodSync, constants, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { homedir } from 'node:os';
+import { dirname, join } from 'node:path';
+import { spawnSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 
-const identityName = "Github Manager";
-const relayUrl = process.env.BUZZ_RELAY_URL || "https://buzz.gdk.so";
-const configHome =
-  process.env.XDG_CONFIG_HOME || join(homedir(), ".config");
-const buzzHome =
-  process.env.GOOSE_BUZZ_HOME || join(configHome, "goose", "buzz");
-const identityDirectory = join(buzzHome, "github-manager");
-const privateKeyPath = join(identityDirectory, "private-key.nsec");
-const publicKeyPath = join(identityDirectory, "public-key.npub");
-const publicKeyHexPath = join(identityDirectory, "public-key.hex");
-const profileCreatedPath = join(identityDirectory, "profile-created");
+const identityName = 'Github Manager';
+const relayUrl = process.env.BUZZ_RELAY_URL || 'https://buzz.gdk.so';
+const configHome = process.env.XDG_CONFIG_HOME || join(homedir(), '.config');
+const buzzHome = process.env.GOOSE_BUZZ_HOME || join(configHome, 'goose', 'buzz');
+const identityDirectory = join(buzzHome, 'github-manager');
+const privateKeyPath = join(identityDirectory, 'private-key.nsec');
+const publicKeyPath = join(identityDirectory, 'public-key.npub');
+const publicKeyHexPath = join(identityDirectory, 'public-key.hex');
+const profileCreatedPath = join(identityDirectory, 'profile-created');
 const keyPaths = [privateKeyPath, publicKeyPath, publicKeyHexPath];
-const avatarPath = join(
-  dirname(fileURLToPath(import.meta.url)),
-  "assets",
-  "GithubManager.png",
-);
+const avatarPath = join(dirname(fileURLToPath(import.meta.url)), 'assets', 'GithubManager.png');
 
 const existingKeyPaths = keyPaths.filter(existsSync);
 let nsec;
@@ -39,9 +25,7 @@ let npub;
 let publicKeyHex;
 if (existingKeyPaths.length > 0) {
   if (existingKeyPaths.length !== keyPaths.length) {
-    console.error(
-      `Refusing to change the incomplete Github Manager key pair in ${identityDirectory}`,
-    );
+    console.error(`Refusing to change the incomplete Github Manager key pair in ${identityDirectory}`);
     process.exit(1);
   }
 
@@ -50,25 +34,25 @@ if (existingKeyPaths.length > 0) {
     chmodSync(keyPath, 0o600);
   }
 
-  nsec = readFileSync(privateKeyPath, "utf8").trim();
-  npub = readFileSync(publicKeyPath, "utf8").trim();
-  publicKeyHex = readFileSync(publicKeyHexPath, "utf8").trim();
+  nsec = readFileSync(privateKeyPath, 'utf8').trim();
+  npub = readFileSync(publicKeyPath, 'utf8').trim();
+  publicKeyHex = readFileSync(publicKeyHexPath, 'utf8').trim();
   console.log(`Github Manager keys already exist: ${npub}`);
   console.log(`Keys: ${identityDirectory}`);
   if (existsSync(profileCreatedPath)) {
     chmodSync(profileCreatedPath, 0o600);
-    console.log("No key or profile changes were made.");
+    console.log('No key or profile changes were made.');
     process.exit(0);
   }
-  console.log("The profile marker is missing; recreating the Buzz profile.");
+  console.log('The profile marker is missing; recreating the Buzz profile.');
 } else {
   mkdirSync(identityDirectory, { recursive: true, mode: 0o700 });
   chmodSync(identityDirectory, 0o700);
 
   const { privateKey, publicKey } = generateKeyPair();
-  publicKeyHex = publicKey.toString("hex");
-  nsec = bech32Encode("nsec", privateKey);
-  npub = bech32Encode("npub", publicKey);
+  publicKeyHex = publicKey.toString('hex');
+  nsec = bech32Encode('nsec', privateKey);
+  npub = bech32Encode('npub', publicKey);
 
   writeSecret(privateKeyPath, nsec);
   writeSecret(publicKeyPath, npub);
@@ -84,23 +68,19 @@ const buzzEnvironment = {
   ...process.env,
   BUZZ_PRIVATE_KEY: nsec,
 };
-const uploadResult = spawnSync(
-  buzz,
-  ["--relay", relayUrl, "upload", "file", "--file", avatarPath],
-  {
-    encoding: "utf8",
-    env: buzzEnvironment,
-  },
-);
+const uploadResult = spawnSync(buzz, ['--relay', relayUrl, 'upload', 'file', '--file', avatarPath], {
+  encoding: 'utf8',
+  env: buzzEnvironment,
+});
 
 if (uploadResult.error) {
-  console.error("The Github Manager avatar was not uploaded.");
+  console.error('The Github Manager avatar was not uploaded.');
   console.error(`Could not run Buzz: ${uploadResult.error.message}`);
   process.exit(1);
 }
 
 if (uploadResult.status !== 0) {
-  console.error("The Github Manager avatar was not uploaded.");
+  console.error('The Github Manager avatar was not uploaded.');
   process.stderr.write(uploadResult.stderr);
   process.exit(uploadResult.status || 1);
 }
@@ -109,41 +89,32 @@ let avatarUrl;
 try {
   avatarUrl = JSON.parse(uploadResult.stdout).url;
 } catch {
-  console.error("Buzz returned an invalid response after uploading the avatar.");
+  console.error('Buzz returned an invalid response after uploading the avatar.');
   process.exit(1);
 }
 
 if (!avatarUrl) {
-  console.error("Buzz did not return a URL for the uploaded avatar.");
+  console.error('Buzz did not return a URL for the uploaded avatar.');
   process.exit(1);
 }
 
 const profileResult = spawnSync(
   buzz,
-  [
-    "--relay",
-    relayUrl,
-    "users",
-    "set-profile",
-    "--name",
-    identityName,
-    "--avatar",
-    avatarUrl,
-  ],
+  ['--relay', relayUrl, 'users', 'set-profile', '--name', identityName, '--avatar', avatarUrl],
   {
-    encoding: "utf8",
+    encoding: 'utf8',
     env: buzzEnvironment,
   },
 );
 
 if (profileResult.error) {
-  console.error("The Buzz profile was not created.");
+  console.error('The Buzz profile was not created.');
   console.error(`Could not run Buzz: ${profileResult.error.message}`);
   process.exit(1);
 }
 
 if (profileResult.status !== 0) {
-  console.error("The Buzz profile was not created.");
+  console.error('The Buzz profile was not created.');
   process.stderr.write(profileResult.stderr);
   process.exit(profileResult.status || 1);
 }
@@ -156,18 +127,18 @@ if (profileResult.stdout) {
 console.log(`Created the ${identityName} Buzz profile.`);
 
 function writeSecret(path, value) {
-  writeFileSync(path, `${value}\n`, { flag: "wx", mode: 0o600 });
+  writeFileSync(path, `${value}\n`, { flag: 'wx', mode: 0o600 });
   chmodSync(path, 0o600);
 }
 
 function generateKeyPair() {
   while (true) {
     const privateKey = randomBytes(32);
-    const ecdh = createECDH("secp256k1");
+    const ecdh = createECDH('secp256k1');
 
     try {
       ecdh.setPrivateKey(privateKey);
-      const compressedPublicKey = ecdh.getPublicKey(undefined, "compressed");
+      const compressedPublicKey = ecdh.getPublicKey(undefined, 'compressed');
       return {
         privateKey,
         publicKey: compressedPublicKey.subarray(1),
@@ -183,37 +154,23 @@ function findBuzz() {
     return process.env.BUZZ_BIN;
   }
 
-  const bundledBuzz = "/Applications/Buzz.app/Contents/MacOS/buzz";
+  const bundledBuzz = '/Applications/Buzz.app/Contents/MacOS/buzz';
   try {
     accessSync(bundledBuzz, constants.X_OK);
     return bundledBuzz;
   } catch {
-    return "buzz";
+    return 'buzz';
   }
 }
 
 function bech32Encode(prefix, bytes) {
-  const alphabet = "qpzry9x8gf2tvdw0s3jn54khce6mua7l";
+  const alphabet = 'qpzry9x8gf2tvdw0s3jn54khce6mua7l';
   const words = convertBits(bytes, 8, 5);
-  const checksumInput = [
-    ...expandPrefix(prefix),
-    ...words,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-  ];
+  const checksumInput = [...expandPrefix(prefix), ...words, 0, 0, 0, 0, 0, 0];
   const checksum = polymod(checksumInput) ^ 1;
-  const checksumWords = Array.from(
-    { length: 6 },
-    (_, index) => (checksum >> (5 * (5 - index))) & 31,
-  );
+  const checksumWords = Array.from({ length: 6 }, (_, index) => (checksum >> (5 * (5 - index))) & 31);
 
-  return `${prefix}1${[...words, ...checksumWords]
-    .map((word) => alphabet[word])
-    .join("")}`;
+  return `${prefix}1${[...words, ...checksumWords].map((word) => alphabet[word]).join('')}`;
 }
 
 function convertBits(bytes, fromBits, toBits) {
@@ -248,9 +205,7 @@ function expandPrefix(prefix) {
 }
 
 function polymod(values) {
-  const generators = [
-    0x3b6a57b2, 0x26508e6d, 0x1ea119fa, 0x3d4233dd, 0x2a1462b3,
-  ];
+  const generators = [0x3b6a57b2, 0x26508e6d, 0x1ea119fa, 0x3d4233dd, 0x2a1462b3];
   let checksum = 1;
 
   for (const value of values) {

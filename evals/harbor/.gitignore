@@ -1,5 +1,3 @@
 runs/
 .env
 .venv/
-__pycache__/
-*.pyc

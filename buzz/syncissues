@@ -1,18 +1,10 @@
 #!/usr/bin/env node
 
-import {
-  accessSync,
-  chmodSync,
-  constants,
-  existsSync,
-  readFileSync,
-  renameSync,
-  writeFileSync,
-} from "node:fs";
-import { homedir } from "node:os";
-import { dirname, join } from "node:path";
-import { spawnSync } from "node:child_process";
-import { fileURLToPath } from "node:url";
+import { accessSync, chmodSync, constants, existsSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
+import { homedir } from 'node:os';
+import { dirname, join } from 'node:path';
+import { spawnSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 
 import {
   getOpenIssues,
@@ -20,21 +12,17 @@ import {
   issueReferenceFromChannel,
   issueReferenceRank,
   readCoreTeam,
-} from "./github_manager.mjs";
+} from './github_manager.mjs';
 
 const phaseMarkers = {
-  Inbox: "⚪",
-  "Needs info": "🟡",
-  "Accepted / design": "🟣",
-  Ready: "🟢",
-  Verification: "🔵",
-  Done: "✅",
+  Inbox: '⚪',
+  'Needs info': '🟡',
+  'Accepted / design': '🟣',
+  Ready: '🟢',
+  Verification: '🔵',
+  Done: '✅',
 };
-const internalAuthorAssociations = new Set([
-  "OWNER",
-  "MEMBER",
-  "COLLABORATOR",
-]);
+const internalAuthorAssociations = new Set(['OWNER', 'MEMBER', 'COLLABORATOR']);
 const scriptDirectory = dirname(fileURLToPath(import.meta.url));
 
 const options = parseArguments(process.argv.slice(2));
@@ -43,34 +31,28 @@ if (options.help) {
   process.exit(0);
 }
 
-const relayUrl = process.env.BUZZ_RELAY_URL || "https://buzz.gdk.so";
-const configHome = process.env.XDG_CONFIG_HOME || join(homedir(), ".config");
-const buzzHome =
-  process.env.GOOSE_BUZZ_HOME || join(configHome, "goose", "buzz");
-const identityDirectory = join(buzzHome, "github-manager");
-const privateKeyPath = join(identityDirectory, "private-key.nsec");
-const publicKeyPath = join(identityDirectory, "public-key.hex");
+const relayUrl = process.env.BUZZ_RELAY_URL || 'https://buzz.gdk.so';
+const configHome = process.env.XDG_CONFIG_HOME || join(homedir(), '.config');
+const buzzHome = process.env.GOOSE_BUZZ_HOME || join(configHome, 'goose', 'buzz');
+const identityDirectory = join(buzzHome, 'github-manager');
+const privateKeyPath = join(identityDirectory, 'private-key.nsec');
+const publicKeyPath = join(identityDirectory, 'public-key.hex');
 const commentStatePath = join(
   identityDirectory,
-  `issue-comment-sync-${options.repository
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")}.json`,
+  `issue-comment-sync-${options.repository.toLowerCase().replace(/[^a-z0-9]+/g, '-')}.json`,
 );
 const snoozeStatePath = join(
   identityDirectory,
-  `issue-snooze-sync-${options.repository
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")}.json`,
+  `issue-snooze-sync-${options.repository.toLowerCase().replace(/[^a-z0-9]+/g, '-')}.json`,
 );
-const coreTeamPath =
-  process.env.BUZZ_CORE_TEAM_FILE || join(scriptDirectory, "core-team.json");
+const coreTeamPath = process.env.BUZZ_CORE_TEAM_FILE || join(scriptDirectory, 'core-team.json');
 const privateKey = readRequiredFile(privateKeyPath);
 const publicKey = readRequiredFile(publicKeyPath).toLowerCase();
 if (!/^[0-9a-f]{64}$/.test(publicKey)) {
   fail(`Invalid GitHub Manager public key in ${publicKeyPath}.`);
 }
 const buzz = findBuzz();
-const gh = process.env.GH_BIN || "gh";
+const gh = process.env.GH_BIN || 'gh';
 const buzzEnvironment = {
   ...process.env,
   BUZZ_PRIVATE_KEY: privateKey,
@@ -82,9 +64,7 @@ const { byNumber: projectItemsByIssueNumber } = getProjectIssuesOrFail();
 const openIssues = getOpenIssuesOrFail();
 const openIssueCount = openIssues.length;
 
-const openIssuesByNumber = new Map(
-  openIssues.map((issue) => [issue.number, issue]),
-);
+const openIssuesByNumber = new Map(openIssues.map((issue) => [issue.number, issue]));
 const detailsByChannelId = getChannelDetails();
 const channels = [...detailsByChannelId.values()];
 const results = [];
@@ -102,8 +82,8 @@ for (const channel of channels) {
     results.push({
       channel_id: channel.channel_id,
       channel: channel.name,
-      state: "IGNORED",
-      actions: ["skipped"],
+      state: 'IGNORED',
+      actions: ['skipped'],
       reason: resolved.reason,
     });
     continue;
@@ -116,15 +96,14 @@ for (const channel of channels) {
   if (selected.resolved.rank === resolved.rank) {
     fail(`More than one Buzz channel matches GitHub issue #${resolved.number}.`);
   }
-  const ignored =
-    selected.resolved.rank > resolved.rank ? channel : selected.channel;
+  const ignored = selected.resolved.rank > resolved.rank ? channel : selected.channel;
   results.push({
     channel_id: ignored.channel_id,
     channel: ignored.name,
     issue: resolved.number,
-    state: "IGNORED",
-    actions: ["skipped"],
-    reason: "A more specific issue channel exists",
+    state: 'IGNORED',
+    actions: ['skipped'],
+    reason: 'A more specific issue channel exists',
   });
   if (resolved.rank > selected.resolved.rank) {
     selectedChannels.set(resolved.number, { channel, resolved });
@@ -145,58 +124,48 @@ for (const { channel, resolved } of selectedChannels.values()) {
   const issue = openIssuesByNumber.get(issueNumber);
 
   if (!issue) {
-    const topic = "✅ GitHub issue: Closed";
+    const topic = '✅ GitHub issue: Closed';
     const topicNeedsUpdate = currentTopic !== topic;
-    if (
-      (!details.archived || topicNeedsUpdate) &&
-      !canManageChannel(channel.channel_id)
-    ) {
+    if ((!details.archived || topicNeedsUpdate) && !canManageChannel(channel.channel_id)) {
       results.push({
         channel_id: channel.channel_id,
         channel: channel.name,
         issue: issueNumber,
-        state: "CLOSED",
+        state: 'CLOSED',
         topic: currentTopic,
         desired_topic: topic,
-        actions: ["skipped-not-owner"],
-        reason: "GitHub Manager is not a channel owner",
+        actions: ['skipped-not-owner'],
+        reason: 'GitHub Manager is not a channel owner',
       });
       continue;
     }
     if (details.archived && topicNeedsUpdate) {
       if (!options.dryRun) {
-        runBuzz(["channels", "unarchive", "--channel", channel.channel_id]);
+        runBuzz(['channels', 'unarchive', '--channel', channel.channel_id]);
       }
-      actions.push(options.dryRun ? "would-unarchive" : "unarchived");
+      actions.push(options.dryRun ? 'would-unarchive' : 'unarchived');
     }
     if (topicNeedsUpdate) {
       if (!options.dryRun) {
-        runBuzz([
-          "channels",
-          "topic",
-          "--channel",
-          channel.channel_id,
-          "--topic",
-          topic,
-        ]);
+        runBuzz(['channels', 'topic', '--channel', channel.channel_id, '--topic', topic]);
       }
-      actions.push(options.dryRun ? "would-update-topic" : "topic-updated");
+      actions.push(options.dryRun ? 'would-update-topic' : 'topic-updated');
     }
     if (!details.archived || topicNeedsUpdate) {
       if (!options.dryRun) {
-        runBuzz(["channels", "archive", "--channel", channel.channel_id]);
+        runBuzz(['channels', 'archive', '--channel', channel.channel_id]);
       }
-      actions.push(options.dryRun ? "would-archive" : "archived");
+      actions.push(options.dryRun ? 'would-archive' : 'archived');
     }
 
     results.push({
       channel_id: channel.channel_id,
       channel: channel.name,
       issue: issueNumber,
-      state: "CLOSED",
+      state: 'CLOSED',
       topic,
       ...(topicNeedsUpdate ? { previous_topic: currentTopic } : {}),
-      actions: actions.length > 0 ? actions : ["unchanged"],
+      actions: actions.length > 0 ? actions : ['unchanged'],
     });
     continue;
   }
@@ -207,17 +176,17 @@ for (const { channel, resolved } of selectedChannels.values()) {
         channel_id: channel.channel_id,
         channel: channel.name,
         issue: issue.number,
-        state: "OPEN",
+        state: 'OPEN',
         topic: currentTopic,
-        actions: ["skipped-not-owner"],
-        reason: "GitHub Manager is not a channel owner",
+        actions: ['skipped-not-owner'],
+        reason: 'GitHub Manager is not a channel owner',
       });
       continue;
     }
     if (!options.dryRun) {
-      runBuzz(["channels", "unarchive", "--channel", channel.channel_id]);
+      runBuzz(['channels', 'unarchive', '--channel', channel.channel_id]);
     }
-    actions.push(options.dryRun ? "would-unarchive" : "unarchived");
+    actions.push(options.dryRun ? 'would-unarchive' : 'unarchived');
   }
 
   const projectItem = projectItemsByIssueNumber.get(issue.number);
@@ -227,74 +196,56 @@ for (const { channel, resolved } of selectedChannels.values()) {
       channel_id: channel.channel_id,
       channel: channel.name,
       issue: issue.number,
-      state: "OPEN",
-      actions: actions.length > 0 ? actions : ["skipped"],
+      state: 'OPEN',
+      actions: actions.length > 0 ? actions : ['skipped'],
       reason: `Issue is not in ${options.project} with a status`,
     });
     continue;
   }
 
   const marker = phaseMarkers[phase];
-  const assignees = issue.assignees
-    .map((assignee) => assignee.login)
-    .filter(Boolean);
-  const assignment =
-    assignees.length > 0
-      ? assignees.map((login) => `@${login}`).join(", ")
-      : "unassigned";
-  const topic = `${marker ? `${marker} ` : ""}${phase} -- assigned to: ${assignment}`;
+  const assignees = issue.assignees.map((assignee) => assignee.login).filter(Boolean);
+  const assignment = assignees.length > 0 ? assignees.map((login) => `@${login}`).join(', ') : 'unassigned';
+  const topic = `${marker ? `${marker} ` : ''}${phase} -- assigned to: ${assignment}`;
 
   if (currentTopic !== topic && !canManageChannel(channel.channel_id)) {
     results.push({
       channel_id: channel.channel_id,
       channel: channel.name,
       issue: issue.number,
-      state: "OPEN",
+      state: 'OPEN',
       phase,
       assignees,
       topic: currentTopic,
       desired_topic: topic,
-      actions: ["skipped-not-owner"],
-      reason: "GitHub Manager is not a channel owner",
+      actions: ['skipped-not-owner'],
+      reason: 'GitHub Manager is not a channel owner',
     });
     continue;
   }
 
   if (currentTopic !== topic) {
     if (!options.dryRun) {
-      runBuzz([
-        "channels",
-        "topic",
-        "--channel",
-        channel.channel_id,
-        "--topic",
-        topic,
-      ]);
+      runBuzz(['channels', 'topic', '--channel', channel.channel_id, '--topic', topic]);
     }
-    actions.push(options.dryRun ? "would-update-topic" : "topic-updated");
+    actions.push(options.dryRun ? 'would-update-topic' : 'topic-updated');
   }
 
   results.push({
     channel_id: channel.channel_id,
     channel: channel.name,
     issue: issue.number,
-    state: "OPEN",
+    state: 'OPEN',
     phase,
     assignees,
     topic,
     ...(currentTopic !== topic ? { previous_topic: currentTopic } : {}),
-    actions: actions.length > 0 ? actions : ["unchanged"],
+    actions: actions.length > 0 ? actions : ['unchanged'],
   });
 }
 
-const commentSync = syncOutsiderComments(
-  openIssuesByNumber,
-  channelsByIssueNumber,
-);
-const snoozeSync = syncExpiredSnoozes(
-  openIssuesByNumber,
-  channelsByIssueNumber,
-);
+const commentSync = syncOutsiderComments(openIssuesByNumber, channelsByIssueNumber);
+const snoozeSync = syncExpiredSnoozes(openIssuesByNumber, channelsByIssueNumber);
 
 console.log(
   JSON.stringify(
@@ -316,9 +267,9 @@ console.log(
 
 function parseArguments(arguments_) {
   const parsed = {
-    repository: "aaif-goose/goose",
-    project: "Goose Issues",
-    projectOwner: "aaif-goose",
+    repository: 'aaif-goose/goose',
+    project: 'Goose Issues',
+    projectOwner: 'aaif-goose',
     projectNumber: 1,
     projectLimit: 1000,
     limit: 500,
@@ -329,48 +280,39 @@ function parseArguments(arguments_) {
   for (let index = 0; index < arguments_.length; index += 1) {
     const argument = arguments_[index];
 
-    if (argument === "--repo") {
+    if (argument === '--repo') {
       parsed.repository = requiredValue(arguments_, ++index, argument);
       continue;
     }
-    if (argument === "--project") {
+    if (argument === '--project') {
       parsed.project = requiredValue(arguments_, ++index, argument);
       continue;
     }
-    if (argument === "--project-owner") {
+    if (argument === '--project-owner') {
       parsed.projectOwner = requiredValue(arguments_, ++index, argument);
       continue;
     }
-    if (argument === "--project-number") {
-      parsed.projectNumber = positiveInteger(
-        requiredValue(arguments_, ++index, argument),
-        argument,
-      );
+    if (argument === '--project-number') {
+      parsed.projectNumber = positiveInteger(requiredValue(arguments_, ++index, argument), argument);
       continue;
     }
-    if (argument === "--project-limit") {
-      parsed.projectLimit = positiveInteger(
-        requiredValue(arguments_, ++index, argument),
-        argument,
-      );
+    if (argument === '--project-limit') {
+      parsed.projectLimit = positiveInteger(requiredValue(arguments_, ++index, argument), argument);
       continue;
     }
-    if (argument === "--limit") {
-      const value = Number.parseInt(
-        requiredValue(arguments_, ++index, argument),
-        10,
-      );
+    if (argument === '--limit') {
+      const value = Number.parseInt(requiredValue(arguments_, ++index, argument), 10);
       if (!Number.isSafeInteger(value) || value < 1) {
-        fail("--limit must be a positive integer.");
+        fail('--limit must be a positive integer.');
       }
       parsed.limit = value;
       continue;
     }
-    if (argument === "--dry-run") {
+    if (argument === '--dry-run') {
       parsed.dryRun = true;
       continue;
     }
-    if (argument === "--help" || argument === "-h") {
+    if (argument === '--help' || argument === '-h') {
       parsed.help = true;
       continue;
     }
@@ -382,7 +324,7 @@ function parseArguments(arguments_) {
 
 function requiredValue(arguments_, index, option) {
   const value = arguments_[index];
-  if (!value || value.startsWith("--")) {
+  if (!value || value.startsWith('--')) {
     fail(`${option} requires a value.`);
   }
   return value;
@@ -431,20 +373,18 @@ function readCoreTeamOrFail() {
 
 function getChannelDetails() {
   const details = new Map();
-  for (const digit of "0123456789") {
+  for (const digit of '0123456789') {
     const matches = runBuzz([
-      "channels",
-      "search",
-      "--query",
+      'channels',
+      'search',
+      '--query',
       digit,
-      "--include-archived",
-      "--limit",
+      '--include-archived',
+      '--limit',
       String(options.limit),
     ]);
     if (matches.length >= options.limit) {
-      fail(
-        `Buzz returned ${matches.length} channels at the --limit boundary for ${digit}. Raise --limit.`,
-      );
+      fail(`Buzz returned ${matches.length} channels at the --limit boundary for ${digit}. Raise --limit.`);
     }
     for (const channel of matches) {
       details.set(channel.channel_id, channel);
@@ -455,18 +395,10 @@ function getChannelDetails() {
 
 function canManageChannel(channelId) {
   if (!channelOwnership.has(channelId)) {
-    const members = runBuzz([
-      "channels",
-      "members",
-      "--channel",
-      channelId,
-    ]);
+    const members = runBuzz(['channels', 'members', '--channel', channelId]);
     channelOwnership.set(
       channelId,
-      members.some(
-        (member) =>
-          member.pubkey?.toLowerCase() === publicKey && member.role === "owner",
-      ),
+      members.some((member) => member.pubkey?.toLowerCase() === publicKey && member.role === 'owner'),
     );
   }
   return channelOwnership.get(channelId);
@@ -477,20 +409,17 @@ function resolveChannel(channel) {
   if (!reference) {
     return null;
   }
-  if (
-    reference.repository &&
-    reference.repository.toLowerCase() !== options.repository.toLowerCase()
-  ) {
+  if (reference.repository && reference.repository.toLowerCase() !== options.repository.toLowerCase()) {
     return {
       reason: `Channel belongs to ${reference.repository}#${reference.number}`,
     };
   }
-  if (reference.kind === "pull-request") {
+  if (reference.kind === 'pull-request') {
     return { reason: `#${reference.number} is a pull request, not an issue` };
   }
   const rank = issueReferenceRank(reference);
   if (
-    reference.source === "description" ||
+    reference.source === 'description' ||
     projectItemsByIssueNumber.has(reference.number) ||
     openIssuesByNumber.has(reference.number)
   ) {
@@ -498,11 +427,11 @@ function resolveChannel(channel) {
   }
 
   const kind = githubItemKind(reference.number);
-  return kind === "issue"
+  return kind === 'issue'
     ? { number: reference.number, rank }
     : {
         reason:
-          kind === "pull-request"
+          kind === 'pull-request'
             ? `#${reference.number} is a pull request, not an issue`
             : `Could not find GitHub issue #${reference.number}`,
       };
@@ -510,21 +439,15 @@ function resolveChannel(channel) {
 
 function githubItemKind(number) {
   if (!githubItemKinds.has(number)) {
-    const item = runOptionalJson(gh, [
-      "api",
-      `repos/${options.repository}/issues/${number}`,
-    ]);
-    githubItemKinds.set(
-      number,
-      item ? (item.pull_request ? "pull-request" : "issue") : "missing",
-    );
+    const item = runOptionalJson(gh, ['api', `repos/${options.repository}/issues/${number}`]);
+    githubItemKinds.set(number, item ? (item.pull_request ? 'pull-request' : 'issue') : 'missing');
   }
   return githubItemKinds.get(number);
 }
 
 function runOptionalJson(command, arguments_) {
   const result = spawnSync(command, arguments_, {
-    encoding: "utf8",
+    encoding: 'utf8',
     maxBuffer: 32 * 1024 * 1024,
   });
   if (result.error) {
@@ -535,7 +458,7 @@ function runOptionalJson(command, arguments_) {
     if (/HTTP 404|Not Found/i.test(message)) {
       return null;
     }
-    fail(`${command} failed${message ? `: ${message}` : "."}`);
+    fail(`${command} failed${message ? `: ${message}` : '.'}`);
   }
   try {
     return JSON.parse(result.stdout);
@@ -545,9 +468,7 @@ function runOptionalJson(command, arguments_) {
 }
 
 function syncOutsiderComments(openIssuesByNumber, channelsByIssueNumber) {
-  const syncStartedAt = new Date(
-    Math.floor(Date.now() / 1000) * 1000,
-  ).toISOString();
+  const syncStartedAt = new Date(Math.floor(Date.now() / 1000) * 1000).toISOString();
   const state = readCommentState();
 
   if (!state) {
@@ -555,7 +476,7 @@ function syncOutsiderComments(openIssuesByNumber, channelsByIssueNumber) {
       writeCommentState({ checked_at: syncStartedAt, posted_comment_ids: [] });
     }
     return {
-      status: options.dryRun ? "would-initialize" : "initialized",
+      status: options.dryRun ? 'would-initialize' : 'initialized',
       checked_at: syncStartedAt,
       comments_scanned: 0,
       notifications: [],
@@ -563,19 +484,19 @@ function syncOutsiderComments(openIssuesByNumber, channelsByIssueNumber) {
   }
 
   const pages = runJson(gh, [
-    "api",
-    "--method",
-    "GET",
-    "--paginate",
-    "--slurp",
+    'api',
+    '--method',
+    'GET',
+    '--paginate',
+    '--slurp',
     `repos/${options.repository}/issues/comments`,
-    "-f",
+    '-f',
     `since=${state.checked_at}`,
-    "-f",
-    "per_page=100",
+    '-f',
+    'per_page=100',
   ]);
   if (!Array.isArray(pages) || pages.some((page) => !Array.isArray(page))) {
-    fail("GitHub returned an invalid paginated issue comment response.");
+    fail('GitHub returned an invalid paginated issue comment response.');
   }
 
   const comments = pages
@@ -588,20 +509,12 @@ function syncOutsiderComments(openIssuesByNumber, channelsByIssueNumber) {
         createdAt <= Date.parse(syncStartedAt)
       );
     })
-    .sort(
-      (left, right) =>
-        Date.parse(left.created_at) - Date.parse(right.created_at) ||
-        left.id - right.id,
-    );
+    .sort((left, right) => Date.parse(left.created_at) - Date.parse(right.created_at) || left.id - right.id);
   const postedCommentIds = new Set(state.posted_comment_ids);
   const notifications = [];
 
   for (const comment of comments) {
-    if (
-      !comment.user ||
-      comment.user.type !== "User" ||
-      internalAuthorAssociations.has(comment.author_association)
-    ) {
+    if (!comment.user || comment.user.type !== 'User' || internalAuthorAssociations.has(comment.author_association)) {
       continue;
     }
 
@@ -617,7 +530,7 @@ function syncOutsiderComments(openIssuesByNumber, channelsByIssueNumber) {
         comment_id: comment.id,
         author: comment.user.login,
         url: comment.html_url,
-        action: "skipped-no-channel",
+        action: 'skipped-no-channel',
       });
       continue;
     }
@@ -629,7 +542,7 @@ function syncOutsiderComments(openIssuesByNumber, channelsByIssueNumber) {
         comment_id: comment.id,
         author: comment.user.login,
         url: comment.html_url,
-        action: "already-notified",
+        action: 'already-notified',
       });
       continue;
     }
@@ -641,19 +554,12 @@ function syncOutsiderComments(openIssuesByNumber, channelsByIssueNumber) {
         owner
           ? `@${owner.name}, \`${comment.user.login}\` replied on GitHub.`
           : `\`${comment.user.login}\` replied on GitHub. This issue has no core-team owner to mention.`,
-        "",
+        '',
         `[Read the reply on GitHub](${comment.html_url})`,
-      ].join("\n");
-      const sendArguments = [
-        "messages",
-        "send",
-        "--channel",
-        channel.channel_id,
-        "--content",
-        content,
-      ];
+      ].join('\n');
+      const sendArguments = ['messages', 'send', '--channel', channel.channel_id, '--content', content];
       if (owner) {
-        sendArguments.push("--mention", owner.pubkey);
+        sendArguments.push('--mention', owner.pubkey);
       }
       runBuzz(sendArguments);
       postedCommentIds.add(comment.id);
@@ -670,16 +576,14 @@ function syncOutsiderComments(openIssuesByNumber, channelsByIssueNumber) {
       author: comment.user.login,
       url: comment.html_url,
       owner: owner?.github || null,
-      action: options.dryRun ? "would-notify" : "notified",
+      action: options.dryRun ? 'would-notify' : 'notified',
     });
   }
 
   if (!options.dryRun) {
     const boundaryCommentIds = comments
       .filter(
-        (comment) =>
-          Date.parse(comment.created_at) === Date.parse(syncStartedAt) &&
-          postedCommentIds.has(comment.id),
+        (comment) => Date.parse(comment.created_at) === Date.parse(syncStartedAt) && postedCommentIds.has(comment.id),
       )
       .map((comment) => comment.id);
     writeCommentState({
@@ -689,7 +593,7 @@ function syncOutsiderComments(openIssuesByNumber, channelsByIssueNumber) {
   }
 
   return {
-    status: "scanned",
+    status: 'scanned',
     since: state.checked_at,
     checked_at: syncStartedAt,
     comments_scanned: comments.length,
@@ -705,10 +609,10 @@ function syncExpiredSnoozes(openIssuesByNumber, channelsByIssueNumber) {
   for (const [issueNumber, channel] of channelsByIssueNumber) {
     const issue = openIssuesByNumber.get(issueNumber);
     const projectItem = projectItemsByIssueNumber.get(issueNumber);
-    const snoozedUntil = projectItem?.["snoozed until"];
+    const snoozedUntil = projectItem?.['snoozed until'];
     if (
       !issue ||
-      typeof snoozedUntil !== "string" ||
+      typeof snoozedUntil !== 'string' ||
       !/^\d{4}-\d{2}-\d{2}$/.test(snoozedUntil) ||
       snoozedUntil > today
     ) {
@@ -724,17 +628,10 @@ function syncExpiredSnoozes(openIssuesByNumber, channelsByIssueNumber) {
     if (!options.dryRun) {
       const content = owner
         ? `@${owner.name}, the snooze is expired.`
-        : "The snooze is expired. This issue has no core-team owner to mention.";
-      const sendArguments = [
-        "messages",
-        "send",
-        "--channel",
-        channel.channel_id,
-        "--content",
-        content,
-      ];
+        : 'The snooze is expired. This issue has no core-team owner to mention.';
+      const sendArguments = ['messages', 'send', '--channel', channel.channel_id, '--content', content];
       if (owner) {
-        sendArguments.push("--mention", owner.pubkey);
+        sendArguments.push('--mention', owner.pubkey);
       }
       runBuzz(sendArguments);
       state.notified[stateKey] = snoozedUntil;
@@ -746,7 +643,7 @@ function syncExpiredSnoozes(openIssuesByNumber, channelsByIssueNumber) {
       channel_id: channel.channel_id,
       snoozed_until: snoozedUntil,
       owner: owner?.github || null,
-      action: options.dryRun ? "would-notify" : "notified",
+      action: options.dryRun ? 'would-notify' : 'notified',
     });
   }
 
@@ -765,8 +662,8 @@ function issueOwner(issue) {
 
 function localDate(date) {
   const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
 }
 
@@ -783,13 +680,13 @@ function readCommentState() {
   chmodSync(commentStatePath, 0o600);
   let state;
   try {
-    state = JSON.parse(readFileSync(commentStatePath, "utf8"));
+    state = JSON.parse(readFileSync(commentStatePath, 'utf8'));
   } catch (error) {
     fail(`Could not read ${commentStatePath}: ${error.message}`);
   }
 
   if (
-    typeof state.checked_at !== "string" ||
+    typeof state.checked_at !== 'string' ||
     !Number.isFinite(Date.parse(state.checked_at)) ||
     !Array.isArray(state.posted_comment_ids) ||
     state.posted_comment_ids.some((id) => !Number.isSafeInteger(id))
@@ -817,19 +714,16 @@ function readSnoozeState() {
   chmodSync(snoozeStatePath, 0o600);
   let state;
   try {
-    state = JSON.parse(readFileSync(snoozeStatePath, "utf8"));
+    state = JSON.parse(readFileSync(snoozeStatePath, 'utf8'));
   } catch (error) {
     fail(`Could not read ${snoozeStatePath}: ${error.message}`);
   }
   if (
     !state.notified ||
-    typeof state.notified !== "object" ||
+    typeof state.notified !== 'object' ||
     Array.isArray(state.notified) ||
     Object.entries(state.notified).some(
-      ([issue, date]) =>
-        !/^[1-9]\d*$/.test(issue) ||
-        typeof date !== "string" ||
-        !/^\d{4}-\d{2}-\d{2}$/.test(date),
+      ([issue, date]) => !/^[1-9]\d*$/.test(issue) || typeof date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(date),
     )
   ) {
     fail(`Invalid issue snooze sync state in ${snoozeStatePath}.`);
@@ -853,7 +747,7 @@ function runBuzz(arguments_) {
 
 function runJson(command, arguments_, options = {}) {
   const result = spawnSync(command, arguments_, {
-    encoding: "utf8",
+    encoding: 'utf8',
     maxBuffer: 32 * 1024 * 1024,
     ...options,
   });
@@ -863,7 +757,7 @@ function runJson(command, arguments_, options = {}) {
   }
   if (result.status !== 0) {
     const message = result.stderr.trim() || result.stdout.trim();
-    fail(`${command} failed${message ? `: ${message}` : "."}`);
+    fail(`${command} failed${message ? `: ${message}` : '.'}`);
   }
 
   try {
@@ -878,19 +772,19 @@ function findBuzz() {
     return process.env.BUZZ_BIN;
   }
 
-  const bundledBuzz = "/Applications/Buzz.app/Contents/MacOS/buzz";
+  const bundledBuzz = '/Applications/Buzz.app/Contents/MacOS/buzz';
   try {
     accessSync(bundledBuzz, constants.X_OK);
     return bundledBuzz;
   } catch {
-    return "buzz";
+    return 'buzz';
   }
 }
 
 function readRequiredFile(path) {
   try {
     chmodSync(path, 0o600);
-    return readFileSync(path, "utf8").trim();
+    return readFileSync(path, 'utf8').trim();
   } catch (error) {
     fail(`Could not read ${path}: ${error.message}`);
   }

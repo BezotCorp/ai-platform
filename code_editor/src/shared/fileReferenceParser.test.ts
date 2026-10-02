@@ -1,10 +1,5 @@
-import { describe, expect, test } from 'bun:test';
-import {
-  getLanguageFromPath,
-  isFileReferenceContent,
-  parseContent,
-  parseFileReference,
-} from './fileReferenceParser';
+import { describe, expect, test } from 'vitest';
+import { getLanguageFromPath, isFileReferenceContent, parseContent, parseFileReference } from './fileReferenceParser';
 
 describe('isFileReferenceContent', () => {
   test('detects Unix absolute path (H1 style)', () => {
@@ -176,9 +171,7 @@ some content
     const result = parseFileReference(content);
 
     expect(result).not.toBeNull();
-    expect(result?.filePath).toBe(
-      '/Users/prem/Development/vscode-mcp/manual-tests/dirs-stuff/more/depth/test.json'
-    );
+    expect(result?.filePath).toBe('/Users/prem/Development/vscode-mcp/manual-tests/dirs-stuff/more/depth/test.json');
     expect(result?.fileName).toBe('test.json');
     expect(result?.content).toBe('[]');
     expect(result?.language).toBeUndefined();

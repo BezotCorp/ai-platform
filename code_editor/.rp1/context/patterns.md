@@ -1,11 +1,12 @@
 ---
 scope: kbRoot
-path_pattern: "patterns.md"
+path_pattern: 'patterns.md'
 producer: knowledge-base
 type: document
-description: "Implementation patterns, coding conventions, and idioms for a single-project codebase. Hard limit of 150 lines."
+description: 'Implementation patterns, coding conventions, and idioms for a single-project codebase. Hard limit of 150 lines.'
 strictness: strict
 ---
+
 # Implementation Patterns
 
 **Project**: vscode-goose
@@ -65,7 +66,7 @@ Evidence: `src/extension/logger.ts`, `src/extension/webviewProvider.ts:52,123`
 ## Testing Idioms
 
 **Organization**: co-located test files (`*.test.ts` next to source).
-**Framework**: Bun test runner (preferred per `AGENTS.md`).
+**Framework**: Vitest (preferred per `AGENTS.md`).
 **Coverage**: unit tests for pure functions (version parsing, file-reference parsing); `subprocess.integration.test.ts` exercises the subprocess + RPC path.
 **Mocks**: shared in `src/test/mocks` (`vscode.ts`, `streams.ts`).
 
@@ -111,7 +112,7 @@ Evidence: `src/webview/bridge.ts:38-55`, `src/extension/webviewProvider.ts:105-1
 
 ## Tooling & Code Style
 
-**Runtime / Package Manager**: Bun preferred (per `AGENTS.md`); `bun.lock` checked in.
+**Runtime / Package Manager**: Node.js with pnpm (per `AGENTS.md`); esbuild is used for bundling and Vitest for tests.
 **Linter / Formatter**: Biome 2.x — 2-space indent, 100-col width, single quotes, double JSX quotes, es5 trailing commas, semicolons always (`biome.json:5-27,109-122`).
 **Module System**: ESM only — `noCommonJs=error`, `noNamespace=error` (`biome.json:65-70`).
 **TS Safety**: `noVar=error`, `useConst=error`, `useAsConstAssertion=error` in TS override (`biome.json:157-169`).

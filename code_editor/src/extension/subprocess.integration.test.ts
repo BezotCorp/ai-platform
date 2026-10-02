@@ -4,7 +4,7 @@
  * without spawning a real subprocess.
  */
 
-import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, test } from 'vitest';
 import * as E from 'fp-ts/Either';
 import { Readable, Writable } from 'stream';
 import { isJsonRpcError } from '../shared/errors';
@@ -35,9 +35,7 @@ interface BidirectionalMockStreams {
  * reads those writes via onRequest callback and writes responses
  * to subprocessToClient.
  */
-function createBidirectionalMockStreams(
-  onRequest: (data: string) => void
-): BidirectionalMockStreams {
+function createBidirectionalMockStreams(onRequest: (data: string) => void): BidirectionalMockStreams {
   // Client writes here, we intercept and call onRequest
   const clientToSubprocess = new Writable({
     write(chunk, _encoding, callback) {
@@ -265,7 +263,7 @@ describe('Subprocess Integration Tests', () => {
 
   describe('Request/Response Round-Trip', () => {
     test('completes successfully with simple handler', async () => {
-      subprocess.registerHandler('echo', params => ({ echoed: params }));
+      subprocess.registerHandler('echo', (params) => ({ echoed: params }));
 
       const result = await client.request<{ echoed: unknown }>('echo', { message: 'hello' })();
 
@@ -276,7 +274,7 @@ describe('Subprocess Integration Tests', () => {
     });
 
     test('completes successfully with handler returning primitive', async () => {
-      subprocess.registerHandler('add', params => {
+      subprocess.registerHandler('add', (params) => {
         const p = params as { a: number; b: number };
         return p.a + p.b;
       });
@@ -346,7 +344,7 @@ describe('Subprocess Integration Tests', () => {
 
   describe('Concurrent Requests', () => {
     test('resolves multiple concurrent requests correctly', async () => {
-      subprocess.registerHandler('identify', params => {
+      subprocess.registerHandler('identify', (params) => {
         const p = params as { id: string };
         return { response: `Response for ${p.id}` };
       });
@@ -373,7 +371,7 @@ describe('Subprocess Integration Tests', () => {
     });
 
     test('handles mixed success and failure in concurrent requests', async () => {
-      subprocess.registerHandler('mayFail', params => {
+      subprocess.registerHandler('mayFail', (params) => {
         const p = params as { shouldFail: boolean };
         if (p.shouldFail) {
           throw new Error('Intentional failure');
@@ -393,14 +391,14 @@ describe('Subprocess Integration Tests', () => {
     });
 
     test('maintains request/response correlation under load', async () => {
-      subprocess.registerHandler('delay', params => {
+      subprocess.registerHandler('delay', (params) => {
         const p = params as { value: number };
         return { doubled: p.value * 2 };
       });
 
       // Fire 10 concurrent requests with different values
       const requests = Array.from({ length: 10 }, (_, i) =>
-        client.request<{ doubled: number }>('delay', { value: i })()
+        client.request<{ doubled: number }>('delay', { value: i })(),
       );
 
       const results = await Promise.all(requests);
@@ -418,14 +416,14 @@ describe('Subprocess Integration Tests', () => {
   describe('Notification Handling', () => {
     test('receives notifications from subprocess', async () => {
       const receivedNotifications: JsonRpcNotification[] = [];
-      client.onNotification(notification => {
+      client.onNotification((notification) => {
         receivedNotifications.push(notification);
       });
 
       subprocess.sendNotification('server.event', { type: 'update', data: 'new data' });
 
       // Wait for notification to be processed
-      await new Promise(resolve => setTimeout(resolve, 20));
+      await new Promise((resolve) => setTimeout(resolve, 20));
 
       expect(receivedNotifications.length).toBe(1);
       expect(receivedNotifications[0].method).toBe('server.event');
@@ -434,7 +432,7 @@ describe('Subprocess Integration Tests', () => {
 
     test('receives multiple notifications in order', async () => {
       const receivedNotifications: JsonRpcNotification[] = [];
-      client.onNotification(notification => {
+      client.onNotification((notification) => {
         receivedNotifications.push(notification);
       });
 
@@ -442,7 +440,7 @@ describe('Subprocess Integration Tests', () => {
       subprocess.sendNotification('event', { seq: 2 });
       subprocess.sendNotification('event', { seq: 3 });
 
-      await new Promise(resolve => setTimeout(resolve, 20));
+      await new Promise((resolve) => setTimeout(resolve, 20));
 
       expect(receivedNotifications.length).toBe(3);
       expect((receivedNotifications[0].params as { seq: number }).seq).toBe(1);
@@ -454,7 +452,7 @@ describe('Subprocess Integration Tests', () => {
       subprocess.registerHandler('slow', () => 'done');
 
       const receivedNotifications: JsonRpcNotification[] = [];
-      client.onNotification(notification => {
+      client.onNotification((notification) => {
         receivedNotifications.push(notification);
       });
 
@@ -466,7 +464,7 @@ describe('Subprocess Integration Tests', () => {
       subprocess.sendNotification('interrupt', { msg: 'notification 2' });
 
       const result = await requestPromise;
-      await new Promise(resolve => setTimeout(resolve, 20));
+      await new Promise((resolve) => setTimeout(resolve, 20));
 
       // Request should complete successfully
       expect(E.isRight(result)).toBe(true);
@@ -480,13 +478,13 @@ describe('Subprocess Integration Tests', () => {
 
     test('handles notifications without params', async () => {
       const receivedNotifications: JsonRpcNotification[] = [];
-      client.onNotification(notification => {
+      client.onNotification((notification) => {
         receivedNotifications.push(notification);
       });
 
       subprocess.sendNotification('ping');
 
-      await new Promise(resolve => setTimeout(resolve, 20));
+      await new Promise((resolve) => setTimeout(resolve, 20));
 
       expect(receivedNotifications.length).toBe(1);
       expect(receivedNotifications[0].method).toBe('ping');
@@ -503,7 +501,7 @@ describe('Subprocess Integration Tests', () => {
       const requestPromise = client.request('neverCompletes')();
 
       // Wait a tick then crash
-      await new Promise(resolve => setTimeout(resolve, 10));
+      await new Promise((resolve) => setTimeout(resolve, 10));
       subprocess.crash();
 
       const result = await requestPromise;
@@ -538,20 +536,20 @@ describe('Subprocess Integration Tests', () => {
 
     test('notifications stop after crash', async () => {
       const receivedNotifications: JsonRpcNotification[] = [];
-      client.onNotification(notification => {
+      client.onNotification((notification) => {
         receivedNotifications.push(notification);
       });
 
       // Send notification before crash
       subprocess.sendNotification('before', { when: 'before' });
-      await new Promise(resolve => setTimeout(resolve, 20));
+      await new Promise((resolve) => setTimeout(resolve, 20));
 
       // Crash
       subprocess.crash();
 
       // Try to send notification after crash (should be ignored)
       subprocess.sendNotification('after', { when: 'after' });
-      await new Promise(resolve => setTimeout(resolve, 20));
+      await new Promise((resolve) => setTimeout(resolve, 20));
 
       // Only notification before crash should be received
       expect(receivedNotifications.length).toBe(1);
@@ -562,7 +560,7 @@ describe('Subprocess Integration Tests', () => {
   describe('Malformed JSON Handling', () => {
     test('handles malformed JSON gracefully without crashing', async () => {
       const receivedNotifications: JsonRpcNotification[] = [];
-      client.onNotification(notification => {
+      client.onNotification((notification) => {
         receivedNotifications.push(notification);
       });
 
@@ -570,13 +568,13 @@ describe('Subprocess Integration Tests', () => {
       subprocess.sendMalformedResponse('{ invalid json }');
 
       // Wait a tick
-      await new Promise(resolve => setTimeout(resolve, 20));
+      await new Promise((resolve) => setTimeout(resolve, 20));
 
       // Client should not crash
       // Send valid notification to verify client still works
       subprocess.sendNotification('afterMalformed', { status: 'ok' });
 
-      await new Promise(resolve => setTimeout(resolve, 20));
+      await new Promise((resolve) => setTimeout(resolve, 20));
 
       // Should receive the valid notification
       expect(receivedNotifications.length).toBe(1);
@@ -600,7 +598,7 @@ describe('Subprocess Integration Tests', () => {
 
     test('handles truncated JSON gracefully', async () => {
       const receivedNotifications: JsonRpcNotification[] = [];
-      client.onNotification(notification => {
+      client.onNotification((notification) => {
         receivedNotifications.push(notification);
       });
 
@@ -610,7 +608,7 @@ describe('Subprocess Integration Tests', () => {
       // Send valid notification
       subprocess.sendNotification('valid', { data: 'ok' });
 
-      await new Promise(resolve => setTimeout(resolve, 20));
+      await new Promise((resolve) => setTimeout(resolve, 20));
 
       // Only the valid notification should be processed
       expect(receivedNotifications.length).toBe(1);
@@ -635,7 +633,7 @@ describe('Subprocess Integration Tests', () => {
 
     test('handles response with wrong JSON-RPC version gracefully', async () => {
       const receivedNotifications: JsonRpcNotification[] = [];
-      client.onNotification(notification => {
+      client.onNotification((notification) => {
         receivedNotifications.push(notification);
       });
 
@@ -646,7 +644,7 @@ describe('Subprocess Integration Tests', () => {
       // But it should not crash
       subprocess.sendNotification('afterWrongVersion', {});
 
-      await new Promise(resolve => setTimeout(resolve, 20));
+      await new Promise((resolve) => setTimeout(resolve, 20));
 
       // At minimum, subsequent valid messages should work
       expect(receivedNotifications.length).toBeGreaterThanOrEqual(1);
@@ -665,7 +663,7 @@ describe('Subprocess Integration Tests', () => {
         sessionId: 'test-session-123',
       }));
 
-      subprocess.registerHandler('session/prompt', params => {
+      subprocess.registerHandler('session/prompt', (params) => {
         const p = params as { prompt: string };
         return {
           response: `Echo: ${p.prompt}`,
@@ -709,7 +707,7 @@ describe('Subprocess Integration Tests', () => {
       });
 
       const updates: unknown[] = [];
-      client.onNotification(notification => {
+      client.onNotification((notification) => {
         if (notification.method === 'session/update') {
           updates.push(notification.params);
         }
@@ -719,7 +717,7 @@ describe('Subprocess Integration Tests', () => {
       expect(E.isRight(result)).toBe(true);
 
       // Wait for notifications
-      await new Promise(resolve => setTimeout(resolve, 50));
+      await new Promise((resolve) => setTimeout(resolve, 50));
 
       expect(updates.length).toBe(3);
       expect(updates[0]).toEqual({ chunk: 'Hello' });

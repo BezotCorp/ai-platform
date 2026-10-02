@@ -20,7 +20,7 @@ extensions:
     cmd: uv
     args:
       - run
-      - '{{ recipe_dir }}/../scripts/pr-review-mcp.py'
+      - "{{ recipe_dir }}/../scripts/pr-review-mcp.py"
 
 prompt: |
   Review the code changes downloaded from a GitHub pull request.

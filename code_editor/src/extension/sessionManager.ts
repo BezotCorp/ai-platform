@@ -61,11 +61,7 @@ interface AcpSessionUpdateParams {
 }
 
 export interface SessionManager {
-  initialize(
-    client: JsonRpcClient,
-    capabilities: AgentCapabilities,
-    workingDirectory: string
-  ): void;
+  initialize(client: JsonRpcClient, capabilities: AgentCapabilities, workingDirectory: string): void;
   createSession(): TE.TaskEither<GooseError, SessionEntry>;
   loadSession(sessionId: string): TE.TaskEither<GooseError, void>;
   getGroupedSessions(): GroupedSessions[];
@@ -91,11 +87,7 @@ export function createSessionManager(storage: SessionStorage, logger: Logger): S
     return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
   };
 
-  const initialize = (
-    rpcClient: JsonRpcClient,
-    agentCapabilities: AgentCapabilities,
-    cwd: string
-  ): void => {
+  const initialize = (rpcClient: JsonRpcClient, agentCapabilities: AgentCapabilities, cwd: string): void => {
     client = rpcClient;
     capabilities = agentCapabilities;
     workingDirectory = cwd;
@@ -114,7 +106,7 @@ export function createSessionManager(storage: SessionStorage, logger: Logger): S
         cwd: workingDirectory,
         mcpServers: [],
       }),
-      TE.map(response => {
+      TE.map((response) => {
         const session: SessionEntry = {
           sessionId: response.sessionId,
           title: 'New Session',
@@ -127,7 +119,7 @@ export function createSessionManager(storage: SessionStorage, logger: Logger): S
 
         logger.info(`Created session: ${session.sessionId}`);
         return session;
-      })
+      }),
     );
   };
 
@@ -179,7 +171,7 @@ export function createSessionManager(storage: SessionStorage, logger: Logger): S
           timestamp: undefined,
           status: MessageStatus.COMPLETE,
         };
-        historyMessageCallbacks.forEach(cb => cb(msg));
+        historyMessageCallbacks.forEach((cb) => cb(msg));
         messageCount++;
       } else if (content.type === 'resource_link') {
         // Resource link - reference without content
@@ -198,7 +190,7 @@ export function createSessionManager(storage: SessionStorage, logger: Logger): S
             },
           ],
         };
-        historyMessageCallbacks.forEach(cb => cb(msg));
+        historyMessageCallbacks.forEach((cb) => cb(msg));
         messageCount++;
       } else if (content.type === 'resource') {
         // Embedded resource - has actual content
@@ -220,7 +212,7 @@ export function createSessionManager(storage: SessionStorage, logger: Logger): S
             },
           ],
         };
-        historyMessageCallbacks.forEach(cb => cb(msg));
+        historyMessageCallbacks.forEach((cb) => cb(msg));
         messageCount++;
       }
     });
@@ -234,14 +226,14 @@ export function createSessionManager(storage: SessionStorage, logger: Logger): S
       TE.map(() => {
         isLoadingSession = false;
         storage.setActiveSession(sessionId);
-        historyCompleteCallbacks.forEach(cb => cb(sessionId, messageCount));
+        historyCompleteCallbacks.forEach((cb) => cb(sessionId, messageCount));
         logger.info(`Loaded session: ${sessionId} with ${messageCount} messages`);
       }),
-      TE.mapLeft(error => {
+      TE.mapLeft((error) => {
         isLoadingSession = false;
         logger.error('Failed to load session:', error);
         return error;
-      })
+      }),
     );
   };
 
@@ -288,9 +280,7 @@ export function createSessionManager(storage: SessionStorage, logger: Logger): S
     };
   };
 
-  const onHistoryComplete = (
-    callback: (sessionId: string, messageCount: number) => void
-  ): (() => void) => {
+  const onHistoryComplete = (callback: (sessionId: string, messageCount: number) => void): (() => void) => {
     historyCompleteCallbacks.push(callback);
     return () => {
       const index = historyCompleteCallbacks.indexOf(callback);

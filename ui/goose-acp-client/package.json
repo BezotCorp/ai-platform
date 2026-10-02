@@ -43,12 +43,12 @@
     "@agentclientprotocol/sdk": "^1.5.1"
   },
   "devDependencies": {
-    "@agentclientprotocol/sdk": "1.5.1",
-    "@kubb/cli": "^5.4.1",
+    "@agentclientprotocol/sdk": "1.6.0",
+    "@kubb/cli": "^5.4.2",
     "@kubb/plugin-ts": "^5.0.2",
     "@kubb/plugin-zod": "^5.4.1",
     "@types/node": "^26.6.3",
-    "kubb": "^5.4.1",
+    "kubb": "^5.4.2",
     "prettier": "^3.9.9",
     "tsx": "^4.23.15",
     "typescript": "~7.0.2"

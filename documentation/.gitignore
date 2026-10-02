@@ -1,10 +1,10 @@
 # Dependencies
-/node_modules/
 
 # Production
 /build
 
 # Generated files
+.astro/
 .docusaurus
 .cache-loader
 static/goose-docs-map.md
@@ -12,7 +12,6 @@ static/skills-manifest.json
 static/skills-data-zips/
 
 # Misc
-.DS_Store
 .env.local
 .env.development.local
 .env.test.local

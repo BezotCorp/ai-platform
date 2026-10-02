@@ -98,7 +98,7 @@ export function createWebviewProvider(config: WebviewProviderConfig): WebviewPro
         installUrl: payload.installUrl,
         updateUrl: payload.updateUrl,
         configuredPath: payload.configuredPath,
-      })
+      }),
     );
   };
 
@@ -150,7 +150,7 @@ export function createWebviewProvider(config: WebviewProviderConfig): WebviewPro
     if (isReady) {
       return Promise.resolve();
     }
-    return new Promise(resolve => {
+    return new Promise((resolve) => {
       readyCallbacks.push(resolve);
     });
   };
@@ -167,12 +167,8 @@ export function createWebviewProvider(config: WebviewProviderConfig): WebviewPro
   const getWebviewContent = (webview: vscode.Webview): string => {
     const nonce = getNonce();
 
-    const scriptUri = webview.asWebviewUri(
-      vscode.Uri.joinPath(extensionUri, 'dist', 'webview', 'main.js')
-    );
-    const styleUri = webview.asWebviewUri(
-      vscode.Uri.joinPath(extensionUri, 'dist', 'webview', 'styles.css')
-    );
+    const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, 'dist', 'webview', 'main.js'));
+    const styleUri = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, 'dist', 'webview', 'styles.css'));
 
     return `<!DOCTYPE html>
 <html lang="en">
@@ -193,7 +189,7 @@ export function createWebviewProvider(config: WebviewProviderConfig): WebviewPro
   const resolveWebviewView = (
     webviewView: vscode.WebviewView,
     _context: vscode.WebviewViewResolveContext,
-    _token: vscode.CancellationToken
+    _token: vscode.CancellationToken,
   ): void => {
     view = webviewView;
     isReady = false;

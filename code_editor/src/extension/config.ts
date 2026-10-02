@@ -17,8 +17,8 @@ export function getGooseBinaryPath(): O.Option<string> {
   return pipe(
     path,
     O.fromNullable,
-    O.map(p => p.trim()),
-    O.filter(p => p.length > 0)
+    O.map((p) => p.trim()),
+    O.filter((p) => p.length > 0),
   );
 }
 
@@ -44,7 +44,7 @@ export type ConfigChangeCallback = (e: vscode.ConfigurationChangeEvent) => void;
 
 /** Register a listener for configuration changes */
 export function onConfigChange(callback: ConfigChangeCallback): vscode.Disposable {
-  return vscode.workspace.onDidChangeConfiguration(e => {
+  return vscode.workspace.onDidChangeConfiguration((e) => {
     if (e.affectsConfiguration(CONFIG_SECTION)) {
       callback(e);
     }

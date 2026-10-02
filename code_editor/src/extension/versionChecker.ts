@@ -54,7 +54,7 @@ export function parseVersion(output: string): string | null {
  * @returns Array of numeric segments [major, minor, patch]
  */
 function parseVersionSegments(version: string): readonly [number, number, number] {
-  const parts = version.split('.').map(part => parseInt(part, 10) || 0);
+  const parts = version.split('.').map((part) => parseInt(part, 10) || 0);
   return [parts[0] ?? 0, parts[1] ?? 0, parts[2] ?? 0];
 }
 
@@ -95,11 +95,9 @@ export function meetsMinimumVersion(version: string, minimum: string): boolean {
  * @param binaryPath - Path to the goose binary
  * @returns TaskEither containing VersionCheckResult on success, or VersionMismatchError on failure
  */
-export function checkVersion(
-  binaryPath: string
-): TE.TaskEither<VersionMismatchError, VersionCheckResult> {
+export function checkVersion(binaryPath: string): TE.TaskEither<VersionMismatchError, VersionCheckResult> {
   return () =>
-    new Promise(resolve => {
+    new Promise((resolve) => {
       let stdout = '';
       let stderr = '';
       let resolved = false;
@@ -171,7 +169,7 @@ export function checkVersion(
             E.right({
               version,
               isCompatible: true,
-            })
+            }),
           );
         } else {
           resolveWith(E.left(createVersionMismatchError(version, MINIMUM_VERSION)));

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, test } from 'bun:test';
+import { beforeEach, describe, expect, test } from 'vitest';
 import { SessionEntry } from '../shared/sessionTypes';
 import { createMockMemento, MockMemento } from '../test/mocks/vscode';
 import { createSessionStorage, SessionStorage } from './sessionStorage';

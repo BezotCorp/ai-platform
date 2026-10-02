@@ -69,18 +69,16 @@ function chatReducer(state: ChatState, action: ChatAction): ChatState {
     case 'STREAM_TOKEN':
       return {
         ...state,
-        messages: state.messages.map(msg =>
-          msg.id === action.payload.messageId
-            ? { ...msg, content: msg.content + action.payload.token }
-            : msg
+        messages: state.messages.map((msg) =>
+          msg.id === action.payload.messageId ? { ...msg, content: msg.content + action.payload.token } : msg,
         ),
       };
 
     case 'COMPLETE_GENERATION':
       return {
         ...state,
-        messages: state.messages.map(msg =>
-          msg.id === action.payload.messageId ? { ...msg, status: MessageStatus.COMPLETE } : msg
+        messages: state.messages.map((msg) =>
+          msg.id === action.payload.messageId ? { ...msg, status: MessageStatus.COMPLETE } : msg,
         ),
         isGenerating: false,
         currentResponseId: null,
@@ -89,8 +87,8 @@ function chatReducer(state: ChatState, action: ChatAction): ChatState {
     case 'CANCEL_GENERATION':
       return {
         ...state,
-        messages: state.messages.map(msg =>
-          msg.id === action.payload.messageId ? { ...msg, status: MessageStatus.CANCELLED } : msg
+        messages: state.messages.map((msg) =>
+          msg.id === action.payload.messageId ? { ...msg, status: MessageStatus.CANCELLED } : msg,
         ),
         isGenerating: false,
         currentResponseId: null,
@@ -128,7 +126,7 @@ function chatReducer(state: ChatState, action: ChatAction): ChatState {
       // already streamed partial text before the failure, keep the content
       // (marking it COMPLETE so the spinner stops) -- only drop truly empty
       // placeholders.
-      const cleaned = state.messages.flatMap(msg => {
+      const cleaned = state.messages.flatMap((msg) => {
         if (msg.role !== MessageRole.ASSISTANT || msg.status !== MessageStatus.STREAMING) {
           return [msg];
         }
@@ -200,7 +198,7 @@ export function useChat(): UseChatReturn {
   }, [state.inputValue]);
 
   useEffect(() => {
-    const unsubscribe = onMessage(message => {
+    const unsubscribe = onMessage((message) => {
       if (isStreamTokenMessage(message)) {
         dispatch({
           type: 'STREAM_TOKEN',
@@ -262,7 +260,7 @@ export function useChat(): UseChatReturn {
     const responseId = generateId();
 
     // Convert chips to context for display in message
-    const context: MessageContext[] | undefined = chips?.map(chip => ({
+    const context: MessageContext[] | undefined = chips?.map((chip) => ({
       filePath: chip.filePath,
       fileName: chip.fileName,
       range: chip.range,
@@ -281,7 +279,7 @@ export function useChat(): UseChatReturn {
     dispatch({ type: 'START_GENERATION', payload: { responseId } });
 
     // Convert ContextChip to ContextChipData (only what extension needs)
-    const chipData: ContextChipData[] | undefined = chips?.map(chip => ({
+    const chipData: ContextChipData[] | undefined = chips?.map((chip) => ({
       filePath: chip.filePath,
       range: chip.range,
     }));

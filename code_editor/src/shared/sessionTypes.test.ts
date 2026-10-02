@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'bun:test';
+import { describe, expect, test } from 'vitest';
 import { truncatePath } from './sessionTypes';
 
 describe('truncatePath', () => {
@@ -9,14 +9,14 @@ describe('truncatePath', () => {
   });
 
   test('truncates Unix paths with forward slash separators', () => {
-    expect(
-      truncatePath('/Users/prem/Development/vscode-goose/src/shared/sessionTypes.ts', 30)
-    ).toBe('.../shared/sessionTypes.ts');
+    expect(truncatePath('/Users/prem/Development/vscode-goose/src/shared/sessionTypes.ts', 30)).toBe(
+      '.../shared/sessionTypes.ts',
+    );
   });
 
   test('truncates Windows paths with backslash separators', () => {
-    expect(
-      truncatePath('C:\\Users\\prem\\Development\\vscode-goose\\src\\shared\\sessionTypes.ts', 30)
-    ).toBe('...\\shared\\sessionTypes.ts');
+    expect(truncatePath('C:\\Users\\prem\\Development\\vscode-goose\\src\\shared\\sessionTypes.ts', 30)).toBe(
+      '...\\shared\\sessionTypes.ts',
+    );
   });
 });

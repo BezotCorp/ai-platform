@@ -24,11 +24,11 @@ get_latest_version() {
         return
     fi
 
-    local latest=$(find "${MIGRATIONS_DIR}" -mindepth 1 -maxdepth 1 -type d -name "[0-9]*" 2>/dev/null | \
-                   sed 's/.*\/\([0-9]*\).*/\1/' | \
-                   sed 's/^0*//' | \
-                   sort -n | \
-                   tail -1)
+    local latest=$(find "${MIGRATIONS_DIR}" -mindepth 1 -maxdepth 1 -type d -name "[0-9]*" 2>/dev/null |
+        sed 's/.*\/\([0-9]*\).*/\1/' |
+        sed 's/^0*//' |
+        sort -n |
+        tail -1)
 
     echo "${latest:-0}"
 }
@@ -238,7 +238,7 @@ apply_migration() {
         return 1
     fi
 
-    if ! sqlite3 "${DB_PATH}" < "${up_sql}"; then
+    if ! sqlite3 "${DB_PATH}" <"${up_sql}"; then
         echo -e "${RED}ERROR: Migration to v${target_version} failed${NC}" >&2
         echo -e "${YELLOW}Check the SQL file: ${up_sql}${NC}"
         return 1
@@ -266,7 +266,7 @@ rollback_migration() {
         return 1
     fi
 
-    if ! sqlite3 "${DB_PATH}" < "${down_sql}"; then
+    if ! sqlite3 "${DB_PATH}" <"${down_sql}"; then
         echo -e "${RED}ERROR: Rollback from v${from_version} failed${NC}" >&2
         echo -e "${YELLOW}Check the SQL file: ${down_sql}${NC}"
         return 1
@@ -458,7 +458,7 @@ validate_sql_syntax() {
                 fi
             fi
         fi
-    done <<< "$lines"
+    done <<<"$lines"
 
     return 0
 }
@@ -530,7 +530,7 @@ generate_rollback_sql() {
         fi
     done
 
-    for ((i=${#rollback_stmts[@]}-1; i>=0; i--)); do
+    for ((i = ${#rollback_stmts[@]} - 1; i >= 0; i--)); do
         echo "${rollback_stmts[$i]}"
     done
 
@@ -600,10 +600,10 @@ generate_migrations() {
 
     mkdir -p "${MIGRATIONS_DIR}"
 
-    local max_version=$(grep -E '^\s+[0-9]+ =>' "${RUST_SESSION_MANAGER}" | \
-                         sed 's/[^0-9]//g' | \
-                         sort -n | \
-                         tail -1)
+    local max_version=$(grep -E '^\s+[0-9]+ =>' "${RUST_SESSION_MANAGER}" |
+        sed 's/[^0-9]//g' |
+        sort -n |
+        tail -1)
 
     if [[ -z "$max_version" ]]; then
         max_version=2
@@ -643,17 +643,17 @@ generate_migrations() {
         local migration_dir="${MIGRATIONS_DIR}/${padded_version}_${migration_name}"
         mkdir -p "$migration_dir"
 
-        echo "BEGIN TRANSACTION;" > "${migration_dir}/up.sql"
-        echo "" >> "${migration_dir}/up.sql"
-        echo "$sql" >> "${migration_dir}/up.sql"
-        echo "" >> "${migration_dir}/up.sql"
-        echo "INSERT INTO schema_version (version) VALUES ($version);" >> "${migration_dir}/up.sql"
-        echo "" >> "${migration_dir}/up.sql"
-        echo "COMMIT;" >> "${migration_dir}/up.sql"
+        echo "BEGIN TRANSACTION;" >"${migration_dir}/up.sql"
+        echo "" >>"${migration_dir}/up.sql"
+        echo "$sql" >>"${migration_dir}/up.sql"
+        echo "" >>"${migration_dir}/up.sql"
+        echo "INSERT INTO schema_version (version) VALUES ($version);" >>"${migration_dir}/up.sql"
+        echo "" >>"${migration_dir}/up.sql"
+        echo "COMMIT;" >>"${migration_dir}/up.sql"
 
-        generate_rollback_sql "$version" "$sql" > "${migration_dir}/down.sql"
+        generate_rollback_sql "$version" "$sql" >"${migration_dir}/down.sql"
 
-        generate_metadata "$version" "$sql" > "${migration_dir}/metadata.txt"
+        generate_metadata "$version" "$sql" >"${migration_dir}/metadata.txt"
 
         echo -e "${GREEN}✓ Generated migration $padded_version: ${migration_dir##*/}${NC}"
         generated_count=$((generated_count + 1))
@@ -786,90 +786,90 @@ main() {
 
     while [[ $# -gt 0 ]]; do
         case "$1" in
-            --dry-run)
-                DRY_RUN=true
-                shift
-                ;;
-            --yes|-y)
-                SKIP_CONFIRM=true
-                shift
-                ;;
-            --clean)
-                CLEAN_GENERATE=true
-                shift
-                ;;
-            --help|-h)
-                show_help
-                exit 0
-                ;;
-            -*)
-                echo -e "${RED}ERROR: Unknown flag: $1${NC}" >&2
-                echo ""
-                show_help
-                exit 1
-                ;;
-            *)
-                non_flag_args+=("$1")
-                shift
-                ;;
+        --dry-run)
+            DRY_RUN=true
+            shift
+            ;;
+        --yes | -y)
+            SKIP_CONFIRM=true
+            shift
+            ;;
+        --clean)
+            CLEAN_GENERATE=true
+            shift
+            ;;
+        --help | -h)
+            show_help
+            exit 0
+            ;;
+        -*)
+            echo -e "${RED}ERROR: Unknown flag: $1${NC}" >&2
+            echo ""
+            show_help
+            exit 1
+            ;;
+        *)
+            non_flag_args+=("$1")
+            shift
+            ;;
         esac
     done
 
     local command=${non_flag_args[0]:-help}
 
     case "${command}" in
-        status)
-            show_status
-            ;;
-        migrate-to)
-            migrate_to_version "${non_flag_args[1]}"
-            ;;
-        history)
-            show_version_history
-            ;;
-        generate-migrations)
-            generate_migrations
-            ;;
-        backup)
-            create_backup
-            ;;
-        list-backups)
-            list_backups
-            ;;
-        restore)
-            restore_backup "${non_flag_args[1]}"
-            ;;
-        migrate)
-            local latest_version=$(get_latest_version)
-            echo -e "${YELLOW}Note: 'migrate' is deprecated. Use 'migrate-to ${latest_version}' instead.${NC}"
-            echo ""
-            migrate_to_version ${latest_version}
-            ;;
-        rollback)
-            echo -e "${YELLOW}Note: 'rollback' is deprecated. Use 'migrate-to <version>' instead.${NC}"
-            echo -e "${YELLOW}Use '$0 history' to see available versions.${NC}"
-            echo ""
-            show_version_history
-            ;;
-        compatible-with)
-            echo -e "${RED}ERROR: 'compatible-with' command has been removed.${NC}" >&2
-            echo ""
-            echo "The script now uses a generic migration system."
-            echo "To migrate your database, use: $0 migrate-to <version>"
-            echo ""
-            echo "Available migrations:"
-            show_version_history
-            exit 1
-            ;;
-        help)
-            show_help
-            ;;
-        *)
-            echo -e "${RED}ERROR: Unknown command: ${command}${NC}" >&2
-            echo ""
-            show_help
-            exit 1
-            ;;
+    status)
+        show_status
+        ;;
+    migrate-to)
+        migrate_to_version "${non_flag_args[1]}"
+        ;;
+    history)
+        show_version_history
+        ;;
+    generate-migrations)
+        generate_migrations
+        ;;
+    backup)
+        create_backup
+        ;;
+    list-backups)
+        list_backups
+        ;;
+    restore)
+        restore_backup "${non_flag_args[1]}"
+        ;;
+    migrate)
+        local latest_version=$(get_latest_version)
+        echo -e "${YELLOW}Note: 'migrate' is deprecated. Use 'migrate-to ${latest_version}' instead.${NC}"
+        echo ""
+        migrate_to_version ${latest_version}
+        ;;
+    rollback)
+        echo -e "${YELLOW}Note: 'rollback' is deprecated. Use 'migrate-to <version>' instead.${NC}"
+        echo -e "${YELLOW}Use '$0 history' to see available versions.${NC}"
+        echo ""
+        show_version_history
+        ;;
+    compatible-with)
+        echo -e "${RED}ERROR: 'compatible-with' command has been removed.${NC}" >&2
+        echo ""
+        echo "The script now uses a generic migration system."
+        echo "To migrate your database, use: $0 migrate-to <version>"
+        echo ""
+        echo "Available migrations:"
+        show_version_history
+        exit 1
+        ;;
+    help)
+        show_help
+        ;;
+    *)
+        echo -e "${RED}ERROR: Unknown command: ${command}${NC}" >&2
+        echo ""
+        show_help
+        exit 1
+        ;;
     esac
 }
 

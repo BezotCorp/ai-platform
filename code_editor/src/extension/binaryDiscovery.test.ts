@@ -1,12 +1,13 @@
-import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import * as E from 'fp-ts/Either';
 import { BinaryDiscoveryConfig } from '../shared/types';
 
-// Track paths that should "exist" for our tests
-let mockExistingPaths: Set<string> = new Set();
+const { mockExistingPaths } = vi.hoisted(() => ({
+  mockExistingPaths: new Set<string>(),
+}));
 
 // Mock fs module before importing binaryDiscovery
-mock.module('fs', () => ({
+vi.mock('fs', () => ({
   accessSync: (path: string, _mode?: number) => {
     if (mockExistingPaths.has(path)) {
       return undefined;
@@ -21,17 +22,11 @@ mock.module('fs', () => ({
 }));
 
 // Import the module under test AFTER mocking fs
-import {
-  checkPathExists,
-  discoverBinary,
-  expandPath,
-  findInPath,
-  findInPlatformPaths,
-} from './binaryDiscovery';
+import { checkPathExists, discoverBinary, expandPath, findInPath, findInPlatformPaths } from './binaryDiscovery';
 
 describe('binaryDiscovery', () => {
   beforeEach(() => {
-    mockExistingPaths = new Set<string>();
+    mockExistingPaths.clear();
   });
 
   afterEach(() => {

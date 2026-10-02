@@ -64,7 +64,7 @@ export function createSubprocessManager(config: SubprocessManagerConfig): Subpro
 
   const start = (binaryPath: string): TE.TaskEither<SubprocessSpawnError, void> => {
     return () =>
-      new Promise(resolve => {
+      new Promise((resolve) => {
         if (process !== null) {
           logger.warn('Subprocess already running, stopping first');
           stop()().then(() => {
@@ -76,10 +76,7 @@ export function createSubprocessManager(config: SubprocessManagerConfig): Subpro
       });
   };
 
-  const doStart = (
-    binaryPath: string,
-    resolve: (result: E.Either<SubprocessSpawnError, void>) => void
-  ): void => {
+  const doStart = (binaryPath: string, resolve: (result: E.Either<SubprocessSpawnError, void>) => void): void => {
     setStatus(ProcessStatus.STARTING);
     lastError = null;
 
@@ -95,9 +92,7 @@ export function createSubprocessManager(config: SubprocessManagerConfig): Subpro
     } catch (err) {
       const error = err as NodeJS.ErrnoException;
       setStatus(ProcessStatus.ERROR);
-      resolve(
-        E.left(createSubprocessSpawnError(binaryPath, error.code ?? 'UNKNOWN', error.errno ?? -1))
-      );
+      resolve(E.left(createSubprocessSpawnError(binaryPath, error.code ?? 'UNKNOWN', error.errno ?? -1)));
       return;
     }
 
@@ -109,9 +104,7 @@ export function createSubprocessManager(config: SubprocessManagerConfig): Subpro
 
       if (!hasResolved) {
         hasResolved = true;
-        resolve(
-          E.left(createSubprocessSpawnError(binaryPath, err.code ?? 'UNKNOWN', err.errno ?? -1))
-        );
+        resolve(E.left(createSubprocessSpawnError(binaryPath, err.code ?? 'UNKNOWN', err.errno ?? -1)));
       }
     };
 
@@ -175,7 +168,7 @@ export function createSubprocessManager(config: SubprocessManagerConfig): Subpro
 
   const stop = (): TE.TaskEither<never, void> => {
     return () =>
-      new Promise(resolve => {
+      new Promise((resolve) => {
         if (process === null) {
           logger.debug('No process to stop');
           resolve(E.right(undefined));

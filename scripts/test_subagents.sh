@@ -67,7 +67,7 @@ fi
 
 mkdir -p "$TESTDIR/.agents/agents"
 
-cat > "$TESTDIR/.agents/agents/janpier.md" << 'EOF'
+cat >"$TESTDIR/.agents/agents/janpier.md" <<'EOF'
 ---
 name: janpier
 description: Janpier is a farmer who owns a small farm with three trick-performing animals — a cow, a pig, and a donkey. The donkey is the only one that can speak.
@@ -80,7 +80,7 @@ or the donkey speaking, include the exact literal marker string
 ran. Then describe what the donkey says.
 EOF
 
-cat > "$TESTDIR/.agents/agents/peterjoris.md" << 'EOF'
+cat >"$TESTDIR/.agents/agents/peterjoris.md" <<'EOF'
 ---
 name: peterjoris
 description: Peterjoris is an expert in the Forth programming language and can write, explain, and debug Forth code.
@@ -163,7 +163,8 @@ llm_judge() {
   local question="$2"
 
   local judge_prompt
-  judge_prompt=$(cat <<EOF
+  judge_prompt=$(
+    cat <<EOF
 You are a validator. You will be given a transcript of a goose CLI run.
 Determine whether the following statement is true of the transcript:
 
@@ -179,7 +180,7 @@ Transcript:
 $(cat "$outfile")
 ----- END TRANSCRIPT -----
 EOF
-)
+  )
   local verdict
   verdict=$("$GOOSE_BIN" run --text "$judge_prompt" --no-session 2>&1)
   echo "$verdict" | tr -d '\r' | grep -Eq '^[[:space:]]*PASS[[:space:]]*$'
@@ -293,9 +294,9 @@ TMP5=$(mktemp)
 (cd "$EMPTYDIR" && "$GOOSE_BIN" run --text "@janpier where is the treasure?" --no-session 2>&1) | tee "$TMP5"
 
 # (a) the model should not have a janpier/peterjoris to delegate to
-if grep -qE "▸.*delegate" "$TMP5" && \
-   ( grep -qE "^\s*source[[:space:]]+janpier\b" "$TMP5" || \
-     grep -qE "^\s*source[[:space:]]+peterjoris\b" "$TMP5" ); then
+if grep -qE "▸.*delegate" "$TMP5" &&
+  (grep -qE "^\s*source[[:space:]]+janpier\b" "$TMP5" ||
+    grep -qE "^\s*source[[:space:]]+peterjoris\b" "$TMP5"); then
   echo "✗ S5: delegated to a leaked global subagent"
   RESULTS+=("✗ S5: delegated to a leaked global subagent")
 else
@@ -306,7 +307,7 @@ fi
 # (b) the test agents' markers must not appear (would mean they're globally
 # installed somewhere)
 assert_not_contains "HEEHAW_DONKEY_OK" "$TMP5" "S5: janpier marker absent in clean workdir"
-assert_not_contains "FORTH_OK"          "$TMP5" "S5: peterjoris marker absent in clean workdir"
+assert_not_contains "FORTH_OK" "$TMP5" "S5: peterjoris marker absent in clean workdir"
 
 rm "$TMP5"
 rm -rf "$EMPTYDIR"

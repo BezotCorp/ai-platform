@@ -1,6 +1,6 @@
 {
   "name": "oidc-proxy",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "private": true,
   "scripts": {
     "dev": "wrangler dev",
@@ -9,7 +9,7 @@
   },
   "devDependencies": {
     "vitest": "^5.0.3",
-    "wrangler": "^4.144.0"
+    "wrangler": "^4.146.0"
   },
   "type": "module"
 }

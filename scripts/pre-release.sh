@@ -49,7 +49,7 @@ if ! curl -fSL --connect-timeout 10 -o "$TMPDIR/goose.zip" "$DOWNLOAD_URL" 2>/de
         echo "Could not find artifact '$ARTIFACT_NAME' for run $RUN_ID"
         exit 1
     fi
-    gh api "repos/$REPO/actions/artifacts/$ARTIFACT_ID/zip" > "$TMPDIR/goose.zip"
+    gh api "repos/$REPO/actions/artifacts/$ARTIFACT_ID/zip" >"$TMPDIR/goose.zip"
 fi
 echo "Done."
 
@@ -76,7 +76,7 @@ APP_PATH="$DEST/$APP_NAME"
 # Remove quarantine and sign with entitlements
 xattr -r -d com.apple.quarantine "$APP_PATH" 2>/dev/null || true
 
-cat > "$PLIST" << 'EOF'
+cat >"$PLIST" <<'EOF'
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">

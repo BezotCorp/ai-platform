@@ -41,7 +41,7 @@ echo ""
 
 # Create sample code files for analysis
 echo "Creating sample code files for testing..."
-cat > "$TESTDIR/sample.rs" << 'EOF'
+cat >"$TESTDIR/sample.rs" <<'EOF'
 // TODO: Add error handling
 fn calculate(x: i32, y: i32) -> i32 {
     x + y
@@ -53,7 +53,7 @@ fn test_calculate() {
 }
 EOF
 
-cat > "$TESTDIR/sample.py" << 'EOF'
+cat >"$TESTDIR/sample.py" <<'EOF'
 # FIXME: Optimize this function
 def process_data(items):
     """Process a list of items"""
@@ -63,7 +63,7 @@ def test_process_data():
     assert process_data([1, 2, 3]) == [2, 4, 6]
 EOF
 
-cat > "$TESTDIR/README.md" << 'EOF'
+cat >"$TESTDIR/README.md" <<'EOF'
 # Sample Project
 This is a test project for analyzing code patterns.
 ## TODO

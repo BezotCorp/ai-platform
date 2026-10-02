@@ -2,11 +2,7 @@
  * Bridge module for webview-extension communication via postMessage.
  */
 
-import {
-  AnyWebviewMessage,
-  createWebviewReadyMessage,
-  WebviewMessageType,
-} from '../shared/messages';
+import { AnyWebviewMessage, createWebviewReadyMessage, WebviewMessageType } from '../shared/messages';
 
 declare global {
   interface Window {

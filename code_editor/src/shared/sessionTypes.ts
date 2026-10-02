@@ -68,11 +68,7 @@ export function groupSessionsByDate(sessions: readonly SessionEntry[]): GroupedS
 
   for (const session of sessions) {
     const sessionDate = new Date(session.createdAt);
-    const sessionDay = new Date(
-      sessionDate.getFullYear(),
-      sessionDate.getMonth(),
-      sessionDate.getDate()
-    );
+    const sessionDay = new Date(sessionDate.getFullYear(), sessionDate.getMonth(), sessionDate.getDate());
 
     let label: string;
     if (sessionDay.getTime() === today.getTime()) {
@@ -105,9 +101,7 @@ export function groupSessionsByDate(sessions: readonly SessionEntry[]): GroupedS
 
   return sortedEntries.map(([label, groupSessions]) => ({
     label,
-    sessions: [...groupSessions].sort(
-      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    ),
+    sessions: [...groupSessions].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
   }));
 }
 

@@ -78,8 +78,9 @@ uv run proxy.py --mode "u *"
 ```
 
 Command-line options:
+
 - `--port PORT` - Port to listen on (default: 8888)
-- `--mode COMMAND` - Initial error mode command (e.g., "c 3", "r 30%", "u *", "n")
+- `--mode COMMAND` - Initial error mode command (e.g., "c 3", "r 30%", "u \*", "n")
   - Same syntax as interactive commands
 - `--no-stdin` - Disable stdin reader (for background/automated mode)
 
@@ -147,6 +148,7 @@ Then run Goose normally. The proxy will intercept API requests and you can manua
 ### Streaming Details
 
 The proxy automatically detects and handles streaming responses by:
+
 - Checking for `text/event-stream` content type (Server-Sent Events)
 - Using `StreamResponse` to forward chunks in real-time without buffering
 
@@ -157,6 +159,7 @@ This means streaming completions from providers like OpenAI, Anthropic, and Data
 The proxy returns realistic error responses for each provider:
 
 ### Context Length Exceeded (Command: `c`)
+
 - **OpenAI**: 400 with `context_length_exceeded` error
 - **Anthropic**: 400 with "prompt is too long" message
 - **Google**: 400 with `INVALID_ARGUMENT` status
@@ -165,6 +168,7 @@ The proxy returns realistic error responses for each provider:
 - **Databricks**: 400 with `INVALID_PARAMETER_VALUE` error
 
 ### Rate Limit (Command: `r`)
+
 - **OpenAI**: 429 with `rate_limit_exceeded` error
 - **Anthropic**: 429 with `rate_limit_error` type
 - **Google**: 429 with `RESOURCE_EXHAUSTED` status
@@ -173,6 +177,7 @@ The proxy returns realistic error responses for each provider:
 - **Databricks**: 429 with `RATE_LIMIT_EXCEEDED` error
 
 ### Server Error (Command: `u`)
+
 - **OpenAI**: 500 with `internal_server_error` error
 - **Anthropic**: 529 with `overloaded_error` type
 - **Google**: 503 with `UNAVAILABLE` status
@@ -182,7 +187,7 @@ The proxy returns realistic error responses for each provider:
 
 ## Example Session
 
-```
+```text
 $ uv run proxy.py
 ============================================================
 🔧 Provider Error Proxy

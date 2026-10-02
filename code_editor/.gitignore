@@ -1,5 +1,4 @@
 # Dependencies
-node_modules/
 .pnp
 .pnp.js
 npm-debug.log*
@@ -35,16 +34,12 @@ bin/*.exe
 .env.production.local
 
 # OS specific
-.DS_Store
 Thumbs.db
 
 # Debug files
-debug*.log
 coverage/
 eslint-report.*
 
-# Bun lockfile (if using bun)
-bun.lockb
 
 # https://rp1.run knowledge files
 !.rp1/

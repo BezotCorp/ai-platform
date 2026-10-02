@@ -81,7 +81,7 @@ const UPDATE_URL = 'https://goose-docs.ai/docs/guides/updating-goose/';
 /** Create a BinaryNotFoundError */
 export function createBinaryNotFoundError(
   searchedPaths: readonly string[],
-  platform: NodeJS.Platform
+  platform: NodeJS.Platform,
 ): BinaryNotFoundError {
   return {
     _tag: 'BinaryNotFoundError',
@@ -96,7 +96,7 @@ export function createBinaryNotFoundError(
 /** Create a BinaryNotFoundError for an explicitly configured but invalid `goose.binaryPath` */
 export function createConfiguredPathInvalidError(
   configuredPath: string,
-  platform: NodeJS.Platform
+  platform: NodeJS.Platform,
 ): BinaryNotFoundError {
   return {
     _tag: 'BinaryNotFoundError',
@@ -110,11 +110,7 @@ export function createConfiguredPathInvalidError(
 }
 
 /** Create a SubprocessSpawnError */
-export function createSubprocessSpawnError(
-  binaryPath: string,
-  code: string,
-  errno: number
-): SubprocessSpawnError {
+export function createSubprocessSpawnError(binaryPath: string, code: string, errno: number): SubprocessSpawnError {
   return {
     _tag: 'SubprocessSpawnError',
     message: `Failed to spawn subprocess at ${binaryPath}: ${code} (errno: ${errno})`,
@@ -126,16 +122,8 @@ export function createSubprocessSpawnError(
 }
 
 /** Create a SubprocessCrashError */
-export function createSubprocessCrashError(
-  exitCode: number | null,
-  signal: string | null
-): SubprocessCrashError {
-  const reason =
-    signal !== null
-      ? `signal ${signal}`
-      : exitCode !== null
-        ? `exit code ${exitCode}`
-        : 'unknown reason';
+export function createSubprocessCrashError(exitCode: number | null, signal: string | null): SubprocessCrashError {
+  const reason = signal !== null ? `signal ${signal}` : exitCode !== null ? `exit code ${exitCode}` : 'unknown reason';
   return {
     _tag: 'SubprocessCrashError',
     message: `Subprocess exited unexpectedly: ${reason}`,
@@ -157,11 +145,7 @@ export function createJsonRpcParseError(rawData: string, parseError: string): Js
 }
 
 /** Create a JsonRpcTimeoutError */
-export function createJsonRpcTimeoutError(
-  method: string,
-  timeoutMs: number,
-  requestId: number
-): JsonRpcTimeoutError {
+export function createJsonRpcTimeoutError(method: string, timeoutMs: number, requestId: number): JsonRpcTimeoutError {
   return {
     _tag: 'JsonRpcTimeoutError',
     message: `JSON-RPC request '${method}' (id: ${requestId}) timed out after ${timeoutMs}ms`,
@@ -184,10 +168,7 @@ export function createJsonRpcError(code: number, message: string, data?: unknown
 }
 
 /** Create a VersionMismatchError */
-export function createVersionMismatchError(
-  detectedVersion: string,
-  minimumVersion: string
-): VersionMismatchError {
+export function createVersionMismatchError(detectedVersion: string, minimumVersion: string): VersionMismatchError {
   return {
     _tag: 'VersionMismatchError',
     message: `Goose version ${detectedVersion} is below minimum required ${minimumVersion}`,
@@ -270,7 +251,7 @@ export function formatError(error: GooseError): string {
       }
       return (
         `Goose binary not found.\n` +
-        `Searched paths:\n${error.searchedPaths.map(p => `  - ${p}`).join('\n')}\n` +
+        `Searched paths:\n${error.searchedPaths.map((p) => `  - ${p}`).join('\n')}\n` +
         `Install Goose: ${error.installationUrl}`
       );
     case 'SubprocessSpawnError':
@@ -327,9 +308,6 @@ export function formatErrorDetail(error: GooseError): string {
   if (detail === '') {
     return error.message;
   }
-  const truncated =
-    detail.length > MAX_ERROR_DETAIL_LENGTH
-      ? `${detail.slice(0, MAX_ERROR_DETAIL_LENGTH)}…`
-      : detail;
+  const truncated = detail.length > MAX_ERROR_DETAIL_LENGTH ? `${detail.slice(0, MAX_ERROR_DETAIL_LENGTH)}…` : detail;
   return `${error.message} — ${truncated}`;
 }

@@ -28,15 +28,10 @@ const initialState: ContextChipsState = {
 };
 
 function formatChipDisplayName(chip: ContextChip): string {
-  return chip.range
-    ? `${chip.fileName}:${chip.range.startLine}-${chip.range.endLine}`
-    : chip.fileName;
+  return chip.range ? `${chip.fileName}:${chip.range.startLine}-${chip.range.endLine}` : chip.fileName;
 }
 
-function contextChipsReducer(
-  state: ContextChipsState,
-  action: ContextChipsAction
-): ContextChipsState {
+function contextChipsReducer(state: ContextChipsState, action: ContextChipsAction): ContextChipsState {
   switch (action.type) {
     case 'ADD_CHIP': {
       const displayName = formatChipDisplayName(action.payload);
@@ -48,7 +43,7 @@ function contextChipsReducer(
     }
 
     case 'REMOVE_CHIP': {
-      const newChips = state.chips.filter(chip => chip.id !== action.payload.chipId);
+      const newChips = state.chips.filter((chip) => chip.id !== action.payload.chipId);
       const newFocusedIndex =
         state.focusedIndex !== null && state.focusedIndex >= newChips.length
           ? newChips.length > 0
@@ -110,7 +105,7 @@ export function useContextChips(): UseContextChipsReturn {
   const [state, dispatch] = useReducer(contextChipsReducer, initialState);
 
   useEffect(() => {
-    const unsubscribe = onMessage(message => {
+    const unsubscribe = onMessage((message) => {
       if (isAddContextChipMessage(message)) {
         dispatch({ type: 'ADD_CHIP', payload: message.payload.chip });
       }
@@ -125,11 +120,11 @@ export function useContextChips(): UseContextChipsReturn {
 
   const removeChip = useCallback(
     (chipId: string) => {
-      const chip = state.chips.find(c => c.id === chipId);
+      const chip = state.chips.find((c) => c.id === chipId);
       const chipName = chip ? formatChipDisplayName(chip) : chipId;
       dispatch({ type: 'REMOVE_CHIP', payload: { chipId, chipName } });
     },
-    [state.chips]
+    [state.chips],
   );
 
   const clearChips = useCallback(() => {
@@ -142,9 +137,9 @@ export function useContextChips(): UseContextChipsReturn {
 
   const hasDuplicate = useCallback(
     (filePath: string, range?: LineRange): boolean => {
-      return state.chips.some(chip => chip.filePath === filePath && rangesEqual(chip.range, range));
+      return state.chips.some((chip) => chip.filePath === filePath && rangesEqual(chip.range, range));
     },
-    [state.chips]
+    [state.chips],
   );
 
   const getContextPrefix = useCallback((): string => {
@@ -152,7 +147,7 @@ export function useContextChips(): UseContextChipsReturn {
       return '';
     }
 
-    const lines = state.chips.map(chip => {
+    const lines = state.chips.map((chip) => {
       if (chip.range) {
         return `- ${chip.filePath}:${chip.range.startLine}-${chip.range.endLine}`;
       }

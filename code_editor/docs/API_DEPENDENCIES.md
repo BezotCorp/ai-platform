@@ -12,19 +12,19 @@ This extension communicates with goose via the **[Agent Communication Protocol (
 
 ### Methods Used
 
-| Method | Purpose |
-|--------|---------|
-| `initialize` | Initialize ACP connection |
-| `session/new` | Create new chat session |
-| `session/load` | Load session with history |
-| `session/prompt` | Send user message |
+| Method           | Purpose                   |
+| ---------------- | ------------------------- |
+| `initialize`     | Initialize ACP connection |
+| `session/new`    | Create new chat session   |
+| `session/load`   | Load session with history |
+| `session/prompt` | Send user message         |
 
 ### Notifications Handled
 
-| Notification | Purpose |
-|--------------|---------|
+| Notification     | Purpose                   |
+| ---------------- | ------------------------- |
 | `session/update` | Streaming response chunks |
-| `session/cancel` | Cancel generation |
+| `session/cancel` | Cancel generation         |
 
 ### Content Blocks
 

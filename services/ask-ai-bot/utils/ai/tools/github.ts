@@ -1,7 +1,7 @@
-import { Octokit } from "@octokit/rest";
+import { Octokit } from '@octokit/rest';
 
-const REPO_OWNER = "aaif-goose";
-const REPO_NAME = "goose";
+const REPO_OWNER = 'aaif-goose';
+const REPO_NAME = 'goose';
 
 let octokit: Octokit | null = null;
 
@@ -37,17 +37,17 @@ export interface GitHubComment {
 export async function searchGitHub(
   query: string,
   options: {
-    sort?: "created" | "updated" | "comments";
-    order?: "asc" | "desc";
-    state?: "open" | "closed" | "all";
+    sort?: 'created' | 'updated' | 'comments';
+    order?: 'asc' | 'desc';
+    state?: 'open' | 'closed' | 'all';
     limit?: number;
   } = {},
 ): Promise<GitHubItem[]> {
-  const { sort, order = "desc", state = "all", limit = 10 } = options;
+  const { sort, order = 'desc', state = 'all', limit = 10 } = options;
   const api = getOctokit();
 
-  const sanitized = query.replace(/\b(?:repo|org|user):\S+/gi, "").trim();
-  const q = `repo:${REPO_OWNER}/${REPO_NAME} ${sanitized}${state !== "all" ? ` state:${state}` : ""}`;
+  const sanitized = query.replace(/\b(?:repo|org|user):\S+/gi, '').trim();
+  const q = `repo:${REPO_OWNER}/${REPO_NAME} ${sanitized}${state !== 'all' ? ` state:${state}` : ''}`;
 
   const response = await api.rest.search.issuesAndPullRequests({
     q,
@@ -60,13 +60,11 @@ export async function searchGitHub(
     title: item.title,
     state: item.state,
     isMerged: !!item.pull_request?.merged_at,
-    author: item.user?.login ?? "unknown",
+    author: item.user?.login ?? 'unknown',
     createdAt: item.created_at,
     updatedAt: item.updated_at,
-    labels: item.labels.map((l: any) =>
-      typeof l === "string" ? l : (l.name ?? ""),
-    ),
-    body: item.body ?? "",
+    labels: item.labels.map((l: any) => (typeof l === 'string' ? l : (l.name ?? ''))),
+    body: item.body ?? '',
     comments: item.comments,
     url: item.html_url,
   }));
@@ -87,22 +85,17 @@ export async function getGitHubItem(number: number): Promise<GitHubItem> {
     title: item.title,
     state: item.state,
     isMerged: !!item.pull_request?.merged_at,
-    author: item.user?.login ?? "unknown",
+    author: item.user?.login ?? 'unknown',
     createdAt: item.created_at,
     updatedAt: item.updated_at,
-    labels: item.labels.map((l: any) =>
-      typeof l === "string" ? l : (l.name ?? ""),
-    ),
-    body: item.body ?? "",
+    labels: item.labels.map((l: any) => (typeof l === 'string' ? l : (l.name ?? ''))),
+    body: item.body ?? '',
     comments: item.comments,
     url: item.html_url,
   };
 }
 
-export async function getGitHubItemComments(
-  number: number,
-  limit: number = 30,
-): Promise<GitHubComment[]> {
+export async function getGitHubItemComments(number: number, limit: number = 30): Promise<GitHubComment[]> {
   const api = getOctokit();
   const perPage = Math.min(limit, 100);
   const comments: GitHubComment[] = [];
@@ -120,9 +113,9 @@ export async function getGitHubItemComments(
 
     for (const comment of response.data) {
       comments.push({
-        author: comment.user?.login ?? "unknown",
+        author: comment.user?.login ?? 'unknown',
         createdAt: comment.created_at,
-        body: comment.body ?? "",
+        body: comment.body ?? '',
       });
       if (comments.length >= limit) break;
     }

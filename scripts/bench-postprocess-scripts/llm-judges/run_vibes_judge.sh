@@ -3,7 +3,7 @@
 # This script is called by the benchmark runner with the eval results file as an argument
 
 # Get the directory where this script is located
-SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Get the eval results file path from the first argument
 EVAL_RESULTS_FILE="$1"

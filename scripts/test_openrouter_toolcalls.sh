@@ -31,35 +31,35 @@ RUN_TIMEOUT=180
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    -n|--count)
-      MODEL_COUNT="$2"
-      shift 2
-      ;;
-    -m|--models)
-      MODEL_LIST="$2"
-      shift 2
-      ;;
-    -o|--output-dir)
-      OUTPUT_DIR="$2"
-      shift 2
-      ;;
-    -s|--sort)
-      MODEL_SORT="$2"
-      shift 2
-      ;;
-    --run-timeout)
-      RUN_TIMEOUT="$2"
-      shift 2
-      ;;
-    -h|--help)
-      show_usage
-      exit 0
-      ;;
-    *)
-      echo "Error: Unknown option: $1"
-      show_usage
-      exit 1
-      ;;
+  -n | --count)
+    MODEL_COUNT="$2"
+    shift 2
+    ;;
+  -m | --models)
+    MODEL_LIST="$2"
+    shift 2
+    ;;
+  -o | --output-dir)
+    OUTPUT_DIR="$2"
+    shift 2
+    ;;
+  -s | --sort)
+    MODEL_SORT="$2"
+    shift 2
+    ;;
+  --run-timeout)
+    RUN_TIMEOUT="$2"
+    shift 2
+    ;;
+  -h | --help)
+    show_usage
+    exit 0
+    ;;
+  *)
+    echo "Error: Unknown option: $1"
+    show_usage
+    exit 1
+    ;;
   esac
 done
 
@@ -106,7 +106,7 @@ mkdir -p "$OUTPUT_DIR"
 
 MODELS=()
 if [[ -n "$MODEL_LIST" ]]; then
-  IFS=',' read -ra MODELS <<< "$MODEL_LIST"
+  IFS=',' read -ra MODELS <<<"$MODEL_LIST"
 else
   OPENROUTER_HOST="${OPENROUTER_HOST:-https://openrouter.ai}"
   MODELS_URL="$OPENROUTER_HOST/api/v1/models?supported_parameters=tools&sort=$MODEL_SORT"
@@ -115,7 +115,7 @@ else
   MODELS_JSON=$(curl --fail --silent --show-error --max-time 30 "$MODELS_URL")
   while IFS= read -r model; do
     MODELS+=("$model")
-  done < <(jq -r --argjson limit "$MODEL_COUNT" '.data[:$limit][] | .id' <<< "$MODELS_JSON")
+  done < <(jq -r --argjson limit "$MODEL_COUNT" '.data[:$limit][] | .id' <<<"$MODELS_JSON")
 fi
 
 if [[ ${#MODELS[@]} -eq 0 ]]; then
@@ -126,7 +126,7 @@ fi
 TESTDIR=$(mktemp -d)
 trap 'rm -rf "$TESTDIR"' EXIT
 
-cat > "$TESTDIR/weather.py" << 'EOF'
+cat >"$TESTDIR/weather.py" <<'EOF'
 from typing import Annotated
 from fastmcp import FastMCP
 
@@ -140,7 +140,7 @@ def get_weather(
     return f"GOOSE_TOOL_CALL_OK: The weather in {location} is 68 F and clear."
 EOF
 
-cat > "$TESTDIR/recipe.yaml" << 'EOF'
+cat >"$TESTDIR/recipe.yaml" <<'EOF'
 title: OpenRouter Tool Call Test
 description: Test a model can call a simple MCP tool through goose
 prompt: Use the get_weather tool to check the weather in San Francisco. Do not answer from memory.
@@ -236,7 +236,7 @@ for model in "${MODELS[@]}"; do
       echo "  $error_summary"
       RESULTS+=("✗ $model - $error_summary")
       OVERALL_SUCCESS=false
-    elif grep -qE "(get_weather \| weather)|(▸.*get_weather.*weather)" "$log_file" && \
+    elif grep -qE "(get_weather \| weather)|(▸.*get_weather.*weather)" "$log_file" &&
       grep -Fq "GOOSE_TOOL_CALL_OK:" "$log_file"; then
       echo "✓ Tool call passed for $model"
       RESULTS+=("✓ $model")

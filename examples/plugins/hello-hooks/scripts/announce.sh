@@ -15,11 +15,11 @@ tool_name="$(printf '%s' "$payload" | sed -n 's/.*"tool_name":"\([^"]*\)".*/\1/p
 
 emoji() {
   case "$1" in
-    start)     printf '\xf0\x9f\x9a\x80' ;;  # rocket
-    prompt)    printf '\xf0\x9f\x92\xac' ;;  # speech balloon
-    pre-tool)  printf '\xe2\x9a\xa1' ;;      # zap
-    post-tool) printf '\xe2\x9c\x85' ;;      # check
-    *)         printf '\xf0\x9f\x94\x94' ;;  # bell
+  start) printf '\xf0\x9f\x9a\x80' ;;  # rocket
+  prompt) printf '\xf0\x9f\x92\xac' ;; # speech balloon
+  pre-tool) printf '\xe2\x9a\xa1' ;;   # zap
+  post-tool) printf '\xe2\x9c\x85' ;;  # check
+  *) printf '\xf0\x9f\x94\x94' ;;      # bell
   esac
 }
 
@@ -33,4 +33,4 @@ printf '%s [hello-hooks] %s%s\n' "$icon" "${event_name:-$label}" "$suffix" 1>&2
 {
   printf -- '---- %s @ %s ----\n' "${event_name:-$label}" "$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
   printf '%s\n' "$payload"
-} >> "$log"
+} >>"$log"

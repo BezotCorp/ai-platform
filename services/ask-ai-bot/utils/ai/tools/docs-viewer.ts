@@ -1,14 +1,14 @@
-import fs from "fs";
-import path from "path";
+import fs from 'fs';
+import path from 'path';
 
 function getDocsDir(): string {
-  return process.env.DOCS_PATH || path.join(process.cwd(), "docs");
+  return process.env.DOCS_PATH || path.join(process.cwd(), 'docs');
 }
 
 function generateWebUrl(filePath: string): string {
-  const baseUrl = "https://goose-docs.ai/docs";
+  const baseUrl = 'https://goose-docs.ai/docs';
   // Remove file extension for the URL path
-  const urlPath = filePath.replace(/\.[^/.]+$/, "");
+  const urlPath = filePath.replace(/\.[^/.]+$/, '');
   return `${baseUrl}/${urlPath}`;
 }
 
@@ -19,7 +19,7 @@ function findDocFile(partialPath: string): string | null {
     return null;
   }
 
-  const searchTerm = partialPath.toLowerCase().replace(/\.md$/, "");
+  const searchTerm = partialPath.toLowerCase().replace(/\.md$/, '');
   let foundPath: string | null = null;
 
   function walkDir(dir: string) {
@@ -32,7 +32,7 @@ function findDocFile(partialPath: string): string | null {
       const stat = fs.statSync(filePath);
 
       if (stat.isDirectory()) {
-        if (file === "assets" || file === "docker") {
+        if (file === 'assets' || file === 'docker') {
           continue;
         }
         walkDir(filePath);
@@ -59,8 +59,8 @@ function getDocChunk(
   const fullPath = path.join(docsDir, filePath);
 
   const normalizedPath = path.resolve(fullPath);
-  if (!normalizedPath.startsWith(docsDir + "/")) {
-    throw new Error("Invalid file path - directory traversal not allowed");
+  if (!normalizedPath.startsWith(docsDir + '/')) {
+    throw new Error('Invalid file path - directory traversal not allowed');
   }
 
   if (!fs.existsSync(fullPath)) {
@@ -68,13 +68,13 @@ function getDocChunk(
   }
 
   try {
-    const content = fs.readFileSync(fullPath, "utf-8");
-    const lines = content.split("\n");
+    const content = fs.readFileSync(fullPath, 'utf-8');
+    const lines = content.split('\n');
 
     const actualStartLine = Math.max(0, Math.min(startLine, lines.length - 1));
     const actualEndLine = Math.min(actualStartLine + lineCount, lines.length);
     const chunkLines = lines.slice(actualStartLine, actualEndLine);
-    const chunkContent = chunkLines.join("\n");
+    const chunkContent = chunkLines.join('\n');
 
     const fileName = path.basename(fullPath);
 
@@ -84,18 +84,14 @@ function getDocChunk(
       webUrl: generateWebUrl(filePath),
     };
   } catch (error) {
-    if (error instanceof Error && error.message.includes("ENOENT")) {
+    if (error instanceof Error && error.message.includes('ENOENT')) {
       throw new Error(`Documentation file not found: ${filePath}`);
     }
     throw error;
   }
 }
 
-export function viewDocs(
-  filePaths: string | string[],
-  startLine: number = 0,
-  lineCount: number = 1500,
-): string {
+export function viewDocs(filePaths: string | string[], startLine: number = 0, lineCount: number = 1500): string {
   const paths = Array.isArray(filePaths) ? filePaths : [filePaths];
 
   const docs = paths.map((filePath) => {
@@ -111,9 +107,6 @@ export function viewDocs(
   });
 
   return docs
-    .map(
-      (doc) =>
-        `**${doc.fileName}**\nWeb URL: <${doc.webUrl}>\n\`\`\`\n${doc.content}\n\`\`\``,
-    )
-    .join("\n\n---\n\n");
+    .map((doc) => `**${doc.fileName}**\nWeb URL: <${doc.webUrl}>\n\`\`\`\n${doc.content}\n\`\`\``)
+    .join('\n\n---\n\n');
 }

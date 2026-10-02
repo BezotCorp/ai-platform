@@ -1,24 +1,24 @@
-name: 'Generate Release Notes'
-description: 'Generate release notes for a given version'
+name: "Generate Release Notes"
+description: "Generate release notes for a given version"
 
 inputs:
   version:
-    description: 'The version being released'
+    description: "The version being released"
     required: true
   head_ref:
-    description: 'The commit SHA or reference of the head of the release branch'
+    description: "The commit SHA or reference of the head of the release branch"
     required: true
   prior_ref:
-    description: 'The previous version to compare against'
+    description: "The previous version to compare against"
     required: true
 
 outputs:
   pr_body_file:
-    description: 'Path to the generated PR body file'
+    description: "Path to the generated PR body file"
     value: ${{ steps.generate.outputs.pr_body_file }}
 
 runs:
-  using: 'composite'
+  using: "composite"
   steps:
     - name: Generate release notes
       id: generate

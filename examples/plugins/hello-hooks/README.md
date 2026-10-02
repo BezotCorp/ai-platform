@@ -9,7 +9,7 @@ event payload to `last-event.log` next to the plugin.
 
 ## Layout
 
-```
+```plain_text
 hello-hooks/
 ├── plugin.json
 ├── hooks/

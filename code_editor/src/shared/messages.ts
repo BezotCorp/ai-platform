@@ -92,8 +92,7 @@ export interface ErrorPayload {
   };
 }
 
-export const FALLBACK_ERROR_BLOCK_CONTENT =
-  'Something went wrong. Check the Goose output log for details.';
+export const FALLBACK_ERROR_BLOCK_CONTENT = 'Something went wrong. Check the Goose output log for details.';
 
 /**
  * Build the chat error-block text for an ERROR payload.
@@ -284,9 +283,7 @@ export type AnyWebviewMessage = {
 // ============================================================================
 
 /** Create a WEBVIEW_READY message */
-export function createWebviewReadyMessage(
-  version: string
-): WebviewMessage<WebviewMessageType.WEBVIEW_READY> {
+export function createWebviewReadyMessage(version: string): WebviewMessage<WebviewMessageType.WEBVIEW_READY> {
   return {
     type: WebviewMessageType.WEBVIEW_READY,
     payload: { version },
@@ -296,7 +293,7 @@ export function createWebviewReadyMessage(
 /** Create a STATUS_UPDATE message */
 export function createStatusUpdateMessage(
   status: ProcessStatus,
-  message?: string
+  message?: string,
 ): WebviewMessage<WebviewMessageType.STATUS_UPDATE> {
   return {
     type: WebviewMessageType.STATUS_UPDATE,
@@ -316,7 +313,7 @@ export function createGetStatusMessage(): WebviewMessage<WebviewMessageType.GET_
 export function createErrorMessage(
   title: string,
   message: string,
-  action?: { label: string; command: string }
+  action?: { label: string; command: string },
 ): WebviewMessage<WebviewMessageType.ERROR> {
   return {
     type: WebviewMessageType.ERROR,
@@ -329,7 +326,7 @@ export function createSendMessageMessage(
   content: string,
   messageId: string,
   responseId: string,
-  contextChips?: readonly ContextChipData[]
+  contextChips?: readonly ContextChipData[],
 ): WebviewMessage<WebviewMessageType.SEND_MESSAGE> {
   return {
     type: WebviewMessageType.SEND_MESSAGE,
@@ -346,7 +343,7 @@ export function createSendMessageMessage(
 export function createStreamTokenMessage(
   messageId: string,
   token: string,
-  done: boolean
+  done: boolean,
 ): WebviewMessage<WebviewMessageType.STREAM_TOKEN> {
   return {
     type: WebviewMessageType.STREAM_TOKEN,
@@ -356,7 +353,7 @@ export function createStreamTokenMessage(
 
 /** Create a GENERATION_COMPLETE message */
 export function createGenerationCompleteMessage(
-  messageId: string
+  messageId: string,
 ): WebviewMessage<WebviewMessageType.GENERATION_COMPLETE> {
   return {
     type: WebviewMessageType.GENERATION_COMPLETE,
@@ -374,7 +371,7 @@ export function createStopGenerationMessage(): WebviewMessage<WebviewMessageType
 
 /** Create a GENERATION_CANCELLED message */
 export function createGenerationCancelledMessage(
-  messageId: string
+  messageId: string,
 ): WebviewMessage<WebviewMessageType.GENERATION_CANCELLED> {
   return {
     type: WebviewMessageType.GENERATION_CANCELLED,
@@ -384,7 +381,7 @@ export function createGenerationCancelledMessage(
 
 /** Create a CHAT_HISTORY message */
 export function createChatHistoryMessage(
-  messages: readonly ChatMessage[]
+  messages: readonly ChatMessage[],
 ): WebviewMessage<WebviewMessageType.CHAT_HISTORY> {
   return {
     type: WebviewMessageType.CHAT_HISTORY,
@@ -393,9 +390,7 @@ export function createChatHistoryMessage(
 }
 
 /** Create an OPEN_EXTERNAL_LINK message */
-export function createOpenExternalLinkMessage(
-  url: string
-): WebviewMessage<WebviewMessageType.OPEN_EXTERNAL_LINK> {
+export function createOpenExternalLinkMessage(url: string): WebviewMessage<WebviewMessageType.OPEN_EXTERNAL_LINK> {
   return {
     type: WebviewMessageType.OPEN_EXTERNAL_LINK,
     payload: { url },
@@ -406,7 +401,7 @@ export function createOpenExternalLinkMessage(
 
 /** Create a CREATE_SESSION message */
 export function createCreateSessionMessage(
-  workingDirectory?: string
+  workingDirectory?: string,
 ): WebviewMessage<WebviewMessageType.CREATE_SESSION> {
   return {
     type: WebviewMessageType.CREATE_SESSION,
@@ -415,9 +410,7 @@ export function createCreateSessionMessage(
 }
 
 /** Create a SESSION_CREATED message */
-export function createSessionCreatedMessage(
-  session: SessionEntry
-): WebviewMessage<WebviewMessageType.SESSION_CREATED> {
+export function createSessionCreatedMessage(session: SessionEntry): WebviewMessage<WebviewMessageType.SESSION_CREATED> {
   return {
     type: WebviewMessageType.SESSION_CREATED,
     payload: { session },
@@ -435,7 +428,7 @@ export function createGetSessionsMessage(): WebviewMessage<WebviewMessageType.GE
 /** Create a SESSIONS_LIST message */
 export function createSessionsListMessage(
   sessions: readonly SessionEntry[],
-  activeSessionId: string | null
+  activeSessionId: string | null,
 ): WebviewMessage<WebviewMessageType.SESSIONS_LIST> {
   return {
     type: WebviewMessageType.SESSIONS_LIST,
@@ -444,9 +437,7 @@ export function createSessionsListMessage(
 }
 
 /** Create a SELECT_SESSION message */
-export function createSelectSessionMessage(
-  sessionId: string
-): WebviewMessage<WebviewMessageType.SELECT_SESSION> {
+export function createSelectSessionMessage(sessionId: string): WebviewMessage<WebviewMessageType.SELECT_SESSION> {
   return {
     type: WebviewMessageType.SELECT_SESSION,
     payload: { sessionId },
@@ -456,7 +447,7 @@ export function createSelectSessionMessage(
 /** Create a SESSION_LOADED message */
 export function createSessionLoadedMessage(
   sessionId: string,
-  historyUnavailable?: boolean
+  historyUnavailable?: boolean,
 ): WebviewMessage<WebviewMessageType.SESSION_LOADED> {
   return {
     type: WebviewMessageType.SESSION_LOADED,
@@ -465,9 +456,7 @@ export function createSessionLoadedMessage(
 }
 
 /** Create a HISTORY_MESSAGE message */
-export function createHistoryMessage(
-  message: ChatMessage
-): WebviewMessage<WebviewMessageType.HISTORY_MESSAGE> {
+export function createHistoryMessage(message: ChatMessage): WebviewMessage<WebviewMessageType.HISTORY_MESSAGE> {
   return {
     type: WebviewMessageType.HISTORY_MESSAGE,
     payload: { message, isReplay: true },
@@ -477,7 +466,7 @@ export function createHistoryMessage(
 /** Create a HISTORY_COMPLETE message */
 export function createHistoryCompleteMessage(
   sessionId: string,
-  messageCount: number
+  messageCount: number,
 ): WebviewMessage<WebviewMessageType.HISTORY_COMPLETE> {
   return {
     type: WebviewMessageType.HISTORY_COMPLETE,
@@ -496,7 +485,7 @@ export function createVersionStatusMessage(
     installUrl?: string;
     updateUrl?: string;
     configuredPath?: string;
-  }
+  },
 ): WebviewMessage<WebviewMessageType.VERSION_STATUS> {
   return {
     type: WebviewMessageType.VERSION_STATUS,
@@ -514,9 +503,7 @@ export function createVersionStatusMessage(
 // Context Chip Factory Functions
 
 /** Create an ADD_CONTEXT_CHIP message */
-export function createAddContextChipMessage(
-  chip: ContextChip
-): WebviewMessage<WebviewMessageType.ADD_CONTEXT_CHIP> {
+export function createAddContextChipMessage(chip: ContextChip): WebviewMessage<WebviewMessageType.ADD_CONTEXT_CHIP> {
   return {
     type: WebviewMessageType.ADD_CONTEXT_CHIP,
     payload: { chip },
@@ -524,9 +511,7 @@ export function createAddContextChipMessage(
 }
 
 /** Create a FILE_SEARCH message */
-export function createFileSearchMessage(
-  query: string
-): WebviewMessage<WebviewMessageType.FILE_SEARCH> {
+export function createFileSearchMessage(query: string): WebviewMessage<WebviewMessageType.FILE_SEARCH> {
   return {
     type: WebviewMessageType.FILE_SEARCH,
     payload: { query },
@@ -535,7 +520,7 @@ export function createFileSearchMessage(
 
 /** Create a SEARCH_RESULTS message */
 export function createSearchResultsMessage(
-  results: readonly FileSearchResult[]
+  results: readonly FileSearchResult[],
 ): WebviewMessage<WebviewMessageType.SEARCH_RESULTS> {
   return {
     type: WebviewMessageType.SEARCH_RESULTS,
@@ -558,89 +543,72 @@ export function createFocusChatInputMessage(): WebviewMessage<WebviewMessageType
 /** Check if a message is of a specific type */
 export function isWebviewMessage<T extends WebviewMessageType>(
   message: unknown,
-  type: T
+  type: T,
 ): message is WebviewMessage<T> {
   return (
-    typeof message === 'object' &&
-    message !== null &&
-    'type' in message &&
-    (message as { type: unknown }).type === type
+    typeof message === 'object' && message !== null && 'type' in message && (message as { type: unknown }).type === type
   );
 }
 
 /** Check if message is WEBVIEW_READY */
-export function isWebviewReadyMessage(
-  message: unknown
-): message is WebviewMessage<WebviewMessageType.WEBVIEW_READY> {
+export function isWebviewReadyMessage(message: unknown): message is WebviewMessage<WebviewMessageType.WEBVIEW_READY> {
   return isWebviewMessage(message, WebviewMessageType.WEBVIEW_READY);
 }
 
 /** Check if message is STATUS_UPDATE */
-export function isStatusUpdateMessage(
-  message: unknown
-): message is WebviewMessage<WebviewMessageType.STATUS_UPDATE> {
+export function isStatusUpdateMessage(message: unknown): message is WebviewMessage<WebviewMessageType.STATUS_UPDATE> {
   return isWebviewMessage(message, WebviewMessageType.STATUS_UPDATE);
 }
 
 /** Check if message is GET_STATUS */
-export function isGetStatusMessage(
-  message: unknown
-): message is WebviewMessage<WebviewMessageType.GET_STATUS> {
+export function isGetStatusMessage(message: unknown): message is WebviewMessage<WebviewMessageType.GET_STATUS> {
   return isWebviewMessage(message, WebviewMessageType.GET_STATUS);
 }
 
 /** Check if message is ERROR */
-export function isErrorMessage(
-  message: unknown
-): message is WebviewMessage<WebviewMessageType.ERROR> {
+export function isErrorMessage(message: unknown): message is WebviewMessage<WebviewMessageType.ERROR> {
   return isWebviewMessage(message, WebviewMessageType.ERROR);
 }
 
 /** Check if message is SEND_MESSAGE */
-export function isSendMessageMessage(
-  message: unknown
-): message is WebviewMessage<WebviewMessageType.SEND_MESSAGE> {
+export function isSendMessageMessage(message: unknown): message is WebviewMessage<WebviewMessageType.SEND_MESSAGE> {
   return isWebviewMessage(message, WebviewMessageType.SEND_MESSAGE);
 }
 
 /** Check if message is STREAM_TOKEN */
-export function isStreamTokenMessage(
-  message: unknown
-): message is WebviewMessage<WebviewMessageType.STREAM_TOKEN> {
+export function isStreamTokenMessage(message: unknown): message is WebviewMessage<WebviewMessageType.STREAM_TOKEN> {
   return isWebviewMessage(message, WebviewMessageType.STREAM_TOKEN);
 }
 
 /** Check if message is GENERATION_COMPLETE */
 export function isGenerationCompleteMessage(
-  message: unknown
+  message: unknown,
 ): message is WebviewMessage<WebviewMessageType.GENERATION_COMPLETE> {
   return isWebviewMessage(message, WebviewMessageType.GENERATION_COMPLETE);
 }
 
 /** Check if message is STOP_GENERATION */
 export function isStopGenerationMessage(
-  message: unknown
+  message: unknown,
 ): message is WebviewMessage<WebviewMessageType.STOP_GENERATION> {
   return isWebviewMessage(message, WebviewMessageType.STOP_GENERATION);
 }
 
 /** Check if message is GENERATION_CANCELLED */
 export function isGenerationCancelledMessage(
-  message: unknown
+  message: unknown,
 ): message is WebviewMessage<WebviewMessageType.GENERATION_CANCELLED> {
   return isWebviewMessage(message, WebviewMessageType.GENERATION_CANCELLED);
 }
 
 /** Check if message is CHAT_HISTORY */
-export function isChatHistoryMessage(
-  message: unknown
-): message is WebviewMessage<WebviewMessageType.CHAT_HISTORY> {
+export function isChatHistoryMessage(message: unknown): message is WebviewMessage<WebviewMessageType.CHAT_HISTORY> {
   return isWebviewMessage(message, WebviewMessageType.CHAT_HISTORY);
 }
 
 /** Check if message is OPEN_EXTERNAL_LINK */
 export function isOpenExternalLinkMessage(
-  message: unknown
+  message: unknown,
 ): message is WebviewMessage<WebviewMessageType.OPEN_EXTERNAL_LINK> {
   return isWebviewMessage(message, WebviewMessageType.OPEN_EXTERNAL_LINK);
 }
@@ -648,57 +616,45 @@ export function isOpenExternalLinkMessage(
 // Session Management Type Guards
 
 /** Check if message is CREATE_SESSION */
-export function isCreateSessionMessage(
-  message: unknown
-): message is WebviewMessage<WebviewMessageType.CREATE_SESSION> {
+export function isCreateSessionMessage(message: unknown): message is WebviewMessage<WebviewMessageType.CREATE_SESSION> {
   return isWebviewMessage(message, WebviewMessageType.CREATE_SESSION);
 }
 
 /** Check if message is SESSION_CREATED */
 export function isSessionCreatedMessage(
-  message: unknown
+  message: unknown,
 ): message is WebviewMessage<WebviewMessageType.SESSION_CREATED> {
   return isWebviewMessage(message, WebviewMessageType.SESSION_CREATED);
 }
 
 /** Check if message is GET_SESSIONS */
-export function isGetSessionsMessage(
-  message: unknown
-): message is WebviewMessage<WebviewMessageType.GET_SESSIONS> {
+export function isGetSessionsMessage(message: unknown): message is WebviewMessage<WebviewMessageType.GET_SESSIONS> {
   return isWebviewMessage(message, WebviewMessageType.GET_SESSIONS);
 }
 
 /** Check if message is SESSIONS_LIST */
-export function isSessionsListMessage(
-  message: unknown
-): message is WebviewMessage<WebviewMessageType.SESSIONS_LIST> {
+export function isSessionsListMessage(message: unknown): message is WebviewMessage<WebviewMessageType.SESSIONS_LIST> {
   return isWebviewMessage(message, WebviewMessageType.SESSIONS_LIST);
 }
 
 /** Check if message is SELECT_SESSION */
-export function isSelectSessionMessage(
-  message: unknown
-): message is WebviewMessage<WebviewMessageType.SELECT_SESSION> {
+export function isSelectSessionMessage(message: unknown): message is WebviewMessage<WebviewMessageType.SELECT_SESSION> {
   return isWebviewMessage(message, WebviewMessageType.SELECT_SESSION);
 }
 
 /** Check if message is SESSION_LOADED */
-export function isSessionLoadedMessage(
-  message: unknown
-): message is WebviewMessage<WebviewMessageType.SESSION_LOADED> {
+export function isSessionLoadedMessage(message: unknown): message is WebviewMessage<WebviewMessageType.SESSION_LOADED> {
   return isWebviewMessage(message, WebviewMessageType.SESSION_LOADED);
 }
 
 /** Check if message is HISTORY_MESSAGE */
-export function isHistoryMessage(
-  message: unknown
-): message is WebviewMessage<WebviewMessageType.HISTORY_MESSAGE> {
+export function isHistoryMessage(message: unknown): message is WebviewMessage<WebviewMessageType.HISTORY_MESSAGE> {
   return isWebviewMessage(message, WebviewMessageType.HISTORY_MESSAGE);
 }
 
 /** Check if message is HISTORY_COMPLETE */
 export function isHistoryCompleteMessage(
-  message: unknown
+  message: unknown,
 ): message is WebviewMessage<WebviewMessageType.HISTORY_COMPLETE> {
   return isWebviewMessage(message, WebviewMessageType.HISTORY_COMPLETE);
 }
@@ -706,9 +662,7 @@ export function isHistoryCompleteMessage(
 // Version Status Type Guards
 
 /** Check if message is VERSION_STATUS */
-export function isVersionStatusMessage(
-  message: unknown
-): message is WebviewMessage<WebviewMessageType.VERSION_STATUS> {
+export function isVersionStatusMessage(message: unknown): message is WebviewMessage<WebviewMessageType.VERSION_STATUS> {
   return isWebviewMessage(message, WebviewMessageType.VERSION_STATUS);
 }
 
@@ -716,28 +670,24 @@ export function isVersionStatusMessage(
 
 /** Check if message is ADD_CONTEXT_CHIP */
 export function isAddContextChipMessage(
-  message: unknown
+  message: unknown,
 ): message is WebviewMessage<WebviewMessageType.ADD_CONTEXT_CHIP> {
   return isWebviewMessage(message, WebviewMessageType.ADD_CONTEXT_CHIP);
 }
 
 /** Check if message is FILE_SEARCH */
-export function isFileSearchMessage(
-  message: unknown
-): message is WebviewMessage<WebviewMessageType.FILE_SEARCH> {
+export function isFileSearchMessage(message: unknown): message is WebviewMessage<WebviewMessageType.FILE_SEARCH> {
   return isWebviewMessage(message, WebviewMessageType.FILE_SEARCH);
 }
 
 /** Check if message is SEARCH_RESULTS */
-export function isSearchResultsMessage(
-  message: unknown
-): message is WebviewMessage<WebviewMessageType.SEARCH_RESULTS> {
+export function isSearchResultsMessage(message: unknown): message is WebviewMessage<WebviewMessageType.SEARCH_RESULTS> {
   return isWebviewMessage(message, WebviewMessageType.SEARCH_RESULTS);
 }
 
 /** Check if message is FOCUS_CHAT_INPUT */
 export function isFocusChatInputMessage(
-  message: unknown
+  message: unknown,
 ): message is WebviewMessage<WebviewMessageType.FOCUS_CHAT_INPUT> {
   return isWebviewMessage(message, WebviewMessageType.FOCUS_CHAT_INPUT);
 }

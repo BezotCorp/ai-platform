@@ -4,7 +4,7 @@ A Cloudflare Worker that authenticates GitHub Actions OIDC tokens and proxies re
 
 ## How it works
 
-```
+```text
 GitHub Actions (OIDC token) → Worker (validate JWT, inject API key) → Upstream API
 ```
 
@@ -24,20 +24,20 @@ npm install
 
 Edit `wrangler.toml` for your upstream:
 
-| Variable | Description |
-|---|---|
-| `OIDC_ISSUER` | `https://token.actions.githubusercontent.com` |
-| `OIDC_AUDIENCE` | The audience your workflow requests (e.g. `goose-oidc-proxy`) |
-| `MAX_TOKEN_AGE_SECONDS` | Operator-configured upper bound on `iat` age in seconds (default: `1200` = 20 min). Applied **in addition to** the IdP's `exp` claim, never as a replacement. |
-| `MAX_REQUESTS_PER_TOKEN` | Max requests per OIDC token (default: `200`) |
-| `RATE_LIMIT_PER_SECOND` | Max requests per second per token (default: `2`) |
-| `ALLOWED_REPOS` | *(optional)* Comma-separated `owner/repo` list |
-| `ALLOWED_REFS` | *(optional)* Comma-separated allowed refs |
-| `UPSTREAM_URL` | The upstream API base URL |
-| `UPSTREAM_AUTH_HEADER` | Header name for the API key (e.g. `x-api-key`, `Authorization`) |
-| `UPSTREAM_AUTH_PREFIX` | *(optional)* Prefix before the key (e.g. `Bearer `) — omit for raw value |
-| `CORS_ORIGIN` | *(optional)* Allowed CORS origin |
-| `CORS_EXTRA_HEADERS` | *(optional)* Additional CORS allowed headers |
+| Variable                 | Description                                                                                                                                                   |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `OIDC_ISSUER`            | `https://token.actions.githubusercontent.com`                                                                                                                 |
+| `OIDC_AUDIENCE`          | The audience your workflow requests (e.g. `goose-oidc-proxy`)                                                                                                 |
+| `MAX_TOKEN_AGE_SECONDS`  | Operator-configured upper bound on `iat` age in seconds (default: `1200` = 20 min). Applied **in addition to** the IdP's `exp` claim, never as a replacement. |
+| `MAX_REQUESTS_PER_TOKEN` | Max requests per OIDC token (default: `200`)                                                                                                                  |
+| `RATE_LIMIT_PER_SECOND`  | Max requests per second per token (default: `2`)                                                                                                              |
+| `ALLOWED_REPOS`          | _(optional)_ Comma-separated `owner/repo` list                                                                                                                |
+| `ALLOWED_REFS`           | _(optional)_ Comma-separated allowed refs                                                                                                                     |
+| `UPSTREAM_URL`           | The upstream API base URL                                                                                                                                     |
+| `UPSTREAM_AUTH_HEADER`   | Header name for the API key (e.g. `x-api-key`, `Authorization`)                                                                                               |
+| `UPSTREAM_AUTH_PREFIX`   | _(optional)_ Prefix before the key (e.g. `Bearer`) — omit for raw value                                                                                       |
+| `CORS_ORIGIN`            | _(optional)_ Allowed CORS origin                                                                                                                              |
+| `CORS_EXTRA_HEADERS`     | _(optional)_ Additional CORS allowed headers                                                                                                                  |
 
 Set your upstream API key as a secret:
 
@@ -113,4 +113,4 @@ The proxy enforces **both** gates and a token must pass each:
 1. The IdP's `exp` claim (always enforced).
 2. The operator's `MAX_TOKEN_AGE_SECONDS` cap on `iat`, when configured (default `1200`s = 20 min).
 
-`MAX_TOKEN_AGE_SECONDS` is a stricter upper bound *on top of* `exp` — it cannot extend a token past its `exp`. For workflows longer than the IdP's token lifetime (GitHub OIDC issues `exp = iat + 300` ≈ 5 min), refresh the OIDC token rather than relying on `MAX_TOKEN_AGE_SECONDS` to accept expired tokens.
+`MAX_TOKEN_AGE_SECONDS` is a stricter upper bound _on top of_ `exp` — it cannot extend a token past its `exp`. For workflows longer than the IdP's token lifetime (GitHub OIDC issues `exp = iat + 300` ≈ 5 min), refresh the OIDC token rather than relying on `MAX_TOKEN_AGE_SECONDS` to accept expired tokens.

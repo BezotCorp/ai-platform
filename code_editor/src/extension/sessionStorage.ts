@@ -45,7 +45,7 @@ export function createSessionStorage(globalState: vscode.Memento): SessionStorag
 
   const getSession = (sessionId: string): SessionEntry | undefined => {
     const sessions = loadSessions();
-    return sessions.find(s => s.sessionId === sessionId);
+    return sessions.find((s) => s.sessionId === sessionId);
   };
 
   const getActiveSessionId = (): string | null => {
@@ -54,7 +54,7 @@ export function createSessionStorage(globalState: vscode.Memento): SessionStorag
 
   const addSession = async (session: SessionEntry): Promise<void> => {
     const sessions = loadSessions();
-    const existing = sessions.findIndex(s => s.sessionId === session.sessionId);
+    const existing = sessions.findIndex((s) => s.sessionId === session.sessionId);
     if (existing >= 0) {
       sessions[existing] = session;
     } else {
@@ -65,7 +65,7 @@ export function createSessionStorage(globalState: vscode.Memento): SessionStorag
 
   const updateSessionTitle = async (sessionId: string, title: string): Promise<void> => {
     const sessions = loadSessions();
-    const index = sessions.findIndex(s => s.sessionId === sessionId);
+    const index = sessions.findIndex((s) => s.sessionId === sessionId);
     if (index >= 0) {
       sessions[index] = { ...sessions[index], title };
       await saveSessions(sessions);
@@ -77,7 +77,7 @@ export function createSessionStorage(globalState: vscode.Memento): SessionStorag
   };
 
   const removeSession = async (sessionId: string): Promise<void> => {
-    const sessions = loadSessions().filter(s => s.sessionId !== sessionId);
+    const sessions = loadSessions().filter((s) => s.sessionId !== sessionId);
     await saveSessions(sessions);
     const activeId = getActiveSessionId();
     if (activeId === sessionId) {

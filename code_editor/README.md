@@ -67,16 +67,16 @@ Type `@` in the chat input to search your workspace. Select a file to add it as 
 
 ## Keyboard Shortcuts
 
-| Action | macOS | Windows/Linux |
-|--------|-------|---------------|
+| Action                  | macOS                  | Windows/Linux           |
+| ----------------------- | ---------------------- | ----------------------- |
 | Send selection to Goose | <kbd>Cmd+Shift+G</kbd> | <kbd>Ctrl+Shift+G</kbd> |
 
 ## Configuration
 
-| Setting | Description |
-|---------|-------------|
+| Setting            | Description                                     |
+| ------------------ | ----------------------------------------------- |
 | `goose.binaryPath` | Path to Goose binary (auto-detected by default) |
-| `goose.logLevel` | Logging level: `error`, `warn`, `info`, `debug` |
+| `goose.logLevel`   | Logging level: `error`, `warn`, `info`, `debug` |
 
 Goose reads its provider and model configuration from:
 

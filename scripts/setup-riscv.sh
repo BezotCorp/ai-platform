@@ -17,9 +17,9 @@ verify_sha256() {
     local expected="$2"
     local actual
 
-    if command -v sha256sum > /dev/null 2>&1; then
+    if command -v sha256sum >/dev/null 2>&1; then
         actual="$(sha256sum "$file" | awk '{print $1}')"
-    elif command -v shasum > /dev/null 2>&1; then
+    elif command -v shasum >/dev/null 2>&1; then
         actual="$(shasum -a 256 "$file" | awk '{print $1}')"
     else
         echo "Error: sha256sum or shasum is required to verify downloads" >&2
@@ -161,7 +161,7 @@ if ! grep -q '^exclude = \[' Cargo.toml; then
             next
         }
         { print }
-    ' Cargo.toml > Cargo.toml.new
+    ' Cargo.toml >Cargo.toml.new
     mv Cargo.toml.new Cargo.toml
 fi
 
@@ -185,7 +185,7 @@ if ! grep -q 'vendor/deno_core' Cargo.toml; then
             next
         }
         { print }
-    ' Cargo.toml > Cargo.toml.new
+    ' Cargo.toml >Cargo.toml.new
     mv Cargo.toml.new Cargo.toml
 fi
 
@@ -214,7 +214,7 @@ echo "   ✓ Done"
 echo "11. Checking RISC-V toolchain..."
 if [ "$(uname -m)" = "riscv64" ]; then
     echo "   ✓ native RISC-V build - no cross toolchain needed"
-elif command -v riscv64-linux-gnu-gcc > /dev/null 2>&1; then
+elif command -v riscv64-linux-gnu-gcc >/dev/null 2>&1; then
     echo "   ✓ riscv64-linux-gnu-gcc found"
     echo "     For cross-compiling, export before building:"
     echo "     export CARGO_TARGET_RISCV64GC_UNKNOWN_LINUX_GNU_LINKER=riscv64-linux-gnu-gcc"

@@ -1,7 +1,7 @@
-import fs from "fs";
-import MiniSearch from "minisearch";
-import path from "path";
-import { logger } from "../../logger";
+import fs from 'fs';
+import MiniSearch from 'minisearch';
+import path from 'path';
+import { logger } from '../../logger';
 
 export interface SearchResult {
   filePath: string;
@@ -23,7 +23,7 @@ interface DocFile {
 let miniSearch: MiniSearch<DocFile> | null = null;
 
 function getDocsDir(): string {
-  return process.env.DOCS_PATH || path.join(process.cwd(), "docs");
+  return process.env.DOCS_PATH || path.join(process.cwd(), 'docs');
 }
 
 function initializeSearch(): MiniSearch<DocFile> {
@@ -36,8 +36,8 @@ function initializeSearch(): MiniSearch<DocFile> {
   if (!fs.existsSync(docsDir)) {
     logger.warn(`Docs directory not found at ${docsDir}`);
     miniSearch = new MiniSearch({
-      fields: ["content", "fileName", "path"],
-      storeFields: ["path", "fileName", "content", "lineCount"],
+      fields: ['content', 'fileName', 'path'],
+      storeFields: ['path', 'fileName', 'content', 'lineCount'],
     });
     return miniSearch;
   }
@@ -53,20 +53,20 @@ function initializeSearch(): MiniSearch<DocFile> {
         const stat = fs.statSync(filePath);
 
         if (stat.isDirectory()) {
-          if (file === "assets" || file === "docker") {
+          if (file === 'assets' || file === 'docker') {
             continue;
           }
           walkDir(filePath);
         } else {
           try {
-            const content = fs.readFileSync(filePath, "utf-8");
+            const content = fs.readFileSync(filePath, 'utf-8');
             const relativePath = path.relative(docsDir, filePath);
             const docFile: DocFile = {
               id: relativePath,
               path: relativePath,
               fileName: file,
               content,
-              lineCount: content.split("\n").length,
+              lineCount: content.split('\n').length,
             };
             docs.push(docFile);
           } catch (error) {
@@ -82,8 +82,8 @@ function initializeSearch(): MiniSearch<DocFile> {
   walkDir(docsDir);
 
   miniSearch = new MiniSearch({
-    fields: ["content", "fileName", "path"],
-    storeFields: ["path", "fileName", "content", "lineCount"],
+    fields: ['content', 'fileName', 'path'],
+    storeFields: ['path', 'fileName', 'content', 'lineCount'],
   });
 
   miniSearch.addAll(docs);
@@ -93,34 +93,30 @@ function initializeSearch(): MiniSearch<DocFile> {
 }
 
 function generateWebUrl(filePath: string): string {
-  const baseUrl = "https://goose-docs.ai/docs";
+  const baseUrl = 'https://goose-docs.ai/docs';
   // Remove file extension for the URL path
-  const urlPath = filePath.replace(/\.[^/.]+$/, "");
+  const urlPath = filePath.replace(/\.[^/.]+$/, '');
   return `${baseUrl}/${urlPath}`;
 }
 
 function getPreview(content: string, maxLength: number = 1000): string {
-  const withoutFrontmatter = content.replace(/^---[\s\S]*?---\n/, "");
-  const lines = withoutFrontmatter.split("\n");
+  const withoutFrontmatter = content.replace(/^---[\s\S]*?---\n/, '');
+  const lines = withoutFrontmatter.split('\n');
   const contentLines: string[] = [];
   let currentLength = 0;
 
   for (const line of lines) {
     const cleanLine = line
-      .replace(/^#+\s+/, "")
-      .replace(/\[([^\]]+)\]\([^\)]+\)/g, "$1")
-      .replace(/[*_]/g, "")
+      .replace(/^#+\s+/, '')
+      .replace(/\[([^\]]+)\]\([^\)]+\)/g, '$1')
+      .replace(/[*_]/g, '')
       .trim();
 
-    if (
-      cleanLine &&
-      !cleanLine.startsWith("import") &&
-      !cleanLine.startsWith("export")
-    ) {
+    if (cleanLine && !cleanLine.startsWith('import') && !cleanLine.startsWith('export')) {
       if (currentLength + cleanLine.length > maxLength) {
         const remaining = maxLength - currentLength;
         if (remaining > 0) {
-          contentLines.push(cleanLine.substring(0, remaining) + "...");
+          contentLines.push(cleanLine.substring(0, remaining) + '...');
         }
         break;
       }
@@ -129,8 +125,8 @@ function getPreview(content: string, maxLength: number = 1000): string {
     }
   }
 
-  const preview = contentLines.join("\n");
-  return preview || "(No preview available)";
+  const preview = contentLines.join('\n');
+  return preview || '(No preview available)';
 }
 
 export function searchDocs(query: string, limit: number = 15): SearchResult[] {
@@ -151,9 +147,7 @@ export function searchDocs(query: string, limit: number = 15): SearchResult[] {
     webUrl: generateWebUrl(result.path),
   }));
 
-  logger.verbose(
-    `Search for "${query}" returned ${searchResults.length} results`,
-  );
+  logger.verbose(`Search for "${query}" returned ${searchResults.length} results`);
   return searchResults;
 }
 

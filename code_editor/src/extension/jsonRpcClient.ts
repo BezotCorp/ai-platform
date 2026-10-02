@@ -56,7 +56,7 @@ export interface JsonRpcClient {
   readonly request: <T>(
     method: string,
     params?: unknown,
-    options?: JsonRpcRequestOptions
+    options?: JsonRpcRequestOptions,
   ) => TE.TaskEither<JsonRpcError | JsonRpcTimeoutError, T>;
 
   readonly notify: (method: string, params?: unknown) => E.Either<JsonRpcParseError, void>;
@@ -95,9 +95,7 @@ export function createJsonRpcClient(config: JsonRpcClientConfig): JsonRpcClient 
 
           const response = message as JsonRpcResponse;
           if (response.error) {
-            pending.reject(
-              createJsonRpcError(response.error.code, response.error.message, response.error.data)
-            );
+            pending.reject(createJsonRpcError(response.error.code, response.error.message, response.error.data));
           } else {
             pending.resolve(response.result);
           }
@@ -141,10 +139,10 @@ export function createJsonRpcClient(config: JsonRpcClientConfig): JsonRpcClient 
   const request = <T>(
     method: string,
     params?: unknown,
-    options?: JsonRpcRequestOptions
+    options?: JsonRpcRequestOptions,
   ): TE.TaskEither<JsonRpcError | JsonRpcTimeoutError, T> => {
     return () =>
-      new Promise(resolve => {
+      new Promise((resolve) => {
         if (disposed) {
           resolve(E.left(createJsonRpcError(-32000, 'Client disposed')));
           return;
@@ -181,8 +179,8 @@ export function createJsonRpcClient(config: JsonRpcClientConfig): JsonRpcClient 
         const entry: PendingRequestEntry = {
           id,
           method,
-          resolve: value => resolve(E.right(value as T)),
-          reject: error => resolve(E.left(error)),
+          resolve: (value) => resolve(E.right(value as T)),
+          reject: (error) => resolve(E.left(error)),
           timer,
         };
 
@@ -191,7 +189,7 @@ export function createJsonRpcClient(config: JsonRpcClientConfig): JsonRpcClient 
         const requestLine = JSON.stringify(rpcRequest) + '\n';
         logger.debug('Sending:', requestLine.trim());
 
-        stdin.write(requestLine, err => {
+        stdin.write(requestLine, (err) => {
           if (err) {
             if (timer !== undefined) {
               clearTimeout(timer);

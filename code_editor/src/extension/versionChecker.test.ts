@@ -1,10 +1,5 @@
-import { describe, expect, test } from 'bun:test';
-import {
-  compareVersions,
-  MINIMUM_VERSION,
-  meetsMinimumVersion,
-  parseVersion,
-} from './versionChecker';
+import { describe, expect, test } from 'vitest';
+import { compareVersions, MINIMUM_VERSION, meetsMinimumVersion, parseVersion } from './versionChecker';
 
 describe('parseVersion', () => {
   test('parses simple version', () => {

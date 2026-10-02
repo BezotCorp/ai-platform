@@ -8,7 +8,7 @@ The goal of this project is to ensure a thin UI bridge between Goose and VS Code
 - When choosing libraries to include, choose well supported yet the cleanest and leanest option
 - Always look up the latest stable version when installing libraries
 - Prefer functional programming
-- Prefer using bun tooling as much possible
+- Prefer using pnpm tooling as much as possible
 
 ## Additional Context
 

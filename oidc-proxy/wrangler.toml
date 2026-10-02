@@ -12,7 +12,7 @@ new_classes = ["TokenBucket"]
 [vars]
 OIDC_ISSUER = "https://token.actions.githubusercontent.com"
 OIDC_AUDIENCE = "goose-oidc-proxy"
-MAX_TOKEN_AGE_SECONDS = "1200"  # 20 minutes
+MAX_TOKEN_AGE_SECONDS = "1200"                              # 20 minutes
 MAX_REQUESTS_PER_TOKEN = "200"
 RATE_LIMIT_PER_SECOND = "2"
 

@@ -291,7 +291,7 @@ ERROR_CONFIGS = {
 
 class ErrorProxy:
     """HTTP proxy that can inject errors into provider responses."""
-    
+
     def __init__(self):
         """Initialize the error proxy."""
         self.error_mode = ErrorMode.NO_ERROR
@@ -300,11 +300,11 @@ class ErrorProxy:
         self.request_count = 0
         self.session: Optional[ClientSession] = None
         self.lock = threading.Lock()
-        
+
     def set_error_mode(self, mode: ErrorMode, count: int = 1, percentage: float = 0.0):
         """
         Set the error injection mode.
-        
+
         Args:
             mode: The error mode to use
             count: Number of errors to inject (default 1, 0 for unlimited)
@@ -314,22 +314,22 @@ class ErrorProxy:
             self.error_mode = mode
             self.error_count = count
             self.error_percentage = percentage
-            
+
     def should_inject_error(self) -> bool:
         """
         Determine if we should inject an error for this request.
-        
+
         Returns:
             True if an error should be injected, False otherwise
         """
         with self.lock:
             if self.error_mode == ErrorMode.NO_ERROR:
                 return False
-                
+
             # Percentage mode
             if self.error_percentage > 0.0:
                 return random.random() < self.error_percentage
-            
+
             # Count mode
             if self.error_count > 0:
                 self.error_count -= 1
@@ -343,27 +343,27 @@ class ErrorProxy:
                 return False
 
             return False
-            
+
     def get_error_mode(self) -> ErrorMode:
         """Get the current error injection mode."""
         with self.lock:
             return self.error_mode
-    
+
     def get_error_config(self) -> tuple[ErrorMode, int, float]:
         """Get the current error configuration."""
         with self.lock:
             return (self.error_mode, self.error_count, self.error_percentage)
-        
+
     async def start_session(self):
         """Start the aiohttp client session."""
         timeout = ClientTimeout(total=600)  # Match provider timeout
         self.session = ClientSession(timeout=timeout)
-        
+
     async def close_session(self):
         """Close the aiohttp client session."""
         if self.session:
             await self.session.close()
-            
+
     def detect_provider(self, request: Request) -> str:
         """
         Detect which provider this request is for based on headers and path.
@@ -404,7 +404,7 @@ class ErrorProxy:
 
         # Default to openai if we can't determine
         return 'openai'
-        
+
     def should_always_forward(self, request: Request) -> bool:
         """
         Check if this request should always be forwarded (never injected with errors).
@@ -484,7 +484,7 @@ class ErrorProxy:
             url = f"{url}?{query}"
 
         return url
-        
+
     def _format_status_line(self) -> str:
         """Format a one-line status indicator."""
         mode, count, percentage = self.get_error_config()
@@ -549,20 +549,20 @@ class ErrorProxy:
                     error_config['body'],
                     status=error_config['status']
                 )
-        
+
         # Forward the request to the actual provider
         target_url = self.get_target_url(request, provider)
-        
+
         try:
             # Read request body
             body = await request.read()
-            
+
             # Copy headers, excluding hop-by-hop headers
-            headers = {k: v for k, v in request.headers.items() 
-                      if k.lower() not in ('host', 'connection', 'keep-alive', 
+            headers = {k: v for k, v in request.headers.items()
+                      if k.lower() not in ('host', 'connection', 'keep-alive',
                                            'proxy-authenticate', 'proxy-authorization',
                                            'te', 'trailers', 'transfer-encoding', 'upgrade')}
-            
+
             # Make the proxied request
             async with self.session.request(
                 method=request.method,
@@ -578,11 +578,11 @@ class ErrorProxy:
                                    if k.lower() not in ('connection', 'keep-alive',
                                                         'transfer-encoding', 'content-encoding',
                                                         'content-length')}
-                
+
                 # Check if this is a streaming response (SSE)
                 content_type = resp.headers.get('content-type', '').lower()
                 is_streaming = 'text/event-stream' in content_type
-                
+
                 if is_streaming:
                     # Stream the response (Server-Sent Events)
                     logger.info(f"🌊 Streaming response: {resp.status}")
@@ -612,7 +612,7 @@ class ErrorProxy:
                         status=resp.status,
                         headers=response_headers
                     )
-                
+
         except Exception as e:
             logger.error(f"❌ Error proxying request: {e}", exc_info=True)
             return web.json_response(
@@ -764,30 +764,30 @@ async def shutdown_server(loop):
 async def create_app(proxy: ErrorProxy) -> web.Application:
     """
     Create the aiohttp application.
-    
+
     Args:
         proxy: The ErrorProxy instance
-        
+
     Returns:
         Configured aiohttp application
     """
     app = web.Application()
-    
+
     # Setup and teardown
     async def on_startup(app):
         await proxy.start_session()
         logger.info("🚀 Proxy session started")
-        
+
     async def on_cleanup(app):
         await proxy.close_session()
         logger.info("🛑 Proxy session closed")
-        
+
     app.on_startup.append(on_startup)
     app.on_cleanup.append(on_cleanup)
-    
+
     # Route all requests through the proxy
     app.router.add_route('*', '/{path:.*}', proxy.handle_request)
-    
+
     return app
 
 
@@ -812,7 +812,7 @@ def main():
     )
 
     args = parser.parse_args()
-    
+
     print("=" * 60)
     print("🔧 Provider Error Proxy")
     print("=" * 60)
@@ -826,7 +826,7 @@ def main():
     print(f"  export TETRATE_HOST=http://localhost:{args.port}")
     print(f"  export DATABRICKS_HOST=http://localhost:{args.port}")
     print("=" * 60)
-    
+
     # Create proxy instance
     proxy = ErrorProxy()
 
@@ -861,18 +861,18 @@ def main():
         print("Running in no-stdin mode (background/automated)")
         print("Use SIGINT (Ctrl+C) or SIGTERM to stop the proxy")
         print()
-    
+
     # Create and run the app
     app = loop.run_until_complete(create_app(proxy))
-    
+
     # Run the web server
     runner = web.AppRunner(app)
     loop.run_until_complete(runner.setup())
     site = web.TCPSite(runner, 'localhost', args.port)
     loop.run_until_complete(site.start())
-    
+
     logger.info(f"Proxy running on http://localhost:{args.port}")
-    
+
     try:
         loop.run_forever()
     except KeyboardInterrupt:

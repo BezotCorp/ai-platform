@@ -39,63 +39,63 @@ KEEP_DOWNLOADS=false
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    -n|--top-n)
-      TOP_N="$2"
-      shift 2
-      ;;
-    -o|--output-dir)
-      OUTPUT_DIR="$2"
-      shift 2
-      ;;
-    -m|--models)
-      MODEL_LIST="$2"
-      shift 2
-      ;;
-    --ram-gb)
-      RAM_GB="$2"
-      shift 2
-      ;;
-    --instruction)
-      INSTRUCTION="$2"
-      shift 2
-      ;;
-    --repo-prefix)
-      REPO_PREFIX="$2"
-      shift 2
-      ;;
-    --repo-suffix)
-      REPO_SUFFIX="$2"
-      shift 2
-      ;;
-    --quant)
-      QUANT="$2"
-      shift 2
-      ;;
-    --download-retries)
-      DOWNLOAD_RETRIES="$2"
-      shift 2
-      ;;
-    --retry-delay)
-      RETRY_DELAY="$2"
-      shift 2
-      ;;
-    --run-timeout)
-      RUN_TIMEOUT="$2"
-      shift 2
-      ;;
-    --keep-downloads)
-      KEEP_DOWNLOADS=true
-      shift
-      ;;
-    -h|--help)
-      show_usage
-      exit 0
-      ;;
-    *)
-      echo "Error: Unknown option: $1"
-      show_usage
-      exit 1
-      ;;
+  -n | --top-n)
+    TOP_N="$2"
+    shift 2
+    ;;
+  -o | --output-dir)
+    OUTPUT_DIR="$2"
+    shift 2
+    ;;
+  -m | --models)
+    MODEL_LIST="$2"
+    shift 2
+    ;;
+  --ram-gb)
+    RAM_GB="$2"
+    shift 2
+    ;;
+  --instruction)
+    INSTRUCTION="$2"
+    shift 2
+    ;;
+  --repo-prefix)
+    REPO_PREFIX="$2"
+    shift 2
+    ;;
+  --repo-suffix)
+    REPO_SUFFIX="$2"
+    shift 2
+    ;;
+  --quant)
+    QUANT="$2"
+    shift 2
+    ;;
+  --download-retries)
+    DOWNLOAD_RETRIES="$2"
+    shift 2
+    ;;
+  --retry-delay)
+    RETRY_DELAY="$2"
+    shift 2
+    ;;
+  --run-timeout)
+    RUN_TIMEOUT="$2"
+    shift 2
+    ;;
+  --keep-downloads)
+    KEEP_DOWNLOADS=true
+    shift
+    ;;
+  -h | --help)
+    show_usage
+    exit 0
+    ;;
+  *)
+    echo "Error: Unknown option: $1"
+    show_usage
+    exit 1
+    ;;
   esac
 done
 
@@ -142,8 +142,8 @@ mkdir -p "$OUTPUT_DIR"
 
 EXISTING_MODELS_FILE="$OUTPUT_DIR/existing-models.txt"
 RESULTS_FILE="$OUTPUT_DIR/results.tsv"
-"$GOOSE_BIN" lm list | awk 'NR > 2 && $4 == "✓" { print $1 }' > "$EXISTING_MODELS_FILE"
-printf "status\tmodel_id\tdetail\n" > "$RESULTS_FILE"
+"$GOOSE_BIN" lm list | awk 'NR > 2 && $4 == "✓" { print $1 }' >"$EXISTING_MODELS_FILE"
+printf "status\tmodel_id\tdetail\n" >"$RESULTS_FILE"
 
 TEMP_HF_CACHE_ROOT=""
 TEMP_MODELS=()
@@ -188,7 +188,7 @@ trap cleanup_temp_models EXIT
 
 MODELS=()
 if [[ -n "$MODEL_LIST" ]]; then
-  IFS=',' read -ra REQUESTED_MODELS <<< "$MODEL_LIST"
+  IFS=',' read -ra REQUESTED_MODELS <<<"$MODEL_LIST"
   for model in "${REQUESTED_MODELS[@]}"; do
     repo="${model%%:*}"
     variant="${model#*:}"
@@ -219,7 +219,7 @@ else
 
   SEARCH_JSON="$OUTPUT_DIR/search.json"
   echo "Finding recommended local models..."
-  "$GOOSE_BIN" "${SEARCH_ARGS[@]}" > "$SEARCH_JSON"
+  "$GOOSE_BIN" "${SEARCH_ARGS[@]}" >"$SEARCH_JSON"
 
   while IFS= read -r model_row; do
     MODELS+=("$model_row")
@@ -252,7 +252,7 @@ record_result() {
   local model_id="$2"
   local detail="$3"
   RESULTS+=("$status $model_id${detail:+ - $detail}")
-  printf "%s\t%s\t%s\n" "$status" "$model_id" "$detail" >> "$RESULTS_FILE"
+  printf "%s\t%s\t%s\n" "$status" "$model_id" "$detail" >>"$RESULTS_FILE"
 }
 
 summarize_goose_error() {
@@ -300,7 +300,7 @@ download_model() {
   local delay="$RETRY_DELAY"
 
   while true; do
-    : > "$log_file"
+    : >"$log_file"
     if download_once "$download_id" "$cache_root" 2>&1 | tee "$log_file"; then
       return 0
     fi
@@ -362,7 +362,7 @@ echo "Testing ${#MODELS[@]} model(s)"
 echo ""
 
 for row in "${MODELS[@]}"; do
-  IFS=$'\t' read -r repo_id model_id download_id label size_bytes <<< "$row"
+  IFS=$'\t' read -r repo_id model_id download_id label size_bytes <<<"$row"
   safe_model=$(echo "$model_id" | tr '/:' '__' | tr -cd '[:alnum:]_.-')
   download_log="$OUTPUT_DIR/$safe_model.download.log"
   run_log="$OUTPUT_DIR/$safe_model.run.log"

@@ -14,7 +14,7 @@ const DEFAULT_THRESHOLD = 100;
 
 export function useAutoScroll(
   containerRef: RefObject<HTMLElement | null>,
-  options: UseAutoScrollOptions
+  options: UseAutoScrollOptions,
 ): UseAutoScrollReturn {
   const { isStreaming, threshold = DEFAULT_THRESHOLD } = options;
   const [isAtBottom, setIsAtBottom] = useState(true);

@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'bun:test';
+import { describe, expect, test } from 'vitest';
 import {
   createBinaryNotFoundError,
   createConfiguredPathInvalidError,
@@ -190,12 +190,8 @@ describe('formatErrorDetail', () => {
   });
 
   test('returns message unchanged when data is null or blank', () => {
-    expect(formatErrorDetail(createJsonRpcError(-32603, 'Internal error', null))).toBe(
-      'Internal error'
-    );
-    expect(formatErrorDetail(createJsonRpcError(-32603, 'Internal error', '   '))).toBe(
-      'Internal error'
-    );
+    expect(formatErrorDetail(createJsonRpcError(-32603, 'Internal error', null))).toBe('Internal error');
+    expect(formatErrorDetail(createJsonRpcError(-32603, 'Internal error', '   '))).toBe('Internal error');
   });
 
   test('returns message unchanged for non-JsonRpc errors', () => {

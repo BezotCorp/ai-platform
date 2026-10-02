@@ -7,16 +7,16 @@ For architectural details, see [ARCHITECTURE.md](./ARCHITECTURE.md).
 ## Dev Setup
 
 1. Clone the repository
-2. Install [Bun](https://bun.sh/) if not already installed
+2. Install Node.js and pnpm if not already installed
 3. Navigate to the project root directory
-4. Install dependencies: `bun install`
-5. Build the extension: `bun run build`
+4. Install dependencies: `pnpm install`
+5. Build the extension: `pnpm run build`
 6. Open the project in VS Code: `code .`
 7. Press F5 to start debugging
 
 ## Project Structure
 
-```
+```plain_text
 src/
 ├── extension/          # VS Code extension host (Node.js)
 │   ├── extension.ts    # Main entry point
@@ -38,24 +38,24 @@ src/
 
 ## Build Process
 
-The extension uses Bun for building. All scripts are defined in `package.json`:
+The extension uses esbuild for building. All scripts are defined in `package.json`:
 
 ### Build Commands
 
-| Command | Description |
-|---------|-------------|
-| `bun run build` | Full build: extension + webview + CSS |
-| `bun run build:extension` | Build extension only |
-| `bun run build:webview` | Build webview React app |
-| `bun run build:webview:css` | Build Tailwind CSS |
-| `bun run dev` | Watch mode for extension development |
-| `bun run clean` | Remove dist directory |
+| Command                      | Description                           |
+| ---------------------------- | ------------------------------------- |
+| `pnpm run build`             | Full build: extension + webview + CSS |
+| `pnpm run build:extension`   | Build extension only                  |
+| `pnpm run build:webview`     | Build webview React app               |
+| `pnpm run build:webview:css` | Build Tailwind CSS                    |
+| `pnpm run dev`               | Watch mode for extension development  |
+| `pnpm run clean`             | Remove dist directory                 |
 
 ### Build Details
 
-1. **Extension Build** (`build:extension`): Uses Bun to bundle `src/extension/extension.ts` into `dist/extension.js` with CommonJS format for Node.js. The `vscode` module is external.
+1. **Extension Build** (`build:extension`): Uses esbuild to bundle `src/extension/extension.ts` into `dist/extension.js` with CommonJS format for Node.js. The `vscode` module is external.
 
-2. **Webview Build** (`build:webview`): Uses Bun to bundle `src/webview/index.tsx` into `dist/webview/main.js` with minification.
+2. **Webview Build** (`build:webview`): Uses esbuild to bundle `src/webview/index.tsx` into `dist/webview/main.js` with minification.
 
 3. **CSS Build** (`build:webview:css`): Uses Tailwind CSS v4 to compile `src/webview/styles.css` into `dist/webview/styles.css`.
 
@@ -65,10 +65,10 @@ The extension uses Bun for building. All scripts are defined in `package.json`:
 
 Run tests from the project root:
 
-| Command | Description |
-|---------|-------------|
-| `bun test` | Run all tests |
-| `bun test --watch` | Run tests in watch mode |
+| Command               | Description             |
+| --------------------- | ----------------------- |
+| `pnpm run test`       | Run all tests           |
+| `pnpm run test:watch` | Run tests in watch mode |
 
 ### Writing Tests
 
@@ -78,13 +78,13 @@ Tests are co-located with source files using the `*.test.ts` naming convention:
 - `src/shared/fileReferenceParser.test.ts`
 - `src/extension/jsonRpcClient.test.ts`
 
-Use the Bun test runner with the following pattern:
+Use the Vitest with the following pattern:
 
 ```typescript
-import { describe, it, expect } from "bun:test";
+import { describe, it, expect } from 'vitest';
 
-describe("MyModule", () => {
-  it("should do something", () => {
+describe('MyModule', () => {
+  it('should do something', () => {
     expect(result).toBe(expected);
   });
 });
@@ -94,21 +94,21 @@ describe("MyModule", () => {
 
 This project uses [Biome](https://biomejs.dev/) for linting and formatting.
 
-| Command | Description |
-|---------|-------------|
-| `bun run lint` | Run linter |
-| `bun run lint:fix` | Run linter with auto-fix |
-| `bun run format` | Format code |
-| `bun run check` | Run both lint and format checks |
-| `bun run check:fix` | Fix both lint and format issues |
-| `bun run ci` | CI mode (fails on issues) |
+| Command              | Description                     |
+| -------------------- | ------------------------------- |
+| `pnpm run lint`      | Run linter                      |
+| `pnpm run lint:fix`  | Run linter with auto-fix        |
+| `pnpm run format`    | Format code                     |
+| `pnpm run check`     | Run both lint and format checks |
+| `pnpm run check:fix` | Fix both lint and format issues |
+| `pnpm run ci`        | CI mode (fails on issues)       |
 
 ## Packaging
 
 To create a `.vsix` package for local testing:
 
 ```bash
-bun run package
+pnpm run package
 ```
 
 This will:
@@ -124,7 +124,7 @@ This project uses **Conventional Commits** ([v1.0.0](https://www.conventionalcom
 
 ### Format
 
-```
+```text
 <type>[optional scope]: <description>
 
 [optional body]
@@ -134,30 +134,30 @@ This project uses **Conventional Commits** ([v1.0.0](https://www.conventionalcom
 
 ### Common Types
 
-| Type | Description | SemVer Impact |
-|------|-------------|---------------|
-| `feat` | New feature | Minor |
-| `fix` | Bug fix | Patch |
-| `perf` | Performance improvement | Patch |
-| `refactor` | Code change (no feature/fix) | None |
-| `style` | Formatting changes | None |
-| `test` | Adding/fixing tests | None |
-| `build` | Build system changes | None |
-| `ci` | CI configuration changes | None |
-| `docs` | Documentation only | None |
-| `chore` | Other maintenance | None |
+| Type       | Description                  | SemVer Impact |
+| ---------- | ---------------------------- | ------------- |
+| `feat`     | New feature                  | Minor         |
+| `fix`      | Bug fix                      | Patch         |
+| `perf`     | Performance improvement      | Patch         |
+| `refactor` | Code change (no feature/fix) | None          |
+| `style`    | Formatting changes           | None          |
+| `test`     | Adding/fixing tests          | None          |
+| `build`    | Build system changes         | None          |
+| `ci`       | CI configuration changes     | None          |
+| `docs`     | Documentation only           | None          |
+| `chore`    | Other maintenance            | None          |
 
 ### Breaking Changes
 
 Indicate breaking changes with `!` after type/scope:
 
-```
+```text
 feat!: change API endpoint structure
 ```
 
 ### Examples
 
-```
+```text
 feat(webview): add support for multiple chat sessions
 fix(subprocess): prevent crash when goose path is invalid
 docs: update architecture diagram
@@ -169,20 +169,20 @@ chore(deps): update typescript to 5.8.0
 
 The extension exposes these VS Code settings:
 
-| Setting | Type | Default | Description |
-|---------|------|---------|-------------|
-| `goose.binaryPath` | string | `""` | Path to goose binary (empty = auto-detect) |
-| `goose.logLevel` | enum | `"info"` | Logging level: error, warn, info, debug |
+| Setting            | Type   | Default  | Description                                |
+| ------------------ | ------ | -------- | ------------------------------------------ |
+| `goose.binaryPath` | string | `""`     | Path to goose binary (empty = auto-detect) |
+| `goose.logLevel`   | enum   | `"info"` | Logging level: error, warn, info, debug    |
 
 ## Commands
 
 Registered commands accessible via Command Palette:
 
-| Command | ID | Description |
-|---------|-----|-------------|
-| Goose: Show Logs | `goose.showLogs` | Open output channel |
-| Goose: Restart | `goose.restart` | Restart goose subprocess |
-| Send to Goose | `goose.sendSelectionToChat` | Send selection to chat (Cmd+Shift+G) |
+| Command          | ID                          | Description                          |
+| ---------------- | --------------------------- | ------------------------------------ |
+| Goose: Show Logs | `goose.showLogs`            | Open output channel                  |
+| Goose: Restart   | `goose.restart`             | Restart goose subprocess             |
+| Send to Goose    | `goose.sendSelectionToChat` | Send selection to chat (Cmd+Shift+G) |
 
 ## Debugging
 
@@ -209,24 +209,24 @@ View goose communication:
 
 ### Runtime Dependencies
 
-| Package | Version | Purpose |
-|---------|---------|---------|
-| fp-ts | ^2.16.0 | Functional programming (Either, TaskEither) |
-| react-markdown | ^10.1.0 | Markdown rendering |
-| react-syntax-highlighter | ^15.6.1 | Code syntax highlighting |
-| remark-gfm | ^4.0.1 | GitHub Flavored Markdown |
-| zod | ^3.23.0 | Runtime type validation |
+| Package                  | Version | Purpose                                     |
+| ------------------------ | ------- | ------------------------------------------- |
+| fp-ts                    | ^2.16.0 | Functional programming (Either, TaskEither) |
+| react-markdown           | ^10.1.0 | Markdown rendering                          |
+| react-syntax-highlighter | ^15.6.1 | Code syntax highlighting                    |
+| remark-gfm               | ^4.0.1  | GitHub Flavored Markdown                    |
+| zod                      | ^3.23.0 | Runtime type validation                     |
 
 ### Dev Dependencies
 
-| Package | Purpose |
-|---------|---------|
-| @biomejs/biome | Linting and formatting |
-| @tailwindcss/cli | CSS framework |
-| @vscode/vsce | Extension packaging |
-| typescript | Type checking |
-| husky | Git hooks |
-| @commitlint/* | Commit message linting |
+| Package          | Purpose                |
+| ---------------- | ---------------------- |
+| @biomejs/biome   | Linting and formatting |
+| @tailwindcss/cli | CSS framework          |
+| @vscode/vsce     | Extension packaging    |
+| typescript       | Type checking          |
+| husky            | Git hooks              |
+| @commitlint/*    | Commit message linting |
 
 ## Known Issues
 

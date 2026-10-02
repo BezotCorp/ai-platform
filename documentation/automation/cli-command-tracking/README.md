@@ -51,11 +51,13 @@ cd output && goose run --recipe ../recipes/update-cli-commands.yaml
 ### Version Detection
 
 The pipeline automatically detects versions when not specified:
+
 - **Old version**: Second-most-recent release tag (via `gh release list`)
 - **New version**: Most recent release tag, or `RELEASE_TAG` env var (for CI)
 - **Fallback**: Uses git tags if `gh` CLI not available
 
 To test unreleased changes, explicitly pass `HEAD`:
+
 ```bash
 ./scripts/run-pipeline.sh v1.19.0 HEAD
 ```
@@ -66,7 +68,7 @@ To test unreleased changes, explicitly pass `HEAD`:
 
 The automation uses a **hybrid approach**: deterministic scripts for data extraction/diffing, AI recipes for analysis and documentation updates.
 
-```
+```plain_text
 ┌─────────────────────────────────────────────────────────────────┐
 │                    EXTRACTION (Deterministic)                    │
 ├─────────────────────────────────────────────────────────────────┤
@@ -103,17 +105,20 @@ The automation uses a **hybrid approach**: deterministic scripts for data extrac
 ### Why This Design?
 
 **Scripts handle deterministic tasks:**
+
 - Building goose from specific git tags
 - Running `--help` commands and parsing output
 - JSON structure comparison
 - No interpretation or inference - direct extraction
 
 **AI recipes handle synthesis and updates:**
+
 - Analyzing changes and explaining implications
 - Generating migration guidance and examples
 - Updating documentation with proper formatting and context
 
 **Benefits:**
+
 - **Reliability**: Extraction is deterministic and reproducible
 - **Testability**: Each stage has clear inputs/outputs
 - **Maintainability**: Easy to update individual components
@@ -123,25 +128,26 @@ The automation uses a **hybrid approach**: deterministic scripts for data extrac
 
 All stages communicate via JSON/Markdown files in the `output/` directory:
 
-| File | Producer | Consumer | Purpose |
-|------|----------|----------|---------|
-| `old-cli-structure.json` | `extract-cli-structure.sh` | `diff-cli-structures.py` | Previous version CLI structure |
-| `new-cli-structure.json` | `extract-cli-structure.sh` | `diff-cli-structures.py` | Current version CLI structure |
-| `cli-changes.json` | `diff-cli-structures.py` | `synthesize-cli-changes.yaml` | Detected changes (structured) |
-| `cli-changes.md` | `synthesize-cli-changes.yaml` | `update-cli-commands.yaml` | Human-readable change documentation |
-| `update-summary.md` | `update-cli-commands.yaml` | Human review | Summary of documentation updates |
+| File                     | Producer                      | Consumer                      | Purpose                             |
+| ------------------------ | ----------------------------- | ----------------------------- | ----------------------------------- |
+| `old-cli-structure.json` | `extract-cli-structure.sh`    | `diff-cli-structures.py`      | Previous version CLI structure      |
+| `new-cli-structure.json` | `extract-cli-structure.sh`    | `diff-cli-structures.py`      | Current version CLI structure       |
+| `cli-changes.json`       | `diff-cli-structures.py`      | `synthesize-cli-changes.yaml` | Detected changes (structured)       |
+| `cli-changes.md`         | `synthesize-cli-changes.yaml` | `update-cli-commands.yaml`    | Human-readable change documentation |
+| `update-summary.md`      | `update-cli-commands.yaml`    | Human review                  | Summary of documentation updates    |
 
 ## Configuration
 
 ### Environment Variables
 
-| Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `GOOSE_REPO` | Yes (local) | - | Path to goose repository root |
-| `CLI_COMMANDS_PATH` | No | `$GOOSE_REPO/documentation/docs/guides/goose-cli-commands.md` | Full path to target doc file |
-| `RELEASE_TAG` | No | - | Used by GitHub Actions to specify the new version |
+| Variable            | Required    | Default                                                       | Description                                       |
+| ------------------- | ----------- | ------------------------------------------------------------- | ------------------------------------------------- |
+| `GOOSE_REPO`        | Yes (local) | -                                                             | Path to goose repository root                     |
+| `CLI_COMMANDS_PATH` | No          | `$GOOSE_REPO/documentation/docs/guides/goose-cli-commands.md` | Full path to target doc file                      |
+| `RELEASE_TAG`       | No          | -                                                             | Used by GitHub Actions to specify the new version |
 
 **Example:**
+
 ```bash
 export GOOSE_REPO=/Users/you/goose
 # CLI_COMMANDS_PATH is auto-constructed from GOOSE_REPO
@@ -172,16 +178,19 @@ To add or remove skipped commands, edit the config file - no code changes requir
 Builds goose from a specific git tag and extracts CLI structure using `--help` output.
 
 **Usage:**
+
 ```bash
 ./scripts/extract-cli-structure.sh [version] > output/cli-structure.json
 ```
 
 **Arguments:**
+
 - `version` (optional): Git tag or commit to extract from (default: HEAD)
 
 **Output:** JSON with complete command tree including options, subcommands, aliases
 
 **Example:**
+
 ```bash
 # Extract from current code
 ./scripts/extract-cli-structure.sh HEAD > output/new-cli-structure.json
@@ -195,21 +204,25 @@ Builds goose from a specific git tag and extracts CLI structure using `--help` o
 Compares two CLI structure files and outputs detected changes.
 
 **Usage:**
+
 ```bash
 python3 scripts/diff-cli-structures.py <old-file> <new-file> > output/cli-changes.json
 ```
 
 **Arguments:**
+
 - `old-file`: Path to old CLI structure JSON
 - `new-file`: Path to new CLI structure JSON
 
 **Output:** JSON with categorized changes:
+
 - `commands.added`: New commands
 - `commands.removed`: Deleted commands
 - `commands.modified`: Changed commands (options, description, aliases)
 - `breaking_changes`: Categorized breaking changes
 
 **Example:**
+
 ```bash
 python3 scripts/diff-cli-structures.py \
   output/old-cli-structure.json \
@@ -224,11 +237,13 @@ python3 scripts/diff-cli-structures.py \
 Analyzes detected changes and generates human-readable documentation.
 
 **Inputs:**
+
 - `output/cli-changes.json` - Detected changes from diff script
 - `output/old-cli-structure.json` - Previous version structure
 - `output/new-cli-structure.json` - Current version structure
 
 **Output:**
+
 - `output/cli-changes.md` - Human-readable change documentation with:
   - Breaking changes with migration guidance
   - New commands with usage examples
@@ -236,6 +251,7 @@ Analyzes detected changes and generates human-readable documentation.
   - Non-breaking changes summary
 
 **Usage:**
+
 ```bash
 cd output
 goose run --recipe ../recipes/synthesize-cli-changes.yaml
@@ -246,14 +262,17 @@ goose run --recipe ../recipes/synthesize-cli-changes.yaml
 Updates the CLI Commands Guide based on synthesized changes.
 
 **Inputs:**
+
 - `output/cli-changes.md` - Change documentation from synthesis recipe
 - `goose-cli-commands.md` - Target documentation file (path from `CLI_COMMANDS_PATH` or `GOOSE_REPO` env var)
 
 **Outputs:**
+
 - Updated `goose-cli-commands.md` with changes applied
 - `output/update-summary.md` - Summary of changes for review
 
 **Usage:**
+
 ```bash
 export CLI_COMMANDS_PATH=/path/to/goose-cli-commands.md
 cd output
@@ -262,7 +281,7 @@ goose run --recipe ../recipes/update-cli-commands.yaml
 
 ## Directory Structure
 
-```
+```plain_text
 cli-command-tracking/
 ├── README.md                           # This file
 ├── TESTING.md                          # Testing guide for GitHub Actions workflow
@@ -300,12 +319,14 @@ The automation runs via `.github/workflows/docs-update-cli-ref.yml`:
 ## What Gets Tracked
 
 ### Commands
+
 - ✅ Commands added/removed
 - ✅ Command descriptions changed
 - ✅ Command aliases added/removed
 - ✅ Subcommands added/removed
 
 ### Options
+
 - ✅ Options added/removed
 - ✅ Option help text changed
 - ✅ Default values changed
@@ -313,6 +334,7 @@ The automation runs via `.github/workflows/docs-update-cli-ref.yml`:
 - ✅ Short/long flags changed
 
 ### Breaking Changes (Auto-Categorized)
+
 - Command removed (high severity)
 - Option removed (high severity)
 - Option renamed (high severity)

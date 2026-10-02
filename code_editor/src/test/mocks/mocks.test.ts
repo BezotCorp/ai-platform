@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'bun:test';
+import { describe, expect, test } from 'vitest';
 import { createMockStreams } from './streams';
 import { createMockMemento } from './vscode';
 
@@ -43,27 +43,32 @@ describe('createMockStreams', () => {
     expect(written).toContain('test data');
   });
 
-  test('pushResponse adds data to stdout', done => {
+  test('pushResponse adds data to stdout', async () => {
     const { stdout, pushResponse } = createMockStreams();
 
-    stdout.on('data', (chunk: Buffer) => {
-      expect(chunk.toString()).toBe('response\n');
-      done();
+    const received = new Promise<void>((resolve) => {
+      stdout.once('data', (chunk: Buffer) => {
+        expect(chunk.toString()).toBe('response\n');
+        resolve();
+      });
     });
 
     pushResponse('response');
+    await received;
   });
 
-  test('close ends the stdout stream', done => {
+  test('close ends the stdout stream', async () => {
     const { stdout, close } = createMockStreams();
 
-    stdout.on('end', () => {
-      done();
+    const ended = new Promise<void>((resolve) => {
+      stdout.once('end', resolve);
     });
 
     // Need to consume data for 'end' to fire
     // biome-ignore lint/suspicious/noEmptyBlockStatements: intentional noop for stream consumption
     stdout.on('data', () => {});
+
     close();
+    await ended;
   });
 });
