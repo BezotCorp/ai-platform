@@ -3,7 +3,7 @@ import { act, renderHook } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 import type { Message } from '../../types/message';
 import { ChatState } from '../../types/chatState';
-import type { Session } from '../../types/session';
+import { Session } from '../../types/session';
 import {
   acpElicitationUserInputRequestId,
   acpChatSessionActions,
@@ -25,7 +25,7 @@ function message(id: string, text: string): Message {
 }
 
 function session(id: string, conversation: Message[] = []): Session {
-  return {
+  return new Session({
     id,
     name: `Session ${id}`,
     created_at: '2026-01-01T00:00:00Z',
@@ -33,11 +33,10 @@ function session(id: string, conversation: Message[] = []): Session {
     working_dir: '/tmp',
     message_count: conversation.length,
     extension_data: {},
-    source: 'test',
     conversation,
     usage: { input_tokens: 1, output_tokens: 2, total_tokens: 3 },
     accumulated_usage: { input_tokens: 4, output_tokens: 5, total_tokens: 9 },
-  } as Session;
+  });
 }
 
 function permissionRequest(sessionId: string, toolCallId = 'tool-1'): AcpPermissionRequest {

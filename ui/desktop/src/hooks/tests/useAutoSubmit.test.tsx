@@ -5,10 +5,11 @@ import type { PropsWithChildren } from 'react';
 import { useAutoSubmit } from '../useAutoSubmit';
 import { ChatState } from '../../types/chatState';
 import type { UserInput } from '../../types/message';
-import type { Session } from '../../types/session';
+import { Session } from '../../types/session';
+import type { SessionData } from '../../types/sessionData';
 
-function makeSession(overrides: Partial<Session> = {}): Session {
-  return {
+function makeSession(overrides: Partial<SessionData> = {}): Session {
+  return new Session({
     id: 'sess-1',
     name: 'untitled',
     message_count: 0,
@@ -17,7 +18,7 @@ function makeSession(overrides: Partial<Session> = {}): Session {
     working_dir: '/tmp',
     extension_data: { active: [], installed: [] },
     ...overrides,
-  };
+  });
 }
 
 const initialMessage: UserInput = {

@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createSession } from '../sessions';
 import type { ExtensionConfig } from '../types/extensions';
-import type { Session } from '../types/session';
+import { Session } from '../types/session';
 import type { FixedExtensionEntry } from '../components/ConfigContext';
 import type { GooseExtension, GooseExtensionEntry } from '@aaif/goose-acp-client';
 import { getConfiguredGooseExtensions } from '../acp/extensions';
@@ -52,7 +52,7 @@ const testRecipe = vi.hoisted(() => ({
   description: 'Recipe used in tests',
 }));
 
-const testSession: Session = {
+const testSession: Session = new Session({
   id: 'session-1',
   name: 'untitled',
   message_count: 0,
@@ -60,7 +60,7 @@ const testSession: Session = {
   updated_at: '2026-06-19T00:00:00.000Z',
   working_dir: '/tmp',
   extension_data: { active: [], installed: [] },
-};
+});
 
 const extensionConfig = (name: string): ExtensionConfig => ({
   name,

@@ -2,11 +2,13 @@ import { describe, it, expect } from 'vitest';
 import { getSessionDisplayName } from '../sessions';
 import { prependUnique } from '../hooks/useNavigationSessions';
 import type { SessionListItem } from '../acp/sessionListItem';
-import type { Session } from '../types/session';
+import { Session } from '../types/session';
+import type { SessionData } from '../types/sessionData';
+import type { Recipe } from '../recipe';
 
 // Helper to build a minimal Session object for testing.
-function makeSession(overrides: Partial<Session> = {}): Session {
-  return {
+function makeSession(overrides: Partial<SessionData> = {}): Session {
+  return new Session({
     id: 'sess-1',
     name: 'untitled',
     message_count: 0,
@@ -15,7 +17,7 @@ function makeSession(overrides: Partial<Session> = {}): Session {
     working_dir: '/tmp',
     extension_data: { active: [], installed: [] },
     ...overrides,
-  };
+  });
 }
 
 function makeListItem(overrides: Partial<SessionListItem> = {}): SessionListItem {
@@ -45,7 +47,7 @@ describe('getSessionDisplayName (fix for #8865)', () => {
       name: 'My Renamed Chat',
       user_set_name: true,
       message_count: 2,
-      recipe: { title: 'Some Recipe' } as unknown as Session['recipe'],
+      recipe: { title: 'Some Recipe' } as unknown as Recipe,
     });
     expect(getSessionDisplayName(session)).toBe('My Renamed Chat');
   });
@@ -55,7 +57,7 @@ describe('getSessionDisplayName (fix for #8865)', () => {
       name: 'auto-generated',
       user_set_name: false,
       message_count: 2,
-      recipe: { title: 'Some Recipe' } as unknown as Session['recipe'],
+      recipe: { title: 'Some Recipe' } as unknown as Recipe,
     });
     expect(getSessionDisplayName(session)).toBe('Some Recipe');
   });

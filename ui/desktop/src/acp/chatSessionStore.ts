@@ -10,7 +10,7 @@ import {
   type AcpChatStateChange,
   type AcpSessionNotificationAdapter,
 } from './sessionNotificationAdapter';
-import type { ElicitationStatus } from './adapter/elicitations';
+import type { ElicitationStatus } from './adapter/elicitationStatus';
 import { cloneMessage } from './adapter/shared';
 import type { AcpElicitationRequest } from './elicitationRequests';
 import type { AcpPermissionRequest } from './permissionRequestTypes';
@@ -689,7 +689,7 @@ function applyChatStateChanges(entry: StoreEntry, changes: AcpChatStateChange[])
         break;
       case 'sessionInfo':
         if (change.name && entry.session) {
-          entry.session = { ...entry.session, name: change.name };
+          entry.session = entry.session.with({ name: change.name });
         }
         if (change.activeRunId !== undefined) {
           entry.activeRunId = change.activeRunId;

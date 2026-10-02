@@ -5,9 +5,9 @@ import {
   applyElicitationRequest as applyElicitationRequestToState,
   applyElicitationStatus as applyElicitationStatusToState,
   type ElicitationStatus,
-} from './adapter/elicitations';
+} from './adapter/elicitationStatus';
 import { applyGooseSessionNotification } from './adapter/gooseSessionNotifications';
-import { applyContentChunk, applyThoughtChunk } from './adapter/messages';
+import { applyContentChunk, applyThoughtChunk } from './adapter/streamedContentBlock';
 import {
   applyPermissionRequest as applyPermissionRequestToState,
   cancelPermissionRequest as cancelPermissionRequestInState,

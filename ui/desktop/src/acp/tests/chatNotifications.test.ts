@@ -2,7 +2,7 @@ import type { SessionNotification } from '@agentclientprotocol/sdk';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AppEvents } from '../../constants/events';
 import { ChatState } from '../../types/chatState';
-import type { Session } from '../../types/session';
+import { Session } from '../../types/session';
 import { maybeHandlePlatformEvent } from '../../utils/platformEvents';
 import {
   handleAcpGooseSessionNotification,
@@ -60,7 +60,7 @@ function platformEventToolUpdate(status: 'in_progress' | 'completed'): SessionNo
 }
 
 function sessionWithName(name: string): Session {
-  return {
+  return new Session({
     id: SESSION_ID,
     name,
     created_at: '2026-01-01T00:00:00Z',
@@ -68,8 +68,7 @@ function sessionWithName(name: string): Session {
     working_dir: '/tmp',
     message_count: 0,
     extension_data: {},
-    source: 'test',
-  } as Session;
+  });
 }
 
 function snapshotWithName(name: string): AcpChatSessionSnapshot {

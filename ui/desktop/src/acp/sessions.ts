@@ -8,7 +8,7 @@ import {
 } from '@agentclientprotocol/sdk';
 import type { GooseExtension, SessionExportFormatKey } from '@aaif/goose-acp-client';
 import { getAcpClient } from './acpConnection';
-import type { Session } from '../types/session';
+import { Session } from '../types/session';
 import type { GooseSessionInfoMeta } from './gooseSessionInfoMeta';
 import type { SessionListItem } from './sessionListItem';
 import type { SessionListPage } from './sessionListPage';
@@ -49,7 +49,7 @@ export function sessionInfoToSession(s: SessionInfo, loadMeta: LoadSessionMeta =
       }
     : null;
 
-  return {
+  return new Session({
     id: String(s.sessionId),
     name: s.title ?? '',
     working_dir: loadMeta.workingDir ?? s.cwd,
@@ -67,7 +67,7 @@ export function sessionInfoToSession(s: SessionInfo, loadMeta: LoadSessionMeta =
     user_recipe_values: loadMeta.userRecipeValues,
     user_set_name: meta.userSetName,
     last_message_snippet: meta.lastMessageSnippet,
-  };
+  });
 }
 
 function sessionInfoToListItem(s: SessionInfo): SessionListItem {

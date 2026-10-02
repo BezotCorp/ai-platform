@@ -80,16 +80,18 @@ function patchAcpSessionProviderModel(
   const currentSession = acpChatSessionStore.getSnapshot(sessionId)?.session;
   if (!currentSession) return;
 
-  acpChatSessionActions.setSessionMetadata(sessionId, {
-    ...currentSession,
-    provider_name: providerId ?? currentSession.provider_name,
-    model_config: modelId
-      ? {
-          ...(currentSession.model_config ?? { toolshim: false }),
-          model_name: modelId,
-        }
-      : currentSession.model_config,
-  });
+  acpChatSessionActions.setSessionMetadata(
+    sessionId,
+    currentSession.with({
+      provider_name: providerId ?? currentSession.provider_name,
+      model_config: modelId
+        ? {
+            ...(currentSession.model_config ?? { toolshim: false }),
+            model_name: modelId,
+          }
+        : currentSession.model_config,
+    })
+  );
 }
 
 export const ModelAndProviderProvider: React.FC<ModelAndProviderProviderProps> = ({ children }) => {

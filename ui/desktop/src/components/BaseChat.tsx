@@ -268,7 +268,7 @@ export default function BaseChat({
         throw new Error('Cannot update working directory before ACP session is loaded');
       }
       await acpUpdateWorkingDir(session.id, newDir);
-      updateSession((currentSession) => ({ ...currentSession, working_dir: newDir }));
+      updateSession((currentSession) => currentSession.with({ working_dir: newDir }));
     },
     [session, updateSession]
   );

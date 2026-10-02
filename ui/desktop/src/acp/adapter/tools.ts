@@ -5,7 +5,7 @@ import type {
 } from '@agentclientprotocol/sdk';
 import type { Message } from '../../types/message';
 import type { ContentBlock as GooseContentBlock } from '../../types/message';
-import { findMessageForChunk } from './messages';
+import { findMessageForChunk } from './streamedContentBlock';
 import { toolNotificationChange } from './toolNotifications';
 import {
   type AcpChatStateChange,

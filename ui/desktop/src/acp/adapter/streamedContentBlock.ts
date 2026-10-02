@@ -168,7 +168,7 @@ function lastMergeableMessageWithRole(
   role: Message['role']
 ): Message | undefined {
   const lastMessage = state.messages[state.messages.length - 1];
-  if (lastMessage?.role !== role || ! lastMessage.metadata.agentVisible) {
+  if (lastMessage?.role !== role || !lastMessage.metadata.agentVisible) {
     return undefined;
   }
   return lastMessage;

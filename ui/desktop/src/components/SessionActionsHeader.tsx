@@ -420,7 +420,12 @@ export default function SessionActionsHeader({
       await acpRenameSession(session.id, trimmedName);
       flushSync(() => setIsRenameOpen(false));
       document.body.style.removeProperty('pointer-events');
-      onSessionChange((current) => ({ ...current, name: trimmedName, user_set_name: true }));
+      onSessionChange((current) =>
+        current.with({
+          name: trimmedName,
+          user_set_name: true,
+        })
+      );
       window.dispatchEvent(
         new CustomEvent(AppEvents.SESSION_RENAMED, {
           detail: { sessionId: session.id, newName: trimmedName, userInitiated: true },

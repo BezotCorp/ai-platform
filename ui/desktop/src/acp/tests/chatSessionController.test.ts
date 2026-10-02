@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Message } from '../../types/message';
 import { ChatState } from '../../types/chatState';
-import type { Session } from '../../types/session';
+import { Session } from '../../types/session';
 import { acpChatSessionController } from '../chatSessionController';
 import {
   acpChatSessionActions,
@@ -70,7 +70,7 @@ function userMessage(): Message & { id: string } {
 }
 
 function loadedSession(): Session {
-  return {
+  return new Session({
     id: SESSION_ID,
     name: 'Loaded session',
     created_at: '2026-01-01T00:00:00Z',
@@ -78,8 +78,7 @@ function loadedSession(): Session {
     working_dir: '/tmp',
     message_count: 0,
     extension_data: {},
-    source: 'test',
-  } as Session;
+  });
 }
 
 function mockLoadResult() {

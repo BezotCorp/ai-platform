@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import Hub from '../Hub';
 import { IntlTestWrapper } from '../../i18n/test-utils';
 import { createSession } from '../../sessions';
+import { Session as AppSession } from '../../types/session';
 import { UserInput } from '../../types/message';
 import { acpGetLiveVoiceAvailability } from '../../acp/liveVoice';
 import { subscribeToAcpRecovery } from '../../acp/acpConnection';
@@ -22,6 +23,18 @@ type ChatInputCapture = {
 };
 
 type Session = Awaited<ReturnType<typeof createSession>>;
+
+function session(id: string = 'session-1'): AppSession {
+  return new AppSession({
+    id,
+    name: 'untitled',
+    message_count: 0,
+    created_at: '2026-01-01T00:00:00.000Z',
+    updated_at: '2026-01-01T00:00:00.000Z',
+    working_dir: '/tmp/goose',
+    extension_data: {},
+  });
+}
 
 const liveVoice: LiveVoiceController = {
   activeSessionId: null,
@@ -77,7 +90,7 @@ function pendingSession() {
   vi.mocked(createSession).mockImplementation(
     () =>
       new Promise<Session>((resolve, reject) => {
-        settle.started = () => resolve({ id: 'session-1' } as Session);
+        settle.started = () => resolve(session());
         settle.failed = () => reject(new Error('no agent'));
       })
   );
@@ -146,7 +159,7 @@ describe('Hub', () => {
   });
 
   it('starts a chat with no extensions when the user cleared the picker', async () => {
-    vi.mocked(createSession).mockResolvedValue({ id: 'session-1' } as Session);
+    vi.mocked(createSession).mockResolvedValue(session());
     renderHub({ current: '' });
 
     // Touching the picker is what turns "not specified" into a real choice, and
@@ -160,7 +173,7 @@ describe('Hub', () => {
   });
 
   it('leaves the set unspecified when the picker was never touched', async () => {
-    vi.mocked(createSession).mockResolvedValue({ id: 'session-1' } as Session);
+    vi.mocked(createSession).mockResolvedValue(session());
     renderHub({ current: '' });
 
     await submit();

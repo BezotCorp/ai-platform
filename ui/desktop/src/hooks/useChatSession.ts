@@ -116,11 +116,10 @@ export function useChatSession({
         return;
       }
 
-      const updatedSession = {
-        ...currentSession,
+      const updatedSession: Session = currentSession.with({
         name: newName,
-        ...(userInitiated && { user_set_name: true }),
-      };
+        ...(userInitiated ? { user_set_name: true } : {}),
+      });
       acpChatSessionActions.setSessionMetadata(sessionId, updatedSession);
     };
 
