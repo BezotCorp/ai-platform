@@ -32,7 +32,7 @@ export function useThrottledStreamingText(
   }, [content, enabled]);
 
   useEffect(() => {
-    if (!enabled) return;
+    if (!enabled) return undefined;
 
     cooldownTimerRef.current = window.setTimeout(() => {
       cooldownTimerRef.current = null;

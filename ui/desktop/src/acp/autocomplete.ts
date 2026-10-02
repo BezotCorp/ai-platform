@@ -11,10 +11,7 @@ function isSlashCommandItemType(value: unknown): value is SlashCommandItemType {
   return typeof value === 'string' && SLASH_COMMAND_ITEM_TYPES.has(value);
 }
 
-function stringMetaValue(
-  meta: AvailableCommand['_meta'],
-  key: string
-): string | undefined {
+function stringMetaValue(meta: AvailableCommand['_meta'], key: string): string | undefined {
   const value = meta?.[key];
   return typeof value === 'string' && value.trim() ? value : undefined;
 }
@@ -33,7 +30,8 @@ export function availableCommandToDisplayItem(
   }
 
   const sourcePath = stringMetaValue(command._meta, 'sourcePath');
-  const extra = commandType === 'Recipe' ? sourcePath ?? command.description : command.description;
+  const extra =
+    commandType === 'Recipe' ? (sourcePath ?? command.description) : command.description;
 
   return {
     name: command.name,
@@ -57,7 +55,7 @@ export function agentMentionToDisplayItem(agent: AgentMention): AutocompleteDisp
 
 export async function listSlashCommandItems(cwd: string): Promise<AutocompleteDisplayItem[]> {
   const client = await getAcpClient();
-  const response = await client.goose.slashCommandsList_unstable(cwdParam(cwd));
+  const response = await client.goose.slashCommandsListUnstable(cwdParam(cwd));
   return response.availableCommands
     .map(availableCommandToDisplayItem)
     .filter((item): item is AutocompleteDisplayItem => item !== null);
@@ -68,7 +66,7 @@ export async function listAgentMentionItems(
   sessionId?: string
 ): Promise<AutocompleteDisplayItem[]> {
   const client = await getAcpClient();
-  const response = await client.goose.agentMentionsList_unstable({
+  const response = await client.goose.agentMentionsListUnstable({
     ...cwdParam(cwd),
     ...(sessionId ? { sessionId } : {}),
   });

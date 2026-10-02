@@ -26,7 +26,7 @@ function handleIntlError(err: { code: string; message?: string }) {
   console.error(err);
 }
 
-(async () => {
+void (async () => {
   const messages = await loadMessages(currentMessageLocale);
 
   ReactDOM.createRoot(document.getElementById('root')!).render(

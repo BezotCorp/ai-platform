@@ -36,7 +36,7 @@ export async function fetchModelsForProviders(
         const allModels = await listLocalModels();
         const downloadedModels = allModels
           .filter((m) => m.status.state === 'Downloaded')
-          .map((m) => ({ name: m.id, provider: p.name }) as Model);
+          .map((m) => ({ name: m.id, provider: p.name }));
         return { provider: p, models: downloadedModels, error: null, warning: null };
       }
 
@@ -48,7 +48,7 @@ export async function fetchModelsForProviders(
             provider: p.name,
             context_limit: m.contextLimit ?? undefined,
             reasoning: m.reasoning ?? undefined,
-          }) as Model
+          })
       );
       return { provider: p, models, error: null, warning: null };
     } catch (e: unknown) {

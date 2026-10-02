@@ -3,11 +3,34 @@ import { Switch } from '../../ui/switch';
 import { Input } from '../../ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../ui/card';
 import { AlertCircle } from 'lucide-react';
-import { ExternalBackendConfig, defaultSettings } from '../../../utils/settings';
 import { defineMessages, useIntl } from '../../../i18n';
 import { normalizeAcpHttpBaseUrl } from '../../../acp/url';
+import type { NoMessageValues } from 'react-intl';
+import { ExternalBackendConfig } from '../../../utils/externalBackendConfig';
+import { defaultSettings } from '../../../utils/settings';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly "title": NoMessageValues;
+  readonly "description": NoMessageValues;
+  readonly "useExternalServer": NoMessageValues;
+  readonly "useExternalServerDescription": NoMessageValues;
+  readonly "serverUrl": NoMessageValues;
+  readonly "serverUrlHelp": NoMessageValues;
+  readonly "workingDir": NoMessageValues;
+  readonly "workingDirPlaceholder": NoMessageValues;
+  readonly "workingDirHelp": NoMessageValues;
+  readonly "secretKey": NoMessageValues;
+  readonly "secretKeyPlaceholder": NoMessageValues;
+  readonly "secretKeyHelp": NoMessageValues;
+  readonly "certFingerprint": NoMessageValues;
+  readonly "certFingerprintPlaceholder": NoMessageValues;
+  readonly "certFingerprintHelp": NoMessageValues;
+  readonly "restartNote": NoMessageValues;
+  readonly "urlProtocolError": NoMessageValues;
+  readonly "fingerprintRequiresHttps": NoMessageValues;
+  readonly "urlFormatError": NoMessageValues;
+  readonly "urlBaseError": NoMessageValues;
+}>({
   title: {
     id: 'externalBackendSection.title',
     defaultMessage: 'External Backend (ACP)',

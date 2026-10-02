@@ -29,8 +29,19 @@ import { useFeatures } from '../../contexts/FeaturesContext';
 import { defineMessages, useIntl } from '../../i18n';
 import BackButton from '../ui/BackButton';
 import { useNavigationContext } from '../Layout/NavigationContext';
+import type { NoMessageValues } from 'react-intl';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly "title": NoMessageValues;
+  readonly "tabModels": NoMessageValues;
+  readonly "tabLocalInference": NoMessageValues;
+  readonly "tabChat": NoMessageValues;
+  readonly "tabAgent": NoMessageValues;
+  readonly "tabPrompts": NoMessageValues;
+  readonly "tabKeyboard": NoMessageValues;
+  readonly "tabAuth": NoMessageValues;
+  readonly "tabApp": NoMessageValues;
+}>({
   title: {
     id: 'settingsView.title',
     defaultMessage: 'Settings',

@@ -11,8 +11,21 @@ import { defineMessages, useIntl } from '../../i18n';
 import { SearchView } from '../conversation/SearchView';
 import { getSearchShortcutText } from '../../utils/keyboardShortcuts';
 import { listSkillSources } from '../../acp/sources';
+import type { MessageValue, NoMessageValues } from 'react-intl';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly "errorLoadingSkills": NoMessageValues;
+  readonly "tryAgain": NoMessageValues;
+  readonly "noSkillsInstalled": NoMessageValues;
+  readonly "noSkillsDescription": NoMessageValues;
+  readonly "noMatchingSkills": NoMessageValues;
+  readonly "adjustSearchTerms": NoMessageValues;
+  readonly "skillsTitle": NoMessageValues;
+  readonly "addSkill": NoMessageValues;
+  readonly "skillsDescription": { readonly "shortcut": MessageValue };
+  readonly "searchSkillsPlaceholder": NoMessageValues;
+  readonly "comingSoon": NoMessageValues;
+}>({
   errorLoadingSkills: {
     id: 'skillsView.errorLoadingSkills',
     defaultMessage: 'Error Loading Skills',
@@ -132,7 +145,7 @@ export default function SkillsView() {
   }, []);
 
   useEffect(() => {
-    loadSkills();
+    void loadSkills();
   }, [loadSkills]);
 
   useEffect(() => {

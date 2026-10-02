@@ -1,8 +1,8 @@
 import type {
-  CreateScheduleRequest_unstable,
-  InspectRunningJobResponse_unstable,
-  KillRunningJobResponse_unstable,
-  RunScheduleNowResponse_unstable,
+  CreateScheduleRequestUnstable,
+  InspectRunningJobResponseUnstable,
+  KillRunningJobResponseUnstable,
+  RunScheduleNowResponseUnstable,
   ScheduledJobDto,
   SessionInfo,
 } from '@aaif/goose-acp-client';
@@ -54,7 +54,7 @@ export async function acpListSchedules(): Promise<ScheduledJobDto[]> {
 
   const listPromise = (async () => {
     const client = await getAcpClient();
-    const response = await client.goose.schedulesList_unstable({});
+    const response = await client.goose.schedulesListUnstable({});
     return response.jobs;
   })().catch((error) => {
     throw normalizeAcpError(error, 'Failed to list schedules');
@@ -72,11 +72,11 @@ export async function acpListSchedules(): Promise<ScheduledJobDto[]> {
 }
 
 export async function acpCreateSchedule(
-  request: CreateScheduleRequest_unstable
+  request: CreateScheduleRequestUnstable
 ): Promise<ScheduledJobDto> {
   try {
     const client = await getAcpClient();
-    const response = await client.goose.schedulesCreate_unstable(request);
+    const response = await client.goose.schedulesCreateUnstable(request);
     clearInFlightScheduleReads();
     return response.job;
   } catch (error) {
@@ -87,7 +87,7 @@ export async function acpCreateSchedule(
 export async function acpDeleteSchedule(scheduleId: string): Promise<void> {
   try {
     const client = await getAcpClient();
-    await client.goose.schedulesDelete_unstable({ scheduleId });
+    await client.goose.schedulesDeleteUnstable({ scheduleId });
     clearInFlightScheduleReads();
   } catch (error) {
     throw normalizeAcpError(error, 'Failed to delete schedule');
@@ -106,7 +106,7 @@ export async function acpListScheduleSessions(
 
   const listPromise = (async () => {
     const client = await getAcpClient();
-    const response = await client.goose.schedulesSessionsList_unstable({ scheduleId, limit });
+    const response = await client.goose.schedulesSessionsListUnstable({ scheduleId, limit });
     return response.sessions;
   })().catch((error) => {
     throw normalizeAcpError(error, 'Failed to list schedule sessions');
@@ -125,10 +125,10 @@ export async function acpListScheduleSessions(
 
 export async function acpRunScheduleNow(
   scheduleId: string
-): Promise<RunScheduleNowResponse_unstable> {
+): Promise<RunScheduleNowResponseUnstable> {
   try {
     const client = await getAcpClient();
-    const response = await client.goose.schedulesRunNow_unstable({ scheduleId });
+    const response = await client.goose.schedulesRunNowUnstable({ scheduleId });
     clearInFlightScheduleReads();
     return response;
   } catch (error) {
@@ -139,7 +139,7 @@ export async function acpRunScheduleNow(
 export async function acpPauseSchedule(scheduleId: string): Promise<void> {
   try {
     const client = await getAcpClient();
-    await client.goose.schedulesPause_unstable({ scheduleId });
+    await client.goose.schedulesPauseUnstable({ scheduleId });
     clearInFlightScheduleReads();
   } catch (error) {
     throw normalizeAcpError(error, 'Failed to pause schedule');
@@ -149,7 +149,7 @@ export async function acpPauseSchedule(scheduleId: string): Promise<void> {
 export async function acpUnpauseSchedule(scheduleId: string): Promise<void> {
   try {
     const client = await getAcpClient();
-    await client.goose.schedulesUnpause_unstable({ scheduleId });
+    await client.goose.schedulesUnpauseUnstable({ scheduleId });
     clearInFlightScheduleReads();
   } catch (error) {
     throw normalizeAcpError(error, 'Failed to unpause schedule');
@@ -162,7 +162,7 @@ export async function acpUpdateSchedule(
 ): Promise<ScheduledJobDto> {
   try {
     const client = await getAcpClient();
-    const response = await client.goose.schedulesUpdate_unstable({ scheduleId, cron });
+    const response = await client.goose.schedulesUpdateUnstable({ scheduleId, cron });
     clearInFlightScheduleReads();
     return response.job;
   } catch (error) {
@@ -170,10 +170,10 @@ export async function acpUpdateSchedule(
   }
 }
 
-export async function acpKillRunningJob(jobId: string): Promise<KillRunningJobResponse_unstable> {
+export async function acpKillRunningJob(jobId: string): Promise<KillRunningJobResponseUnstable> {
   try {
     const client = await getAcpClient();
-    const response = await client.goose.schedulesRunningJobKill_unstable({ jobId });
+    const response = await client.goose.schedulesRunningJobKillUnstable({ jobId });
     clearInFlightScheduleReads();
     return response;
   } catch (error) {
@@ -183,10 +183,10 @@ export async function acpKillRunningJob(jobId: string): Promise<KillRunningJobRe
 
 export async function acpInspectRunningJob(
   jobId: string
-): Promise<InspectRunningJobResponse_unstable> {
+): Promise<InspectRunningJobResponseUnstable> {
   try {
     const client = await getAcpClient();
-    return await client.goose.schedulesRunningJobInspect_unstable({ jobId });
+    return await client.goose.schedulesRunningJobInspectUnstable({ jobId });
   } catch (error) {
     throw normalizeAcpError(error, 'Failed to inspect running job');
   }

@@ -1,8 +1,11 @@
 import React from 'react';
 import { defineMessages, useIntl } from '../i18n';
 import { cn } from '../utils';
+import type { MessageValue } from 'react-intl';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly "toolStatus": { readonly "status": MessageValue };
+}>({
   toolStatus: {
     id: 'toolCallStatusIndicator.toolStatus',
     defaultMessage: 'Tool status: {status}',

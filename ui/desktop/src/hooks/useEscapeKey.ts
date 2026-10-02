@@ -7,7 +7,7 @@ import { useEffect } from 'react';
  */
 export function useEscapeKey(isActive: boolean, onEscape: () => void) {
   useEffect(() => {
-    if (!isActive) return;
+    if (!isActive) return undefined;
 
     const handleEscKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {

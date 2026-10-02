@@ -20,8 +20,13 @@ import type {
 import LoadingGoose from './LoadingGoose';
 import { getModelDisplayName } from './settings/models/predefinedModelsUtils';
 import { deriveMessageRowContexts, type MessageRowContext } from './messageRowContext';
+import type { MessageValue, NoMessageValues } from 'react-intl';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly "loadingMessages": { readonly "renderedCount": MessageValue; readonly "totalCount": MessageValue };
+  readonly "searchHint": NoMessageValues;
+  readonly "modelChanged": { readonly "currentModel": MessageValue; readonly "previousModel": MessageValue };
+}>({
   loadingMessages: {
     id: 'progressiveMessageList.loadingMessages',
     defaultMessage: 'Loading messages... ({renderedCount}/{totalCount})',
@@ -196,10 +201,10 @@ export default function ProgressiveMessageList({
   useEffect(() => {
     if (messages.length <= showLoadingThreshold) {
       setRenderedCount(messages.length);
-      return;
+      return undefined;
     }
 
-    if (!isLoading) return;
+    if (!isLoading) return undefined;
 
     const timeout = window.setTimeout(() => {
       setRenderedCount((current) => Math.min(current + batchSize, messages.length));
@@ -209,10 +214,10 @@ export default function ProgressiveMessageList({
   }, [batchDelay, batchSize, isLoading, messages.length, renderedCount, showLoadingThreshold]);
 
   useEffect(() => {
-    if (isLoading) return;
+    if (isLoading) return undefined;
 
     const completedMessageKey = `${sessionId}:${messages.length}`;
-    if (completedMessageKeyRef.current === completedMessageKey) return;
+    if (completedMessageKeyRef.current === completedMessageKey) return undefined;
 
     const timeout = window.setTimeout(() => {
       completedMessageKeyRef.current = completedMessageKey;
@@ -223,7 +228,7 @@ export default function ProgressiveMessageList({
   }, [isLoading, messages.length, onRenderingComplete, sessionId]);
 
   useEffect(() => {
-    if (!isLoading) return;
+    if (!isLoading) return undefined;
 
     const handleKeyDown = (event: KeyboardEvent) => {
       const isMac = window.electron.platform === 'darwin';

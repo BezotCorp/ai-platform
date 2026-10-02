@@ -1,12 +1,22 @@
-import type { LiveVoiceAvailabilityResponse_unstable } from '@aaif/goose-acp-client';
+import type { LiveVoiceAvailabilityResponseUnstable } from '@aaif/goose-acp-client';
 import { AudioLines, LoaderCircle, Mic, MicOff, Square } from 'lucide-react';
 import { defineMessages, useIntl } from '../i18n';
 import { cn } from '../utils';
 import { Button } from './ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/Tooltip';
 import { isLiveVoiceActive, type LiveVoicePhase } from '../liveVoice/useLiveVoice';
+import type { NoMessageValues } from 'react-intl';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly "emptyComposerRequired": NoMessageValues;
+  readonly "connecting": NoMessageValues;
+  readonly "live": NoMessageValues;
+  readonly "stopping": NoMessageValues;
+  readonly "error": NoMessageValues;
+  readonly "mute": NoMessageValues;
+  readonly "unmute": NoMessageValues;
+  readonly "returnToActive": NoMessageValues;
+}>({
   emptyComposerRequired: {
     id: 'liveVoice.emptyComposerRequired',
     defaultMessage: 'Clear the message and attachments to use Live voice',
@@ -42,7 +52,7 @@ const i18n = defineMessages({
 });
 
 interface LiveVoiceButtonProps {
-  availability: LiveVoiceAvailabilityResponse_unstable | null;
+  availability: LiveVoiceAvailabilityResponseUnstable | null;
   composerEmpty: boolean;
   phase: LiveVoicePhase;
   muted: boolean;

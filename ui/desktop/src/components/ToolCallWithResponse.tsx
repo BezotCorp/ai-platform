@@ -3,13 +3,12 @@ import { ToolIconWithStatus, ToolCallStatus } from './ToolCallStatusIndicator';
 import { getToolCallIcon } from '../utils/toolIconMapping';
 import React, { useEffect, useRef, useState } from 'react';
 import { Button } from './ui/button';
-import { ToolCallArguments, ToolCallArgumentValue } from './ToolCallArguments';
+import { ToolCallArguments } from './ToolCallArguments';
 import MarkdownContent from './MarkdownContent';
 import {
   ToolRequestMessageContent,
   ToolResponseMessageContent,
   NotificationEvent,
-  LiveOutputNotificationParams,
   ToolConfirmationData,
 } from '../types/message';
 import { cn, snakeToTitleCase } from '../utils';
@@ -21,10 +20,20 @@ import type { ContentBlock } from '../types/message';
 import McpAppRenderer from './McpApps/McpAppRenderer';
 import ToolApprovalButtons from './ToolApprovalButtons';
 import { defineMessages, useIntl } from '../i18n';
+import type { MessageValue, NoMessageValues } from 'react-intl';
 
 type LoadingStatus = 'loading' | 'success' | 'error';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly "viewSubagentSession": NoMessageValues;
+  readonly "toolDetails": NoMessageValues;
+  readonly "code": NoMessageValues;
+  readonly "output": NoMessageValues;
+  readonly "toolResultAlt": NoMessageValues;
+  readonly "activityCount": { readonly "count": MessageValue };
+  readonly "logs": NoMessageValues;
+  readonly "loadingSpinner": NoMessageValues;
+}>({
   viewSubagentSession: {
     id: 'toolCallWithResponse.viewSubagentSession',
     defaultMessage: 'View subagent session',
@@ -65,6 +74,92 @@ interface ToolGraphNode {
   depends_on: number[];
 }
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
+
+const isToolGraphNode = (value: unknown): value is ToolGraphNode => {
+  if (!isRecord(value)) {
+    return false;
+  }
+
+  return (
+    typeof value.tool === 'string' &&
+    typeof value.description === 'string' &&
+    Array.isArray(value.depends_on) &&
+    value.depends_on.every((dependency) => typeof dependency === 'number')
+  );
+};
+
+const getToolGraph = (value: unknown): ToolGraphNode[] | undefined =>
+  Array.isArray(value) && value.every(isToolGraphNode) ? value : undefined;
+
+interface ParsedToolCall {
+  name: string;
+  arguments: Record<string, unknown>;
+}
+
+function getParsedToolCall(value: unknown): ParsedToolCall | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const candidate = value.status === 'success' ? value.value : value;
+  if (!isRecord(candidate) || typeof candidate.name !== 'string') {
+    return null;
+  }
+
+  return {
+    name: candidate.name,
+    arguments: isRecord(candidate.arguments) ? candidate.arguments : {},
+  };
+}
+
+function getToolResultUiMeta(value: unknown): UiMeta | undefined {
+  if (!isRecord(value) || value.status !== 'success' || !isRecord(value.value)) {
+    return undefined;
+  }
+
+  const meta = value.value._meta;
+  if (!isRecord(meta)) {
+    return undefined;
+  }
+
+  const uiValue = meta.ui;
+  const ui =
+    isRecord(uiValue) && typeof uiValue.resourceUri === 'string'
+      ? { resourceUri: uiValue.resourceUri }
+      : undefined;
+
+  return {
+    ui,
+    extensionName:
+      typeof meta.extensionName === 'string' ? meta.extensionName : undefined,
+    toolName: typeof meta.toolName === 'string' ? meta.toolName : undefined,
+    toolNameIsActual:
+      typeof meta.toolNameIsActual === 'boolean'
+        ? meta.toolNameIsActual
+        : undefined,
+    subagent_session_id:
+      typeof meta.subagent_session_id === 'string'
+        ? meta.subagent_session_id
+        : undefined,
+  };
+}
+
+function isProgress(value: unknown): value is Progress {
+  if (!isRecord(value)) {
+    return false;
+  }
+
+  return (
+    typeof value.progress === 'number' &&
+    typeof value.progressToken === 'string' &&
+    (value.total === undefined || typeof value.total === 'number') &&
+    (value.message === undefined || typeof value.message === 'string')
+  );
+}
+
+
 type UiMeta = {
   ui?: {
     resourceUri?: string;
@@ -80,24 +175,6 @@ type ToolResultValue = {
   structuredContent?: unknown;
   isError: boolean;
   _meta?: UiMeta;
-};
-
-type ToolResultWithMeta = {
-  status?: string;
-  value?: ToolResultValue & {
-    _meta?: UiMeta;
-  };
-};
-
-type ToolRequestWithMeta = ToolRequestMessageContent & {
-  _meta?: UiMeta;
-  toolCall: {
-    status: 'success';
-    value: {
-      name: string;
-      arguments?: Record<string, unknown>;
-    };
-  };
 };
 
 interface ToolCallWithResponseProps {
@@ -117,22 +194,30 @@ function getSubagentSessionId(
   toolResponse?: ToolResponseMessageContent,
   notifications?: NotificationEvent[]
 ): string | null {
-  const result = toolResponse?.toolResult as ToolResultWithMeta | undefined;
-  const sessionId =
-    result?.status === 'success' ? result?.value?._meta?.subagent_session_id : undefined;
-  if (typeof sessionId === 'string') return sessionId;
+  const sessionId = getToolResultUiMeta(toolResponse?.toolResult)?.subagent_session_id;
+  if (sessionId) {
+    return sessionId;
+  }
 
   // Fallback: extract from subagent notifications (e.g. when delegate was cancelled mid-stream)
   if (notifications) {
-    for (const n of notifications) {
-      const message = n.message as { method?: string; params?: Record<string, unknown> };
-      if (message.method !== 'notifications/message') continue;
-      const data = message.params?.data;
-      if (data && typeof data === 'object' && 'type' in data && 'subagent_id' in data) {
-        const record = data as Record<string, unknown>;
-        if (record.type === 'subagent_tool_request' && typeof record.subagent_id === 'string') {
-          return record.subagent_id;
-        }
+    for (const notification of notifications) {
+      if (notification.message.method !== 'notifications/message') {
+        continue;
+      }
+
+      const params = notification.message.params;
+      if (!isRecord(params)) {
+        continue;
+      }
+
+      const data = params.data;
+      if (
+        isRecord(data) &&
+        data.type === 'subagent_tool_request' &&
+        typeof data.subagent_id === 'string'
+      ) {
+        return data.subagent_id;
       }
     }
   }
@@ -188,28 +273,33 @@ function McpAppWrapper({
   sessionId,
   append,
 }: McpAppWrapperProps): React.ReactNode {
-  const requestWithMeta = toolRequest as ToolRequestWithMeta;
-  const resultWithMeta = toolResponse?.toolResult as ToolResultWithMeta | undefined;
-  const responseMeta =
-    resultWithMeta?.status === 'success' && resultWithMeta.value
-      ? resultWithMeta.value._meta
-      : undefined;
+  const parsedToolCall = getParsedToolCall(toolRequest.toolCall);
+  const responseMeta = getToolResultUiMeta(toolResponse?.toolResult);
   const appMetadata = resolveMcpAppMetadata(responseMeta);
 
-  const toolArguments =
-    requestWithMeta.toolCall.status === 'success'
-      ? requestWithMeta.toolCall.value.arguments
-      : undefined;
+  if (!appMetadata || !parsedToolCall) {
+    return null;
+  }
 
-  const toolInput = { arguments: toolArguments || {} };
+  const toolInput = { arguments: parsedToolCall.arguments };
 
+  const rawToolResult = toolResponse?.toolResult;
   const toolResult =
-    resultWithMeta?.status === 'success' && resultWithMeta.value
-      ? (resultWithMeta.value as unknown as CallToolResult)
+    isRecord(rawToolResult) &&
+    rawToolResult.status === 'success' &&
+    isRecord(rawToolResult.value) &&
+    Array.isArray(rawToolResult.value.content)
+      ? ({
+          content: rawToolResult.value.content,
+          structuredContent: isRecord(rawToolResult.value.structuredContent)
+            ? rawToolResult.value.structuredContent
+            : undefined,
+          isError:
+            typeof rawToolResult.value.isError === 'boolean'
+              ? rawToolResult.value.isError
+              : undefined,
+        } satisfies CallToolResult)
       : undefined;
-
-  if (!appMetadata) return null;
-  if (requestWithMeta.toolCall.status !== 'success') return null;
 
   const { resourceUri, extensionName, toolName } = appMetadata;
 
@@ -242,18 +332,14 @@ export default function ToolCallWithResponse({
 }: ToolCallWithResponseProps) {
   // Handle both the wrapped ToolResult format and the unwrapped format
   // The server serializes ToolResult<T> as { status: "success", value: T } or { status: "error", error: string }
-  const toolCallData = toolRequest.toolCall as Record<string, unknown>;
-  const toolCall =
-    toolCallData?.status === 'success'
-      ? (toolCallData.value as { name: string; arguments: Record<string, unknown> })
-      : (toolCallData as { name: string; arguments: Record<string, unknown> });
+  const toolCall = getParsedToolCall(toolRequest.toolCall);
 
-  if (!toolCall || !toolCall.name) {
+  if (!toolCall) {
     return null;
   }
 
-  const resultWithMeta = toolResponse?.toolResult as ToolResultWithMeta;
-  const hasMcpAppResourceURI = Boolean(resultWithMeta?.value?._meta?.ui?.resourceUri);
+  const responseMeta = getToolResultUiMeta(toolResponse?.toolResult);
+  const hasMcpAppResourceURI = Boolean(responseMeta?.ui?.resourceUri);
 
   const shouldShowMcpContent = !isPendingApproval;
 
@@ -383,21 +469,29 @@ interface SubagentToolRequestData {
 }
 
 const isSubagentToolRequestData = (data: unknown): data is SubagentToolRequestData => {
-  if (!data || typeof data !== 'object') {
+  if (
+    !isRecord(data) ||
+    data.type !== 'subagent_tool_request' ||
+    typeof data.subagent_id !== 'string' ||
+    !isRecord(data.tool_call) ||
+    typeof data.tool_call.name !== 'string'
+  ) {
     return false;
   }
-  const record = data as Record<string, unknown>;
-  if (record.type !== 'subagent_tool_request') {
+
+  const argumentsValue = data.tool_call.arguments;
+  if (argumentsValue === undefined) {
+    return true;
+  }
+
+  if (!isRecord(argumentsValue)) {
     return false;
   }
-  if (typeof record.subagent_id !== 'string') {
-    return false;
-  }
-  if (!record.tool_call || typeof record.tool_call !== 'object') {
-    return false;
-  }
-  const toolCall = record.tool_call as Record<string, unknown>;
-  return typeof toolCall.name === 'string';
+
+  return (
+    argumentsValue.tool_graph === undefined ||
+    getToolGraph(argumentsValue.tool_graph) !== undefined
+  );
 };
 
 const formatSubagentToolCall = (data: SubagentToolRequestData): string => {
@@ -430,50 +524,58 @@ const formatSubagentToolCall = (data: SubagentToolRequestData): string => {
     : `[subagent:${shortId}] ${toolName}`;
 };
 
-const logToString = (logMessage: NotificationEvent) => {
-  const message = logMessage.message as { method: string; params: unknown };
-  const params = message.params as Record<string, unknown>;
+const logToString = (logMessage: NotificationEvent): string => {
+  const params = isRecord(logMessage.message.params)
+    ? logMessage.message.params
+    : {};
+  const data = params.data;
 
-  if (
-    params &&
-    params.data &&
-    typeof params.data === 'object' &&
-    'type' in params.data &&
-    params.data.type === 'subagent_tool_request'
-  ) {
-    if (isSubagentToolRequestData(params.data)) {
-      return formatSubagentToolCall(params.data);
+  if (isSubagentToolRequestData(data)) {
+    return formatSubagentToolCall(data);
+  }
+
+  if (isRecord(data)) {
+    const stream = data.stream;
+    const output = data.output;
+
+    if (
+      (typeof stream === 'string' || typeof stream === 'number') &&
+      (typeof output === 'string' || typeof output === 'number')
+    ) {
+      return `[${stream}] ${output}`;
     }
   }
 
-  // Special case for the developer system shell logs
-  if (
-    params &&
-    params.data &&
-    typeof params.data === 'object' &&
-    'output' in params.data &&
-    'stream' in params.data
-  ) {
-    return `[${params.data.stream}] ${params.data.output}`;
+  if (typeof data === 'string') {
+    return data;
   }
 
-  return typeof params.data === 'string' ? params.data : JSON.stringify(params.data);
+  try {
+    return JSON.stringify(data) ?? '';
+  } catch {
+    return '[unserializable log data]';
+  }
 };
 
-const notificationToProgress = (notification: NotificationEvent): Progress => {
-  const message = notification.message as { method: string; params: unknown };
-  return message.params as Progress;
-};
+const notificationToProgress = (notification: NotificationEvent): Progress | null =>
+  isProgress(notification.message.params)
+    ? notification.message.params
+    : null;
 
 const liveOutputToString = (notifications: NotificationEvent[] | undefined): string =>
   notifications
-    ?.filter((notification) => {
-      const message = notification.message as { method?: string };
-      return message.method === 'goose/live_output';
-    })
+    ?.filter((notification) => notification.message.method === 'goose/live_output')
     .flatMap((notification) => {
-      const message = notification.message as { params?: LiveOutputNotificationParams };
-      return message.params?.chunks.map((chunk) => chunk.output) ?? [];
+      const params = notification.message.params;
+      if (!isRecord(params) || !Array.isArray(params.chunks)) {
+        return [];
+      }
+
+      return params.chunks.flatMap((chunk) =>
+        isRecord(chunk) && typeof chunk.output === 'string'
+          ? [chunk.output]
+          : []
+      );
     })
     .join('') ?? '';
 
@@ -508,10 +610,20 @@ function ToolCallView({
 
   useEffect(() => {
     // Load initial value from settings
-    window.electron.getSetting('responseStyle').then(setResponseStyle);
+    void window.electron
+      .getSetting('responseStyle')
+      .then(setResponseStyle)
+      .catch((error) => {
+        console.error('Failed to read response style:', error);
+      });
 
     const handleStyleChange = () => {
-      window.electron.getSetting('responseStyle').then(setResponseStyle);
+      void window.electron
+        .getSetting('responseStyle')
+        .then(setResponseStyle)
+        .catch((error) => {
+          console.error('Failed to refresh response style:', error);
+        });
     };
 
     window.addEventListener(AppEvents.RESPONSE_STYLE_CHANGED, handleStyleChange);
@@ -537,14 +649,18 @@ function ToolCallView({
   // This is a workaround for cases where the backend doesn't send tool responses
   const isStreamingComplete = !isStreamingMessage;
   const shouldShowAsComplete = isStreamingComplete && !toolResponse;
-  const toolResult = toolResponse?.toolResult as Record<string, unknown> | undefined;
-  const toolResultValue = toolResult?.value as ToolResultValue | undefined;
+  const toolResult = toolResponse?.toolResult;
+  const toolResultValue =
+    toolResult && 'value' in toolResult && isRecord(toolResult.value)
+      ? toolResult.value
+      : undefined;
+  const toolResultIsError = toolResultValue?.isError === true;
 
   const loadingStatus: LoadingStatus = !toolResponse
     ? shouldShowAsComplete
       ? 'success'
       : 'loading'
-    : toolResult?.status === 'error' || toolResultValue?.isError
+    : toolResult?.status === 'error' || toolResultIsError
       ? 'error'
       : 'success';
 
@@ -562,18 +678,17 @@ function ToolCallView({
   const liveOutput = toolResponse ? '' : liveOutputToString(notifications);
 
   const logs = notifications
-    ?.filter((notification) => {
-      const message = notification.message as { method?: string };
-      return message.method === 'notifications/message';
-    })
+    ?.filter(
+      (notification) => notification.message.method === 'notifications/message'
+    )
     .map(logToString);
 
   const progress = notifications
-    ?.filter((notification) => {
-      const message = notification.message as { method?: string };
-      return message.method === 'notifications/progress';
-    })
+    ?.filter(
+      (notification) => notification.message.method === 'notifications/progress'
+    )
     .map(notificationToProgress)
+    .filter((item): item is Progress => item !== null)
     .reduce((map, item) => {
       const key = item.progressToken;
       if (!map.has(key)) {
@@ -593,11 +708,19 @@ function ToolCallView({
 
   // Function to create a descriptive representation of what the tool is doing
   const getToolDescription = (): string | null => {
-    const args = (toolCall.arguments ?? {}) as Record<string, ToolCallArgumentValue>;
+    const args = toolCall.arguments ?? {};
     const toolName = getToolName(toolCall.name);
 
-    const getStringValue = (value: ToolCallArgumentValue): string => {
-      return typeof value === 'string' ? value : JSON.stringify(value);
+    const getStringValue = (value: unknown): string => {
+      if (typeof value === 'string') {
+        return value;
+      }
+
+      try {
+        return JSON.stringify(value) ?? '';
+      } catch {
+        return '[unserializable value]';
+      }
     };
 
     // Generate descriptive text based on tool type
@@ -718,10 +841,10 @@ function ToolCallView({
         return `poking around...`;
 
       case 'execute_typescript': {
-        const toolGraph = args.tool_graph as unknown as ToolGraphNode[] | undefined;
-        if (toolGraph && Array.isArray(toolGraph) && toolGraph.length > 0) {
+        const toolGraph = getToolGraph(args.tool_graph);
+        if (toolGraph && toolGraph.length > 0) {
           if (toolGraph.length === 1) {
-            return `${toolGraph[0].description}`;
+            return toolGraph[0].description;
           }
           if (toolGraph.length === 2) {
             return `${toolGraph[0].tool}, ${toolGraph[1].tool}`;
@@ -738,7 +861,7 @@ function ToolCallView({
         const entries = Object.entries(args);
 
         if (entries.length === 0) {
-          return `${toolDisplayName}`;
+          return toolDisplayName;
         }
 
         // For a single parameter, show key and truncated value
@@ -811,12 +934,13 @@ function ToolCallView({
       }
     >
       {(() => {
-        const code = toolCall.arguments?.code as unknown as string | undefined;
-        const toolGraph = toolCall.arguments?.tool_graph as unknown as ToolGraphNode[] | undefined;
+        const rawCode = toolCall.arguments?.code;
+        const code = typeof rawCode === 'string' ? rawCode : undefined;
+        const toolGraph = getToolGraph(toolCall.arguments?.tool_graph);
 
         if (
           toolCall.name === 'code_execution__execute_typescript' &&
-          (typeof code === 'string' || Array.isArray(toolGraph))
+          (code !== undefined || toolGraph !== undefined)
         ) {
           return (
             <div className="border-t border-border-primary">
@@ -919,7 +1043,7 @@ function ToolDetailsView({ toolCall, isStartExpanded }: ToolDetailsViewProps) {
     >
       <div className="pr-4 pl-8">
         {toolCall.arguments && (
-          <ToolCallArguments args={toolCall.arguments as Record<string, ToolCallArgumentValue>} />
+          <ToolCallArguments args={toolCall.arguments} />
         )}
       </div>
     </ToolCallExpandable>
@@ -1006,11 +1130,11 @@ function LiveOutputView({ output }: { output: string }) {
 function ToolResultView({ result, isStartExpanded }: ToolResultViewProps) {
   const intl = useIntl();
   const hasText = (c: ContentBlock): c is ContentBlock & { text: string } =>
-    'text' in c && typeof (c as Record<string, unknown>).text === 'string';
+    'text' in c && typeof c.text === 'string';
 
   const hasImage = (c: ContentBlock): c is ContentBlock & { data: string; mimeType: string } => {
     if (!('data' in c && 'mimeType' in c)) return false;
-    const mimeType = (c as Record<string, unknown>).mimeType;
+    const mimeType = c.mimeType;
     return typeof mimeType === 'string' && mimeType.startsWith('image');
   };
 
@@ -1139,7 +1263,7 @@ function ToolLogsView({
 
 const ProgressBar = ({ progress, total, message }: Omit<Progress, 'progressToken'>) => {
   const isDeterminate = typeof total === 'number';
-  const percent = isDeterminate ? Math.min((progress / total!) * 100, 100) : 0;
+  const percent = isDeterminate ? Math.min((progress / total) * 100, 100) : 0;
 
   return (
     <div className="w-full space-y-2">

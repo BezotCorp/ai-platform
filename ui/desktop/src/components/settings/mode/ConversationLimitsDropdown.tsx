@@ -2,8 +2,13 @@ import { useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { Input } from '../../ui/input';
 import { defineMessages, useIntl } from '../../../i18n';
+import type { NoMessageValues } from 'react-intl';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly "conversationLimits": NoMessageValues;
+  readonly "maxTurns": NoMessageValues;
+  readonly "maxTurnsDescription": NoMessageValues;
+}>({
   conversationLimits: {
     id: 'conversationLimitsDropdown.conversationLimits',
     defaultMessage: 'Conversation Limits',

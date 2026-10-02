@@ -1,246 +1,465 @@
 #!/usr/bin/env node
-/**
- * Generates TypeScript types + Zod validators for Goose custom extension methods.
- *
- * Usage:
- *   npm run generate              # build Rust schema, then generate TS
- */
 
-import { createClient } from "@hey-api/openapi-ts";
-import * as fs from "fs/promises";
-import { dirname, resolve } from "path";
-import { fileURLToPath } from "url";
-import * as prettier from "prettier";
+import { spawn } from 'node:child_process';
+import * as fs from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
+import * as prettier from 'prettier';
+import type { Meta } from './src/generate-schema';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-const ROOT = resolve(__dirname, "../..");
-const SCHEMA_PATH = resolve(ROOT, "crates/goose/acp-schema.json");
-const META_PATH = resolve(ROOT, "crates/goose/acp-meta.json");
-const OUTPUT_DIR = resolve(__dirname, "src/generated");
+import * as path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { resolve } from 'node:path';
 
-// Export the main function so it can be imported by build-schema.ts
+const moduleFilePath = fileURLToPath(import.meta.url);
+const moduleDir = path.dirname(moduleFilePath);
+const ROOT = resolve(moduleDir, '../..');
+const SCHEMA_PATH = resolve(ROOT, 'crates/goose/acp-schema.json');
+const META_PATH = resolve(ROOT, 'crates/goose/acp-meta.json');
+const OUTPUT_DIR = resolve(moduleDir, 'src/generated');
+
+type JsonObject = Record<string, unknown>;
+
 export default async function main() {
-  const schemaSrc = await fs.readFile(SCHEMA_PATH, "utf8");
-  const jsonSchema = JSON.parse(
-    schemaSrc.replaceAll("#/$defs/", "#/components/schemas/"),
-  );
+  const schemaSrc = await fs.readFile(SCHEMA_PATH, 'utf8');
 
-  const metaSrc = await fs.readFile(META_PATH, "utf8");
-  const meta = JSON.parse(metaSrc);
+  const jsonSchema = JSON.parse(schemaSrc.replaceAll('#/$defs/', '#/components/schemas/')) as {
+    $defs?: JsonObject;
+  };
 
-  await createClient({
-    input: {
-      openapi: "3.1.0",
-      info: {
-        title: "Goose Extensions",
-        version: "1.0.0",
-      },
-      components: {
-        schemas: jsonSchema.$defs,
-      },
+  const meta = JSON.parse(await fs.readFile(META_PATH, 'utf8')) as Meta;
+
+  const schemas = structuredClone(jsonSchema.$defs ?? {});
+
+  removeInvalidDefaults(schemas, schemas);
+
+  const openApiPath = resolve(OUTPUT_DIR, '.acp-openapi.json');
+
+  const openApiDocument = {
+    openapi: '3.1.0',
+    info: {
+      title: 'Goose Extensions',
+      version: '1.0.0',
     },
-    output: {
-      path: OUTPUT_DIR,
+    components: {
+      schemas,
     },
-    plugins: [
-      {
-        case: "preserve",
-        name: "zod",
-      },
-      {
-        case: "preserve",
-        name: "@hey-api/typescript",
-      },
-    ],
-  });
+  };
 
-  await postProcessTypes();
-  await postProcessIndex(meta);
+  await fs.mkdir(OUTPUT_DIR, { recursive: true });
 
-  await generateClient(meta);
+  await fs.writeFile(openApiPath, JSON.stringify(openApiDocument, null, 2), 'utf8');
+
+  try {
+    await runKubb();
+  } finally {
+    await fs.rm(openApiPath, { force: true });
+  }
+
+  await restoreReferencedObjectDefaults(schemas);
+  await fixGeneratedImports();
+
+  const generatedNames = await readGeneratedNames();
+
+  await generateIndex(meta);
+  await generateClient(meta, generatedNames);
 
   console.log(`\nGenerated Goose extension schema in ${OUTPUT_DIR}`);
 }
 
-async function postProcessTypes() {
-  const tsPath = resolve(OUTPUT_DIR, "types.gen.ts");
-  let src = await fs.readFile(tsPath, "utf8");
-  src = src.replace(/\nexport type ClientOptions =[\s\S]*?^};\n/m, "\n");
-  await fs.writeFile(tsPath, src);
+async function runKubb(): Promise<void> {
+  await new Promise<void>((resolvePromise, rejectPromise) => {
+    const child = spawn('pnpm', ['exec', 'kubb', 'generate', '--config', resolve(moduleDir, 'kubb.config.ts')], {
+      cwd: moduleDir,
+      stdio: 'inherit',
+      env: {
+        ...process.env,
+        KUBB_DISABLE_TELEMETRY: '1',
+      },
+    });
+
+    child.once('error', rejectPromise);
+
+    child.once('exit', (code) => {
+      if (code === 0) {
+        resolvePromise();
+        return;
+      }
+
+      rejectPromise(new Error(`Kubb exited with code ${code ?? 'unknown'}`));
+    });
+  });
 }
 
-async function postProcessIndex(meta: {
-  methods: unknown[];
-  notifications?: unknown[];
-  agentRequests?: unknown[];
-}) {
-  const indexPath = resolve(OUTPUT_DIR, "index.ts");
-  let src = await fs.readFile(indexPath, "utf8");
+function isObject(value: unknown): value is JsonObject {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
 
-  src = src.replace(/,?\s*ClientOptions\s*,?/g, (match) => {
-    if (match.startsWith(",") && match.endsWith(",")) return ",";
-    if (match.startsWith(",")) return "";
-    return "";
-  });
+function isEmptyObject(value: unknown): boolean {
+  return isObject(value) && Object.keys(value).length === 0;
+}
 
-  src = fixRelativeImports(src);
+function resolveLocalRef(schema: JsonObject, schemas: JsonObject): JsonObject | null {
+  const ref = schema.$ref;
 
-  const methodConstants = await prettier.format(
-    `
-export const GOOSE_EXT_METHODS = ${JSON.stringify(meta.methods, null, 2)} as const;
+  if (typeof ref !== 'string' || !ref.startsWith('#/components/schemas/')) {
+    return null;
+  }
 
-export type GooseExtMethod = (typeof GOOSE_EXT_METHODS)[number];
+  const name = decodeURIComponent(ref.slice('#/components/schemas/'.length));
 
-export const GOOSE_EXT_NOTIFICATIONS = ${JSON.stringify(meta.notifications ?? [], null, 2)} as const;
+  const resolved = schemas[name];
 
-export type GooseExtNotification = (typeof GOOSE_EXT_NOTIFICATIONS)[number];
+  return isObject(resolved) ? resolved : null;
+}
 
-export const GOOSE_EXT_AGENT_REQUESTS = ${JSON.stringify(meta.agentRequests ?? [], null, 2)} as const;
+function schemaAcceptsEmptyObject(schema: JsonObject, schemas: JsonObject, seen = new Set<JsonObject>()): boolean {
+  if (seen.has(schema)) {
+    return false;
+  }
 
-export type GooseExtAgentRequest = (typeof GOOSE_EXT_AGENT_REQUESTS)[number];
-`,
-    { parser: "typescript" },
-  );
+  seen.add(schema);
 
-  await fs.writeFile(indexPath, `${src}\n${methodConstants}`);
+  const referenced = resolveLocalRef(schema, schemas);
 
-  for (const file of ["zod.gen.ts", "types.gen.ts"]) {
-    const filePath = resolve(OUTPUT_DIR, file);
-    try {
-      const content = await fs.readFile(filePath, "utf8");
-      const fixed = fixRelativeImports(content);
-      if (fixed !== content) {
-        await fs.writeFile(filePath, fixed);
-      }
-    } catch {
-      // File may not exist
+  if (referenced) {
+    return schemaAcceptsEmptyObject(referenced, schemas, seen);
+  }
+
+  for (const key of ['oneOf', 'anyOf'] as const) {
+    const variants = schema[key];
+
+    if (Array.isArray(variants)) {
+      return variants.some((variant) => isObject(variant) && schemaAcceptsEmptyObject(variant, schemas, new Set(seen)));
     }
+  }
+
+  if (Array.isArray(schema.allOf)) {
+    return schema.allOf.every(
+      (variant) => isObject(variant) && schemaAcceptsEmptyObject(variant, schemas, new Set(seen)),
+    );
+  }
+
+  if (schema.const !== undefined || Array.isArray(schema.enum)) {
+    return false;
+  }
+
+  if (schema.type === 'object' || isObject(schema.properties)) {
+    const required = schema.required;
+
+    return !Array.isArray(required) || required.length === 0;
+  }
+
+  return false;
+}
+
+function removeInvalidDefaults(value: unknown, schemas: JsonObject): void {
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      removeInvalidDefaults(item, schemas);
+    }
+
+    return;
+  }
+
+  if (!isObject(value)) {
+    return;
+  }
+
+  if ('default' in value && isEmptyObject(value.default) && !schemaAcceptsEmptyObject(value, schemas)) {
+    delete value.default;
+  }
+
+  for (const child of Object.values(value)) {
+    removeInvalidDefaults(child, schemas);
   }
 }
 
 function fixRelativeImports(src: string): string {
-  return src.replace(
-    /from\s+['"](\.[^'"]+)['"]/g,
-    (_match, importPath: string) => {
-      if (importPath.endsWith(".js") || importPath.endsWith(".json")) {
-        return `from '${importPath}'`;
-      }
-      return `from '${importPath}.js'`;
-    },
-  );
+  return src.replace(/from\s+['"](\.[^'"]+)['"]/g, (_match, importPath: string) => {
+    if (importPath.endsWith('.js') || importPath.endsWith('.json')) {
+      return `from '${importPath}'`;
+    }
+
+    return `from '${importPath}.js'`;
+  });
 }
 
-interface MethodMeta {
-  method: string;
-  requestType: string | null;
-  responseType: string | null;
+function toCamelCase(name: string): string {
+  return name
+    .replace(/_([a-zA-Z0-9])/g, (_, character: string) => character.toUpperCase())
+    .replace(/^[A-Z]/, (character) => character.toLowerCase());
+}
+
+function zodSchemaNameFromRef(ref: string): string {
+  const prefix = '#/components/schemas/';
+
+  if (!ref.startsWith(prefix)) {
+    throw new Error(`Unsupported schema reference: ${ref}`);
+  }
+
+  const schemaName = decodeURIComponent(ref.slice(prefix.length));
+
+  return `${toCamelCase(schemaName)}Schema`;
+}
+
+function collectReferencedObjectDefaults(value: unknown, result: Map<string, unknown>): void {
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      collectReferencedObjectDefaults(item, result);
+    }
+
+    return;
+  }
+
+  if (!isObject(value)) {
+    return;
+  }
+
+  const ref = value.$ref;
+  const defaultValue = value.default;
+
+  if (typeof ref === 'string' && isObject(defaultValue) && Object.keys(defaultValue).length > 0) {
+    const schemaName = zodSchemaNameFromRef(ref);
+    const serializedDefault = JSON.stringify(defaultValue);
+
+    const previous = result.get(schemaName);
+
+    if (previous !== undefined && JSON.stringify(previous) !== serializedDefault) {
+      throw new Error(`Multiple different object defaults found for ${schemaName}`);
+    }
+
+    result.set(schemaName, defaultValue);
+  }
+
+  for (const child of Object.values(value)) {
+    collectReferencedObjectDefaults(child, result);
+  }
+}
+
+async function restoreReferencedObjectDefaults(schemas: JsonObject): Promise<void> {
+  const defaults = new Map<string, unknown>();
+
+  collectReferencedObjectDefaults(schemas, defaults);
+
+  if (defaults.size === 0) {
+    return;
+  }
+
+  const path = resolve(OUTPUT_DIR, 'zod.gen.ts');
+  let source = await fs.readFile(path, 'utf8');
+
+  for (const [schemaName, defaultValue] of defaults) {
+    const emptyDefault = `${schemaName}.optional().default({})`;
+    const matches = source.split(emptyDefault).length - 1;
+
+    if (matches === 0) {
+      continue;
+    }
+
+    const replacement = `${schemaName}.optional().default(${JSON.stringify(defaultValue)})`;
+
+    source = source.replaceAll(emptyDefault, replacement);
+  }
+
+  source = await prettier.format(source, {
+    parser: 'typescript',
+  });
+
+  await fs.writeFile(path, source, 'utf8');
+}
+
+async function fixGeneratedImports(): Promise<void> {
+  for (const file of ['types.gen.ts', 'zod.gen.ts']) {
+    const path = resolve(OUTPUT_DIR, file);
+    const source = await fs.readFile(path, 'utf8');
+    const fixed = fixRelativeImports(source);
+
+    if (fixed !== source) {
+      await fs.writeFile(path, fixed, 'utf8');
+    }
+  }
+}
+
+function normalizeIdentifier(name: string): string {
+  return name.replace(/[^A-Za-z0-9]/g, '').toLowerCase();
+}
+
+function extractExportedNames(source: string, declarations: readonly string[]): Set<string> {
+  const kinds = declarations.join('|');
+
+  const expression = new RegExp(String.raw`export\s+(?:declare\s+)?(?:${kinds})\s+([A-Za-z_$][A-Za-z0-9_$]*)`, 'g');
+
+  const result = new Set<string>();
+
+  for (const match of source.matchAll(expression)) {
+    result.add(match[1]);
+  }
+
+  return result;
+}
+
+function resolveGeneratedName(sourceName: string, candidates: Set<string>, suffix = ''): string {
+  const expected = normalizeIdentifier(sourceName) + normalizeIdentifier(suffix);
+
+  const matches = [...candidates].filter((candidate) => normalizeIdentifier(candidate) === expected);
+
+  if (matches.length === 1) {
+    return matches[0];
+  }
+
+  if (matches.length === 0) {
+    throw new Error(`Kubb did not generate a symbol matching "${sourceName}${suffix}"`);
+  }
+
+  throw new Error(`Kubb generated multiple symbols matching "${sourceName}${suffix}": ${matches.join(', ')}`);
+}
+
+interface GeneratedNames {
+  types: Set<string>;
+  schemas: Set<string>;
+}
+
+async function readGeneratedNames(): Promise<GeneratedNames> {
+  const typesSource = await fs.readFile(resolve(OUTPUT_DIR, 'types.gen.ts'), 'utf8');
+
+  const zodSource = await fs.readFile(resolve(OUTPUT_DIR, 'zod.gen.ts'), 'utf8');
+
+  return {
+    types: extractExportedNames(typesSource, ['type', 'interface', 'class']),
+    schemas: extractExportedNames(zodSource, ['const']),
+  };
+}
+
+async function generateIndex(meta: Meta): Promise<void> {
+  const source = await prettier.format(
+    `
+export const GOOSE_EXT_METHODS = ${JSON.stringify(meta.methods, null, 2)} as const;
+
+export type GooseExtMethod =
+  (typeof GOOSE_EXT_METHODS)[number];
+
+export const GOOSE_EXT_NOTIFICATIONS =
+  ${JSON.stringify(meta.notifications ?? [], null, 2)} as const;
+
+export type GooseExtNotification =
+  (typeof GOOSE_EXT_NOTIFICATIONS)[number];
+
+export const GOOSE_EXT_AGENT_REQUESTS =
+  ${JSON.stringify(meta.agentRequests ?? [], null, 2)} as const;
+
+export type GooseExtAgentRequest =
+  (typeof GOOSE_EXT_AGENT_REQUESTS)[number];
+`,
+    {
+      parser: 'typescript',
+    },
+  );
+
+  await fs.writeFile(resolve(OUTPUT_DIR, 'index.ts'), source, 'utf8');
 }
 
 function methodToCamelCase(method: string): string {
   let methodParts = method.split(/[/_]/).filter((part) => part.length > 0);
 
   let suffix: string;
-  if (methodParts[0] == "goose" && methodParts[1] == "unstable") {
-    methodParts.shift();
-    methodParts.shift();
-    suffix = "_unstable";
+
+  if (methodParts[0] === 'goose' && methodParts[1] === 'unstable') {
+    methodParts = methodParts.slice(2);
+    suffix = 'Unstable';
   } else {
-    suffix = "";
+    suffix = '';
   }
 
-  let prefix = methodParts
-    .map((part) =>
-      part.replace(/[^a-zA-Z0-9]+(.)/g, (_, chr: string) => chr.toUpperCase()),
-    )
-    .map((part, i) =>
-      i === 0 ? part : part.charAt(0).toUpperCase() + part.slice(1),
-    )
-    .join("");
+  const prefix = methodParts
+    .map((part) => part.replace(/[^a-zA-Z0-9]+(.)/g, (_, chr: string) => chr.toUpperCase()))
+    .map((part, index) => (index === 0 ? part : part.charAt(0).toUpperCase() + part.slice(1)))
+    .join('');
 
   return `${prefix}${suffix}`;
 }
 
-async function generateClient(meta: { methods: MethodMeta[] }) {
+async function generateClient(meta: Meta, generatedNames: GeneratedNames): Promise<void> {
   const typeImports = new Set<string>();
-  const zodImports = new Set<string>();
-  const upstreamTypeImports = new Set<string>(["ClientContext"]);
+  const schemaImports = new Set<string>();
+  const methodDefinitions: string[] = [];
 
-  const methodDefs: string[] = [];
+  for (const method of meta.methods) {
+    const functionName = methodToCamelCase(method.method);
 
-  for (const m of meta.methods) {
-    const fnName = methodToCamelCase(m.method);
-    const fullMethod = m.method;
+    let parameterType = '';
+    let parameterArgument = '';
+    let callParameters = '{}';
 
-    let paramType = "";
-    let paramArg = "";
-    let callParams = "{}";
-    if (m.requestType) {
-      typeImports.add(m.requestType);
-      paramType = m.requestType;
-      paramArg = `params: ${paramType}`;
-      callParams = "params";
+    if (method.requestType) {
+      parameterType = resolveGeneratedName(method.requestType, generatedNames.types);
+
+      typeImports.add(parameterType);
+
+      parameterArgument = `params: ${parameterType}`;
+      callParameters = 'params';
     }
 
     let returnType: string;
     let bodyLines: string[];
 
-    if (m.responseType && m.responseType !== "EmptyResponse") {
-      typeImports.add(m.responseType);
-      const zodName = `z${m.responseType}`;
-      zodImports.add(zodName);
-      returnType = m.responseType;
+    if (method.responseType && method.responseType !== 'EmptyResponse') {
+      returnType = resolveGeneratedName(method.responseType, generatedNames.types);
+
+      const schemaName = resolveGeneratedName(method.responseType, generatedNames.schemas, 'Schema');
+
+      typeImports.add(returnType);
+      schemaImports.add(schemaName);
+
       bodyLines = [
-        `const raw = await this.conn.request("${fullMethod}", ${callParams});`,
-        `return ${zodName}.parse(raw) as ${returnType};`,
+        `const raw = await this.conn.request("${method.method}", ${callParameters});`,
+        `return ${schemaName}.parse(raw) as ${returnType};`,
       ];
-    } else if (m.responseType === "EmptyResponse") {
-      returnType = "void";
-      bodyLines = [`await this.conn.request("${fullMethod}", ${callParams});`];
+    } else if (method.responseType === 'EmptyResponse') {
+      returnType = 'void';
+
+      bodyLines = [`await this.conn.request("${method.method}", ${callParameters});`];
     } else {
-      returnType = "Record<string, unknown>";
-      bodyLines = [
-        `return await this.conn.request<Record<string, unknown>>("${fullMethod}", ${callParams ? callParams : "{}"});`,
-      ];
+      returnType = 'Record<string, unknown>';
+
+      bodyLines = [`return await this.conn.request<Record<string, unknown>>("${method.method}", ${callParameters});`];
     }
 
-    methodDefs.push(`
-  async ${fnName}(${paramArg}): Promise<${returnType}> {
-    ${bodyLines.join("\n    ")}
+    methodDefinitions.push(`
+  async ${functionName}(${parameterArgument}): Promise<${returnType}> {
+    ${bodyLines.join('\n    ')}
   }`);
   }
 
-  const upstreamImportLine = `import type { ${[...upstreamTypeImports].sort().join(", ")} } from "@agentclientprotocol/sdk";`;
-  const typeImportLine = typeImports.size
-    ? `import type { ${[...typeImports].sort().join(", ")} } from "./types.gen.js";`
-    : "";
-  const zodImportLine = zodImports.size
-    ? `import { ${[...zodImports].sort().join(", ")} } from "./zod.gen.js";`
-    : "";
+  const typeImport =
+    typeImports.size > 0 ? `import type { ${[...typeImports].sort().join(', ')} } from "./types.gen.js";` : '';
 
-  let src = `// This file is auto-generated — do not edit manually.
+  const schemaImport =
+    schemaImports.size > 0 ? `import { ${[...schemaImports].sort().join(', ')} } from "./zod.gen.js";` : '';
 
-${upstreamImportLine}
-${typeImportLine}
-${zodImportLine}
+  let source = `// This file is auto-generated — do not edit manually.
+
+import type { ClientContext } from "@agentclientprotocol/sdk";
+${typeImport}
+${schemaImport}
 
 export class GooseExtClient {
-  constructor(private conn: Pick<ClientContext, "request">) {}
-${methodDefs.join("\n")}
+  constructor(
+    private conn: Pick<ClientContext, "request">,
+  ) {}
+${methodDefinitions.join('\n')}
 }
 `;
 
-  src = await prettier.format(src, { parser: "typescript" });
-  src = fixRelativeImports(src);
+  source = await prettier.format(source, {
+    parser: 'typescript',
+  });
 
-  const clientPath = resolve(OUTPUT_DIR, "client.gen.ts");
-  await fs.writeFile(clientPath, src);
+  await fs.writeFile(resolve(OUTPUT_DIR, 'client.gen.ts'), source, 'utf8');
 }
 
-// Run main if this file is executed directly
 if (import.meta.url === `file://${process.argv[1]}`) {
-  main().catch((err) => {
-    console.error(err);
+  main().catch((error) => {
+    console.error(error);
     process.exit(1);
   });
 }

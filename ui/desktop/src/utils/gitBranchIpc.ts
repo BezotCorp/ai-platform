@@ -65,8 +65,19 @@ ipcMain.handle(
       const currentBranch = await getCurrentBranch(dir);
       if (currentBranch === branch) return { success: true };
 
-      const gitError = error as Error & { stderr?: string };
-      return { success: false, error: gitError.stderr?.toString() || gitError.message };
+      let message = error instanceof Error ? error.message : String(error);
+
+      if (
+        typeof error === 'object' &&
+        error !== null &&
+        'stderr' in error &&
+        typeof error.stderr === 'string' &&
+        error.stderr.length > 0
+      ) {
+        message = error.stderr;
+      }
+
+      return { success: false, error: message };
     }
   }
 );

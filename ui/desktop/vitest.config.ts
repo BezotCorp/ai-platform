@@ -1,13 +1,16 @@
-/// <reference types="vitest" />
-import { defineConfig } from 'vitest/config';
-import react from '@vitejs/plugin-react';
-import { resolve } from 'node:path';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const cfg = {
+import react from '@vitejs/plugin-react';
+import { defineConfig } from 'vitest/config';
+
+const moduleDir = path.dirname(fileURLToPath(import.meta.url));
+
+export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
-      '@': resolve(__dirname, './src'),
+      '@': path.resolve(moduleDir, './src'),
     },
   },
   test: {
@@ -15,8 +18,6 @@ const cfg = {
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],
     css: true,
-    include: ['src/**/*.{test,spec}.{js,jsx,ts,tsx}'],
+    include: ['src/**/*.test.{js,jsx,ts,tsx}'],
   },
-} satisfies Record<string, any>;
-
-export default defineConfig(cfg as any);
+});

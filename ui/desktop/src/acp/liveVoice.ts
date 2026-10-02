@@ -1,15 +1,15 @@
 import type {
-  LiveVoiceAvailabilityResponse_unstable,
-  LiveVoiceStartResponse_unstable,
+  LiveVoiceAvailabilityResponseUnstable,
+  LiveVoiceStartResponseUnstable,
 } from '@aaif/goose-acp-client';
 import { getAcpClient } from './acpConnection';
 
 export async function acpGetLiveVoiceAvailability(
   sessionId?: string
-): Promise<LiveVoiceAvailabilityResponse_unstable> {
+): Promise<LiveVoiceAvailabilityResponseUnstable> {
   const { goose } = await getAcpClient();
   const useLegacyAgentLoop = await window.electron.getSetting('useLegacyAgentLoop');
-  return goose.sessionLiveVoiceAvailability_unstable({
+  return goose.sessionLiveVoiceAvailabilityUnstable({
     ...(sessionId ? { sessionId } : {}),
     _meta: { goose: { unrolledAgentLoop: !useLegacyAgentLoop } },
   });
@@ -18,10 +18,10 @@ export async function acpGetLiveVoiceAvailability(
 export async function acpStartLiveVoice(
   sessionId: string,
   offerSdp: string
-): Promise<LiveVoiceStartResponse_unstable> {
+): Promise<LiveVoiceStartResponseUnstable> {
   const { goose } = await getAcpClient();
   const useLegacyAgentLoop = await window.electron.getSetting('useLegacyAgentLoop');
-  return goose.sessionLiveVoiceStart_unstable({
+  return goose.sessionLiveVoiceStartUnstable({
     sessionId,
     offerSdp,
     _meta: { goose: { unrolledAgentLoop: !useLegacyAgentLoop } },
@@ -30,5 +30,5 @@ export async function acpStartLiveVoice(
 
 export async function acpStopLiveVoice(sessionId: string, interactionId: string): Promise<void> {
   const { goose } = await getAcpClient();
-  await goose.sessionLiveVoiceStop_unstable({ sessionId, interactionId });
+  await goose.sessionLiveVoiceStopUnstable({ sessionId, interactionId });
 }

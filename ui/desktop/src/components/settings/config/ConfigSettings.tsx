@@ -4,7 +4,7 @@ import { Button } from '../../ui/button';
 import { useConfig } from '../../ConfigContext';
 import { cn } from '../../../utils';
 import { Save, RotateCcw, FileText, Settings } from 'lucide-react';
-import { toastSuccess, toastError } from '../../../toasts';
+import { toastSuccess, toastError } from '../../../toast_service';
 import { getUiNames, providerPrefixes } from '../../../utils/configUtils';
 import type { ConfigData, ConfigValue } from '../../../types/config';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../ui/card';
@@ -19,8 +19,26 @@ import {
 } from '../../ui/dialog';
 import { errorMessage } from '../../../utils/conversionUtils';
 import { defineMessages, useIntl } from '../../../i18n';
+import type { MessageValue, NoMessageValues } from 'react-intl';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly "title": NoMessageValues;
+  readonly "description": NoMessageValues;
+  readonly "descriptionWithProvider": { readonly "provider": MessageValue };
+  readonly "editConfiguration": NoMessageValues;
+  readonly "configurationEditor": NoMessageValues;
+  readonly "noSettings": NoMessageValues;
+  readonly "enterValue": { readonly "name": MessageValue };
+  readonly "saving": NoMessageValues;
+  readonly "resetChanges": NoMessageValues;
+  readonly "done": NoMessageValues;
+  readonly "configUpdated": NoMessageValues;
+  readonly "configUpdatedMsg": { readonly "name": MessageValue };
+  readonly "saveFailed": NoMessageValues;
+  readonly "saveFailedMsg": { readonly "name": MessageValue };
+  readonly "configReset": NoMessageValues;
+  readonly "configResetMsg": NoMessageValues;
+}>({
   title: {
     id: 'configSettings.title',
     defaultMessage: 'Configuration',

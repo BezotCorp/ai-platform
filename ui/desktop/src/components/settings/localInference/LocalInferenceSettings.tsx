@@ -19,8 +19,35 @@ import { ModelSettingsPanel } from './ModelSettingsPanel';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../ui/dialog';
 import HuggingFaceSignInPrompt from '../auth/HuggingFaceSignInPrompt';
 import { acpSaveDefaults } from '../../../acp/providers';
+import type { MessageValue, NoMessageValues } from 'react-intl';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly title: NoMessageValues;
+  readonly description: NoMessageValues;
+  readonly downloading: NoMessageValues;
+  readonly downloadedModels: NoMessageValues;
+  readonly recommended: NoMessageValues;
+  readonly modelSettings: NoMessageValues;
+  readonly noModels: NoMessageValues;
+  readonly downloadProgress: {
+    readonly downloaded: MessageValue;
+    readonly percent: MessageValue;
+    readonly total: MessageValue;
+  };
+  readonly remaining: { readonly time: MessageValue };
+  readonly downloadFailed: NoMessageValues;
+  readonly downloadCancelled: NoMessageValues;
+  readonly retry: NoMessageValues;
+  readonly dismiss: NoMessageValues;
+  readonly deleteConfirm: NoMessageValues;
+  readonly modelSettingsTitle: NoMessageValues;
+  readonly loadedInMemory: NoMessageValues;
+  readonly evictFromMemory: NoMessageValues;
+  readonly vision: NoMessageValues;
+  readonly visionEncoderDownloading: NoMessageValues;
+  readonly visionEncoderNotDownloaded: NoMessageValues;
+  readonly huggingFaceSignInNote: NoMessageValues;
+}>({
   title: {
     id: 'localInferenceSettings.title',
     defaultMessage: 'Local Inference Models',
@@ -208,7 +235,7 @@ export const LocalInferenceSettings = () => {
   }, []);
 
   useEffect(() => {
-    loadModels();
+    void loadModels();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -217,15 +244,15 @@ export const LocalInferenceSettings = () => {
     const hasDownloadingMmproj = models.some(
       (m) => m.visionCapable && m.mmprojStatus?.state === 'Downloading'
     );
-    if (!hasDownloadingMmproj) return;
+    if (!hasDownloadingMmproj) return undefined;
 
-    const interval = setInterval(() => {
-      loadModels();
+    const interval: ReturnType<typeof setInterval> = setInterval((): void => {
+      void loadModels();
     }, 2000);
-    return () => clearInterval(interval);
+    return (): void => clearInterval(interval);
   }, [models, loadModels]);
 
-  const selectModel = async (modelId: string) => {
+  const selectModel = async (modelId: string): Promise<void> => {
     try {
       await acpSaveDefaults('local', modelId);
       await refreshCurrentModelAndProvider();
@@ -234,46 +261,48 @@ export const LocalInferenceSettings = () => {
     }
   };
 
-  const scrollToDownloads = useCallback(() => {
-    requestAnimationFrame(() => {
+  const scrollToDownloads = useCallback((): void => {
+    requestAnimationFrame((): void => {
       downloadSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     });
   }, []);
 
-  const pollDownloadProgress = (modelId: string) => {
+  const pollDownloadProgress = (modelId: string): void => {
     if (activePolls.current.has(modelId)) return;
     activePolls.current.add(modelId);
 
-    const stopPolling = (interval: ReturnType<typeof setInterval>) => {
+    const stopPolling = (interval: ReturnType<typeof setInterval>): void => {
       clearInterval(interval);
       activePolls.current.delete(modelId);
     };
 
-    const interval = setInterval(async () => {
-      try {
-        const progress = await getLocalModelDownloadProgress(modelId);
-        if (progress) {
-          setDownloads((prev) => new Map(prev).set(modelId, progress));
+    const interval: ReturnType<typeof setInterval> = setInterval((): void => {
+      void (async (): Promise<void> => {
+        try {
+          const progress: DownloadProgress | null = await getLocalModelDownloadProgress(modelId);
+          if (progress) {
+            setDownloads((prev) => new Map(prev).set(modelId, progress));
 
-          if (progress.status === 'completed') {
+            if (progress.status === 'completed') {
+              stopPolling(interval);
+              setDownloads((prev) => {
+                const next = new Map(prev);
+                next.delete(modelId);
+                return next;
+              });
+              await loadModels();
+              await selectModel(modelId);
+            } else if (progress.status === 'failed' || progress.status === 'cancelled') {
+              stopPolling(interval);
+              await loadModels();
+            }
+          } else {
             stopPolling(interval);
-            setDownloads((prev) => {
-              const next = new Map(prev);
-              next.delete(modelId);
-              return next;
-            });
-            await loadModels();
-            await selectModel(modelId);
-          } else if (progress.status === 'failed' || progress.status === 'cancelled') {
-            stopPolling(interval);
-            await loadModels();
           }
-        } else {
+        } catch {
           stopPolling(interval);
         }
-      } catch {
-        stopPolling(interval);
-      }
+      })();
     }, 1000);
   };
 
@@ -331,7 +360,7 @@ export const LocalInferenceSettings = () => {
           (m) => m.id !== modelId && m.status.state === 'Downloaded'
         );
         if (remainingDownloaded.length > 0) {
-          selectModel(remainingDownloaded[0].id);
+          void selectModel(remainingDownloaded[0].id);
         }
       }
     } catch (error) {
@@ -354,7 +383,7 @@ export const LocalInferenceSettings = () => {
   const handleHfDownloadStarted = (modelId: string, request: DownloadModelRequest) => {
     setDownloadRequests((prev) => new Map(prev).set(modelId, request));
     pollDownloadProgress(modelId);
-    loadModels();
+    void loadModels();
     scrollToDownloads();
   };
 

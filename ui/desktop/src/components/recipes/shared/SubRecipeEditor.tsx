@@ -4,10 +4,22 @@ import { Button } from '../../ui/button';
 import { SubRecipeFormData } from './recipeFormSchema';
 import SubRecipeModal from './SubRecipeModal';
 import CreateSubRecipeInline from './CreateSubRecipeInline';
-import { toastError } from '../../../toasts';
+import { toastError } from '../../../toast_service';
 import { defineMessages, useIntl } from '../../../i18n';
+import type { MessageValue, NoMessageValues } from 'react-intl';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly "label": NoMessageValues;
+  readonly "createNew": NoMessageValues;
+  readonly "addExisting": NoMessageValues;
+  readonly "description": NoMessageValues;
+  readonly "sequential": NoMessageValues;
+  readonly "preconfiguredValues": NoMessageValues;
+  readonly "editSubrecipe": { readonly "name": MessageValue };
+  readonly "deleteSubrecipe": { readonly "name": MessageValue };
+  readonly "duplicateName": NoMessageValues;
+  readonly "duplicateNameMsg": { readonly "name": MessageValue };
+}>({
   label: {
     id: 'subRecipeEditor.label',
     defaultMessage: 'Subrecipes',

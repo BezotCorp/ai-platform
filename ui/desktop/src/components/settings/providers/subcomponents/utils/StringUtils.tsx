@@ -1,7 +1,10 @@
 import { defineMessages } from '../../../../../i18n';
 import type { IntlShape } from 'react-intl';
+import type { MessageValue } from 'react-intl';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly "configuredProvider": { readonly "name": MessageValue };
+}>({
   configuredProvider: {
     id: 'stringUtils.configuredProvider',
     defaultMessage: '{name} provider is configured',

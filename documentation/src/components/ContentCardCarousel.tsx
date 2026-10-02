@@ -48,14 +48,14 @@ export default function ContentCardCarousel({
         spaceBetween={16}
         freeMode={false}
         navigation={showNavigation}
-        pagination={showPagination ? { 
+        pagination={showPagination ? {
           clickable: true
         } : false}
         modules={[Navigation, Pagination, FreeMode]}
         style={carouselStyles.swiperContainer}
       >
           {items.map((item, index) => (
-            <SwiperSlide key={index} style={{ 
+            <SwiperSlide key={index} style={{
               width: size === 'large' ? 'min(500px, 90vw)' : 'min(350px, 85vw)',
               minWidth: size === 'large' ? '300px' : '250px'
             }}>

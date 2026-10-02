@@ -6,8 +6,13 @@ import { acpCloseSession, acpNewSession } from '../../acp/sessions';
 import { formatAppName } from '../../utils/conversionUtils';
 import { errorMessage } from '../../utils/conversionUtils';
 import { defineMessages, useIntl } from '../../i18n';
+import type { NoMessageValues } from 'react-intl';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly "failedToLoad": NoMessageValues;
+  readonly "initializing": NoMessageValues;
+  readonly "missingParams": NoMessageValues;
+}>({
   failedToLoad: {
     id: 'standaloneAppView.failedToLoad',
     defaultMessage: 'Failed to Load App',
@@ -63,7 +68,7 @@ export default function StandaloneAppView() {
       }
     }
 
-    loadCachedHtml();
+    void loadCachedHtml();
   }, [resourceUri, extensionName, intl]);
 
   useEffect(() => {
@@ -86,7 +91,7 @@ export default function StandaloneAppView() {
       }
     }
 
-    initSession();
+    void initSession();
   }, [resourceUri, extensionName, workingDir, cachedHtml]);
 
   useEffect(() => {

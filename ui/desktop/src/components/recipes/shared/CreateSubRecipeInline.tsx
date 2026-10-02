@@ -2,15 +2,45 @@ import { useState, useCallback } from 'react';
 import { useForm } from '@tanstack/react-form';
 import { X, Save, Loader2 } from 'lucide-react';
 import { Button } from '../../ui/button';
-import { toastSuccess, toastError } from '../../../toasts';
+import { toastSuccess, toastError } from '../../../toast_service';
 import { saveRecipe } from '../../../recipe/recipe_management';
 import { Recipe } from '../../../recipe';
 import { SubRecipeFormData } from './recipeFormSchema';
 import { useEscapeKey } from '../../../hooks/useEscapeKey';
 import KeyValueEditor from './KeyValueEditor';
 import { defineMessages, useIntl } from '../../../i18n';
+import type { MessageValue, NoMessageValues } from 'react-intl';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly "title": NoMessageValues;
+  readonly "subtitle": NoMessageValues;
+  readonly "closeModal": NoMessageValues;
+  readonly "nameLabel": NoMessageValues;
+  readonly "namePlaceholder": NoMessageValues;
+  readonly "nameHint": NoMessageValues;
+  readonly "recipeTitleLabel": NoMessageValues;
+  readonly "recipeTitlePlaceholder": NoMessageValues;
+  readonly "recipeDescriptionLabel": NoMessageValues;
+  readonly "recipeDescriptionPlaceholder": NoMessageValues;
+  readonly "instructionsLabel": NoMessageValues;
+  readonly "instructionsPlaceholder": NoMessageValues;
+  readonly "toolDescriptionLabel": NoMessageValues;
+  readonly "toolDescriptionPlaceholder": NoMessageValues;
+  readonly "sequentialLabel": NoMessageValues;
+  readonly "sequentialHint": NoMessageValues;
+  readonly "preconfiguredValues": NoMessageValues;
+  readonly "preconfiguredValuesHint": NoMessageValues;
+  readonly "cancel": NoMessageValues;
+  readonly "creating": NoMessageValues;
+  readonly "createAndAdd": NoMessageValues;
+  readonly "validationFailed": NoMessageValues;
+  readonly "validationMsg": NoMessageValues;
+  readonly "duplicateName": NoMessageValues;
+  readonly "duplicateNameMsg": { readonly "name": MessageValue };
+  readonly "createdSuccess": NoMessageValues;
+  readonly "saveFailed": NoMessageValues;
+  readonly "saveFailedMsg": { readonly "error": MessageValue };
+}>({
   title: {
     id: 'createSubRecipeInline.title',
     defaultMessage: 'Create New Subrecipe',

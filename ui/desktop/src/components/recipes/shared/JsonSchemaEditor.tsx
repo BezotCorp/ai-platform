@@ -2,8 +2,17 @@ import React, { useState } from 'react';
 import { Button } from '../../ui/button';
 import { useEscapeKey } from '../../../hooks/useEscapeKey';
 import { defineMessages, useIntl } from '../../../i18n';
+import type { NoMessageValues } from 'react-intl';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly "title": NoMessageValues;
+  readonly "label": NoMessageValues;
+  readonly "insertExample": NoMessageValues;
+  readonly "description": NoMessageValues;
+  readonly "invalidJson": NoMessageValues;
+  readonly "cancel": NoMessageValues;
+  readonly "save": NoMessageValues;
+}>({
   title: {
     id: 'jsonSchemaEditor.title',
     defaultMessage: 'JSON Schema Editor',

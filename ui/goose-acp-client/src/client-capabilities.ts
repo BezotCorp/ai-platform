@@ -1,4 +1,4 @@
-import type { GooseMcpHostCapabilities } from "./mcp-apps.js";
+import type { GooseMcpHostCapabilities } from './mcp-apps.js';
 
 export interface GooseClientCapabilitiesMeta {
   goose?: {

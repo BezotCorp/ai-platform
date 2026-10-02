@@ -1,5 +1,5 @@
 import type { ExtensionConfig } from '../../../types/extensions';
-import { toastService } from '../../../toasts';
+import { toastService } from '../../../toast_service';
 import { DEFAULT_EXTENSION_TIMEOUT } from './utils';
 
 /**
@@ -13,15 +13,7 @@ function getStdioConfig(
   timeout: number
 ) {
   // Validate that the command is one of the allowed commands
-  const allowedCommands = [
-    'cu',
-    'docker',
-    'jbang',
-    'npx',
-    'uvx',
-    'goose',
-    'npx.cmd',
-  ];
+  const allowedCommands = ['cu', 'docker', 'jbang', 'npx', 'uvx', 'goose', 'npx.cmd'];
   if (!allowedCommands.includes(cmd)) {
     toastService.handleError(
       'Invalid Command',

@@ -14,8 +14,27 @@ import Close from './icons/Close';
 import Edit from './icons/Edit';
 import { Button } from './ui/button';
 import { defineMessages, useIntl } from '../i18n';
+import type { MessageTag, MessageValue, NoMessageValues } from 'react-intl';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly "editPlaceholder": NoMessageValues;
+  readonly "editAriaLabel": NoMessageValues;
+  readonly "emptyError": NoMessageValues;
+  readonly "editInPlaceDescription": { readonly "b": MessageTag };
+  readonly "cancel": NoMessageValues;
+  readonly "cancelAriaLabel": NoMessageValues;
+  readonly "editInPlace": NoMessageValues;
+  readonly "editInPlaceAriaLabel": NoMessageValues;
+  readonly "editInPlaceTitle": NoMessageValues;
+  readonly "forkSession": NoMessageValues;
+  readonly "forkSessionAriaLabel": NoMessageValues;
+  readonly "forkSessionTitle": NoMessageValues;
+  readonly "editButton": NoMessageValues;
+  readonly "editMessageAriaLabel": { readonly "preview": MessageValue };
+  readonly "editMessageTitle": NoMessageValues;
+  readonly "removeImageFromEdit": NoMessageValues;
+  readonly "editImagesHeading": NoMessageValues;
+}>({
   editPlaceholder: {
     id: 'userMessage.editPlaceholder',
     defaultMessage: 'Edit your message...',

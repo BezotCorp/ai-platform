@@ -3,8 +3,12 @@ import { defineMessages, useIntl } from '../i18n';
 import { snakeToTitleCase } from '../utils';
 import ToolApprovalButtons from './ToolApprovalButtons';
 import { ToolCallArguments, type ToolCallArgumentValue } from './ToolCallArguments';
+import type { MessageValue } from 'react-intl';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly "allowToolCallWithName": { readonly "toolName": MessageValue };
+  readonly "gooseWouldLikeToCallWithName": { readonly "toolName": MessageValue };
+}>({
   allowToolCallWithName: {
     id: 'toolConfirmation.allowToolCallWithName',
     defaultMessage: 'Allow {toolName}?',

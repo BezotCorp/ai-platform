@@ -2,8 +2,19 @@ import React, { useState, useCallback } from 'react';
 import { Input } from './input';
 import { Button } from './button';
 import { defineMessages, useIntl } from '../../i18n';
+import type { MessageValue, NoMessageValues } from 'react-intl';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly "submit": NoMessageValues;
+  readonly "cancel": NoMessageValues;
+  readonly "fieldRequired": NoMessageValues;
+  readonly "minLength": { readonly "minLength": MessageValue };
+  readonly "maxLength": { readonly "maxLength": MessageValue };
+  readonly "minValue": { readonly "minimum": MessageValue };
+  readonly "maxValue": { readonly "maximum": MessageValue };
+  readonly "selectPlaceholder": NoMessageValues;
+  readonly "noFields": NoMessageValues;
+}>({
   submit: {
     id: 'jsonSchemaForm.submit',
     defaultMessage: 'Submit',
@@ -59,6 +70,23 @@ export interface JsonSchema {
   required?: string[];
   title?: string;
   description?: string;
+}
+
+function inputValueToString(value: unknown): string {
+  if (value === null || value === undefined) {
+    return '';
+  }
+
+  if (
+    typeof value === 'string' ||
+    typeof value === 'number' ||
+    typeof value === 'boolean' ||
+    typeof value === 'bigint'
+  ) {
+    return String(value);
+  }
+
+  return '';
 }
 
 interface JsonSchemaFormProps {
@@ -188,7 +216,7 @@ export default function JsonSchemaForm({
       return (
         <select
           id={key}
-          value={String(value ?? '')}
+          value={inputValueToString(value)}
           onChange={(e) => handleChange(key, e.target.value)}
           disabled={disabled}
           className="flex h-9 w-full rounded-md border focus:border-border-secondary hover:border-border-secondary bg-background-primary px-3 py-1 text-base transition-colors focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
@@ -224,7 +252,7 @@ export default function JsonSchemaForm({
         <Input
           type="number"
           id={key}
-          value={String(value ?? '')}
+          value={inputValueToString(value)}
           onChange={(e) => {
             const numValue =
               prop.type === 'integer' ? parseInt(e.target.value, 10) : parseFloat(e.target.value);
@@ -243,7 +271,7 @@ export default function JsonSchemaForm({
       <Input
         type="text"
         id={key}
-        value={String(value ?? '')}
+        value={inputValueToString(value)}
         onChange={(e) => handleChange(key, e.target.value)}
         minLength={prop.minLength}
         maxLength={prop.maxLength}

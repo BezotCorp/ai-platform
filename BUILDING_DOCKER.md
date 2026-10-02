@@ -34,17 +34,20 @@ docker run --rm \
 ### Build the Image
 
 1. Clone the repository:
+
 ```bash
 git clone https://github.com/aaif-goose/goose.git
 cd goose
 ```
 
-2. Build the Docker image:
+1. Build the Docker image:
+
 ```bash
 docker build -t goose:local .
 ```
 
 The build process:
+
 - Uses a multi-stage build to minimize final image size
 - Compiles with optimizations (LTO, stripping, size optimization)
 - Results in a ~340MB image containing the `goose` CLI binary
@@ -52,11 +55,13 @@ The build process:
 ### Build Options
 
 For a development build with debug symbols:
+
 ```bash
 docker build --build-arg CARGO_PROFILE_RELEASE_STRIP=false -t goose:dev .
 ```
 
 For multi-platform builds:
+
 ```bash
 docker buildx build --platform linux/amd64,linux/arm64 -t goose:multi .
 ```
@@ -66,6 +71,7 @@ docker buildx build --platform linux/amd64,linux/arm64 -t goose:multi .
 ### CLI Mode
 
 Basic usage:
+
 ```bash
 # Show help
 docker run --rm goose:local --help
@@ -79,6 +85,7 @@ docker run --rm \
 ```
 
 With volume mounts for file access:
+
 ```bash
 docker run --rm \
   -v $(pwd):/workspace \
@@ -90,6 +97,7 @@ docker run --rm \
 ```
 
 Interactive session mode with Databricks:
+
 ```bash
 docker run -it --rm \
   -e GOOSE_PROVIDER=databricks \
@@ -98,8 +106,6 @@ docker run -it --rm \
   -e DATABRICKS_TOKEN="$DATABRICKS_TOKEN" \
   goose:local session
 ```
-
-
 
 ### Docker Compose
 
@@ -127,6 +133,7 @@ volumes:
 ```
 
 Run with:
+
 ```bash
 docker-compose run --rm goose session
 ```
@@ -144,6 +151,7 @@ The Docker image accepts all standard goose environment variables:
 ### Persistent Configuration
 
 Mount the configuration directory to persist settings:
+
 ```bash
 docker run --rm \
   -v ~/.config/goose:/home/goose/.config/goose \
@@ -223,6 +231,7 @@ analyze:
 ### Included Tools
 
 The image includes essential tools for goose operation:
+
 - `git` - Version control operations
 - `curl` - HTTP requests
 - `ca-certificates` - SSL/TLS support
@@ -233,6 +242,7 @@ The image includes essential tools for goose operation:
 ### Permission Issues
 
 If you encounter permission errors when mounting volumes:
+
 ```bash
 # Ensure the mounted directory is accessible
 docker run --rm \
@@ -244,6 +254,7 @@ docker run --rm \
 ### API Key Issues
 
 If API keys aren't being recognized:
+
 1. Ensure environment variables are properly set
 2. Check that quotes are handled correctly in your shell
 3. Use `docker run --env-file .env` for multiple environment variables
@@ -251,6 +262,7 @@ If API keys aren't being recognized:
 ### Network Issues
 
 For accessing local services from within the container:
+
 ```bash
 # Use host network mode
 docker run --rm --network host goose:local
@@ -261,6 +273,7 @@ docker run --rm --network host goose:local
 ### Custom Entrypoint
 
 Override the default entrypoint for debugging:
+
 ```bash
 docker run --rm -it --entrypoint bash goose:local
 ```
@@ -268,6 +281,7 @@ docker run --rm -it --entrypoint bash goose:local
 ### Resource Limits
 
 Set memory and CPU limits:
+
 ```bash
 docker run --rm \
   --memory="2g" \
@@ -278,6 +292,7 @@ docker run --rm \
 ### Multi-stage Development
 
 For development with hot reload:
+
 ```bash
 # Mount source code
 docker run --rm \
@@ -297,6 +312,7 @@ For production deployments:
 4. Configure resource limits and auto-scaling
 
 Example production Dockerfile:
+
 ```dockerfile
 FROM ghcr.io/aaif-goose/goose:v1.6.0
 # Add any additional tools needed for your use case

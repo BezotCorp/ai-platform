@@ -3,8 +3,19 @@ import { Button } from './ui/button';
 import type { Permission } from '../types/permissions';
 import { resolveAcpPermissionRequest } from '../acp/permissionRequests';
 import { defineMessages, useIntl } from '../i18n';
+import type { NoMessageValues } from 'react-intl';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly "allowOnce": NoMessageValues;
+  readonly "alwaysAllow": NoMessageValues;
+  readonly "deny": NoMessageValues;
+  readonly "allowedOnce": NoMessageValues;
+  readonly "alwaysAllowed": NoMessageValues;
+  readonly "denied": NoMessageValues;
+  readonly "deniedOnce": NoMessageValues;
+  readonly "cancelled": NoMessageValues;
+  readonly "staleApprovalRequest": NoMessageValues;
+}>({
   allowOnce: {
     id: 'toolApprovalButtons.allowOnce',
     defaultMessage: 'Allow Once',

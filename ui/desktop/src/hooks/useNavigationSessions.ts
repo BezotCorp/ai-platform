@@ -9,9 +9,13 @@ import {
   acpListRecentSessions,
   type SessionListItem,
 } from '../acp/sessions';
-import { groupSessionsByProject } from '../utils/projectSessions';
+import { groupSessionsByProject } from '../utils/projectGroup';
 
 const MAX_RECENT_SESSIONS = 25;
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
 
 function pairSessionPath(sessionId: string): string {
   const searchParams = new URLSearchParams({ resumeSessionId: sessionId });
@@ -144,7 +148,7 @@ export function useNavigationSessions() {
         }
       };
 
-      pollForUpdates();
+      void pollForUpdates();
     };
 
     window.addEventListener(AppEvents.SESSION_CREATED, handleSessionCreated);
@@ -158,7 +162,16 @@ export function useNavigationSessions() {
     let fetchVersion = 0;
 
     const handleSessionDeleted = (event: Event) => {
-      const { sessionId } = (event as CustomEvent<{ sessionId: string }>).detail;
+      if (!(event instanceof CustomEvent)) {
+        return;
+      }
+
+      const detail: unknown = event.detail;
+      if (!isRecord(detail) || typeof detail.sessionId !== 'string') {
+        return;
+      }
+
+      const sessionId = detail.sessionId;
 
       setRecentSessions((prev) => prev.filter((session) => session.id !== sessionId));
 
@@ -175,9 +188,23 @@ export function useNavigationSessions() {
     };
 
     const handleSessionRenamed = (event: Event) => {
-      const { sessionId, newName, userInitiated } = (
-        event as CustomEvent<{ sessionId: string; newName: string; userInitiated?: boolean }>
-      ).detail;
+      if (!(event instanceof CustomEvent)) {
+        return;
+      }
+
+      const detail: unknown = event.detail;
+      if (
+        !isRecord(detail) ||
+        typeof detail.sessionId !== 'string' ||
+        typeof detail.newName !== 'string'
+      ) {
+        return;
+      }
+
+      const sessionId = detail.sessionId;
+      const newName = detail.newName;
+      const userInitiated =
+        typeof detail.userInitiated === 'boolean' ? detail.userInitiated : undefined;
 
       setRecentSessions((prev) =>
         prev.map((session) =>
@@ -203,12 +230,18 @@ export function useNavigationSessions() {
         const sessionId =
           currentSessionId || lastSessionIdRef.current || chatContext?.chat?.sessionId;
         if (sessionId && sessionId.length > 0) {
-          navigate(pairSessionPath(sessionId));
+          void Promise.resolve(navigate(pairSessionPath(sessionId))).catch((error) => {
+            console.error('Failed to navigate to active session:', error);
+          });
         } else {
-          navigate('/');
+          void Promise.resolve(navigate('/')).catch((error) => {
+            console.error('Failed to navigate home:', error);
+          });
         }
       } else {
-        navigate(path);
+        void Promise.resolve(navigate(path)).catch((error) => {
+          console.error('Failed to navigate:', error);
+        });
       }
     },
     [navigate, currentSessionId, chatContext?.chat?.sessionId]
@@ -216,7 +249,9 @@ export function useNavigationSessions() {
 
   const handleSessionClick = useCallback(
     (sessionId: string) => {
-      navigate(pairSessionPath(sessionId));
+      void Promise.resolve(navigate(pairSessionPath(sessionId))).catch((error) => {
+        console.error('Failed to navigate to session:', error);
+      });
     },
     [navigate]
   );

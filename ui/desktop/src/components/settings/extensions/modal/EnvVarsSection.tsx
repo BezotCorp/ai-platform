@@ -4,8 +4,17 @@ import { Plus, X, Edit } from 'lucide-react';
 import { Input } from '../../../ui/input';
 import { cn } from '../../../../utils';
 import { defineMessages, useIntl } from '../../../../i18n';
+import type { NoMessageValues } from 'react-intl';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly "environmentVariables": NoMessageValues;
+  readonly "envVarsDescription": NoMessageValues;
+  readonly "variableName": NoMessageValues;
+  readonly "value": NoMessageValues;
+  readonly "bothRequired": NoMessageValues;
+  readonly "noSpaces": NoMessageValues;
+  readonly "add": NoMessageValues;
+}>({
   environmentVariables: {
     id: 'envVarsSection.environmentVariables',
     defaultMessage: 'Environment Variables',

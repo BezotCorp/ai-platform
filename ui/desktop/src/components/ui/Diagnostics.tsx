@@ -1,11 +1,30 @@
 import React, { useState } from 'react';
-import { AlertTriangle, Download, Github } from 'lucide-react';
+import { AlertTriangle, Bug, Download } from 'lucide-react';
 import { Button } from './button';
-import { toastError } from '../../toasts';
+import { toastError } from '../../toast_service';
 import { defineMessages, useIntl } from '../../i18n';
 import { getDiagnosticsReport } from '../../acp/diagnostics';
+import type { NoMessageValues } from 'react-intl';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly "reportProblem": NoMessageValues;
+  readonly "description": NoMessageValues;
+  readonly "systemInfo": NoMessageValues;
+  readonly "sessionMessages": NoMessageValues;
+  readonly "logFiles": NoMessageValues;
+  readonly "configSettings": NoMessageValues;
+  readonly "sensitiveWarning": NoMessageValues;
+  readonly "attachHint": NoMessageValues;
+  readonly "cancel": NoMessageValues;
+  readonly "downloading": NoMessageValues;
+  readonly "download": NoMessageValues;
+  readonly "opening": NoMessageValues;
+  readonly "fileBug": NoMessageValues;
+  readonly "diagnosticsErrorTitle": NoMessageValues;
+  readonly "diagnosticsErrorMsg": NoMessageValues;
+  readonly "systemInfoErrorTitle": NoMessageValues;
+  readonly "systemInfoErrorMsg": NoMessageValues;
+}>({
   reportProblem: {
     id: 'diagnosticsModal.reportProblem',
     defaultMessage: 'Report a Problem',
@@ -140,10 +159,10 @@ export const DiagnosticsModal: React.FC<DiagnosticsModalProps> = ({
 
       const body = `**Describe the bug**
 
-💡 Before filing, please check common issues:  
-https://goose-docs.ai/docs/troubleshooting  
+💡 Before filing, please check common issues:
+https://goose-docs.ai/docs/troubleshooting
 
-📦 To help us debug faster, attach your **diagnostics JSON report** if possible.  
+📦 To help us debug faster, attach your **diagnostics JSON report** if possible.
 👉 How to capture it: https://goose-docs.ai/docs/troubleshooting/diagnostics-and-reporting/
 
 A clear and concise description of what the bug is.
@@ -251,7 +270,7 @@ Add any other context about the problem here.
             disabled={isDownloading || isFilingBug}
             className="bg-slate-600 text-white hover:bg-slate-700"
           >
-            <Github size={16} className="mr-1" />
+            <Bug size={16} className="mr-1" />
             {isFilingBug ? intl.formatMessage(i18n.opening) : intl.formatMessage(i18n.fileBug)}
           </Button>
         </div>

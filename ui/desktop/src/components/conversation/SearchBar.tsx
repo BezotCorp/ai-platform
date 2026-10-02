@@ -4,8 +4,15 @@ import { Search as SearchIcon } from 'lucide-react';
 import { ArrowDown, ArrowUp, Close } from '../icons';
 import debounce from 'lodash/debounce';
 import { Button } from '../ui/button';
+import type { MessageValue, NoMessageValues } from 'react-intl';
 
-const i18nMessages = defineMessages({
+const i18nMessages = defineMessages<{
+  readonly "defaultPlaceholder": NoMessageValues;
+  readonly "caseSensitive": NoMessageValues;
+  readonly "previous": { readonly "shortcut": MessageValue };
+  readonly "next": { readonly "shortcut": MessageValue };
+  readonly "close": { readonly "shortcut": MessageValue };
+}>({
   defaultPlaceholder: {
     id: 'searchBar.placeholder',
     defaultMessage: 'Search conversation...',
@@ -196,7 +203,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
               onKeyDown={handleKeyDown}
               placeholder={resolvedPlaceholder}
               className="no-drag w-full text-sm pl-9 pr-24 py-3 bg-background-inverse text-text-inverse
-                      placeholder:text-text-inverse/50 focus:outline-none 
+                      placeholder:text-text-inverse/50 focus:outline-none
                        active:border-border-secondary"
             />
           </div>

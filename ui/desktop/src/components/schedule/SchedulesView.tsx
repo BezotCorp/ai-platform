@@ -19,7 +19,7 @@ import { TrashIcon } from '../icons/TrashIcon';
 import { Plus, RefreshCw, Pause, Play, Edit, Square, Eye, CircleDotDashed } from 'lucide-react';
 import { NewSchedulePayload, ScheduleModal } from './ScheduleModal';
 import ScheduleDetailView from './ScheduleDetailView';
-import { toastError, toastSuccess } from '../../toasts';
+import { toastError, toastSuccess } from '../../toast_service';
 import cronstrue from 'cronstrue';
 import { formatToLocalDateWithTimezone } from '../../utils/date';
 import { errorMessage } from '../../utils/conversionUtils';
@@ -27,8 +27,39 @@ import { MainPanelLayout } from '../Layout/MainPanelLayout';
 import { ViewOptions } from '../../utils/navigationUtils';
 import { trackScheduleCreated, trackScheduleDeleted, getErrorType } from '../../utils/analytics';
 import { defineMessages, useIntl } from '../../i18n';
+import type { MessageValue, NoMessageValues } from 'react-intl';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly running: NoMessageValues;
+  readonly paused: NoMessageValues;
+  readonly lastRun: { readonly date: MessageValue };
+  readonly edit: NoMessageValues;
+  readonly resume: NoMessageValues;
+  readonly pause: NoMessageValues;
+  readonly inspect: NoMessageValues;
+  readonly kill: NoMessageValues;
+  readonly scheduler: NoMessageValues;
+  readonly refreshing: NoMessageValues;
+  readonly refresh: NoMessageValues;
+  readonly createSchedule: NoMessageValues;
+  readonly description: NoMessageValues;
+  readonly errorPrefix: { readonly error: MessageValue };
+  readonly noSchedules: NoMessageValues;
+  readonly scheduleUpdated: NoMessageValues;
+  readonly scheduleUpdatedMsg: { readonly id: MessageValue };
+  readonly confirmDelete: { readonly id: MessageValue };
+  readonly schedulePaused: NoMessageValues;
+  readonly schedulePausedMsg: { readonly id: MessageValue };
+  readonly pauseError: NoMessageValues;
+  readonly scheduleUnpaused: NoMessageValues;
+  readonly scheduleUnpausedMsg: { readonly id: MessageValue };
+  readonly unpauseError: NoMessageValues;
+  readonly jobKilled: NoMessageValues;
+  readonly killError: NoMessageValues;
+  readonly jobInspection: NoMessageValues;
+  readonly inspectNoInfo: NoMessageValues;
+  readonly inspectError: NoMessageValues;
+}>({
   running: { id: 'schedulesView.running', defaultMessage: 'Running' },
   paused: { id: 'schedulesView.paused', defaultMessage: 'Paused' },
   lastRun: { id: 'schedulesView.lastRun', defaultMessage: 'Last run: {date}' },
@@ -253,11 +284,11 @@ const SchedulesView: React.FC<SchedulesViewProps> = ({ onClose: _onClose }) => {
   const [actionsInProgress, setActionsInProgress] = useState<Set<string>>(new Set());
   const [viewingScheduleId, setViewingScheduleId] = useState<string | null>(null);
 
-  const fetchSchedules = async () => {
+  const fetchSchedules = async (): Promise<void> => {
     setIsLoading(true);
     setApiError(null);
     try {
-      const fetchedSchedules = await acpListSchedules();
+      const fetchedSchedules: ScheduledJobDto[] = await acpListSchedules();
       setSchedules(fetchedSchedules);
     } catch (error) {
       console.error('Failed to fetch schedules:', error);
@@ -269,30 +300,35 @@ const SchedulesView: React.FC<SchedulesViewProps> = ({ onClose: _onClose }) => {
 
   useEffect(() => {
     if (viewingScheduleId === null) {
-      fetchSchedules();
+      queueMicrotask((): void => {
+        void fetchSchedules();
+      });
 
       const locationState = location.state as ViewOptions | null;
       if (locationState?.pendingScheduleDeepLink) {
-        setPendingDeepLink(locationState.pendingScheduleDeepLink);
-        setIsModalOpen(true);
-        window.history.replaceState({}, document.title);
+        const pendingScheduleDeepLink: string = locationState.pendingScheduleDeepLink;
+        queueMicrotask((): void => {
+          setPendingDeepLink(pendingScheduleDeepLink);
+          setIsModalOpen(true);
+          window.history.replaceState({}, document.title);
+        });
       }
     }
   }, [viewingScheduleId, location.state]);
 
   useEffect(() => {
-    if (viewingScheduleId !== null || actionsInProgress.size > 0) return;
+    if (viewingScheduleId !== null || actionsInProgress.size > 0) return undefined;
 
-    const intervalId = setInterval(() => {
+    const intervalId: ReturnType<typeof setInterval> = setInterval((): void => {
       if (viewingScheduleId === null && !isRefreshing && !isLoading && !isSubmitting) {
-        fetchSchedules();
+        void fetchSchedules();
       }
     }, 15000);
 
-    return () => clearInterval(intervalId);
+    return (): void => clearInterval(intervalId);
   }, [viewingScheduleId, isRefreshing, isLoading, isSubmitting, actionsInProgress.size]);
 
-  const handleRefresh = async () => {
+  const handleRefresh = async (): Promise<void> => {
     setIsRefreshing(true);
     try {
       await fetchSchedules();
@@ -333,13 +369,13 @@ const SchedulesView: React.FC<SchedulesViewProps> = ({ onClose: _onClose }) => {
       setSubmitApiError(errorMsg);
 
       if (!editingSchedule) {
-        const failedSourceType =
+        const failedSourceTypeKey =
           typeof payload === 'object' && payload && 'sourceType' in payload
             ? payload.sourceType
             : pendingDeepLink
               ? 'deeplink'
               : 'file';
-        trackScheduleCreated(failedSourceType, false, getErrorType(error));
+        trackScheduleCreated(failedSourceTypeKey, false, getErrorType(error));
       }
     } finally {
       setIsSubmitting(false);

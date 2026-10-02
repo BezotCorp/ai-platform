@@ -3,13 +3,22 @@ import AnimatedIcons from './AnimatedIcons';
 import FlyingBird from './FlyingBird';
 import { ChatState } from '../types/chatState';
 import { defineMessages, useIntl } from '../i18n';
+import type { NoMessageValues } from 'react-intl';
 
 interface LoadingGooseProps {
   message?: string;
   chatState?: ChatState;
 }
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly "loadingConversation": NoMessageValues;
+  readonly "thinking": NoMessageValues;
+  readonly "streaming": NoMessageValues;
+  readonly "waiting": NoMessageValues;
+  readonly "compacting": NoMessageValues;
+  readonly "idle": NoMessageValues;
+  readonly "restartingAgent": NoMessageValues;
+}>({
   loadingConversation: {
     id: 'loadingGoose.loadingConversation',
     defaultMessage: 'loading conversation...',

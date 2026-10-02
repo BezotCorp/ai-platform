@@ -17,7 +17,7 @@ trap 'rm -rf "$temp_dir"' EXIT
 schema="$temp_dir/acp-schema.json"
 meta="$temp_dir/acp-meta.json"
 
-git show "$acp_ref:crates/goose/acp-schema.json" > "$schema"
-git show "$acp_ref:crates/goose/acp-meta.json" > "$meta"
+git show "$acp_ref:crates/goose/acp-schema.json" >"$schema"
+git show "$acp_ref:crates/goose/acp-meta.json" >"$meta"
 node documentation/scripts/generate-acp-docs.js "$schema" "$meta" \
   documentation/docs/gdk/acp/reference.md "$acp_ref"

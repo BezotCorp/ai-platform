@@ -4,8 +4,12 @@ import clsx from 'clsx';
 import { TooltipWrapper } from './TooltipWrapper';
 import { Check, Rocket, Sliders } from 'lucide-react';
 import { defineMessages, useIntl } from '../../../../../i18n';
+import type { NoMessageValues } from 'react-intl';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly "configure": NoMessageValues;
+  readonly "launch": NoMessageValues;
+}>({
   configure: {
     id: 'cardButtons.configure',
     defaultMessage: 'Configure',

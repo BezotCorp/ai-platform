@@ -1,6 +1,6 @@
-const { FusesPlugin } = require('@electron-forge/plugin-fuses');
-const { FuseV1Options, FuseVersion } = require('@electron/fuses');
-const { resolve } = require('path');
+import { FusesPlugin } from '@electron-forge/plugin-fuses';
+import { FuseV1Options, FuseVersion } from '@electron/fuses';
+import { resolve } from 'node:path';
 
 const isLinuxVulkanBuild = process.env.GOOSE_DESKTOP_LINUX_VARIANT === 'vulkan';
 
@@ -35,8 +35,7 @@ let cfg = {
       },
     ],
     // Usage descriptions for macOS TCC (Transparency, Consent, and Control)
-    NSMicrophoneUsageDescription:
-      'Goose needs access to your microphone for voice dictation.',
+    NSMicrophoneUsageDescription: 'Goose needs access to your microphone for voice dictation.',
     NSAppleEventsUsageDescription:
       'Goose needs access to send Apple Events to control other apps on your behalf.',
   },
@@ -57,7 +56,7 @@ if (process.env.APPLE_TEAM_ID) {
   };
 }
 
-module.exports = {
+export default {
   packagerConfig: cfg,
   rebuildConfig: {},
   publishers: [

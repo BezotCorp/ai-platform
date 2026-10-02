@@ -1,6 +1,6 @@
 import cronstrue from 'cronstrue';
-
-export type Period = 'minute' | 'hour' | 'day' | 'week' | 'month' | 'quarter' | 'year' | 'custom';
+import { ParsedCron } from './parsed_cron';
+import { CronParts } from './cronParts';
 
 export const quarterMonthsByStartMonth: Record<string, string> = {
   '1': '1,4,7,10',
@@ -12,28 +12,6 @@ export const quarterDayLimitByStartMonth: Record<string, number> = {
   '1': 30,
   '2': 28,
   '3': 30,
-};
-
-export type ParsedCron = {
-  period: Period;
-  second: string;
-  minute: string;
-  hour: string;
-  dayOfMonth: string;
-  month: string;
-  dayOfWeek: string;
-};
-
-export type CronParts = {
-  period: Period;
-  second: string;
-  minute: string;
-  hour24: number;
-  dayOfWeek: string;
-  dayOfMonth: string | null;
-  month: string;
-  quarterStartMonth: string;
-  customCron: string;
 };
 
 export const defaultParsedCron: ParsedCron = {

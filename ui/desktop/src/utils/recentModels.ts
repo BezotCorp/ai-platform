@@ -1,4 +1,4 @@
-import type { RecentModel } from './settings';
+import type { RecentModel } from './RecentModel';
 
 const MAX_RECENT_MODELS = 5;
 

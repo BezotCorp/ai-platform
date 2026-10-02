@@ -1,10 +1,10 @@
 import type {
-  GooseSessionNotification_unstable,
-  ProviderDeviceCodeNotification_unstable,
+  GooseSessionNotificationUnstable,
+  ProviderDeviceCodeNotificationUnstable,
 } from '@aaif/goose-acp-client';
 import type { SessionNotification } from '@agentclientprotocol/sdk';
 import { AppEvents } from '../constants/events';
-import { maybeHandlePlatformEvent } from '../utils/platform_events';
+import { maybeHandlePlatformEvent } from '../utils/platformEvents';
 import { toolNotificationEvent } from './adapter/toolNotifications';
 import { acpChatSessionActions, acpChatSessionStore } from './chatSessionStore';
 import { publishLiveVoiceInteractionEnded } from './liveVoiceNotifications';
@@ -47,7 +47,7 @@ function maybeHandleLivePlatformEvent(notification: SessionNotification): void {
 }
 
 export function handleAcpGooseSessionNotification(
-  notification: GooseSessionNotification_unstable
+  notification: GooseSessionNotificationUnstable
 ): Promise<void> {
   if (notification.update.sessionUpdate === 'live_voice_interaction_ended') {
     publishLiveVoiceInteractionEnded({
@@ -62,7 +62,7 @@ export function handleAcpGooseSessionNotification(
 }
 
 export function handleAcpProviderDeviceCodeNotification(
-  notification: ProviderDeviceCodeNotification_unstable
+  notification: ProviderDeviceCodeNotificationUnstable
 ): Promise<void> {
   window.dispatchEvent(new CustomEvent('goose:device-code', { detail: notification }));
   return Promise.resolve();

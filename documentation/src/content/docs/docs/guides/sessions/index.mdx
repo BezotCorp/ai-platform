@@ -1,0 +1,35 @@
+---
+title: Managing Sessions
+hide_title: true
+description: Manage your session lifecycle and ongoing interactions with goose
+---
+
+import Card from '~/components/Card';
+import styles from '~/components/Card/styles.module.css';
+import { Tabs, Tab } from '@rspress/core/theme';
+
+<h1 className={styles.pageTitle}>Managing Sessions</h1>
+<p className={styles.pageDescription}>
+  Sessions are your continuous interactions with goose. Each session maintains context and conversation history, enabling goose to understand your ongoing work and provide relevant assistance.
+</p>
+
+<div className={styles.categorySection}>
+  <h2 className={styles.categoryTitle}>📚 Documentation & Guides</h2>
+  <div className={styles.cardGrid}>
+    <Card 
+      title="Session Management"
+      description="Learn how to start, resume, or search sessions, and perform other session management tasks."
+      link="/docs/guides/sessions/session-management"
+    />
+    <Card 
+      title="In-Session Actions"
+      description="Discover features you can use to share information and communicate with goose during sessions."
+      link="/docs/guides/sessions/in-session-actions"
+    />
+    <Card 
+      title="Smart Context Management"
+      description="Maintain productive sessions using features that help manage context and conversation limits."
+      link="/docs/guides/sessions/smart-context-management"
+    />
+  </div>
+</div>

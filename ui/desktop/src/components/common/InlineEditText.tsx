@@ -2,8 +2,14 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { toast } from 'react-toastify';
 import { errorMessage } from '../../utils/conversionUtils';
 import { defineMessages, useIntl } from '../../i18n';
+import type { NoMessageValues } from 'react-intl';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly "enterText": NoMessageValues;
+  readonly "failedToSave": NoMessageValues;
+  readonly "clickToEdit": NoMessageValues;
+  readonly "doubleClickToEdit": NoMessageValues;
+}>({
   enterText: {
     id: 'inlineEditText.enterText',
     defaultMessage: 'Enter text',
@@ -122,7 +128,7 @@ export const InlineEditText: React.FC<InlineEditTextProps> = ({
     (e: React.KeyboardEvent<HTMLInputElement>) => {
       if (e.key === 'Enter' && !isSaving) {
         e.preventDefault();
-        handleSave();
+        void handleSave();
       } else if (e.key === 'Escape' && !isSaving) {
         e.preventDefault();
         handleCancel();
@@ -133,7 +139,7 @@ export const InlineEditText: React.FC<InlineEditTextProps> = ({
 
   const handleBlur = useCallback(() => {
     if (!isSaving) {
-      handleSave();
+      void handleSave();
     }
   }, [handleSave, isSaving]);
 

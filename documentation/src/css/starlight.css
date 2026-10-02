@@ -1,0 +1,48 @@
+:root {
+  --sl-color-accent-low: #e8e8e8;
+  --sl-color-accent: #0f6636;
+  --sl-color-accent-high: #101010;
+
+  --sl-font: "Cash Sans", sans-serif;
+}
+
+:root[data-theme="dark"] {
+  --sl-color-accent-low: #232323;
+  --sl-color-accent: #25c2a0;
+  --sl-color-accent-high: #ffffff;
+}
+
+.documentation-admonition {
+  border-inline-start: 0.25rem solid var(--sl-color-gray-4);
+  padding: 1rem;
+  margin-block: 1rem;
+  background: var(--sl-color-gray-6);
+}
+
+.documentation-admonition--danger {
+  border-inline-start-color: var(--sl-color-red);
+}
+
+.documentation-admonition--warning {
+  border-inline-start-color: var(--sl-color-orange);
+}
+
+.documentation-admonition--tip {
+  border-inline-start-color: var(--sl-color-green);
+}
+
+.documentation-admonition--info {
+  border-inline-start-color: var(--sl-color-blue);
+}
+\n
+.goose-logo--dark {
+  display: none;
+}
+
+:root[data-theme="dark"] .goose-logo--light {
+  display: none;
+}
+
+:root[data-theme="dark"] .goose-logo--dark {
+  display: block;
+}

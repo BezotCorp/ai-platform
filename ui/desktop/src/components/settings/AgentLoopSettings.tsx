@@ -4,8 +4,33 @@ import { Input } from '../ui/input';
 import { Switch } from '../ui/switch';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { defineMessages, useIntl } from '../../i18n';
+import type { MessageValue, NoMessageValues } from 'react-intl';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly "title": NoMessageValues;
+  readonly "description": NoMessageValues;
+  readonly "operationsHeading": NoMessageValues;
+  readonly "enableOperation": { readonly "operation": MessageValue };
+  readonly "slashCommandsTitle": NoMessageValues;
+  readonly "slashCommandsDescription": NoMessageValues;
+  readonly "maxTurnsTitle": NoMessageValues;
+  readonly "maxTurnsDescription": NoMessageValues;
+  readonly "contextCompactionTitle": NoMessageValues;
+  readonly "contextCompactionDescription": NoMessageValues;
+  readonly "toolPairCompactionTitle": NoMessageValues;
+  readonly "toolPairCompactionDescription": NoMessageValues;
+  readonly "recipeRetryTitle": NoMessageValues;
+  readonly "recipeRetryDescription": NoMessageValues;
+  readonly "stopHooksTitle": NoMessageValues;
+  readonly "stopHooksDescription": NoMessageValues;
+  readonly "turnsLabel": NoMessageValues;
+  readonly "thresholdLabel": NoMessageValues;
+  readonly "cutoffLabel": NoMessageValues;
+  readonly "retryTimeoutLabel": NoMessageValues;
+  readonly "failureTimeoutLabel": NoMessageValues;
+  readonly "blockLimitLabel": NoMessageValues;
+  readonly "autoPlaceholder": NoMessageValues;
+}>({
   title: {
     id: 'settings.agentLoop.title',
     defaultMessage: 'Agent Loop',

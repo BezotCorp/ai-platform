@@ -26,14 +26,19 @@ import {
   type NextChatExtensionDraft,
 } from '../utils/nextChatExtensions';
 import { formatAcpError } from '../acp/errors';
-import { toastError } from '../toasts';
+import { toastError } from '../toast_service';
 import { formatClockDisplay } from '../utils/timeUtils';
 import { acpGetLiveVoiceAvailability } from '../acp/liveVoice';
-import type { LiveVoiceAvailabilityResponse_unstable } from '@aaif/goose-acp-client';
+import type { LiveVoiceAvailabilityResponseUnstable } from '@aaif/goose-acp-client';
 import { subscribeToAcpRecovery } from '../acp/acpConnection';
 import type { LiveVoiceController } from '../liveVoice/useLiveVoice';
+import type { NoMessageValues } from 'react-intl';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly "goodMorning": NoMessageValues;
+  readonly "goodAfternoon": NoMessageValues;
+  readonly "goodEvening": NoMessageValues;
+}>({
   goodMorning: { id: 'hub.goodMorning', defaultMessage: 'Good morning' },
   goodAfternoon: { id: 'hub.goodAfternoon', defaultMessage: 'Good afternoon' },
   goodEvening: { id: 'hub.goodEvening', defaultMessage: 'Good evening' },
@@ -65,7 +70,7 @@ export default function Hub({
   const userSelectedWorkingDirRef = useRef(false);
   const [isCreatingSession, setIsCreatingSession] = useState(false);
   const [liveVoiceAvailability, setLiveVoiceAvailability] =
-    useState<LiveVoiceAvailabilityResponse_unstable | null>(null);
+    useState<LiveVoiceAvailabilityResponseUnstable | null>(null);
   const [nextChatExtensionDraft, setNextChatExtensionDraft] =
     useState<NextChatExtensionDraft | null>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);

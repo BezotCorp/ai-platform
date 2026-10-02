@@ -12,8 +12,21 @@ import { Button } from './button';
 import MarkdownContent from '../MarkdownContent';
 import { cn } from '../../utils';
 import { defineMessages, useIntl } from '../../i18n';
+import type { NoMessageValues } from 'react-intl';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly "securityWarningTitle": NoMessageValues;
+  readonly "newRecipeWarningTitle": NoMessageValues;
+  readonly "firstTimeDescription": NoMessageValues;
+  readonly "trustSource": NoMessageValues;
+  readonly "hiddenCharsWarning": NoMessageValues;
+  readonly "recipePreview": NoMessageValues;
+  readonly "titleLabel": NoMessageValues;
+  readonly "descriptionLabel": NoMessageValues;
+  readonly "instructionsLabel": NoMessageValues;
+  readonly "cancel": NoMessageValues;
+  readonly "trustAndExecute": NoMessageValues;
+}>({
   securityWarningTitle: {
     id: 'recipeWarningModal.securityWarningTitle',
     defaultMessage: '⚠️ Security Warning',

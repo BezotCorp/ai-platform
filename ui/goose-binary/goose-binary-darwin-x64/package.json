@@ -24,5 +24,6 @@
   },
   "files": [
     "bin/goose"
-  ]
+  ],
+  "type": "module"
 }

@@ -604,7 +604,7 @@ export class GitHubUpdater {
         name: error instanceof Error ? error.name : 'Unknown',
         code:
           error instanceof Error && 'code' in error
-            ? (error as Error & { code: unknown }).code
+            ? (error).code
             : undefined,
       });
       return {

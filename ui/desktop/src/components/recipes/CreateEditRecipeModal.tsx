@@ -9,12 +9,36 @@ import { Button } from '../ui/button';
 
 import { RecipeFormFields } from './shared/RecipeFormFields';
 import { RecipeFormData } from './shared/recipeFormSchema';
-import { toastSuccess, toastError } from '../../toasts';
+import { toastSuccess, toastError } from '../../toast_service';
 import { saveRecipe } from '../../recipe/recipe_management';
 import { errorMessage } from '../../utils/conversionUtils';
 import { defineMessages, useIntl } from '../../i18n';
+import type { MessageValue, NoMessageValues } from 'react-intl';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly "createRecipeTitle": NoMessageValues;
+  readonly "viewEditRecipeTitle": NoMessageValues;
+  readonly "createSubtitle": NoMessageValues;
+  readonly "editSubtitle": NoMessageValues;
+  readonly "learnMore": NoMessageValues;
+  readonly "copyLinkDescription": NoMessageValues;
+  readonly "copied": NoMessageValues;
+  readonly "copy": NoMessageValues;
+  readonly "generatingDeeplink": NoMessageValues;
+  readonly "clickToGenerateDeeplink": NoMessageValues;
+  readonly "close": NoMessageValues;
+  readonly "saving": NoMessageValues;
+  readonly "saveRecipe": NoMessageValues;
+  readonly "saveAndRunRecipe": NoMessageValues;
+  readonly "validationFailed": NoMessageValues;
+  readonly "validationMsg": NoMessageValues;
+  readonly "recipeSavedMsg": NoMessageValues;
+  readonly "saveFailed": NoMessageValues;
+  readonly "saveFailedMsg": { readonly "error": MessageValue };
+  readonly "recipeSavedAndLaunchedMsg": NoMessageValues;
+  readonly "saveAndRunFailed": NoMessageValues;
+  readonly "saveAndRunFailedMsg": { readonly "error": MessageValue };
+}>({
   createRecipeTitle: {
     id: 'createEditRecipe.createRecipeTitle',
     defaultMessage: 'Create Recipe',
@@ -269,7 +293,7 @@ export default function CreateEditRecipeModal({
         }
         return rest;
       }
-    ) as RecipeExtension[] | undefined;
+    );
 
     const mergedSettings: RecipeSettings = {
       ...(recipe?.settings || {}),
@@ -374,7 +398,7 @@ export default function CreateEditRecipeModal({
       }
     };
 
-    generateLink();
+    void generateLink();
 
     return () => {
       isCancelled = true;

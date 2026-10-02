@@ -1,6 +1,9 @@
 import { defineMessages, useIntl } from '../i18n';
+import type { NoMessageValues } from 'react-intl';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly "recipeLabel": NoMessageValues;
+}>({
   recipeLabel: {
     id: 'recipeHeader.recipeLabel',
     defaultMessage: 'Recipe',

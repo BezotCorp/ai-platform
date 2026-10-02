@@ -3,8 +3,9 @@
 Download the release builds from this PR. Once a build is ready, the actions bot will post a comment on this PR
 with instructions on how to download and sign.
 
-## Use the following script to create a risk assessment and testing plan:
-```
+## Use the following script to create a risk assessment and testing plan
+
+```text
 ./workflow_recipes/release_risk_check/run.sh {{VERSION}}
 ```
 

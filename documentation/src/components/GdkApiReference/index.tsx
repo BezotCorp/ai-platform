@@ -1,12 +1,10 @@
 import React, { useContext, useEffect, useMemo, useState } from "react";
 import clsx from "clsx";
-import Link from "@docusaurus/Link";
-import useBrokenLinks from "@docusaurus/useBrokenLinks";
-import { useHistory, useLocation } from "@docusaurus/router";
-import { useAnchorTargetClassName } from "@docusaurus/theme-common";
-import CodeBlock from "@theme/CodeBlock";
-import apiData from "@site/src/data/gdk-api.json";
-import { LANGUAGES, Language, LanguageId } from "./languages";
+import Link from "~/components/Link";
+import { useHistory, useLocation } from "~/utils/router";
+import CodeBlock from "~/components/CodeBlock";
+import apiData from "~/data/gdk-api.json";
+import { LANGUAGES, type Language, type LanguageId } from "./languages";
 import styles from "./styles.module.css";
 
 type GdkParam = {
@@ -197,9 +195,8 @@ function Anchored({
   className?: string;
   children: React.ReactNode;
 }) {
-  const anchorTargetClassName = useAnchorTargetClassName(anchor);
   return (
-    <As id={anchor} className={clsx("anchor", anchorTargetClassName, className)}>
+    <As id={anchor} className={clsx("anchor", className)}>
       {children}
       <HashLink anchor={anchor} label={label} />
     </As>
@@ -368,7 +365,6 @@ export default function GdkApiReference() {
     languageId: DEFAULT_LANGUAGE,
   });
   const { docVersion, languageId } = selection;
-  const brokenLinks = useBrokenLinks();
   const history = useHistory();
   const location = useLocation();
 
@@ -393,8 +389,6 @@ export default function GdkApiReference() {
     () => VERSIONS.find((entry) => entry.docVersion === docVersion) ?? VERSIONS[0],
     [docVersion],
   );
-
-  anchorsForDoc(VERSIONS[0]).forEach((anchor) => brokenLinks.collectAnchor(anchor));
 
   useEffect(() => {
     const anchor = location.hash.slice(1);

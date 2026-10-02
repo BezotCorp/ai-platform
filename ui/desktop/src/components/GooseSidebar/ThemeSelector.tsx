@@ -3,8 +3,15 @@ import { Moon, Sliders, Sparkles, Sun } from 'lucide-react';
 import { Button } from '../ui/button';
 import { useTheme } from '../../contexts/ThemeContext';
 import { defineMessages, useIntl } from '../../i18n';
+import type { NoMessageValues } from 'react-intl';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly "theme": NoMessageValues;
+  readonly "light": NoMessageValues;
+  readonly "dark": NoMessageValues;
+  readonly "aura": NoMessageValues;
+  readonly "system": NoMessageValues;
+}>({
   theme: {
     id: 'themeSelector.theme',
     defaultMessage: 'Theme',

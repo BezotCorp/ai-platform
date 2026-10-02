@@ -28,7 +28,7 @@ import { Card } from '../ui/card';
 import { Button } from '../ui/button';
 import { Skeleton } from '../ui/skeleton';
 import { MainPanelLayout } from '../Layout/MainPanelLayout';
-import { toastSuccess, toastError } from '../../toasts';
+import { toastSuccess, toastError } from '../../toast_service';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { createSession } from '../../sessions';
 import { isRecipeDeclined, isRecipeParamsCancelled } from '../../acp/errors';
@@ -62,8 +62,68 @@ import { getSearchShortcutText } from '../../utils/keyboardShortcuts';
 import { errorMessage } from '../../utils/conversionUtils';
 import { AppEvents } from '../../constants/events';
 import { defineMessages, useIntl } from '../../i18n';
+import type { MessageValue, NoMessageValues } from 'react-intl';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly "deleteRecipeTitle": NoMessageValues;
+  readonly "deleteRecipeConfirm": { readonly "title": MessageValue };
+  readonly "deleteRecipeDetail": NoMessageValues;
+  readonly "recipeDeletedSuccess": NoMessageValues;
+  readonly "deeplinkCopiedTitle": NoMessageValues;
+  readonly "deeplinkCopiedMsg": NoMessageValues;
+  readonly "copyFailedTitle": NoMessageValues;
+  readonly "copyDeeplinkFailedMsg": NoMessageValues;
+  readonly "yamlCopiedTitle": NoMessageValues;
+  readonly "yamlCopiedMsg": NoMessageValues;
+  readonly "copyYamlFailedMsg": NoMessageValues;
+  readonly "exportRecipeDialogTitle": NoMessageValues;
+  readonly "yamlFiles": NoMessageValues;
+  readonly "allFiles": NoMessageValues;
+  readonly "recipeExportedTitle": NoMessageValues;
+  readonly "recipeExportedMsg": { readonly "filePath": MessageValue };
+  readonly "exportFailedTitle": NoMessageValues;
+  readonly "exportFailedMsg": NoMessageValues;
+  readonly "scheduleSavedTitle": NoMessageValues;
+  readonly "scheduleSavedMsg": { readonly "schedule": MessageValue };
+  readonly "scheduleRemovedTitle": NoMessageValues;
+  readonly "scheduleRemovedMsg": NoMessageValues;
+  readonly "slashCommandSavedTitle": NoMessageValues;
+  readonly "slashCommandSavedMsg": { readonly "command": MessageValue };
+  readonly "slashCommandRemovedTitle": NoMessageValues;
+  readonly "slashCommandRemovedMsg": NoMessageValues;
+  readonly "runs": { readonly "schedule": MessageValue };
+  readonly "editSlashCommand": NoMessageValues;
+  readonly "addSlashCommand": NoMessageValues;
+  readonly "useRecipe": NoMessageValues;
+  readonly "openInNewWindow": NoMessageValues;
+  readonly "editRecipe": NoMessageValues;
+  readonly "shareRecipe": NoMessageValues;
+  readonly "copyDeeplink": NoMessageValues;
+  readonly "copyYaml": NoMessageValues;
+  readonly "exportToFile": NoMessageValues;
+  readonly "editSchedule": NoMessageValues;
+  readonly "addSchedule": NoMessageValues;
+  readonly "deleteRecipe": NoMessageValues;
+  readonly "errorLoadingRecipes": NoMessageValues;
+  readonly "tryAgain": NoMessageValues;
+  readonly "noSavedRecipes": NoMessageValues;
+  readonly "noSavedRecipesDescription": NoMessageValues;
+  readonly "noMatchingRecipes": NoMessageValues;
+  readonly "adjustSearchTerms": NoMessageValues;
+  readonly "recipesTitle": NoMessageValues;
+  readonly "createRecipe": NoMessageValues;
+  readonly "recipesDescription": { readonly "shortcut": MessageValue };
+  readonly "searchRecipesPlaceholder": NoMessageValues;
+  readonly "scheduleDialogTitle": { readonly "action": MessageValue };
+  readonly "removeSchedule": NoMessageValues;
+  readonly "cancel": NoMessageValues;
+  readonly "save": NoMessageValues;
+  readonly "slashCommandTitle": NoMessageValues;
+  readonly "slashCommandDescription": NoMessageValues;
+  readonly "slashCommandPlaceholder": NoMessageValues;
+  readonly "slashCommandUsageHint": { readonly "command": MessageValue };
+  readonly "remove": NoMessageValues;
+}>({
   deleteRecipeTitle: {
     id: 'recipesView.deleteRecipeTitle',
     defaultMessage: 'Delete Recipe',
@@ -344,7 +404,7 @@ export default function RecipesView() {
   }, [savedRecipes, searchTerm]);
 
   useEffect(() => {
-    loadSavedRecipes();
+    void loadSavedRecipes();
   }, []);
 
   useEscapeKey(showEditor, () => setShowEditor(false));
@@ -458,7 +518,7 @@ export default function RecipesView() {
     setShowEditor(false);
     setSelectedRecipe(null);
     if (wasSaved) {
-      loadSavedRecipes();
+      void loadSavedRecipes();
     }
   };
 
@@ -806,7 +866,7 @@ export default function RecipesView() {
           <Button
             onClick={(e) => {
               e.stopPropagation();
-              handleDeleteRecipe(recipeManifestResponse);
+              void handleDeleteRecipe(recipeManifestResponse);
             }}
             variant="ghost"
             size="sm"
@@ -967,7 +1027,7 @@ export default function RecipesView() {
           isOpen={showCreateDialog}
           onClose={() => {
             setShowCreateDialog(false);
-            loadSavedRecipes();
+            void loadSavedRecipes();
           }}
           isCreateMode={true}
         />

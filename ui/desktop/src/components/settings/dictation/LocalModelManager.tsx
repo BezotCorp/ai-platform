@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import type { ChangeEvent, JSX } from 'react';
 import { Download, Trash2, X, Check, ChevronDown, ChevronUp } from 'lucide-react';
 import { Button } from '../../ui/button';
 import { useConfig } from '../../ConfigContext';
@@ -12,8 +13,20 @@ import {
   type LocalDictationModel,
 } from '../../../acp/dictation';
 import { defineMessages, useIntl } from '../../../i18n';
+import type { MessageValue, NoMessageValues } from 'react-intl';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly gpuAcceleration: NoMessageValues;
+  readonly recommended: NoMessageValues;
+  readonly active: NoMessageValues;
+  readonly recommendedForHardware: NoMessageValues;
+  readonly downloaded: NoMessageValues;
+  readonly download: NoMessageValues;
+  readonly deleteConfirm: NoMessageValues;
+  readonly showRecommendedOnly: NoMessageValues;
+  readonly showAllModels: { readonly count: MessageValue };
+  readonly noModels: NoMessageValues;
+}>({
   gpuAcceleration: {
     id: 'localModelManager.gpuAcceleration',
     defaultMessage:
@@ -70,23 +83,23 @@ const capitalize = (str: string): string => {
   return str.charAt(0).toUpperCase() + str.slice(1);
 };
 
-export const LocalModelManager = () => {
-  const intl = useIntl();
+export const LocalModelManager = (): JSX.Element => {
+  const intl: ReturnType<typeof useIntl> = useIntl();
   const [models, setModels] = useState<LocalDictationModel[]>([]);
   const [downloads, setDownloads] = useState<Map<string, LocalDictationDownloadProgress>>(
     new Map()
   );
   const [selectedModelId, setSelectedModelId] = useState<string | null>(null);
-  const [showAllModels, setShowAllModels] = useState(false);
+  const [showAllModels, setShowAllModels] = useState<boolean>(false);
   const { read, upsert } = useConfig();
 
   useEffect(() => {
-    loadModels();
-    loadSelectedModel();
+    void loadModels();
+    void loadSelectedModel();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const loadSelectedModel = async () => {
+  const loadSelectedModel = async (): Promise<void> => {
     try {
       const value = await read(LOCAL_WHISPER_MODEL_CONFIG_KEY, false);
       if (value && typeof value === 'string') {
@@ -100,21 +113,21 @@ export const LocalModelManager = () => {
     }
   };
 
-  const selectModel = async (modelId: string) => {
+  const selectModel = async (modelId: string): Promise<void> => {
     await upsert(LOCAL_WHISPER_MODEL_CONFIG_KEY, modelId, false);
     setSelectedModelId(modelId);
   };
 
-  const loadModels = async () => {
+  const loadModels = async (): Promise<void> => {
     try {
-      const models = await listLocalDictationModels();
-      setModels(models);
+      const modelList: LocalDictationModel[] = await listLocalDictationModels();
+      setModels(modelList);
     } catch (error) {
       console.error('Failed to load models:', error);
     }
   };
 
-  const startDownload = async (modelId: string) => {
+  const startDownload = async (modelId: string): Promise<void> => {
     try {
       await downloadLocalDictationModel(modelId);
       pollDownloadProgress(modelId);
@@ -123,46 +136,53 @@ export const LocalModelManager = () => {
     }
   };
 
-  const pollDownloadProgress = (modelId: string) => {
-    const interval = setInterval(async () => {
-      try {
-        const progress = await getLocalDictationModelDownloadProgress(modelId);
-        if (progress) {
-          setDownloads((prev) => new Map(prev).set(modelId, progress));
+  const pollDownloadProgress = (modelId: string): void => {
+    const interval: ReturnType<typeof setInterval> = setInterval((): void => {
+      void (async (): Promise<void> => {
+        try {
+          const progress: LocalDictationDownloadProgress | null =
+            await getLocalDictationModelDownloadProgress(modelId);
+          if (progress) {
+            setDownloads(
+              (
+                prev: Map<string, LocalDictationDownloadProgress>
+              ): Map<string, LocalDictationDownloadProgress> => new Map(prev).set(modelId, progress)
+            );
 
-          if (progress.status === 'completed') {
+            if (progress.status === 'completed') {
+              clearInterval(interval);
+              await loadModels(); // Refresh model list
+              // Backend auto-selects, but also update frontend state
+              await loadSelectedModel();
+            } else if (progress.status === 'failed') {
+              clearInterval(interval);
+              await loadModels();
+            }
+          } else {
             clearInterval(interval);
-            await loadModels(); // Refresh model list
-            // Backend auto-selects, but also update frontend state
-            await loadSelectedModel();
-          } else if (progress.status === 'failed') {
-            clearInterval(interval);
-            await loadModels();
           }
-        } else {
+        } catch {
           clearInterval(interval);
         }
-      } catch {
-        clearInterval(interval);
-      }
+      })();
     }, 500);
   };
 
-  const cancelDownload = async (modelId: string) => {
+  const cancelDownload = async (modelId: string): Promise<void> => {
     try {
       await cancelLocalDictationModelDownload(modelId);
-      setDownloads((prev) => {
-        const next = new Map(prev);
+      setDownloads((prev: Map<string, LocalDictationDownloadProgress>) => {
+        const next: Map<string, LocalDictationDownloadProgress> = new Map(prev);
         next.delete(modelId);
         return next;
       });
-      loadModels();
+      void loadModels();
     } catch (error) {
       console.error('Failed to cancel download:', error);
     }
   };
 
-  const deleteModel = async (modelId: string) => {
+  const deleteModel = async (modelId: string): Promise<void> => {
     if (!window.confirm(intl.formatMessage(i18n.deleteConfirm))) return;
 
     try {
@@ -171,26 +191,28 @@ export const LocalModelManager = () => {
         await upsert(LOCAL_WHISPER_MODEL_CONFIG_KEY, '', false);
         setSelectedModelId(null);
       }
-      loadModels();
+      void loadModels();
     } catch (error) {
       console.error('Failed to delete model:', error);
     }
   };
 
-  const hasDownloadedNonRecommended = models.some(
-    (model) => model.downloaded && !model.recommended
+  const hasDownloadedNonRecommended: boolean = models.some(
+    (model: LocalDictationModel): boolean => model.downloaded && !model.recommended
   );
-  const displayedModels =
-    showAllModels || hasDownloadedNonRecommended ? models : models.filter((m) => m.recommended);
-  const hasNonRecommendedModels = models.some((m) => !m.recommended);
-  const showToggleButton = hasNonRecommendedModels && !hasDownloadedNonRecommended;
+  const displayedModels: LocalDictationModel[] =
+    showAllModels || hasDownloadedNonRecommended
+      ? models
+      : models.filter((model: LocalDictationModel): boolean => model.recommended);
+  const hasNonRecommendedModels: boolean = models.some(
+    (model: LocalDictationModel): boolean => !model.recommended
+  );
+  const showToggleButton: boolean = hasNonRecommendedModels && !hasDownloadedNonRecommended;
 
   return (
     <div className="space-y-3">
       <div className="text-xs text-text-secondary mb-2">
-        <p>
-          {intl.formatMessage(i18n.gpuAcceleration)}
-        </p>
+        <p>{intl.formatMessage(i18n.gpuAcceleration)}</p>
       </div>
 
       <div className="space-y-2">
@@ -216,7 +238,9 @@ export const LocalModelManager = () => {
                       <input
                         type="radio"
                         checked={isSelected}
-                        onChange={() => selectModel(model.id)}
+                        onChange={(_event: ChangeEvent<HTMLInputElement>): void => {
+                          void selectModel(model.id);
+                        }}
                         className="cursor-pointer"
                       />
                     )}
@@ -254,7 +278,9 @@ export const LocalModelManager = () => {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => deleteModel(model.id)}
+                        onClick={(): void => {
+                          void deleteModel(model.id);
+                        }}
                         className="text-destructive hover:text-destructive"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -265,12 +291,24 @@ export const LocalModelManager = () => {
                       <div className="text-xs text-text-secondary min-w-[60px]">
                         {progress.progressPercent.toFixed(0)}%
                       </div>
-                      <Button variant="ghost" size="sm" onClick={() => cancelDownload(model.id)}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(): void => {
+                          void cancelDownload(model.id);
+                        }}
+                      >
                         <X className="w-4 h-4" />
                       </Button>
                     </>
                   ) : (
-                    <Button variant="outline" size="sm" onClick={() => startDownload(model.id)}>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={(): void => {
+                        void startDownload(model.id);
+                      }}
+                    >
                       <Download className="w-4 h-4 mr-1" />
                       {intl.formatMessage(i18n.download)}
                     </Button>
@@ -306,7 +344,7 @@ export const LocalModelManager = () => {
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => setShowAllModels(!showAllModels)}
+          onClick={(): void => setShowAllModels(!showAllModels)}
           className="w-full text-text-secondary hover:text-text-primary"
         >
           {showAllModels ? (
@@ -317,14 +355,18 @@ export const LocalModelManager = () => {
           ) : (
             <>
               <ChevronDown className="w-4 h-4 mr-1" />
-              {intl.formatMessage(i18n.showAllModels, { count: models.length - displayedModels.length })}
+              {intl.formatMessage(i18n.showAllModels, {
+                count: models.length - displayedModels.length,
+              })}
             </>
           )}
         </Button>
       )}
 
       {models.length === 0 && (
-        <div className="text-center py-6 text-text-secondary text-sm">{intl.formatMessage(i18n.noModels)}</div>
+        <div className="text-center py-6 text-text-secondary text-sm">
+          {intl.formatMessage(i18n.noModels)}
+        </div>
       )}
     </div>
   );

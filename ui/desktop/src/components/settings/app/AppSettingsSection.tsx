@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import type { JSX } from 'react';
 import { defineMessages, useIntl } from '../../../i18n';
 import { Switch } from '../../ui/switch';
 import { Button } from '../../ui/button';
@@ -20,9 +21,67 @@ import BlockLogoBlack from './icons/block-lockup_black.png';
 import BlockLogoWhite from './icons/block-lockup_white.png';
 import TelemetrySettings from './TelemetrySettings';
 import { trackSettingToggled } from '../../../utils/analytics';
-import type { LanguageSetting } from '../../../utils/settings';
+import type { MessageValue, NoMessageValues } from 'react-intl';
+import { LanguageSetting } from '../../../utils/language_setting';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly appearanceTitle: NoMessageValues;
+  readonly appearanceDesc: NoMessageValues;
+  readonly notifications: NoMessageValues;
+  readonly notificationsDesc: { readonly link: MessageValue };
+  readonly configGuide: NoMessageValues;
+  readonly openSettings: NoMessageValues;
+  readonly taskNotifications: NoMessageValues;
+  readonly taskNotificationsDesc: NoMessageValues;
+  readonly menuBarIcon: NoMessageValues;
+  readonly menuBarIconDesc: NoMessageValues;
+  readonly dockIcon: NoMessageValues;
+  readonly dockIconDesc: NoMessageValues;
+  readonly preventSleep: NoMessageValues;
+  readonly preventSleepDesc: NoMessageValues;
+  readonly costTracking: NoMessageValues;
+  readonly costTrackingDesc: NoMessageValues;
+  readonly themeTitle: NoMessageValues;
+  readonly themeDesc: NoMessageValues;
+  readonly languageTitle: NoMessageValues;
+  readonly languageDesc: NoMessageValues;
+  readonly languageSystem: NoMessageValues;
+  readonly languageEnglish: NoMessageValues;
+  readonly languageChineseSimplified: NoMessageValues;
+  readonly languageRussian: NoMessageValues;
+  readonly languageTurkish: NoMessageValues;
+  readonly languageHindi: NoMessageValues;
+  readonly languageJapanese: NoMessageValues;
+  readonly languageSpanish: NoMessageValues;
+  readonly languageKorean: NoMessageValues;
+  readonly languageFrench: NoMessageValues;
+  readonly languageGerman: NoMessageValues;
+  readonly languageItalian: NoMessageValues;
+  readonly languagePortuguese: NoMessageValues;
+  readonly languageIndonesian: NoMessageValues;
+  readonly languageMalay: NoMessageValues;
+  readonly languageVietnamese: NoMessageValues;
+  readonly languageChineseTraditional: NoMessageValues;
+  readonly helpTitle: NoMessageValues;
+  readonly helpDesc: NoMessageValues;
+  readonly reportBug: NoMessageValues;
+  readonly requestFeature: NoMessageValues;
+  readonly versionTitle: NoMessageValues;
+  readonly updatesTitle: NoMessageValues;
+  readonly updatesDesc: NoMessageValues;
+  readonly notificationsModalTitle: NoMessageValues;
+  readonly notificationsMacInstructions: NoMessageValues;
+  readonly notificationsMacStep1: NoMessageValues;
+  readonly notificationsMacStep2: NoMessageValues;
+  readonly notificationsMacStep3: NoMessageValues;
+  readonly notificationsMacStep4: NoMessageValues;
+  readonly notificationsWinInstructions: NoMessageValues;
+  readonly notificationsWinStep1: NoMessageValues;
+  readonly notificationsWinStep2: NoMessageValues;
+  readonly notificationsWinStep3: NoMessageValues;
+  readonly notificationsWinStep4: NoMessageValues;
+  readonly close: NoMessageValues;
+}>({
   appearanceTitle: { id: 'settings.appearance.title', defaultMessage: 'Appearance' },
   appearanceDesc: {
     id: 'settings.appearance.description',
@@ -154,7 +213,7 @@ const i18n = defineMessages({
   close: { id: 'settings.close', defaultMessage: 'Close' },
 });
 
-const LANGUAGE_OPTIONS: Array<{ value: LanguageSetting; message: keyof typeof i18n }> = [
+const LANGUAGE_OPTIONS = [
   { value: 'system', message: 'languageSystem' },
   { value: 'en', message: 'languageEnglish' },
   { value: 'es', message: 'languageSpanish' },
@@ -172,102 +231,111 @@ const LANGUAGE_OPTIONS: Array<{ value: LanguageSetting; message: keyof typeof i1
   { value: 'tr', message: 'languageTurkish' },
   { value: 'zh-CN', message: 'languageChineseSimplified' },
   { value: 'zh-TW', message: 'languageChineseTraditional' },
-];
+] as const satisfies ReadonlyArray<{
+  value: LanguageSetting;
+  message: keyof typeof i18n;
+}>;
+
+type LanguageOption = (typeof LANGUAGE_OPTIONS)[number];
 
 interface AppSettingsSectionProps {
   scrollToSection?: string;
 }
 
-export default function AppSettingsSection({ scrollToSection }: AppSettingsSectionProps) {
-  const [menuBarIconEnabled, setMenuBarIconEnabled] = useState(true);
-  const [dockIconEnabled, setDockIconEnabled] = useState(true);
-  const [wakelockEnabled, setWakelockEnabled] = useState(true);
-  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
-  const [isMacOS, setIsMacOS] = useState(false);
-  const [isDockSwitchDisabled, setIsDockSwitchDisabled] = useState(false);
-  const [showNotificationModal, setShowNotificationModal] = useState(false);
-  const [showPricing, setShowPricing] = useState(true);
+export default function AppSettingsSection({
+  scrollToSection,
+}: AppSettingsSectionProps): JSX.Element {
+  const [menuBarIconEnabled, setMenuBarIconEnabled] = useState<boolean>(true);
+  const [dockIconEnabled, setDockIconEnabled] = useState<boolean>(true);
+  const [wakelockEnabled, setWakelockEnabled] = useState<boolean>(true);
+  const [notificationsEnabled, setNotificationsEnabled] = useState<boolean>(true);
+  const [isMacOS] = useState<boolean>(window.electron.platform === 'darwin');
+  const [isDockSwitchDisabled, setIsDockSwitchDisabled] = useState<boolean>(false);
+  const [showNotificationModal, setShowNotificationModal] = useState<boolean>(false);
+  const [showPricing, setShowPricing] = useState<boolean>(true);
   const [language, setLanguage] = useState<LanguageSetting>('system');
-  const [isDarkMode, setIsDarkMode] = useState(false);
-  const updateSectionRef = useRef<HTMLDivElement>(null);
-  const shouldShowUpdates = !window.appConfig.get('GOOSE_VERSION');
+  const [isDarkMode, setIsDarkMode] = useState<boolean>(false);
+  const updateSectionRef = useRef<HTMLDivElement | null>(null);
+  const gooseVersion: unknown = window.appConfig.get('GOOSE_VERSION');
+  const shouldShowUpdates: boolean = !gooseVersion;
+  const displayedVersion: string = typeof gooseVersion === 'string' ? gooseVersion : 'Development';
 
   useEffect(() => {
-    setIsMacOS(window.electron.platform === 'darwin');
-  }, []);
-
-  useEffect(() => {
-    const updateTheme = () => {
+    const updateTheme = (): void => {
       setIsDarkMode(document.documentElement.classList.contains('dark'));
     };
 
     updateTheme();
 
-    const observer = new MutationObserver(updateTheme);
+    const observer: MutationObserver = new MutationObserver(updateTheme);
     observer.observe(document.documentElement, {
       attributes: true,
       attributeFilter: ['class'],
     });
 
-    return () => observer.disconnect();
+    return (): void => observer.disconnect();
   }, []);
 
   useEffect(() => {
-    window.electron.getSetting('showPricing').then(setShowPricing);
-    window.electron.getSetting('language').then((value) => setLanguage(value ?? 'system'));
+    void window.electron.getSetting('showPricing').then((value): void => {
+      setShowPricing(value);
+    });
+    void window.electron.getSetting('language').then((value): void => {
+      setLanguage(isLanguageSetting(value) ? value : 'system');
+    });
   }, []);
 
   useEffect(() => {
     if (scrollToSection === 'update' && updateSectionRef.current) {
-      setTimeout(() => {
+      setTimeout((): void => {
         updateSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }, 100);
     }
   }, [scrollToSection]);
 
   useEffect(() => {
-    window.electron.getMenuBarIconState().then((enabled) => {
+    void window.electron.getMenuBarIconState().then((enabled): void => {
       setMenuBarIconEnabled(enabled);
     });
 
-    window.electron.getWakelockState().then((enabled) => {
+    void window.electron.getWakelockState().then((enabled): void => {
       setWakelockEnabled(enabled);
     });
 
-    window.electron.getSetting('enableNotifications').then((enabled) => {
+    void window.electron.getSetting('enableNotifications').then((enabled): void => {
       setNotificationsEnabled(enabled ?? true);
     });
 
     if (isMacOS) {
-      window.electron.getDockIconState().then((enabled) => {
+      void window.electron.getDockIconState().then((enabled): void => {
         setDockIconEnabled(enabled);
       });
     }
   }, [isMacOS]);
 
-  const handleMenuBarIconToggle = async () => {
-    const newState = !menuBarIconEnabled;
+  const handleMenuBarIconToggle = async (): Promise<void> => {
+    const newState: boolean = !menuBarIconEnabled;
     // If we're turning off the menu bar icon and the dock icon is hidden,
     // we need to show the dock icon to maintain accessibility
     if (!newState && !dockIconEnabled && isMacOS) {
-      const success = await window.electron.setDockIcon(true);
+      const success: boolean = await window.electron.setDockIcon(true);
       if (success) {
         setDockIconEnabled(true);
       }
     }
-    const success = await window.electron.setMenuBarIcon(newState);
+    const success: boolean = await window.electron.setMenuBarIcon(newState);
     if (success) {
       setMenuBarIconEnabled(newState);
       trackSettingToggled('menu_bar_icon', newState);
     }
   };
 
-  const handleDockIconToggle = async () => {
-    const newState = !dockIconEnabled;
+  const handleDockIconToggle = async (): Promise<void> => {
+    const newState: boolean = !dockIconEnabled;
     // If we're turning off the dock icon and the menu bar icon is hidden,
     // we need to show the menu bar icon to maintain accessibility
     if (!newState && !menuBarIconEnabled) {
-      const success = await window.electron.setMenuBarIcon(true);
+      const success: boolean = await window.electron.setMenuBarIcon(true);
       if (success) {
         setMenuBarIconEnabled(true);
       }
@@ -275,34 +343,34 @@ export default function AppSettingsSection({ scrollToSection }: AppSettingsSecti
 
     // Disable the switch to prevent rapid toggling
     setIsDockSwitchDisabled(true);
-    setTimeout(() => {
+    setTimeout((): void => {
       setIsDockSwitchDisabled(false);
     }, 1000);
 
     // Set the dock icon state
-    const success = await window.electron.setDockIcon(newState);
+    const success: boolean = await window.electron.setDockIcon(newState);
     if (success) {
       setDockIconEnabled(newState);
       trackSettingToggled('dock_icon', newState);
     }
   };
 
-  const handleWakelockToggle = async () => {
-    const newState = !wakelockEnabled;
-    const success = await window.electron.setWakelock(newState);
+  const handleWakelockToggle = async (): Promise<void> => {
+    const newState: boolean = !wakelockEnabled;
+    const success: boolean = await window.electron.setWakelock(newState);
     if (success) {
       setWakelockEnabled(newState);
       trackSettingToggled('prevent_sleep', newState);
     }
   };
 
-  const handleNotificationsToggle = async (checked: boolean) => {
+  const handleNotificationsToggle = async (checked: boolean): Promise<void> => {
     setNotificationsEnabled(checked);
     await window.electron.setSetting('enableNotifications', checked);
     trackSettingToggled('task_notifications', checked);
   };
 
-  const handleShowPricingToggle = async (checked: boolean) => {
+  const handleShowPricingToggle = async (checked: boolean): Promise<void> => {
     setShowPricing(checked);
     await window.electron.setSetting('showPricing', checked);
     trackSettingToggled('cost_tracking', checked);
@@ -310,8 +378,10 @@ export default function AppSettingsSection({ scrollToSection }: AppSettingsSecti
     window.dispatchEvent(new CustomEvent('showPricingChanged'));
   };
 
-  const handleLanguageChange = async (value: string) => {
-    const nextLanguage = LANGUAGE_OPTIONS.find((option) => option.value === value)?.value;
+  const handleLanguageChange = async (value: string): Promise<void> => {
+    const nextLanguage: LanguageSetting | undefined = LANGUAGE_OPTIONS.find(
+      (option: LanguageOption): boolean => option.value === value
+    )?.value;
     if (!nextLanguage || nextLanguage === language) {
       return;
     }
@@ -326,9 +396,10 @@ export default function AppSettingsSection({ scrollToSection }: AppSettingsSecti
     }
   };
 
-  const intl = useIntl();
-  const selectedLanguage =
-    LANGUAGE_OPTIONS.find((option) => option.value === language) ?? LANGUAGE_OPTIONS[0];
+  const intl: ReturnType<typeof useIntl> = useIntl();
+  const selectedLanguage: LanguageOption =
+    LANGUAGE_OPTIONS.find((option: LanguageOption): boolean => option.value === language) ??
+    LANGUAGE_OPTIONS[0];
 
   return (
     <div className="space-y-4 pr-4 pb-8 mt-1">
@@ -361,12 +432,14 @@ export default function AppSettingsSection({ scrollToSection }: AppSettingsSecti
                 className="flex items-center gap-2 justify-center"
                 variant="secondary"
                 size="sm"
-                onClick={async () => {
-                  try {
-                    await window.electron.openNotificationsSettings();
-                  } catch (error) {
-                    console.error('Failed to open notification settings:', error);
-                  }
+                onClick={(): void => {
+                  void (async (): Promise<void> => {
+                    try {
+                      await window.electron.openNotificationsSettings();
+                    } catch (error) {
+                      console.error('Failed to open notification settings:', error);
+                    }
+                  })();
                 }}
               >
                 <Settings />
@@ -387,7 +460,9 @@ export default function AppSettingsSection({ scrollToSection }: AppSettingsSecti
             <div className="flex items-center">
               <Switch
                 checked={notificationsEnabled}
-                onCheckedChange={handleNotificationsToggle}
+                onCheckedChange={(checked: boolean): void => {
+                  void handleNotificationsToggle(checked);
+                }}
                 variant="mono"
               />
             </div>
@@ -403,7 +478,9 @@ export default function AppSettingsSection({ scrollToSection }: AppSettingsSecti
             <div className="flex items-center">
               <Switch
                 checked={menuBarIconEnabled}
-                onCheckedChange={handleMenuBarIconToggle}
+                onCheckedChange={(): void => {
+                  void handleMenuBarIconToggle();
+                }}
                 variant="mono"
               />
             </div>
@@ -421,7 +498,9 @@ export default function AppSettingsSection({ scrollToSection }: AppSettingsSecti
                 <Switch
                   disabled={isDockSwitchDisabled}
                   checked={dockIconEnabled}
-                  onCheckedChange={handleDockIconToggle}
+                  onCheckedChange={(): void => {
+                    void handleDockIconToggle();
+                  }}
                   variant="mono"
                 />
               </div>
@@ -439,7 +518,9 @@ export default function AppSettingsSection({ scrollToSection }: AppSettingsSecti
             <div className="flex items-center">
               <Switch
                 checked={wakelockEnabled}
-                onCheckedChange={handleWakelockToggle}
+                onCheckedChange={(): void => {
+                  void handleWakelockToggle();
+                }}
                 variant="mono"
               />
             </div>
@@ -457,7 +538,9 @@ export default function AppSettingsSection({ scrollToSection }: AppSettingsSecti
               <div className="flex items-center">
                 <Switch
                   checked={showPricing}
-                  onCheckedChange={handleShowPricingToggle}
+                  onCheckedChange={(checked: boolean): void => {
+                    void handleShowPricingToggle(checked);
+                  }}
                   variant="mono"
                 />
               </div>
@@ -550,7 +633,7 @@ export default function AppSettingsSection({ scrollToSection }: AppSettingsSecti
                 className="h-8 w-auto"
               />
               <span className="text-2xl font-mono text-black dark:text-white">
-                {String(window.appConfig.get('GOOSE_VERSION') || 'Development')}
+                {displayedVersion}
               </span>
             </div>
           </CardContent>
@@ -575,7 +658,11 @@ export default function AppSettingsSection({ scrollToSection }: AppSettingsSecti
       {/* Notification Instructions Modal */}
       <Dialog
         open={showNotificationModal}
-        onOpenChange={(open) => !open && setShowNotificationModal(false)}
+        onOpenChange={(open: boolean): void => {
+          if (!open) {
+            setShowNotificationModal(false);
+          }
+        }}
       >
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
@@ -619,4 +706,8 @@ export default function AppSettingsSection({ scrollToSection }: AppSettingsSecti
       </Dialog>
     </div>
   );
+}
+
+function isLanguageSetting(value: unknown): value is LanguageSetting {
+  return LANGUAGE_OPTIONS.some((option: LanguageOption): boolean => option.value === value);
 }

@@ -18,8 +18,17 @@ import { useConfig } from '../ConfigContext';
 import { SearchView } from '../conversation/SearchView';
 import { getSearchShortcutText } from '../../utils/keyboardShortcuts';
 import { defineMessages, useIntl } from '../../i18n';
+import type { MessageValue, NoMessageValues } from 'react-intl';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly "heading": NoMessageValues;
+  readonly "description": { readonly "searchShortcut": MessageValue };
+  readonly "defaultNote": NoMessageValues;
+  readonly "addCustomExtension": NoMessageValues;
+  readonly "browseExtensions": NoMessageValues;
+  readonly "searchPlaceholder": NoMessageValues;
+  readonly "addExtension": NoMessageValues;
+}>({
   heading: {
     id: 'extensionsView.heading',
     defaultMessage: 'Extensions',

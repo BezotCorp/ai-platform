@@ -35,10 +35,16 @@ export class SearchHighlighter {
 
     // Find scroll container (look for our custom data attribute first, then fall back to radix)
     const searchScrollArea = container.closest('[data-search-scroll-area]');
-    this.scrollContainer =
-      searchScrollArea?.querySelector('[data-radix-scroll-area-viewport]') ||
-      (searchScrollArea as HTMLElement) ||
+    const radixViewport =
+      searchScrollArea?.querySelector('[data-radix-scroll-area-viewport]') ??
       container.closest('[data-radix-scroll-area-viewport]');
+
+    this.scrollContainer =
+      radixViewport instanceof HTMLElement
+        ? radixViewport
+        : searchScrollArea instanceof HTMLElement
+          ? searchScrollArea
+          : null;
 
     if (this.scrollContainer) {
       this.scrollContainer.style.position = 'relative';
@@ -74,7 +80,7 @@ export class SearchHighlighter {
       for (const mutation of mutations) {
         if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
           // Ignore mutations from our own overlay
-          if (mutation.target === this.overlay || this.overlay.contains(mutation.target as Node)) {
+          if (mutation.target === this.overlay || this.overlay.contains(mutation.target)) {
             continue;
           }
           // Ignore mutations that only add/remove our highlight elements
@@ -134,10 +140,14 @@ export class SearchHighlighter {
     });
 
     const matches: { node: Text; startOffset: number; endOffset: number }[] = [];
-    let node: Text | null;
+    let node: Node | null;
 
     // Find all matches
-    while ((node = walker.nextNode() as Text)) {
+    while ((node = walker.nextNode())) {
+      if (!(node instanceof Text)) {
+        continue;
+      }
+
       const text = node.textContent || '';
       let match;
 
@@ -232,8 +242,8 @@ export class SearchHighlighter {
 
     // Only scroll if explicitly requested
     if (shouldScroll && this.scrollContainer) {
-      const firstHighlight = highlightElements[0] as HTMLElement;
-      if (firstHighlight) {
+      const firstHighlight = highlightElements[0];
+      if (firstHighlight instanceof HTMLElement) {
         // Calculate the target scroll position
         const containerRect = this.scrollContainer.getBoundingClientRect();
         const highlightRect = firstHighlight.getBoundingClientRect();

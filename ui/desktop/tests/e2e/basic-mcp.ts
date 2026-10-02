@@ -1,5 +1,5 @@
-const { McpServer } = require("@modelcontextprotocol/sdk/server/mcp.js");
-const { StdioServerTransport } = require("@modelcontextprotocol/sdk/server/stdio.js");
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 
 // Collection of running-related inspirational quotes
 const runningQuotes = [
@@ -62,10 +62,11 @@ async function startServer() {
 }
 
 // Only start the server if this is the main module
-if (require.main === module) {
+if (
+  process.argv[1] &&
+  new URL(import.meta.url).pathname === new URL(`file://${process.argv[1]}`).pathname
+) {
     startServer().catch(console.error);
 }
 
-module.exports = {
-    runningQuotes
-};
+export { runningQuotes };

@@ -2,8 +2,9 @@
  * Shared constants and utilities for extension error handling
  */
 
+import { ExtensionLoadingStatus } from '../components/GroupedExtensionLoadingToast';
+import { toastService } from '../toast_service';
 import type { ExtensionLoadResult } from '../types/extensions';
-import { toastService, ExtensionLoadingStatus } from '../toasts';
 
 export const MAX_ERROR_MESSAGE_LENGTH = 70;
 

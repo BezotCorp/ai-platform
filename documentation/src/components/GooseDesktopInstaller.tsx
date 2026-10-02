@@ -1,4 +1,3 @@
-import React from 'react';
 import { PanelLeft } from 'lucide-react';
 
 interface EnvVar {
@@ -39,20 +38,20 @@ export default function GooseDesktopInstaller({
   hasEnvVars,
   appendToStep3
 }: GooseDesktopInstallerProps) {
-  
+
   // Determine extension type with backward compatibility
   const extensionType = type || (command ? 'stdio' : url ? 'http' : 'stdio');
-  
+
   // Build the goose:// URL
   const buildGooseUrl = () => {
     let urlParts = [];
-    
+
     // Only add type parameter for http extensions (mapped to streamable_http)
     // to avoid regressions with existing sse/stdio extensions
     if (extensionType === 'http') {
       urlParts.push(`type=streamable_http`);
     }
-    
+
     // Add SSE/HTTP extension URL or command-line extension command+args
     if (url) {
       urlParts.push(`url=${encodeURIComponent(url)}`);
@@ -60,21 +59,21 @@ export default function GooseDesktopInstaller({
       urlParts.push(`cmd=${encodeURIComponent(command)}`);
       urlParts.push(...args.map(arg => `arg=${encodeURIComponent(arg)}`));
     }
-    
+
     // Add common parameters
     urlParts.push(
       `id=${encodeURIComponent(extensionId)}`,
       `name=${encodeURIComponent(extensionName)}`,
       `description=${encodeURIComponent(description)}`
     );
-    
+
     // Add environment variables/headers
     const isHttp = extensionType === 'http';
     const paramName = isHttp ? 'header' : 'env';
-    urlParts.push(...envVars.map(envVar => 
+    urlParts.push(...envVars.map(envVar =>
       `${paramName}=${encodeURIComponent(`${envVar.name}=${envVar.label}`)}`
     ));
-    
+
     return `goose://extension?${urlParts.join('&')}`;
   };
 
@@ -83,7 +82,7 @@ export default function GooseDesktopInstaller({
     if (customStep3) {
       return customStep3;
     }
-    
+
     if (apiKeyLink && apiKeyLinkText) {
       return (
         <>
@@ -91,16 +90,16 @@ export default function GooseDesktopInstaller({
         </>
       );
     }
-    
+
     if (envVars.length > 0) {
       const envVarNames = envVars.map(env => env.name).join(', ');
       const isHttp = extensionType === 'http';
       const variableType = isHttp ? 'header' : 'environment variable';
       const variableTypes = isHttp ? 'headers' : 'environment variables';
-      
+
       return `Obtain your ${envVarNames} and paste ${envVars.length > 1 ? `them as ${variableTypes}` : `it as a ${variableType}`}`;
     }
-    
+
     return null; // No configuration needed
   };
 
@@ -114,7 +113,7 @@ export default function GooseDesktopInstaller({
         </>
       )
     : content;
-  
+
   const hasConfigurationContent = step3Content !== null;
   const shouldShowConfigurationSteps = hasEnvVars ?? hasConfigurationContent;
 

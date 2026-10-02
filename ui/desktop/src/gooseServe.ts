@@ -1,4 +1,4 @@
-import { spawn, type ChildProcess } from 'child_process';
+import { spawn } from 'child_process';
 import fs from 'node:fs';
 import { createServer } from 'node:net';
 import os from 'node:os';
@@ -6,53 +6,23 @@ import path from 'node:path';
 import {
   appendTail as appendStartupTail,
   createGooseServeStartupDiagnostics,
-  type GooseServeStartupDiagnostics,
 } from './startupDiagnostics';
-
-export interface Logger {
-  info: (...args: unknown[]) => void;
-  error: (...args: unknown[]) => void;
-}
 
 export const defaultLogger: Logger = {
   info: (...args) => console.log('[goose-serve]', ...args),
   error: (...args) => console.error('[goose-serve]', ...args),
 };
 
-export interface FindGooseBinaryOptions {
-  isPackaged?: boolean;
-  resourcesPath?: string;
-}
+import type { FindGooseBinaryOptions } from './findGooseBinaryOptions';
+import { GooseServeResult } from './gooseServeResult';
+import { Logger } from './logger';
+import { LocalServeUrls } from './localServeUrls';
+import { StartGooseServeOptions } from './startGooseServerOptions';
+import { LocalServeScheme } from './localServeScheme';
+import { GooseServeExitSignal } from './gooseServeExitSignal';
 
 type ReadinessFetchInit = Parameters<typeof globalThis.fetch>[1];
-export type GooseServeExitSignal = ChildProcess['signalCode'];
 type ReadinessFetch = (input: string, init?: ReadinessFetchInit) => Promise<Response>;
-
-export interface StartGooseServeOptions extends FindGooseBinaryOptions {
-  dir?: string;
-  serverSecret: string;
-  tls?: boolean;
-  env?: Record<string, string | undefined>;
-  /** PATH from the user's login shell, appended so goosed can find CLI providers. */
-  loginShellPath?: string | null;
-  logger?: Logger;
-  diagnosticsDir?: string;
-  readinessFetch?: ReadinessFetch;
-}
-
-export interface GooseServeResult {
-  acpUrl: string;
-  workingDir: string;
-  process: ChildProcess;
-  errorLog: string[];
-  certFingerprint: string | null;
-  cleanup: () => Promise<void>;
-  hasExited: () => boolean;
-  getExitDetails: () => { code: number | null; signal: GooseServeExitSignal };
-  startupDiagnosticsPath: string | null;
-  getStartupDiagnostics: () => GooseServeStartupDiagnostics | null;
-  recordStartupEvent: (name: string, details?: Record<string, unknown>) => void;
-}
 
 const existingFile = (candidate: string): boolean => {
   try {
@@ -137,10 +107,7 @@ const appendErrorTail = (target: string[], lines: string[], maxLines = 100): voi
 const CERT_FINGERPRINT_PREFIX = 'GOOSED_CERT_FINGERPRINT=';
 const TLS_FINGERPRINT_TIMEOUT_MS = 5000;
 
-const fetchStatus = async (
-  statusUrl: string,
-  readinessFetch: ReadinessFetch
-): Promise<boolean> => {
+const fetchStatus = async (statusUrl: string, readinessFetch: ReadinessFetch): Promise<boolean> => {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 1000);
 
@@ -234,16 +201,6 @@ const waitForGooseServeReady = async (
   options.onEvent?.('healthcheck_timeout', { ...probeDetails, timeoutMs: timeout });
   return false;
 };
-
-export type LocalServeScheme = 'http' | 'https';
-
-export interface LocalServeUrls {
-  httpBaseUrl: string;
-  statusUrl: string;
-  healthUrl: string;
-  acpUrl: string;
-  redactedAcpUrl: string;
-}
 
 export const buildLocalServeUrls = (
   port: number,

@@ -18,8 +18,19 @@ import ExtensionTimeoutField from './ExtensionTimeoutField';
 import { acpUpsertConfig } from '../../../../acp/config';
 import { ConfirmationModal } from '../../../ui/ConfirmationModal';
 import { defineMessages, useIntl } from '../../../../i18n';
+import type { MessageValue, NoMessageValues } from 'react-intl';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly "deleteExtensionTitle": { readonly "name": MessageValue };
+  readonly "deleteDescription": NoMessageValues;
+  readonly "installationNotes": NoMessageValues;
+  readonly "cancel": NoMessageValues;
+  readonly "confirmRemoval": NoMessageValues;
+  readonly "removeExtension": NoMessageValues;
+  readonly "unsavedChangesTitle": NoMessageValues;
+  readonly "unsavedChangesMessage": NoMessageValues;
+  readonly "closeWithoutSaving": NoMessageValues;
+}>({
   deleteExtensionTitle: {
     id: 'extensionModal.deleteExtensionTitle',
     defaultMessage: 'Delete Extension "{name}"',

@@ -1,7 +1,7 @@
 import type {
   RecipeParameterDto,
-  RecipeParamsResponse_unstable,
-  RequestRecipeParams_unstable,
+  RecipeParamsResponseUnstable,
+  RequestRecipeParamsUnstable,
 } from '@aaif/goose-acp-client';
 import { v7 as uuidv7 } from 'uuid';
 
@@ -14,7 +14,7 @@ export interface AcpRecipeParamRequest {
 
 interface PendingRecipeParamRequest {
   request: AcpRecipeParamRequest;
-  resolve: (response: RecipeParamsResponse_unstable) => void;
+  resolve: (response: RecipeParamsResponseUnstable) => void;
   usesConfiguredParameters: boolean;
 }
 
@@ -107,7 +107,7 @@ export function beginConfiguredRecipeParameterScope(): ConfiguredRecipeParameter
   };
 }
 
-function configuredParameterValues(request: RequestRecipeParams_unstable): {
+function configuredParameterValues(request: RequestRecipeParamsUnstable): {
   values: Record<string, string>;
   usesConfiguredParameters: boolean;
 } {
@@ -135,8 +135,8 @@ function configuredParameterValues(request: RequestRecipeParams_unstable): {
 }
 
 export async function requestAcpRecipeParams(
-  request: RequestRecipeParams_unstable
-): Promise<RecipeParamsResponse_unstable> {
+  request: RequestRecipeParamsUnstable
+): Promise<RecipeParamsResponseUnstable> {
   const { values: initialValues, usesConfiguredParameters } = configuredParameterValues(request);
   const paramRequest: AcpRecipeParamRequest = {
     id: `acp_recipe_params_${uuidv7()}`,
@@ -145,7 +145,7 @@ export async function requestAcpRecipeParams(
     initialValues,
   };
 
-  return new Promise<RecipeParamsResponse_unstable>((resolve) => {
+  return new Promise<RecipeParamsResponseUnstable>((resolve) => {
     pendingRequests.set(paramRequest.id, {
       request: paramRequest,
       resolve,

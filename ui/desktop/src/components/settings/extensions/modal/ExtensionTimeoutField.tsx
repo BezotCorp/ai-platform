@@ -1,7 +1,10 @@
 import { Input } from '../../../ui/input';
 import { defineMessages, useIntl } from '../../../../i18n';
+import type { NoMessageValues } from 'react-intl';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly "timeoutLabel": NoMessageValues;
+}>({
   timeoutLabel: {
     id: 'extensionTimeoutField.timeoutLabel',
     defaultMessage: 'Timeout',

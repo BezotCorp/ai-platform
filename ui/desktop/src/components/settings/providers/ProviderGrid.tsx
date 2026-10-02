@@ -18,8 +18,18 @@ import { SwitchModelModal } from '../models/subcomponents/SwitchModelModal';
 import { useModelAndProvider } from '../../ModelAndProviderContext';
 import type { View } from '../../../utils/navigationUtils';
 import { defineMessages, useIntl } from '../../../i18n';
+import type { MessageValue, NoMessageValues } from 'react-intl';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly "addProvider": NoMessageValues;
+  readonly "fromTemplateOrManual": NoMessageValues;
+  readonly "editProvider": NoMessageValues;
+  readonly "configureProvider": NoMessageValues;
+  readonly "addProviderTitle": NoMessageValues;
+  readonly "chooseModel": NoMessageValues;
+  readonly "searchPlaceholder": NoMessageValues;
+  readonly "noMatch": { readonly "query": MessageValue };
+}>({
   addProvider: {
     id: 'providerGrid.addProvider',
     defaultMessage: 'Add Provider',

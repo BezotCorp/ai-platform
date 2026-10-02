@@ -1,8 +1,19 @@
 import { useState, useEffect } from 'react';
 import { Button } from '../ui/button';
 import { defineMessages, useIntl } from '../../i18n';
+import type { NoMessageValues } from 'react-intl';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly "activitiesLabel": NoMessageValues;
+  readonly "activitiesDescription": NoMessageValues;
+  readonly "messageLabel": NoMessageValues;
+  readonly "messageDescription": NoMessageValues;
+  readonly "messagePlaceholder": NoMessageValues;
+  readonly "activityButtonsLabel": NoMessageValues;
+  readonly "activityButtonsDescription": NoMessageValues;
+  readonly "addNewActivityPlaceholder": NoMessageValues;
+  readonly "addActivity": NoMessageValues;
+}>({
   activitiesLabel: {
     id: 'recipeActivityEditor.activitiesLabel',
     defaultMessage: 'Activities',

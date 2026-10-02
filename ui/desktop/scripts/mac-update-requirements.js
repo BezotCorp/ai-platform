@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
-const { execFileSync } = require('node:child_process');
-const fs = require('node:fs');
-const path = require('node:path');
+import { execFileSync } from 'node:child_process';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
 
 function macUpdateRequirements(appMinimum, deploymentTarget) {
   const versions = [appMinimum, deploymentTarget].map((version) => {
@@ -23,7 +23,7 @@ function macUpdateRequirements(appMinimum, deploymentTarget) {
   };
 }
 
-if (require.main === module) {
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const [appPath, outputPath] = process.argv.slice(2);
   const appMinimum = execFileSync(
     '/usr/bin/plutil',
@@ -34,4 +34,4 @@ if (require.main === module) {
   fs.writeFileSync(outputPath, `${JSON.stringify(requirements)}\n`);
 }
 
-module.exports = { macUpdateRequirements };
+export { macUpdateRequirements };

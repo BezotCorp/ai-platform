@@ -1,9 +1,26 @@
 {
-  "extends": "@docusaurus/tsconfig",
+  "extends": "../tsconfig.base.json",
   "compilerOptions": {
+    "target": "ES2023",
+    "lib": ["DOM", "DOM.Iterable", "ES2023"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "jsx": "react-jsx",
+    "allowJs": true,
+    "checkJs": false,
+    "allowImportingTsExtensions": true,
+    "noEmit": true,
     "baseUrl": ".",
-    "resolveJsonModule": true,
-    "esModuleInterop": true
+    "paths": {
+      "~/*": ["src/*"]
+    }
   },
-  "exclude": [".docusaurus", "build"]
+  "include": [
+    "src",
+    "theme",
+    "rspress.config.ts"
+  ],
+  "mdx": {
+    "checkMdx": true
+  }
 }

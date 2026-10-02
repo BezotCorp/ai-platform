@@ -3,8 +3,8 @@ import Info from '@theme-original/BlogPostItem/Header/Info';
 import type InfoType from '@theme/BlogPostItem/Header/Info';
 import type { WrapperProps } from '@docusaurus/types';
 import { useBlogPost } from '@docusaurus/plugin-content-blog/client';
-import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
-import SocialShare from '@site/src/components/SocialShare';
+import useDocusaurusContext from "~/utils/useSiteContext";
+import SocialShare from '~/components/SocialShare';
 
 type Props = WrapperProps<typeof InfoType>;
 

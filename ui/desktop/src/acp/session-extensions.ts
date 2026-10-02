@@ -6,7 +6,7 @@ export type SessionExtension = ExtensionConfig & { extensionKey: string };
 
 export async function getSessionExtensions(sessionId: string): Promise<SessionExtension[]> {
   const client = await getAcpClient();
-  const response = await client.goose.sessionExtensionsList_unstable({ sessionId });
+  const response = await client.goose.sessionExtensionsListUnstable({ sessionId });
   const extensionKeys = new Set<string>();
   const extensions: SessionExtension[] = [];
 
@@ -34,7 +34,7 @@ export async function addSessionExtension(
     throw new Error(`Unsupported extension type for ACP: ${config.type}`);
   }
   const client = await getAcpClient();
-  await client.goose.sessionExtensionsAdd_unstable({ sessionId, extension });
+  await client.goose.sessionExtensionsAddUnstable({ sessionId, extension });
 }
 
 export async function removeSessionExtension(
@@ -42,5 +42,5 @@ export async function removeSessionExtension(
   extensionKey: string
 ): Promise<void> {
   const client = await getAcpClient();
-  await client.goose.sessionExtensionsRemove_unstable({ sessionId, extensionKey });
+  await client.goose.sessionExtensionsRemoveUnstable({ sessionId, extensionKey });
 }

@@ -1,7 +1,7 @@
-const assert = require('node:assert/strict');
-const test = require('node:test');
+import assert from 'node:assert/strict';
+import test from 'node:test';
 
-const {renderDocumentation, schemaType} = require('./generate-acp-docs');
+import { renderDocumentation, schemaType } from './generate-acp-docs';
 
 const schema = {
   $defs: {
@@ -9,26 +9,26 @@ const schema = {
       type: 'object',
       description: 'Run the example.',
       properties: {
-        target: {$ref: '#/$defs/Target'},
-        tags: {type: ['array', 'null'], items: {type: 'string'}},
-        values: {type: 'object', additionalProperties: {type: 'integer'}},
-        mode: {enum: ['fast', 'safe'], default: 'safe'},
-        count: {type: 'integer', minimum: 1, maximum: 10},
-        label: {type: 'string', format: 'slug', pattern: '^[a-z]+$'},
+        target: { $ref: '#/$defs/Target' },
+        tags: { type: ['array', 'null'], items: { type: 'string' } },
+        values: { type: 'object', additionalProperties: { type: 'integer' } },
+        mode: { enum: ['fast', 'safe'], default: 'safe' },
+        count: { type: 'integer', minimum: 1, maximum: 10 },
+        label: { type: 'string', format: 'slug', pattern: '^[a-z]+$' },
       },
       required: ['target'],
     },
-    Response: {type: 'object'},
+    Response: { type: 'object' },
     Target: {
       oneOf: [
-        {$ref: '#/$defs/Response', type: 'object', properties: {kind: {const: 'object'}}},
-        {type: 'string'},
+        { $ref: '#/$defs/Response', type: 'object', properties: { kind: { const: 'object' } } },
+        { type: 'string' },
       ],
     },
   },
 };
 const meta = {
-  methods: [{method: '_goose/example', requestType: 'Request', responseType: 'Response'}],
+  methods: [{ method: '_goose/example', requestType: 'Request', responseType: 'Response' }],
   agentRequests: [],
   notifications: [],
 };
@@ -49,5 +49,5 @@ test('renders representative schema forms deterministically', () => {
 });
 
 test('rejects unsupported schema shapes', () => {
-  assert.throws(() => schemaType({not: {type: 'string'}}), /Unsupported schema keyword: not/);
+  assert.throws(() => schemaType({ not: { type: 'string' } }), /Unsupported schema keyword: not/);
 });

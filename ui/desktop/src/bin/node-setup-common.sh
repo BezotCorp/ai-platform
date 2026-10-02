@@ -10,7 +10,7 @@ set -euo pipefail
 LOG_FILE="/tmp/mcp.log"
 
 # Clear the log file at the start
-> "${LOG_FILE}"
+>"${LOG_FILE}"
 
 # Function for logging
 log() {
@@ -43,7 +43,7 @@ HERMIT_SETUP_LOCK_DIR="${RESOLVED_GOOSE_CONFIG_DIR}/.mcp-hermit-setup.lock"
 HERMIT_SETUP_LOCK_TIMEOUT=300
 HERMIT_SETUP_LOCK_STARTED_AT=$(date +%s)
 while ! mkdir "${HERMIT_SETUP_LOCK_DIR}" 2>/dev/null; do
-    if [ $(( $(date +%s) - HERMIT_SETUP_LOCK_STARTED_AT )) -ge "${HERMIT_SETUP_LOCK_TIMEOUT}" ]; then
+    if [ $(($(date +%s) - HERMIT_SETUP_LOCK_STARTED_AT)) -ge "${HERMIT_SETUP_LOCK_TIMEOUT}" ]; then
         log "Timed out waiting for ${HERMIT_SETUP_LOCK_DIR}; removing stale lock."
         rm -rf "${HERMIT_SETUP_LOCK_DIR}"
         HERMIT_SETUP_LOCK_STARTED_AT=$(date +%s)
@@ -75,12 +75,11 @@ mkdir -p "${MCP_HERMIT_DIR}/bin"
 log "Changing to directory ${MCP_HERMIT_DIR}."
 cd "${MCP_HERMIT_DIR}"
 
-
 download_hermit_binary() {
     local HERMIT_TMP
     HERMIT_TMP=$(mktemp "${MCP_HERMIT_DIR}/bin/hermit.XXXXXX")
-    if curl -fsSL "https://github.com/cashapp/hermit/releases/download/stable/hermit-$(uname -s | tr '[:upper:]' '[:lower:]')-$(uname -m | sed 's/x86_64/amd64/' | sed 's/aarch64/arm64/').gz" \
-        | gzip -dc > "${HERMIT_TMP}" && chmod +x "${HERMIT_TMP}"; then
+    if curl -fsSL "https://github.com/cashapp/hermit/releases/download/stable/hermit-$(uname -s | tr '[:upper:]' '[:lower:]')-$(uname -m | sed 's/x86_64/amd64/' | sed 's/aarch64/arm64/').gz" |
+        gzip -dc >"${HERMIT_TMP}" && chmod +x "${HERMIT_TMP}"; then
         mv "${HERMIT_TMP}" "${MCP_HERMIT_DIR}/bin/hermit"
     else
         rm -f "${HERMIT_TMP}"
@@ -89,12 +88,12 @@ download_hermit_binary() {
 }
 
 activate_hermit_environment() {
-    if ! HERMIT_ENV=$(hermit env --shell=bash --activate 2>> "${LOG_FILE}"); then
+    if ! HERMIT_ENV=$(hermit env --shell=bash --activate 2>>"${LOG_FILE}"); then
         log "Hermit does not support bash activation. Updating hermit binary."
         download_hermit_binary
-        HERMIT_ENV=$(hermit env --shell=bash --activate 2>> "${LOG_FILE}")
+        HERMIT_ENV=$(hermit env --shell=bash --activate 2>>"${LOG_FILE}")
     fi
-    eval "${HERMIT_ENV}" >> "${LOG_FILE}" 2>&1
+    eval "${HERMIT_ENV}" >>"${LOG_FILE}" 2>&1
 }
 
 # Check if hermit binary exists and download if not
@@ -106,20 +105,17 @@ else
     log "Hermit binary already exists. Skipping download."
 fi
 
-
 log "setting hermit cache to be local for MCP servers"
 mkdir -p "${MCP_HERMIT_DIR}/cache"
 export HERMIT_STATE_DIR="${MCP_HERMIT_DIR}/cache"
-
 
 # Update PATH
 export PATH="${MCP_HERMIT_DIR}/bin:${PATH}"
 log "Updated PATH to include ${MCP_HERMIT_DIR}/bin."
 
-
 # Verify hermit installation
 log "Checking for hermit in PATH."
-which hermit >> "${LOG_FILE}"
+which hermit >>"${LOG_FILE}"
 
 # Check if hermit environment is already initialized (only run init on first setup)
 if [ ! -f "bin/activate-hermit" ]; then
@@ -139,7 +135,7 @@ if [ ! -f "bin/activate-hermit" ]; then
 
     # Initialize hermit
     log "Initializing hermit."
-    hermit init >> "${LOG_FILE}"
+    hermit init >>"${LOG_FILE}"
 
     # Clean up temp dir if it was created
     if [[ -n "${HERMIT_CLEANUP_DIR:-}" ]]; then
@@ -160,7 +156,7 @@ activate_hermit_environment
 
 # Install Node.js using hermit
 log "Installing Node.js with hermit."
-hermit install node >> "${LOG_FILE}"
+hermit install node >>"${LOG_FILE}"
 activate_hermit_environment
 
 # Verify installations
@@ -173,16 +169,15 @@ rm -rf "${HERMIT_SETUP_LOCK_DIR}"
 trap 'log "An error occurred. Exiting with status $?."' ERR
 trap - EXIT
 
-
 log "Checking for GOOSE_NPM_REGISTRY and GOOSE_NPM_CERT environment variables for custom npm registry setup..."
 # Check if GOOSE_NPM_REGISTRY is set and accessible
-if [ -n "${GOOSE_NPM_REGISTRY:-}" ] && curl -s --head --fail "${GOOSE_NPM_REGISTRY}" > /dev/null; then
+if [ -n "${GOOSE_NPM_REGISTRY:-}" ] && curl -s --head --fail "${GOOSE_NPM_REGISTRY}" >/dev/null; then
     log "Checking custom goose registry availability: ${GOOSE_NPM_REGISTRY}"
     log "${GOOSE_NPM_REGISTRY} is accessible. Using it for npm registry."
     export NPM_CONFIG_REGISTRY="${GOOSE_NPM_REGISTRY}"
 
     # Check if GOOSE_NPM_CERT is set and accessible
-    if [ -n "${GOOSE_NPM_CERT:-}" ] && curl -s --head --fail "${GOOSE_NPM_CERT}" > /dev/null; then
+    if [ -n "${GOOSE_NPM_CERT:-}" ] && curl -s --head --fail "${GOOSE_NPM_CERT}" >/dev/null; then
         log "Downloading certificate from: ${GOOSE_NPM_CERT}"
         curl -sSL -o "${MCP_HERMIT_DIR}/cert.pem" "${GOOSE_NPM_CERT}"
         if [ $? -eq 0 ]; then

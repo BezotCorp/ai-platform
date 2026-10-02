@@ -12,8 +12,11 @@ import TanzuLogo from './icons/tanzu@3x.png';
 import AzureFoundryLogo from './icons/azure_foundry@3x.png';
 import DefaultLogo from './icons/default@3x.png';
 import { defineMessages, useIntl } from '../../../../../i18n';
+import type { MessageValue } from 'react-intl';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly "logoAlt": { readonly "providerName": MessageValue };
+}>({
   logoAlt: {
     id: 'providerLogo.alt',
     defaultMessage: '{providerName} logo',

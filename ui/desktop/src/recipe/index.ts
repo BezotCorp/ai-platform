@@ -73,7 +73,7 @@ export async function generateDeepLink(recipe: Recipe): Promise<string> {
 export function stripEmptyExtensions(recipe: Recipe): Recipe {
   if (Array.isArray(recipe.extensions) && recipe.extensions.length === 0) {
     const { extensions: _, ...rest } = recipe;
-    return rest as Recipe;
+    return rest;
   }
   return recipe;
 }

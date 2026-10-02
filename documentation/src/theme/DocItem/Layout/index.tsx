@@ -12,7 +12,7 @@ import DocItemTOCMobile from '@theme/DocItem/TOC/Mobile';
 import DocItemTOCDesktop from '@theme/DocItem/TOC/Desktop';
 import DocBreadcrumbs from '@theme/DocBreadcrumbs';
 import ContentVisibility from '@theme/ContentVisibility';
-import Heading from '@theme/Heading';
+import Heading from "~/components/Heading";
 import MDXContent from '@theme/MDXContent';
 import {Copy, Check, ChevronDown, ExternalLink, FileCode, Bot} from 'lucide-react';
 import layoutStyles from './styles.module.css';

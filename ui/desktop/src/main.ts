@@ -1,7 +1,5 @@
-import type { IpcMainInvokeEvent, OpenDialogOptions, OpenDialogReturnValue } from 'electron';
 import {
   app,
-  App,
   BrowserWindow,
   dialog,
   globalShortcut,
@@ -17,7 +15,15 @@ import {
   shell,
   Tray,
 } from 'electron';
-import { pathToFileURL, format as formatUrl, URLSearchParams } from 'node:url';
+
+import type {
+  App,
+  Event as ElectronEvent,
+  IpcMainInvokeEvent,
+  OpenDialogOptions,
+  OpenDialogReturnValue,
+} from 'electron';
+import { fileURLToPath, pathToFileURL, format as formatUrl, URLSearchParams } from 'node:url';
 import { Buffer } from 'node:buffer';
 import fs from 'node:fs/promises';
 import fsSync from 'node:fs';
@@ -31,7 +37,7 @@ import { installBackendCertificateVerifiers } from './backendCertificateVerifier
 import { configureProxy } from './proxy';
 import { startGooseServe } from './gooseServe';
 import { getLoginShellPath } from './loginShellPath';
-import { GooseServeLeaseRegistry, type GooseServeLease } from './gooseServeLeaseRegistry';
+import { GooseServeLeaseRegistry } from './gooseServeLeaseRegistry';
 import { normalizeAcpHttpBaseUrl } from './acp/url';
 import { expandTilde, sanitizeGoosePathRoot } from './utils/pathUtils';
 import log from './utils/logger';
@@ -39,8 +45,7 @@ import { ensureWinShims } from './utils/winShims';
 import { addRecentDir, loadRecentDirs } from './utils/recentDirs';
 import { formatAppName, errorMessage, formatErrorForLogging } from './utils/conversionUtils';
 import { isRetiredGooseChatApp } from './utils/retiredApps';
-import type { Settings, SettingKey } from './utils/settings';
-import { defaultSettings, getKeyboardShortcuts } from './utils/settings';
+import { defaultSettings, getKeyboardShortcuts, Settings } from './utils/settings';
 import * as crypto from 'crypto';
 import * as yaml from 'yaml';
 import windowStateKeeper from 'electron-window-state';
@@ -66,6 +71,18 @@ import {
   isAuthorizedFileAccessRequest,
   readSelectedRecipe,
 } from './desktopFileAccess';
+import { BundledConfig } from './bundleConfig';
+import { RecipeDeeplinkData } from './recipeDeepLinkData';
+import { AppWithOpenFilesEvent } from './app_with_open_diles_event';
+import { BackendCertificateTrustRegistration } from './backend_certificate_trust_registration';
+import { BackendCertificateTrust } from './backend_certificate_trust';
+import { WebContentsWithLegacyNavigationEvents } from './webContentsWithLegacyNavigationEvents';
+import { ExternalBackend } from './externalBackend';
+import { CreateChatOptions } from './createChatOptions';
+import { GooseServeLease } from './gooseServerLease';
+import { SettingKey } from './utils/settingKey';
+
+const moduleDir = path.dirname(fileURLToPath(import.meta.url));
 
 function shouldSetupUpdater(): boolean {
   // Setup updater if either the flag is enabled OR dev updates are enabled
@@ -181,7 +198,7 @@ function translateMenuLabels(items: MenuItem[]): void {
 // Settings management
 const SETTINGS_FILE = path.join(app.getPath('userData'), 'settings.json');
 const STARTUP_LOGS_DIR = path.join(app.getPath('userData'), 'logs', 'startup');
-const validLanguageSettings = new Set<Settings['language']>([
+const validLanguageSettings: ReadonlySet<string> = new Set([
   'system',
   'en',
   'es',
@@ -202,7 +219,54 @@ const validLanguageSettings = new Set<Settings['language']>([
 ]);
 
 function isValidLanguageSetting(value: unknown): value is Settings['language'] {
-  return typeof value === 'string' && validLanguageSettings.has(value as Settings['language']);
+  return typeof value === 'string' && validLanguageSettings.has(value);
+}
+
+function isStringArray(value: unknown): value is string[] {
+  return (
+    Array.isArray(value) && value.every((item: unknown): item is string => typeof item === 'string')
+  );
+}
+
+function isRecentModels(value: unknown): value is Settings['recentModels'] {
+  return (
+    Array.isArray(value) &&
+    value.every((item: unknown): item is Settings['recentModels'][number] => {
+      if (typeof item !== 'object' || item === null) {
+        return false;
+      }
+
+      const model = item as Record<string, unknown>;
+      return typeof model.provider === 'string' && typeof model.model === 'string';
+    })
+  );
+}
+
+function isKeyboardShortcuts(value: unknown): value is Settings['keyboardShortcuts'] {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const shortcuts = value as Record<string, unknown>;
+  return Object.keys(defaultSettings.keyboardShortcuts).every((key: string): boolean => {
+    const shortcut = shortcuts[key];
+    return typeof shortcut === 'string' || shortcut === null;
+  });
+}
+
+function isExternalBackendConfig(value: unknown): value is Settings['externalGoosed'] {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const config = value as Partial<Settings['externalGoosed']>;
+  return (
+    typeof config.enabled === 'boolean' &&
+    typeof config.url === 'string' &&
+    typeof config.secret === 'string' &&
+    (config.certFingerprint === undefined || typeof config.certFingerprint === 'string') &&
+    (config.workingDir === undefined || typeof config.workingDir === 'string')
+  );
 }
 
 function getSettings(): Settings {
@@ -210,7 +274,11 @@ function getSettings(): Settings {
     let stored: Partial<Settings>;
     try {
       const data = fsSync.readFileSync(SETTINGS_FILE, 'utf8');
-      stored = JSON.parse(data) as Partial<Settings>;
+      const parsed: unknown = JSON.parse(data);
+      stored =
+        typeof parsed === 'object' && parsed !== null
+          ? Object.fromEntries(Object.entries(parsed).filter(([key]) => key in defaultSettings))
+          : {};
     } catch (err) {
       console.error('Failed to read settings.json, using defaults:', err);
       return defaultSettings;
@@ -229,6 +297,61 @@ function getSettings(): Settings {
     };
   }
   return defaultSettings;
+}
+
+function assignSetting<K extends SettingKey>(settings: Settings, key: K, value: Settings[K]): void {
+  settings[key] = value;
+}
+
+function assignValidatedSetting(settings: Settings, key: SettingKey, value: unknown): boolean {
+  switch (key) {
+    case 'showMenuBarIcon':
+    case 'showDockIcon':
+    case 'enableWakelock':
+    case 'enableNotifications':
+    case 'spellcheckEnabled':
+    case 'useSystemTheme':
+    case 'showPricing':
+    case 'disableAutoDownload':
+    case 'useLegacyAgentLoop':
+      if (typeof value !== 'boolean') return false;
+      assignSetting(settings, key, value);
+      return true;
+    case 'globalShortcut':
+      if (typeof value !== 'string' && value !== null && value !== undefined) return false;
+      assignSetting(settings, key, value);
+      return true;
+    case 'theme':
+      if (value !== 'dark' && value !== 'light' && value !== 'aura') return false;
+      assignSetting(settings, key, value);
+      return true;
+    case 'language':
+      if (!isValidLanguageSetting(value)) return false;
+      assignSetting(settings, key, value);
+      return true;
+    case 'responseStyle':
+      if (typeof value !== 'string') return false;
+      assignSetting(settings, key, value);
+      return true;
+    case 'seenAnnouncementIds':
+      if (!isStringArray(value)) return false;
+      assignSetting(settings, key, value);
+      return true;
+    case 'recentModels':
+      if (!isRecentModels(value)) return false;
+      assignSetting(settings, key, value);
+      return true;
+    case 'keyboardShortcuts':
+      if (!isKeyboardShortcuts(value)) return false;
+      assignSetting(settings, key, value);
+      return true;
+    case 'externalGoosed':
+      if (!isExternalBackendConfig(value)) return false;
+      assignSetting(settings, key, value);
+      return true;
+  }
+
+  return false;
 }
 
 function updateSettings(modifier: (settings: Settings) => void): void {
@@ -295,19 +418,6 @@ function listGitWorktreeDirs(dir: string): Promise<string[]> {
 }
 
 if (started) app.quit();
-
-// Certificate trust for active backend leases. Renderer requests and
-// main-process net.fetch both pin to the exact cert fingerprint. Each backend
-// lease owns a trust record so old windows keep working after settings change.
-interface BackendCertificateTrust {
-  hostname: string;
-  fingerprint: string | null;
-}
-
-interface BackendCertificateTrustRegistration {
-  trust: BackendCertificateTrust;
-  release: () => void;
-}
 
 const trustedBackendCertificates = new Set<BackendCertificateTrust>();
 
@@ -386,12 +496,12 @@ app.on('certificate-error', (event, _webContents, url, _error, certificate, call
   callback(verifyBackendCertificate(parsed.hostname, certificate.fingerprint));
 });
 
-app.whenReady().then(() => {
+runWhenReady(async () => {
   appConfig.GOOSE_LOCALE = getConfiguredGooseLocale();
 });
 
 // Main-process net.fetch and renderer WebSockets: pin to the exact cert once known.
-app.whenReady().then(() => {
+runWhenReady(async () => {
   installBackendCertificateVerifiers(
     [session.defaultSession, session.fromPartition('persist:goose')],
     {
@@ -430,6 +540,15 @@ if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
   app.setAsDefaultProtocolClient('goose');
 }
 
+function runWhenReady(task: () => Promise<void>): void {
+  void app
+    .whenReady()
+    .then(task)
+    .catch((error) => {
+      log.error('[Main] Deferred app task failed:', errorMessage(error));
+    });
+}
+
 // Apply single instance lock on Windows and Linux where it's needed for deep links
 // macOS uses the 'open-url' event instead
 let gotTheLock: boolean;
@@ -446,7 +565,7 @@ if (process.platform !== 'darwin') {
         const parsedUrl = new URL(protocolUrl);
         // If it's a bot/recipe URL, handle it directly by creating a new window
         if (parsedUrl.hostname === 'bot' || parsedUrl.hostname === 'recipe') {
-          app.whenReady().then(async () => {
+          runWhenReady(async () => {
             const recentDirs = loadRecentDirs();
             const openDir = recentDirs.length > 0 ? recentDirs[0] : null;
 
@@ -465,7 +584,7 @@ if (process.platform !== 'darwin') {
 
         // Handle new-session URL by creating a fresh chat window
         if (parsedUrl.hostname === 'new-session') {
-          app.whenReady().then(async () => {
+          runWhenReady(async () => {
             const recentDirs = loadRecentDirs();
             const openDir = recentDirs.length > 0 ? recentDirs[0] : null;
             const prompt = parsedUrl.searchParams.get('prompt') || undefined;
@@ -479,7 +598,7 @@ if (process.platform !== 'darwin') {
         }
 
         if (parsedUrl.hostname === 'resume') {
-          app.whenReady().then(async () => {
+          runWhenReady(async () => {
             const recentDirs = loadRecentDirs();
             const openDir = recentDirs.length > 0 ? recentDirs[0] : null;
             await createResumeChatWindow(parsedUrl, openDir || undefined);
@@ -488,7 +607,9 @@ if (process.platform !== 'darwin') {
         }
 
         // For non-bot URLs, continue with normal handling
-        handleProtocolUrl(protocolUrl, parsedUrl);
+        void handleProtocolUrl(protocolUrl, parsedUrl).catch((error) => {
+          log.error('[Main] Failed to handle protocol URL:', errorMessage(error));
+        });
       }
 
       // Only focus existing regular windows for non-bot/recipe URLs
@@ -500,7 +621,7 @@ if (process.platform !== 'darwin') {
         }
         mainWindow.focus();
       } else if (!protocolUrl) {
-        app.whenReady().then(async () => {
+        runWhenReady(async () => {
           const recentDirs = loadRecentDirs();
           const openDir = recentDirs.length > 0 ? recentDirs[0] : null;
           await createChat(app, { dir: openDir || undefined });
@@ -512,7 +633,7 @@ if (process.platform !== 'darwin') {
   // Handle protocol URLs on Windows and Linux startup
   const protocolUrl = process.argv.find((arg) => arg.startsWith('goose://'));
   if (protocolUrl) {
-    app.whenReady().then(async () => {
+    runWhenReady(async () => {
       let parsedUrl: URL;
       try {
         parsedUrl = new URL(protocolUrl);
@@ -733,9 +854,8 @@ app.on('open-file', async (event, filePath) => {
 
 // Handle multiple files/folders (macOS only)
 if (process.platform === 'darwin') {
-  // Use type assertion for non-standard Electron event
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  app.on('open-files' as any, async (event: any, filePaths: string[]) => {
+  const appWithOpenFilesEvent: AppWithOpenFilesEvent = app as AppWithOpenFilesEvent;
+  appWithOpenFilesEvent.on('open-files', async (event: ElectronEvent, filePaths: string[]) => {
     event.preventDefault();
     for (const filePath of filePaths) {
       await handleFileOpen(filePath);
@@ -786,7 +906,7 @@ declare var MAIN_WINDOW_VITE_NAME: string;
 function getAppUrl(): URL {
   return MAIN_WINDOW_VITE_DEV_SERVER_URL
     ? new URL(MAIN_WINDOW_VITE_DEV_SERVER_URL)
-    : pathToFileURL(path.join(__dirname, `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`));
+    : pathToFileURL(path.join(moduleDir, `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`));
 }
 
 // Parse command line arguments
@@ -816,13 +936,6 @@ const parseArgs = () => {
   return { dirPath };
 };
 
-interface BundledConfig {
-  defaultProvider?: string;
-  defaultModel?: string;
-  predefinedModels?: string;
-  version?: string;
-}
-
 const getBundledConfig = (): BundledConfig => {
   //{env-macro-start}//
   //needed when goose is bundled for a specific provider
@@ -838,14 +951,6 @@ const getBundledConfig = (): BundledConfig => {
 const { defaultProvider, defaultModel, predefinedModels, version } = getBundledConfig();
 
 const GENERATED_SECRET = crypto.randomBytes(32).toString('hex');
-
-interface ExternalBackend {
-  source: 'env' | 'settings';
-  url: string;
-  secret: string;
-  certFingerprint?: string;
-  workingDir?: string;
-}
 
 const getExternalBackendUrlFromEnv = (): string | null => {
   if (!process.env.GOOSE_EXTERNAL_BACKEND) {
@@ -976,18 +1081,6 @@ const windowPowerSaveBlockers = new Map<number, number>(); // windowId -> blocke
 const pendingInitialMessages = new Map<number, string>(); // windowId -> initialMessage
 const pendingInitialMessageNoAutoSubmit = new Set<number>(); // windowIds whose initialMessage should NOT auto-submit
 
-interface CreateChatOptions {
-  initialMessage?: string;
-  initialMessageNoAutoSubmit?: boolean;
-  dir?: string;
-  resumeSessionId?: string;
-  viewType?: string;
-  recipeDeeplink?: string;
-  recipeId?: string;
-  scheduledJobId?: string;
-  recipeParameters?: Record<string, string>;
-}
-
 const createChat = async (
   app: App,
   options: CreateChatOptions = {}
@@ -1017,7 +1110,7 @@ const createChat = async (
       buttons: ['Quit'],
     });
     app.quit();
-    return;
+    return undefined;
   }
 
   if (externalBackend?.certFingerprint) {
@@ -1051,7 +1144,7 @@ const createChat = async (
       }
 
       app.quit();
-      return;
+      return undefined;
     }
   }
 
@@ -1103,7 +1196,7 @@ const createChat = async (
         }
 
         app.quit();
-        return;
+        return undefined;
       }
 
       const resolvedAcpUrl = externalBackendCheck.acpUrl;
@@ -1144,7 +1237,7 @@ const createChat = async (
       }
 
       app.quit();
-      return;
+      return undefined;
     }
   } else {
     const localCertificateTrust = trustBackendCertificate('127.0.0.1', null);
@@ -1158,14 +1251,14 @@ const createChat = async (
         dir: workingDir,
         tls: true,
         env: {
-          GOOSE_PATH_ROOT: appConfig.GOOSE_PATH_ROOT as string | undefined,
+          GOOSE_PATH_ROOT: appConfig.GOOSE_PATH_ROOT,
         },
         loginShellPath,
         isPackaged: app.isPackaged,
         resourcesPath: app.isPackaged ? process.resourcesPath : undefined,
         logger: log,
         diagnosticsDir: STARTUP_LOGS_DIR,
-        readinessFetch: net.fetch as unknown as typeof globalThis.fetch,
+        readinessFetch: (input, init) => net.fetch(input, init),
       });
       if (!gooseServeResult.certFingerprint) {
         await gooseServeResult.cleanup();
@@ -1198,7 +1291,7 @@ const createChat = async (
         buttons: ['OK'],
       });
       app.quit();
-      return;
+      return undefined;
     }
 
     workingDir = gooseServeResult.workingDir;
@@ -1215,12 +1308,13 @@ const createChat = async (
 
   const cleanupUnregisteredGooseServeLease = async () => {
     if (!gooseServeLease) {
-      return;
+      return undefined;
     }
 
     const lease = gooseServeLease;
     gooseServeLease = null;
     await gooseServeLeases.cleanupLease(lease);
+    return undefined;
   };
 
   let mainWindowState: ReturnType<typeof windowStateKeeper>;
@@ -1248,10 +1342,10 @@ const createChat = async (
       minWidth: 480,
       minHeight: 400,
       resizable: true,
-      icon: path.join(__dirname, '../images/icon.icns'),
+      icon: path.join(moduleDir, '../images/icon.icns'),
       webPreferences: {
         spellcheck: settings.spellcheckEnabled ?? true,
-        preload: path.join(__dirname, 'preload.js'),
+        preload: path.join(moduleDir, 'preload.js'),
         webSecurity: true,
         nodeIntegration: false,
         contextIsolation: true,
@@ -1375,9 +1469,9 @@ const createChat = async (
   });
 
   // Handle new-window events (alternative approach for external links)
-  // Use type assertion for non-standard Electron event
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  mainWindow.webContents.on('new-window' as any, function (event: any, url: string) {
+  const webContentsWithLegacyEvents: WebContentsWithLegacyNavigationEvents =
+    mainWindow.webContents as WebContentsWithLegacyNavigationEvents;
+  webContentsWithLegacyEvents.on('new-window', (event: ElectronEvent, url: string): void => {
     event.preventDefault();
     void openExternalUrl(url, mainWindow, getConfiguredGooseLocale()).catch((error) => {
       log.error('Failed to open external URL:', error);
@@ -1431,7 +1525,7 @@ const createChat = async (
   await desktopFileAccess.bindWindow(windowId, workingDir);
   if (mainWindow.isDestroyed()) {
     desktopFileAccess.unbindWindow(windowId);
-    return;
+    return undefined;
   }
   windowMap.set(windowId, mainWindow);
 
@@ -1461,7 +1555,7 @@ const createChat = async (
     }
   });
 
-  mainWindow.loadURL(formattedUrl);
+  void mainWindow.loadURL(formattedUrl);
 
   // If we have an initial message, store it to send after React is ready
   if (initialMessage) {
@@ -1500,9 +1594,7 @@ const createChat = async (
   mainWindow.on('leave-full-screen', broadcastFullScreenState);
 
   // Handle mouse back button (button 3)
-  // Use type assertion for non-standard Electron event
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  mainWindow.webContents.on('mouse-up' as any, function (_event: any, mouseButton: number) {
+  webContentsWithLegacyEvents.on('mouse-up', (_event: ElectronEvent, mouseButton: number): void => {
     // MouseButton 3 is the back button.
     if (mouseButton === 3) {
       mainWindow.webContents.send('mouse-back-button-clicked');
@@ -1527,7 +1619,7 @@ const createLauncher = () => {
     transparent: process.platform === 'darwin',
     backgroundColor: process.platform === 'darwin' ? '#00000000' : '#ffffff',
     webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
+      preload: path.join(moduleDir, 'preload.js'),
       nodeIntegration: false,
       contextIsolation: true,
       additionalArguments: [
@@ -1563,7 +1655,7 @@ const createLauncher = () => {
   const url = getAppUrl();
 
   url.hash = '/launcher';
-  launcherWindow.loadURL(formatUrl(url));
+  void launcherWindow.loadURL(formatUrl(url));
   activeLauncherWindow = launcherWindow;
 
   launcherWindow.on('closed', () => {
@@ -1609,8 +1701,8 @@ const createTray = () => {
   const possiblePaths = [
     path.join(process.resourcesPath, 'images', 'iconTemplate.png'),
     path.join(process.cwd(), 'src', 'images', 'iconTemplate.png'),
-    path.join(__dirname, '..', 'images', 'iconTemplate.png'),
-    path.join(__dirname, 'images', 'iconTemplate.png'),
+    path.join(moduleDir, '..', 'images', 'iconTemplate.png'),
+    path.join(moduleDir, 'images', 'iconTemplate.png'),
     path.join(process.cwd(), 'images', 'iconTemplate.png'),
   ];
 
@@ -1702,20 +1794,18 @@ const openDirectoryDialog = async (): Promise<OpenDialogReturnValue> => {
           }
         } catch (error) {
           if (error && typeof error === 'object' && 'code' in error) {
-            const fsError = error as { code?: string; message?: string };
-            if (
-              fsError.code === 'ENOENT' ||
-              fsError.code === 'EACCES' ||
-              fsError.code === 'EPERM'
-            ) {
+            const code = typeof error.code === 'string' ? error.code : undefined;
+            const message =
+              'message' in error && typeof error.message === 'string' ? error.message : undefined;
+            if (code === 'ENOENT' || code === 'EACCES' || code === 'EPERM') {
               console.warn(
-                `Current working directory not accessible (${fsError.code}): ${currentWorkingDir}, falling back to home directory`
+                `Current working directory not accessible (${code}): ${currentWorkingDir}, falling back to home directory`
               );
               defaultPath = os.homedir();
             } else {
               console.warn(
-                `Unexpected filesystem error (${fsError.code}) for directory ${currentWorkingDir}:`,
-                fsError.message
+                `Unexpected filesystem error (${code}) for directory ${currentWorkingDir}:`,
+                message
               );
               defaultPath = os.homedir();
             }
@@ -1734,10 +1824,10 @@ const openDirectoryDialog = async (): Promise<OpenDialogReturnValue> => {
     defaultPath = os.homedir();
   }
 
-  const result = (await dialog.showOpenDialog({
+  const result = await dialog.showOpenDialog({
     properties: ['openFile', 'openDirectory', 'createDirectory'],
     defaultPath: defaultPath,
-  })) as unknown as OpenDialogReturnValue;
+  });
 
   if (!result.canceled && result.filePaths.length > 0) {
     const selectedPath = result.filePaths[0];
@@ -1773,11 +1863,6 @@ const openDirectoryDialog = async (): Promise<OpenDialogReturnValue> => {
   }
   return result;
 };
-
-interface RecipeDeeplinkData {
-  config: string;
-  parameters?: Record<string, string>;
-}
 
 function parseRecipeDeeplink(url: string): RecipeDeeplinkData | undefined {
   const parsedUrl = new URL(url);
@@ -1940,14 +2025,12 @@ ipcMain.handle('set-setting', (_event, key: SettingKey, value: unknown) => {
     return;
   }
 
-  if (key === 'language' && !isValidLanguageSetting(value)) {
-    console.error(`Invalid language setting rejected: ${String(value)}`);
+  const settings: Settings = getSettings();
+  if (!assignValidatedSetting(settings, key, value)) {
+    console.error(`Invalid setting value rejected for ${key}: ${String(value)}`);
     return;
   }
 
-  const settings = getSettings();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  (settings as any)[key] = value;
   fsSync.writeFileSync(SETTINGS_FILE, JSON.stringify(settings, null, 2));
 
   if (key === 'language') {
@@ -1960,7 +2043,7 @@ ipcMain.handle('set-setting', (_event, key: SettingKey, value: unknown) => {
   }
 
   if (key === 'disableAutoDownload') {
-    setAutoDownloadDisabled(value as boolean);
+    setAutoDownloadDisabled(settings.disableAutoDownload);
   }
 });
 
@@ -2014,7 +2097,7 @@ ipcMain.handle('set-dock-icon', async (_event, show: boolean) => {
   });
 
   if (show) {
-    app.dock?.show();
+    void app.dock?.show();
   } else {
     // Only hide the dock if we have a menu bar icon to maintain accessibility
     if (settings.showMenuBarIcon) {
@@ -2181,7 +2264,7 @@ ipcMain.handle('select-file-or-directory', async (_event, defaultPath?: string) 
     }
   }
 
-  const result = (await dialog.showOpenDialog(dialogOptions)) as unknown as OpenDialogReturnValue;
+  const result = await dialog.showOpenDialog(dialogOptions);
 
   if (!result.canceled && result.filePaths.length > 0) {
     return result.filePaths[0];
@@ -2191,7 +2274,7 @@ ipcMain.handle('select-file-or-directory', async (_event, defaultPath?: string) 
 
 ipcMain.handle('select-recipe-file', async (event) => {
   const senderWindow = requireRegularRendererWindow(event);
-  const pathRoot = appConfig.GOOSE_PATH_ROOT as string | undefined;
+  const pathRoot = appConfig.GOOSE_PATH_ROOT;
   const recipeDirectory = pathRoot
     ? path.join(pathRoot, 'config', 'recipes')
     : path.join(os.homedir(), '.config', 'goose', 'recipes');
@@ -2231,7 +2314,7 @@ ipcMain.handle('write-goosehints', async (event, content) => {
 // .json/.jsonl, and returns the file's contents inline so the renderer doesn't
 // need a separate read step.
 ipcMain.handle('select-import-session-file', async () => {
-  const result = (await dialog.showOpenDialog({
+  const result = await dialog.showOpenDialog({
     title: 'Import session',
     defaultPath: os.homedir(),
     properties: ['openFile', 'showHiddenFiles'],
@@ -2239,7 +2322,7 @@ ipcMain.handle('select-import-session-file', async () => {
       { name: 'Session files', extensions: ['json', 'jsonl'] },
       { name: 'All files', extensions: ['*'] },
     ],
-  })) as unknown as OpenDialogReturnValue;
+  });
 
   if (result.canceled || result.filePaths.length === 0) {
     return null;
@@ -2376,7 +2459,7 @@ const focusWindow = () => {
     });
     windows[windows.length - 1].webContents.send('focus-input');
   } else {
-    createNewWindow(app);
+    void createNewWindow(app);
   }
 };
 
@@ -2506,7 +2589,7 @@ async function appMain() {
       {
         label: menuT('New Window'),
         click: () => {
-          createNewWindow(app);
+          void createNewWindow(app);
         },
       },
     ]);
@@ -2783,7 +2866,7 @@ async function appMain() {
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
-      createNewWindow(app);
+      void createNewWindow(app);
     }
   });
 
@@ -2816,12 +2899,14 @@ async function appMain() {
       }
     }
 
-    createChat(app, {
+    void createChat(app, {
       initialMessage: query,
       dir: resolvedDir,
       resumeSessionId,
       viewType,
       recipeId,
+    }).catch((error) => {
+      log.error('[Main] Failed to create chat from IPC request:', errorMessage(error));
     });
   });
 
@@ -3008,7 +3093,7 @@ async function appMain() {
         resizable: gooseApp.resizable ?? true,
         useContentSize: true,
         webPreferences: {
-          preload: path.join(__dirname, 'preload.js'),
+          preload: path.join(moduleDir, 'preload.js'),
           nodeIntegration: false,
           contextIsolation: true,
           webSecurity: true,
@@ -3068,7 +3153,7 @@ async function appMain() {
       appWindow.focus();
 
       // Then reload
-      await appWindow.webContents.reload();
+      appWindow.webContents.reload();
     } catch (error) {
       console.error('Failed to refresh app:', error);
       throw error;
@@ -3091,14 +3176,13 @@ async function appMain() {
   });
 }
 
-app.whenReady().then(async () => {
-  try {
-    await appMain();
-  } catch (error) {
-    dialog.showErrorBox('Goose Error', `Failed to create main window: ${error}`);
+void app
+  .whenReady()
+  .then(appMain)
+  .catch((error) => {
+    dialog.showErrorBox('Goose Error', `Failed to create main window: ${errorMessage(error)}`);
     app.quit();
-  }
-});
+  });
 
 async function getAllowList(): Promise<string[]> {
   if (!process.env.GOOSE_ALLOWLIST) {

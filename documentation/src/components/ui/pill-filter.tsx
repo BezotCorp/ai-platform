@@ -1,4 +1,4 @@
-import { cn } from "@site/src/utils/cn";
+import { cn } from "~/utils/cn";
 
 export type PillFilterOption = {
   label: string;

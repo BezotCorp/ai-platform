@@ -7,6 +7,7 @@ import rehypeKatex from 'rehype-katex';
 import 'katex/dist/katex.min.css';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import type { NoMessageValues } from 'react-intl';
 // Improved oneDark theme for better comment contrast and readability
 const customOneDarkTheme = {
   ...oneDark,
@@ -32,7 +33,11 @@ import { BLOCKED_PROTOCOLS } from '../utils/urlSecurity';
 import { getTextDirection } from '../utils/textDirection';
 import { defineMessages, useIntl } from '../i18n';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly "copyCode": NoMessageValues;
+  readonly "failedToOpenLink": NoMessageValues;
+  readonly "noApplicationFound": NoMessageValues;
+}>({
   copyCode: {
     id: 'markdownContent.copyCode',
     defaultMessage: 'Copy code',

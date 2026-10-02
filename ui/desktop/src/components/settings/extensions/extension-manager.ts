@@ -1,5 +1,5 @@
 import type { ExtensionConfig } from '../../../types/extensions';
-import { toastService } from '../../../toasts';
+import { toastService } from '../../../toast_service';
 import {
   trackExtensionAdded,
   trackExtensionEnabled,

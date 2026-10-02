@@ -79,13 +79,13 @@ function gooseExtensionEntryToExtensionEntry(
 
 export async function getConfiguredGooseExtensions(): Promise<GooseExtensionEntry[]> {
   const client = await getAcpClient();
-  const response = await client.goose.configExtensionsList_unstable({});
+  const response = await client.goose.configExtensionsListUnstable({});
   return response.extensions;
 }
 
 export async function getConfiguredExtensions(): Promise<ConfiguredExtensionsResponse> {
   const client = await getAcpClient();
-  const response = await client.goose.configExtensionsList_unstable({});
+  const response = await client.goose.configExtensionsListUnstable({});
   return {
     extensions: response.extensions
       .map(gooseExtensionEntryToExtensionEntry)
@@ -153,12 +153,12 @@ export async function addConfigExtension(config: ExtensionConfig, enabled: boole
     throw new Error(`Unsupported extension type for ACP: ${config.type}`);
   }
   const client = await getAcpClient();
-  await client.goose.configExtensionsAdd_unstable({ extension, enabled });
+  await client.goose.configExtensionsAddUnstable({ extension, enabled });
 }
 
 export async function removeConfigExtension(configKey: string): Promise<void> {
   const client = await getAcpClient();
-  await client.goose.configExtensionsRemove_unstable({ configKey });
+  await client.goose.configExtensionsRemoveUnstable({ configKey });
 }
 
 export async function setConfigExtensionEnabled(
@@ -166,5 +166,5 @@ export async function setConfigExtensionEnabled(
   enabled: boolean
 ): Promise<void> {
   const client = await getAcpClient();
-  await client.goose.configExtensionsSetEnabled_unstable({ configKey, enabled });
+  await client.goose.configExtensionsSetEnabledUnstable({ configKey, enabled });
 }

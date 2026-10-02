@@ -1,8 +1,11 @@
 import React from 'react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/Tooltip';
 import { defineMessages, useIntl } from '../../i18n';
+import type { NoMessageValues } from 'react-intl';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly "dev": NoMessageValues;
+}>({
   dev: {
     id: 'environmentBadge.dev',
     defaultMessage: 'Dev',

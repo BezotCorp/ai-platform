@@ -5,11 +5,18 @@ import { acpAuthenticateProvider, acpListProviderSecrets } from '../../../acp/pr
 import { errorMessage } from '../../../utils/conversionUtils';
 import { defineMessages, useIntl } from '../../../i18n';
 import { Button } from '../../ui/button';
+import type { MessageValue, NoMessageValues } from 'react-intl';
 
 const HUGGINGFACE_PROVIDER = 'huggingface';
 const HUGGINGFACE_OAUTH_SECRET_ID = 'provider_cache:huggingface';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly "title": NoMessageValues;
+  readonly "signIn": NoMessageValues;
+  readonly "signingIn": NoMessageValues;
+  readonly "signedIn": NoMessageValues;
+  readonly "failedToConfigure": { readonly "error": MessageValue };
+}>({
   title: {
     id: 'huggingFaceSignInPrompt.title',
     defaultMessage: 'Hugging Face',

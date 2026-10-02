@@ -4,6 +4,14 @@ import {
   normalizeAcpHttpBaseUrl,
   statusHttpUrlFromHttpBase,
 } from './acp/url';
+import { RedirectError } from './redirectError';
+import { HopInit } from './hopInit';
+import { Hop } from './hop';
+import { Probe } from './probe';
+import { RemoteBackendParams } from './remoteBackendParams';
+import { RemoteBackendConnection } from './remoteBackendConnection';
+import { RemoteBackendStep } from './remote_backend_step';
+import { HopRequest } from './hotRequest';
 
 const RETRY_BUDGET_MS = 15000;
 const RETRY_INTERVAL_MS = 250;
@@ -12,41 +20,6 @@ const MAX_REDIRECT_HOPS = 20;
 
 const FATAL_ERROR_PATTERN = /panicked at|RUST_BACKTRACE|fatal error/i;
 const FATAL_NETWORK_PATTERN = /NAME_NOT_RESOLVED|CERT|SSL|CLIENT_AUTH|INVALID_URL|UNSAFE_PORT/;
-
-export interface RemoteBackendStep {
-  name: string;
-  ok: boolean;
-  detail: string;
-}
-
-export interface RemoteBackendConnection {
-  ok: boolean;
-  steps: RemoteBackendStep[];
-  failure: string | null;
-  acpUrl: string | null;
-}
-
-export interface RemoteBackendParams {
-  baseUrl: string;
-  serverSecret: string;
-  pinnedHostname?: string | null;
-  errorLog?: string[];
-  request?: HopRequest;
-}
-
-interface HopInit {
-  headers?: Record<string, string>;
-  signal?: AbortSignal;
-}
-
-interface Hop {
-  status: number;
-  statusText: string;
-  header(name: string): string | null;
-  location: string | null;
-}
-
-type HopRequest = (url: string, init: HopInit) => Promise<Hop>;
 
 const headerValue = (headers: Record<string, string | string[]>, name: string): string | null => {
   const value = headers[name.toLowerCase()];
@@ -113,8 +86,6 @@ const netHopRequest: HopRequest = (url, init) =>
     request.end();
   });
 
-class RedirectError extends Error {}
-
 const isRedirect = (status: number): boolean =>
   status === 301 || status === 302 || status === 303 || status === 307 || status === 308;
 
@@ -160,13 +131,6 @@ const resolveRedirects = async (
     url = next;
   }
 };
-
-interface Probe {
-  ok: boolean;
-  detail: string;
-  retryable: boolean;
-  resolvedUrl?: string;
-}
 
 const delay = (timeoutMs: number): Promise<void> =>
   new Promise((resolve) => setTimeout(resolve, timeoutMs));

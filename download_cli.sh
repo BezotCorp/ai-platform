@@ -52,18 +52,17 @@ else
   fi
 fi
 
-
 # --- 2) Variables ---
 REPO="aaif-goose/goose"
 OUT_FILE="goose"
 
 # Set default bin directory based on detected OS environment
 if [[ "${WINDIR:-}" ]] || [[ "${windir:-}" ]] || [[ "$OSTYPE" == "msys" ]] || [[ "$OSTYPE" == "cygwin" ]]; then
-    # Native Windows environments - use Windows user profile path
-    DEFAULT_BIN_DIR="$USERPROFILE/goose"
+  # Native Windows environments - use Windows user profile path
+  DEFAULT_BIN_DIR="$USERPROFILE/goose"
 else
-    # Linux, macOS, and WSL all use the same bin directory
-    DEFAULT_BIN_DIR="$HOME/.local/bin"
+  # Linux, macOS, and WSL all use the same bin directory
+  DEFAULT_BIN_DIR="$HOME/.local/bin"
 fi
 
 GOOSE_BIN_DIR="${GOOSE_BIN_DIR:-$DEFAULT_BIN_DIR}"
@@ -90,8 +89,11 @@ fi
 #   INSTALL_OS=linux|windows|darwin
 if [ -n "${INSTALL_OS:-}" ]; then
   case "${INSTALL_OS}" in
-    linux|windows|darwin) OS="${INSTALL_OS}" ;;
-    *) echo "[error]: unsupported INSTALL_OS='${INSTALL_OS}' (expected: linux|windows|darwin)"; exit 1 ;;
+  linux | windows | darwin) OS="${INSTALL_OS}" ;;
+  *)
+    echo "[error]: unsupported INSTALL_OS='${INSTALL_OS}' (expected: linux|windows|darwin)"
+    exit 1
+    ;;
   esac
 else
   # Better OS detection for Windows environments, with safer WSL handling.
@@ -121,28 +123,28 @@ ARCH=$(uname -m)
 
 # Handle Windows environments (MSYS2, Git Bash, Cygwin, WSL)
 case "$OS" in
-  linux|darwin|windows) ;;
-  mingw*|msys*|cygwin*)
-    OS="windows"
-    ;;
-  *)
-    echo "Error: Unsupported OS '$OS'. goose currently supports Linux, macOS, and Windows."
-    exit 1
-    ;;
+linux | darwin | windows) ;;
+mingw* | msys* | cygwin*)
+  OS="windows"
+  ;;
+*)
+  echo "Error: Unsupported OS '$OS'. goose currently supports Linux, macOS, and Windows."
+  exit 1
+  ;;
 esac
 
 case "$ARCH" in
-  x86_64)
-    ARCH="x86_64"
-    ;;
-  arm64|aarch64)
-    # Some systems use 'arm64' and some 'aarch64' – standardize to 'aarch64'
-    ARCH="aarch64"
-    ;;
-  *)
-    echo "Error: Unsupported architecture '$ARCH'."
-    exit 1
-    ;;
+x86_64)
+  ARCH="x86_64"
+  ;;
+arm64 | aarch64)
+  # Some systems use 'arm64' and some 'aarch64' – standardize to 'aarch64'
+  ARCH="aarch64"
+  ;;
+*)
+  echo "Error: Unsupported architecture '$ARCH'."
+  exit 1
+  ;;
 esac
 
 detect_linux_musl() {
@@ -189,11 +191,11 @@ if [ "$OS" = "darwin" ]; then
   EXTRACT_CMD="tar"
 elif [ "$OS" = "windows" ]; then
   case "$GOOSE_WINDOWS_VARIANT" in
-    standard|cuda) ;;
-    *)
-      echo "Error: Unsupported GOOSE_WINDOWS_VARIANT '$GOOSE_WINDOWS_VARIANT'. Expected 'standard' or 'cuda'."
-      exit 1
-      ;;
+  standard | cuda) ;;
+  *)
+    echo "Error: Unsupported GOOSE_WINDOWS_VARIANT '$GOOSE_WINDOWS_VARIANT'. Expected 'standard' or 'cuda'."
+    exit 1
+    ;;
   esac
   # Windows only supports x86_64 currently
   if [ "$ARCH" != "x86_64" ]; then
@@ -208,11 +210,11 @@ elif [ "$OS" = "windows" ]; then
   OUT_FILE="goose.exe"
 else
   case "$GOOSE_LINUX_VARIANT" in
-    standard|vulkan|musl) ;;
-    *)
-      echo "Error: Unsupported GOOSE_LINUX_VARIANT '$GOOSE_LINUX_VARIANT'. Expected 'standard', 'vulkan', or 'musl'."
-      exit 1
-      ;;
+  standard | vulkan | musl) ;;
+  *)
+    echo "Error: Unsupported GOOSE_LINUX_VARIANT '$GOOSE_LINUX_VARIANT'. Expected 'standard', 'vulkan', or 'musl'."
+    exit 1
+    ;;
   esac
   FILE="goose-$ARCH-unknown-linux-gnu.tar.bz2"
   if [ "$GOOSE_LINUX_VARIANT" = "vulkan" ]; then
@@ -230,7 +232,7 @@ echo "Downloading $RELEASE_TAG release: $FILE..."
 if ! curl -sLf "$DOWNLOAD_URL" --output "$FILE"; then
   # If the download fails, only fall back to latest stable when no version was specified and canary was not requested).
   if ! [ -n "${GOOSE_VERSION:-}" ] && [ "${CANARY:-false}" != "true" ]; then
-    LATEST_TAG=$(curl -s https://api.github.com/repos/aaif-goose/goose/releases/latest | \
+    LATEST_TAG=$(curl -s https://api.github.com/repos/aaif-goose/goose/releases/latest |
       grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
     if [ -z "$LATEST_TAG" ]; then
       echo "Error: Failed to download $DOWNLOAD_URL and latest tag unavailable"
@@ -261,10 +263,10 @@ fi
 trap 'rm -rf "$TMP_DIR"' EXIT
 
 echo "Extracting $FILE to temporary directory..."
-set +e  # Disable immediate exit on error
+set +e # Disable immediate exit on error
 
 if [ "$EXTRACT_CMD" = "tar" ]; then
-  tar -xjf "$FILE" -C "$TMP_DIR" 2> tar_error.log
+  tar -xjf "$FILE" -C "$TMP_DIR" 2>tar_error.log
   extract_exit_code=$?
 
   # Check for tar errors
@@ -281,7 +283,7 @@ if [ "$EXTRACT_CMD" = "tar" ]; then
   rm tar_error.log
 else
   # Use unzip for Windows
-  unzip -q "$FILE" -d "$TMP_DIR" 2> unzip_error.log
+  unzip -q "$FILE" -d "$TMP_DIR" 2>unzip_error.log
   extract_exit_code=$?
 
   # Check for unzip errors
@@ -294,7 +296,7 @@ else
   rm unzip_error.log
 fi
 
-set -e  # Re-enable immediate exit on error
+set -e # Re-enable immediate exit on error
 
 rm "$FILE" # clean up the downloaded archive
 
@@ -359,7 +361,7 @@ if [ "$CONFIGURE" = true ]; then
   if [ -t 0 ]; then
     "$GOOSE_BIN_DIR/$OUT_FILE" configure
   elif [ -r /dev/tty ]; then
-    "$GOOSE_BIN_DIR/$OUT_FILE" configure < /dev/tty
+    "$GOOSE_BIN_DIR/$OUT_FILE" configure </dev/tty
   else
     echo "Non-interactive shell detected (e.g. 'curl ... | bash')."
     echo "Skipping 'goose configure' — please run it manually after installation:"
@@ -368,8 +370,6 @@ if [ "$CONFIGURE" = true ]; then
 else
   echo "Skipping 'goose configure', you may need to run this manually later"
 fi
-
-
 
 # --- 7) Check PATH and give instructions if needed ---
 if [[ ":$PATH:" != *":$GOOSE_BIN_DIR:"* ]]; then
@@ -405,7 +405,7 @@ if [[ ":$PATH:" != *":$GOOSE_BIN_DIR:"* ]]; then
       if [ -f "$file" ] && grep -v '^[[:space:]]*#' "$file" | grep -i "path" | grep -Eq "(^|[=:\"' ])$GOOSE_BIN_DIR_RE([:\"' ]|\$)"; then
         echo "$file already references $GOOSE_BIN_DIR, skipping."
       else
-        echo "$line" >> "$file"
+        echo "$line" >>"$file"
         echo "Added \$GOOSE_BIN_DIR to $file"
       fi
     }
@@ -458,7 +458,7 @@ if [[ ":$PATH:" != *":$GOOSE_BIN_DIR:"* ]]; then
       if [ -t 0 ]; then # terminal
         read -p "Enter choice [1/2]: " choice
       elif [ -r /dev/tty ]; then # not a terminal, but /dev/tty is available
-        read -p "Enter choice [1/2]: " choice < /dev/tty
+        read -p "Enter choice [1/2]: " choice </dev/tty
       else # non-interactive environment without /dev/tty
         echo "Non-interactive environment detected without /dev/tty; defaulting to option 2 (show instructions)."
         choice=2

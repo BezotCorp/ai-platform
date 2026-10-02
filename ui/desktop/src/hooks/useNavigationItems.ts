@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { defineMessages, type IntlShape, type MessageDescriptor } from 'react-intl';
+import type { NoMessageValues } from 'react-intl';
 
 export interface NavItem {
   id: string;
@@ -41,7 +42,16 @@ export const SETTINGS_NAV_ITEM: NavItem = {
 
 // Translation descriptors for nav labels. Kept here next to NAV_ITEMS so the two
 // stay in sync.
-const navItemMessages = defineMessages({
+const navItemMessages = defineMessages<{
+  readonly "home": NoMessageValues;
+  readonly "recipes": NoMessageValues;
+  readonly "skills": NoMessageValues;
+  readonly "apps": NoMessageValues;
+  readonly "scheduler": NoMessageValues;
+  readonly "extensions": NoMessageValues;
+  readonly "sessions": NoMessageValues;
+  readonly "settings": NoMessageValues;
+}>({
   home: {
     id: 'navigation.itemHome',
     defaultMessage: 'New Chat',

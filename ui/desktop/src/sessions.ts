@@ -13,6 +13,7 @@ import { decodeRecipe } from './acp/recipe';
 import { scanRecipe, type Recipe } from './recipe';
 import { listSavedRecipes } from './recipe/recipe_management';
 import { requestRecipeConsent } from './recipe/consent';
+import { CreateSessionOptions } from './createSessionOptions';
 
 export function getSessionDisplayName(session: Session): string {
   if (session.user_set_name) {
@@ -22,13 +23,6 @@ export function getSessionDisplayName(session: Session): string {
     return session.recipe.title;
   }
   return session.name;
-}
-
-interface CreateSessionOptions {
-  recipeDeeplink?: string;
-  recipeId?: string;
-  extensionConfigs?: ExtensionConfig[];
-  allExtensions?: FixedExtensionEntry[];
 }
 
 /**
@@ -46,7 +40,7 @@ function selectedExtensionConfigs(options?: CreateSessionOptions): ExtensionConf
       .filter((extension) => extension.enabled)
       .map((extension) => {
         const { enabled: _enabled, ...config } = extension;
-        return config as ExtensionConfig;
+        return config;
       });
     // An empty configured list is also what this looks like before the config
     // finishes loading, so it stays "not specified" rather than becoming an

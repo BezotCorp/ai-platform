@@ -1,6 +1,6 @@
 # Making a Release
 
-You'll generally create one of two release types: a regular feature release (minor version bump like 1.20) or a bug-fixing patch release (patch version bump like 1.20.1). 
+You'll generally create one of two release types: a regular feature release (minor version bump like 1.20) or a bug-fixing patch release (patch version bump like 1.20.1).
 
 goose uses GitHub actions to automate the release process. The actual releases are triggered by tags.
 
@@ -13,6 +13,7 @@ These are typically done once per week. The process has two automated phases:
 2. **Release branch + PR** — When the version bump PR merges, automation creates a `release/<version>` branch from `main` and opens a release PR with a QA checklist.
 
 From there:
+
 - Test locally if you can (`just run-ui`)
 - Cherry-pick any last-minute fixes into the release branch if needed
 - Download and test the .zip from the release PR
@@ -26,9 +27,9 @@ When a minor release is tagged, automation immediately creates the next patch re
 
 To trigger the release, find [the corresponding PR](https://github.com/aaif-goose/goose/pulls?q=is%3Apr+%22chore%28release%29%22+%22%28patch%29%22+author%3Aapp%2Fgithub-actions+) and follow the instructions in the PR description.
 
-## High level release flow:
+## High level release flow
 
-```
+```plain_text
 minor-release (cron/manual)
   │
   ▼

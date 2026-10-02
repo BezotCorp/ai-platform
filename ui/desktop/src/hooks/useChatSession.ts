@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { defineMessages, useIntl } from '../i18n';
 import { AppEvents } from '../constants/events';
-import { toastError } from '../toasts';
+import { toastError } from '../toast_service';
 import { ChatState } from '../types/chatState';
 
 import type { TokenState } from '../types/chat';
@@ -25,6 +25,7 @@ import {
 } from '../acp/chatSessionStore';
 import { acpSteerSession } from '../acp/prompt';
 import { isAcpRecovering } from '../acp/acpConnection';
+import type { NoMessageValues } from 'react-intl';
 
 const initialTokenState: TokenState = {
   inputTokens: 0,
@@ -43,7 +44,10 @@ function isSlashCommand(message: string): boolean {
   return message.trim().startsWith('/');
 }
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly notificationTitle: NoMessageValues;
+  readonly notificationBody: NoMessageValues;
+}>({
   notificationTitle: {
     id: 'chat.notification.taskComplete.title',
     defaultMessage: 'Goose finished the task.',
@@ -80,12 +84,28 @@ export function useChatSession({
 
   useEffect(() => {
     const handleSessionRenamed = (event: Event) => {
-      const {
-        sessionId: renamedSessionId,
-        newName,
-        userInitiated,
-      } = (event as CustomEvent<{ sessionId: string; newName: string; userInitiated?: boolean }>)
-        .detail;
+      if (!(event instanceof CustomEvent)) {
+        return;
+      }
+
+      const detail: unknown = event.detail;
+      if (
+        typeof detail !== 'object' ||
+        detail === null ||
+        !('sessionId' in detail) ||
+        typeof detail.sessionId !== 'string' ||
+        !('newName' in detail) ||
+        typeof detail.newName !== 'string'
+      ) {
+        return;
+      }
+
+      const renamedSessionId = detail.sessionId;
+      const newName = detail.newName;
+      const userInitiated =
+        'userInitiated' in detail && typeof detail.userInitiated === 'boolean'
+          ? detail.userInitiated
+          : undefined;
 
       if (renamedSessionId !== sessionId) {
         return;
@@ -118,7 +138,7 @@ export function useChatSession({
             window.electron.getSetting('enableNotifications'),
             window.electron.isAnyWindowFocused(),
           ]);
-          if (notificationsEnabled === true && !anyWindowFocused) {
+          if (notificationsEnabled && !anyWindowFocused) {
             window.electron.showNotification({
               title: intl.formatMessage(i18n.notificationTitle),
               body: intl.formatMessage(i18n.notificationBody),

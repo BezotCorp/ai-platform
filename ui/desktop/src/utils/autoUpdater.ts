@@ -113,10 +113,7 @@ export function registerUpdateIpcHandlers() {
         message: errorMessage(error, 'Unknown error'),
         stack: error instanceof Error ? error.stack : 'No stack',
         name: error instanceof Error ? error.name : 'Unknown',
-        code:
-          error instanceof Error && 'code' in error
-            ? (error as Error & { code: unknown }).code
-            : undefined,
+        code: error instanceof Error && 'code' in error ? error.code : undefined,
         toString: error?.toString(),
       });
 
@@ -486,7 +483,11 @@ export function setupAutoUpdater(tray?: Tray) {
 
                 if (!autoDownloadDisabled) {
                   log.info('Auto-downloading update via GitHub fallback on startup...');
-                  await githubAutoDownload(result.downloadUrl!, result.latestVersion!, 'on startup');
+                  await githubAutoDownload(
+                    result.downloadUrl!,
+                    result.latestVersion!,
+                    'on startup'
+                  );
                 } else {
                   log.info('Auto-download disabled — skipping GitHub fallback download on startup');
                 }
@@ -658,15 +659,10 @@ export function setupAutoUpdater(tray?: Tray) {
   });
 }
 
-interface UpdaterEvent {
-  event: string;
-  data?: unknown;
-}
-
 function sendStatusToWindow(event: string, data?: unknown) {
   const windows = BrowserWindow.getAllWindows();
   windows.forEach((win) => {
-    win.webContents.send('updater-event', { event, data } as UpdaterEvent);
+    win.webContents.send('updater-event', { event, data } satisfies UpdaterEvent);
   });
 }
 

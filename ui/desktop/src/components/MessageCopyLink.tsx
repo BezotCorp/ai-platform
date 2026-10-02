@@ -3,8 +3,12 @@
 import React, { useState } from 'react';
 import { Copy } from './icons';
 import { defineMessages, useIntl } from '../i18n';
+import type { NoMessageValues } from 'react-intl';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly "copied": NoMessageValues;
+  readonly "copy": NoMessageValues;
+}>({
   copied: {
     id: 'messageCopyLink.copied',
     defaultMessage: 'Copied!',

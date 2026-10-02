@@ -30,8 +30,51 @@ import { getPredefinedModelsFromEnv, shouldShowPredefinedModels } from '../prede
 import type { ProviderDetails, ProviderType, ThinkingEffort } from '../../../../types/providers';
 import { trackModelChanged } from '../../../../utils/analytics';
 import { addToRecentModels } from '../../../../utils/recentModels';
+import type { NoMessageValues } from 'react-intl';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly "thinkingEffortOff": NoMessageValues;
+  readonly "thinkingLevelLow": NoMessageValues;
+  readonly "thinkingLevelHigh": NoMessageValues;
+  readonly "claudeEffortLow": NoMessageValues;
+  readonly "claudeEffortMedium": NoMessageValues;
+  readonly "claudeEffortHigh": NoMessageValues;
+  readonly "claudeEffortMax": NoMessageValues;
+  readonly "selectModel": NoMessageValues;
+  readonly "selectProvider": NoMessageValues;
+  readonly "selectOrEnterModel": NoMessageValues;
+  readonly "title": NoMessageValues;
+  readonly "description": NoMessageValues;
+  readonly "chooseModel": NoMessageValues;
+  readonly "recommended": NoMessageValues;
+  readonly "thinkingLevel": NoMessageValues;
+  readonly "geminiOnly": NoMessageValues;
+  readonly "selectThinkingLevel": NoMessageValues;
+  readonly "useOtherProvider": NoMessageValues;
+  readonly "providerPlaceholder": NoMessageValues;
+  readonly "localModelsTitle": NoMessageValues;
+  readonly "localModelsDescription": NoMessageValues;
+  readonly "goToSettings": NoMessageValues;
+  readonly "couldNotContactProvider": NoMessageValues;
+  readonly "checkProviderConfig": NoMessageValues;
+  readonly "loadingModels": NoMessageValues;
+  readonly "selectModelPlaceholder": NoMessageValues;
+  readonly "customModelName": NoMessageValues;
+  readonly "backToModelList": NoMessageValues;
+  readonly "typeModelName": NoMessageValues;
+  readonly "extendedThinking": NoMessageValues;
+  readonly "selectThinkingMode": NoMessageValues;
+  readonly "thinkingEffort": NoMessageValues;
+  readonly "selectEffortLevel": NoMessageValues;
+  readonly "thinkingBudget": NoMessageValues;
+  readonly "quickStartGuide": NoMessageValues;
+  readonly "cancel": NoMessageValues;
+  readonly "selectModelButton": NoMessageValues;
+  readonly "enterModelNotListed": NoMessageValues;
+  readonly "claudeAdaptive": NoMessageValues;
+  readonly "claudeEnabled": NoMessageValues;
+  readonly "claudeDisabled": NoMessageValues;
+}>({
   thinkingEffortOff: {
     id: 'switchModelModal.thinkingEffortOff',
     defaultMessage: 'Off - No extended thinking',

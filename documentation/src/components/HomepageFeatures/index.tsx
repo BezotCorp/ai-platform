@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import clsx from "clsx";
-import Heading from "@theme/Heading";
+import Heading from "~/components/Heading";
 import styles from "./styles.module.css";
 
 type FeatureItem = {
@@ -19,7 +19,7 @@ type FeatureQuote = {
 const FeatureList: FeatureItem[] = [
   {
     title: "Open Source",
-    Svg: require("@site/static/img/lock-unlocked-fill.svg").default,
+    Svg: "/img/lock-unlocked-fill.svg",
     description: (
       <>
         Built with transparency and collaboration in mind, goose empowers
@@ -29,7 +29,7 @@ const FeatureList: FeatureItem[] = [
   },
   {
     title: "Runs Locally",
-    Svg: require("@site/static/img/category-moving.svg").default,
+    Svg: "/img/category-moving.svg",
     description: (
       <>
         Goose runs locally to execute tasks efficiently, keeping control in your
@@ -39,7 +39,7 @@ const FeatureList: FeatureItem[] = [
   },
   {
     title: "Extensible",
-    Svg: require("@site/static/img/category-ETF.svg").default,
+    Svg: "/img/category-ETF.svg",
     description: (
       <>
         Customize goose with your preferred LLM and enhance its capabilities by connecting it to any
@@ -49,7 +49,7 @@ const FeatureList: FeatureItem[] = [
   },
   {
     title: "Autonomous",
-    Svg: require("@site/static/img/pay-in-four.svg").default,
+    Svg: "/img/pay-in-four.svg",
     description: (
       <>
         Goose independently handles complex tasks, from debugging to deployment,

@@ -1,15 +1,17 @@
 #!/usr/bin/env node
 
+import { fileURLToPath } from 'node:url';
+const moduleDir = path.dirname(fileURLToPath(import.meta.url));
 /**
  * Simple static file server for testing markdown exports locally.
  * Unlike `docusaurus serve`, this serves files as-is without routing logic.
  */
 
-const http = require('http');
-const serveStatic = require('serve-static');
-const path = require('path');
+import http from 'node:http';
+import serveStatic from 'serve-static';
+import path from 'node:path';
 
-const buildDir = path.join(__dirname, '..', 'build');
+const buildDir = path.join(moduleDir, '..', 'build');
 const port = process.env.PORT || 3001;
 
 const serve = serveStatic(buildDir, {
@@ -19,7 +21,7 @@ const serve = serveStatic(buildDir, {
     if (filePath.endsWith('.md')) {
       res.setHeader('Content-Type', 'text/plain; charset=utf-8');
     }
-  }
+  },
 });
 
 const server = http.createServer((req, res) => {

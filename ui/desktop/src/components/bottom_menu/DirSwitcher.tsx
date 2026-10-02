@@ -12,8 +12,20 @@ import {
 } from '../ui/dropdown-menu';
 import { toast } from 'react-toastify';
 import { defineMessages, useIntl } from '../../i18n';
+import type { NoMessageValues } from 'react-intl';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly "failedToUpdateWorkingDir": NoMessageValues;
+  readonly "currentDirectory": NoMessageValues;
+  readonly "gitWorktrees": NoMessageValues;
+  readonly "recentDirectories": NoMessageValues;
+  readonly "chooseDirectory": NoMessageValues;
+  readonly "openInFinder": NoMessageValues;
+  readonly "noWorktreesFound": NoMessageValues;
+  readonly "enterPath": NoMessageValues;
+  readonly "enterPathPlaceholder": NoMessageValues;
+  readonly "enterPathInvalid": NoMessageValues;
+}>({
   failedToUpdateWorkingDir: {
     id: 'dirSwitcher.failedToUpdateWorkingDir',
     defaultMessage: 'Failed to update working directory',

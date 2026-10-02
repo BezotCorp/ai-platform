@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { GitBranch, Check, Search } from 'lucide-react';
-import { toastError } from '../toasts';
+import { toastError } from '../toast_service';
 import { cn } from '../utils';
 import { defineMessages, useIntl } from '../i18n';
 import {
@@ -10,8 +10,14 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from './ui/dropdown-menu';
+import type { MessageValue, NoMessageValues } from 'react-intl';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly "noBranchesFound": NoMessageValues;
+  readonly "searchBranches": NoMessageValues;
+  readonly "failedToSwitch": { readonly "branch": MessageValue };
+  readonly "uncommittedChanges": NoMessageValues;
+}>({
   noBranchesFound: {
     id: 'gitBranchIndicator.noBranchesFound',
     defaultMessage: 'No branches found',

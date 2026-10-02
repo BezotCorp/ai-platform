@@ -1,17 +1,12 @@
-const fs = require('fs');
-const path = require('path');
+import fs from 'node:fs';
+import path from 'node:path';
 
-const ROOT = path.join(__dirname, '..', '..');
+import { fileURLToPath } from 'node:url';
+const moduleDir = path.dirname(fileURLToPath(import.meta.url));
+const ROOT = path.join(moduleDir, '..', '..');
 const SCHEMA_FILE = path.join(ROOT, 'crates', 'goose', 'acp-schema.json');
 const META_FILE = path.join(ROOT, 'crates', 'goose', 'acp-meta.json');
-const OUTPUT_FILE = path.join(
-  ROOT,
-  'documentation',
-  'docs',
-  'gdk',
-  'acp',
-  'reference.md'
-);
+const OUTPUT_FILE = path.join(ROOT, 'documentation', 'docs', 'gdk', 'acp', 'reference.md');
 const UNSUPPORTED_KEYWORDS = [
   'contains',
   'dependentSchemas',
@@ -52,9 +47,7 @@ function schemaCode(value) {
 
 function text(value, fallback = '') {
   const result = String(value ?? '').trim();
-  return result
-    ? result.replaceAll('|', '\\|').replaceAll('\r\n', '\n').replaceAll('\n', '<br />')
-    : fallback;
+  return result ? result.replaceAll('|', '\\|').replaceAll('\r\n', '\n').replaceAll('\n', '<br />') : fallback;
 }
 
 function literal(value) {
@@ -91,17 +84,9 @@ function schemaType(schema, inlineObject = false) {
     const structuralSiblings = Object.fromEntries(
       Object.entries(schema).filter(
         ([key]) =>
-          ![
-            '$ref',
-            'default',
-            'description',
-            'format',
-            'maximum',
-            'minimum',
-            'pattern',
-            'title',
-          ].includes(key) && !key.startsWith('x-')
-      )
+          !['$ref', 'default', 'description', 'format', 'maximum', 'minimum', 'pattern', 'title'].includes(key) &&
+          !key.startsWith('x-'),
+      ),
     );
     const reference = schemaLink(refName(schema.$ref));
     return Object.keys(structuralSiblings).length === 0
@@ -122,9 +107,7 @@ function schemaType(schema, inlineObject = false) {
   }
 
   if (Array.isArray(schema.type)) {
-    return schema.type
-      .map((type) => schemaType({...schema, type}, inlineObject))
-      .join(' \\| ');
+    return schema.type.map((type) => schemaType({ ...schema, type }, inlineObject)).join(' \\| ');
   }
 
   if (schema.type === 'array') {
@@ -139,8 +122,7 @@ function schemaType(schema, inlineObject = false) {
     if (schema.properties && inlineObject) {
       const required = new Set(schema.required ?? []);
       const fields = Object.entries(schema.properties).map(
-        ([name, property]) =>
-          `${code(name)}${required.has(name) ? '' : '?'}: ${schemaType(property, true)}`
+        ([name, property]) => `${code(name)}${required.has(name) ? '' : '?'}: ${schemaType(property, true)}`,
       );
       return `&#123; ${fields.join('; ')} &#125;`;
     }
@@ -153,8 +135,7 @@ function schemaType(schema, inlineObject = false) {
   if (typeof schema.type === 'string') return code(schema.type);
   if (
     Object.keys(schema).every(
-      (key) =>
-        key === 'default' || key === 'description' || key === 'title' || key.startsWith('x-')
+      (key) => key === 'default' || key === 'description' || key === 'title' || key.startsWith('x-'),
     )
   ) {
     return code('unknown');
@@ -177,15 +158,11 @@ function renderProperties(schema) {
   if (properties.length === 0) return '';
 
   const required = new Set(schema.required ?? []);
-  const rows = properties.map(([name, property]) =>
-    `| ${code(name)} | ${schemaType(property)} | ${required.has(name) ? 'Yes' : 'No'} | ${text(property.description, '—')} | ${constraints(property) || '—'} |`
+  const rows = properties.map(
+    ([name, property]) =>
+      `| ${code(name)} | ${schemaType(property)} | ${required.has(name) ? 'Yes' : 'No'} | ${text(property.description, '—')} | ${constraints(property) || '—'} |`,
   );
-  return [
-    '| Field | Type | Required | Description | Constraints |',
-    '|---|---|:---:|---|---|',
-    ...rows,
-    '',
-  ].join('\n');
+  return ['| Field | Type | Required | Description | Constraints |', '|---|---|:---:|---|---|', ...rows, ''].join('\n');
 }
 
 function renderMethods(entries, schemas, notification = false) {
@@ -206,9 +183,7 @@ function renderMethods(entries, schemas, notification = false) {
         ? `**Parameters:** ${schemaLink(inputType)}`
         : `**Request:** ${schemaLink(inputType)}<br />**Response:** ${schemaLink(entry.responseType)}`;
       const description = text(inputSchema.description);
-      const method = description
-        ? `${methodCode(entry.method)}<br />${description}`
-        : methodCode(entry.method);
+      const method = description ? `${methodCode(entry.method)}<br />${description}` : methodCode(entry.method);
       return `| ${method} | ${links} |`;
     });
 
@@ -271,25 +246,20 @@ function renderDocumentation(schemas, meta, gooseVersion = 'Preview') {
 function main() {
   const args = process.argv.slice(2);
   if (args.length !== 0 && args.length !== 3 && args.length !== 4) {
-    throw new Error(
-      'Usage: generate-acp-docs.js [schema-file meta-file output-file [goose-version]]'
-    );
+    throw new Error('Usage: generate-acp-docs.js [schema-file meta-file output-file [goose-version]]');
   }
 
-  const [
-    schemaFile = SCHEMA_FILE,
-    metaFile = META_FILE,
-    outputFile = OUTPUT_FILE,
-    gooseVersion = 'Preview',
-  ] = args;
+  const [schemaFile = SCHEMA_FILE, metaFile = META_FILE, outputFile = OUTPUT_FILE, gooseVersion = 'Preview'] = args;
   const schemas = JSON.parse(fs.readFileSync(schemaFile, 'utf8'));
   const meta = JSON.parse(fs.readFileSync(metaFile, 'utf8'));
   const output = renderDocumentation(schemas, meta, gooseVersion);
-  fs.mkdirSync(path.dirname(outputFile), {recursive: true});
+  fs.mkdirSync(path.dirname(outputFile), { recursive: true });
   fs.writeFileSync(outputFile, output);
   console.log(`[generate-acp-docs] Generated: ${outputFile}`);
 }
 
-if (require.main === module) main();
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  main();
+}
 
-module.exports = {renderDocumentation, schemaType};
+export { renderDocumentation, schemaType };

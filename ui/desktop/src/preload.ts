@@ -1,9 +1,16 @@
 import Electron, { contextBridge, ipcRenderer, webUtils } from 'electron';
 import { Recipe } from './recipe';
 import type { GooseApp } from './types/apps';
-import type { Settings, SettingKey } from './utils/settings';
-import { defaultSettings } from './utils/settings';
-import type { OpenExternalUrlResult } from './utils/urlSecurity';
+import { defaultSettings, type Settings } from './utils/settings';
+import type { OpenExternalUrlResult } from './utils/openExternalUrlResult';
+import { AppConfigAPI } from './app_config_api';
+import { ElectronAPI } from './electronApi';
+import { CreateChatWindowOptions } from './createChatWindowsOptions';
+import { NotificationData } from './notificationData';
+import { MessageBoxOptions } from './messageBoxOptions';
+import { SaveDialogOptions } from './saveDialogOptions';
+import { UpdaterEvent } from './updaterEvent';
+import { SettingKey } from './utils/settingKey';
 
 // Mapping from settings keys to their old localStorage keys for lazy migration
 const localStorageKeyMap: Partial<Record<SettingKey, string>> = {
@@ -14,182 +21,51 @@ const localStorageKeyMap: Partial<Record<SettingKey, string>> = {
   seenAnnouncementIds: 'seenAnnouncementIds',
 };
 
-// Parse localStorage value based on the setting key
+type LocalStorageParserMap = {
+  [K in SettingKey]?: (rawValue: string) => Settings[K] | null;
+};
+
+const localStorageParsers: LocalStorageParserMap = {
+  theme: (rawValue) => (rawValue === 'dark' || rawValue === 'light' ? rawValue : null),
+
+  useSystemTheme: (rawValue) => rawValue === 'true',
+
+  responseStyle: (rawValue) => rawValue,
+
+  showPricing: (rawValue) => rawValue === 'true',
+
+  seenAnnouncementIds: (rawValue) => {
+    const parsed: unknown = JSON.parse(rawValue);
+
+    if (
+      !Array.isArray(parsed) ||
+      !parsed.every((value): value is string => typeof value === 'string')
+    ) {
+      return null;
+    }
+
+    return parsed;
+  },
+};
+
 function parseLocalStorageValue<K extends SettingKey>(
   key: K,
   rawValue: string
 ): Settings[K] | null {
+  const parser = localStorageParsers[key];
+
+  if (!parser) {
+    return null;
+  }
+
   try {
-    switch (key) {
-      case 'theme':
-        return (rawValue === 'dark' || rawValue === 'light' ? rawValue : null) as Settings[K];
-      case 'useSystemTheme':
-        return (rawValue === 'true') as unknown as Settings[K];
-      case 'responseStyle':
-        return rawValue as Settings[K];
-      case 'showPricing':
-        return (rawValue === 'true') as unknown as Settings[K];
-      case 'seenAnnouncementIds':
-        return JSON.parse(rawValue) as Settings[K];
-      default:
-        return null;
-    }
+    return parser(rawValue);
   } catch {
     return null;
   }
 }
 
-interface NotificationData {
-  title: string;
-  body: string;
-}
-
-interface MessageBoxOptions {
-  type?: 'none' | 'info' | 'error' | 'question' | 'warning';
-  buttons?: string[];
-  defaultId?: number;
-  title?: string;
-  message: string;
-  detail?: string;
-}
-
-interface MessageBoxResponse {
-  response: number;
-  checkboxChecked?: boolean;
-}
-
-interface SaveDialogOptions {
-  title?: string;
-  defaultPath?: string;
-  buttonLabel?: string;
-  filters?: Array<{ name: string; extensions: string[] }>;
-  message?: string;
-  nameFieldLabel?: string;
-  showsTagField?: boolean;
-}
-
-interface SaveDialogResponse {
-  canceled: boolean;
-  filePath?: string;
-}
-
-interface FileResponse {
-  file: string;
-  filePath: string;
-  error: string | null;
-  found: boolean;
-}
-
 const config = JSON.parse(process.argv.find((arg) => arg.startsWith('{')) || '{}');
-
-interface UpdaterEvent {
-  event: string;
-  data?: unknown;
-}
-
-export interface CreateChatWindowOptions {
-  query?: string;
-  dir?: string;
-  version?: string;
-  resumeSessionId?: string;
-  viewType?: string;
-  recipeId?: string;
-}
-
-// Define the API types in a single place
-type ElectronAPI = {
-  platform: string;
-  arch: string;
-  reactReady: () => void;
-  getConfig: () => Record<string, unknown>;
-  hideWindow: () => void;
-  directoryChooser: () => Promise<Electron.OpenDialogReturnValue>;
-  createChatWindow: (options?: CreateChatWindowOptions) => void;
-  logInfo: (txt: string) => void;
-  showNotification: (data: NotificationData) => void;
-  showMessageBox: (options: MessageBoxOptions) => Promise<MessageBoxResponse>;
-  showSaveDialog: (options: SaveDialogOptions) => Promise<SaveDialogResponse>;
-  openInChrome: (url: string) => void;
-  reloadApp: () => void;
-  checkForOllama: () => Promise<boolean>;
-  selectFileOrDirectory: (defaultPath?: string) => Promise<string | null>;
-  selectImportSessionFile: () => Promise<{
-    filePath: string;
-    contents: string;
-    error?: string;
-  } | null>;
-  getBinaryPath: (binaryName: string) => Promise<string>;
-  selectRecipeFile: () => Promise<FileResponse | null>;
-  readGoosehints: () => Promise<FileResponse>;
-  writeGoosehints: (content: string) => Promise<boolean>;
-  writeFile: (directory: string, content: string) => Promise<boolean>;
-  ensureDirectory: (dirPath: string) => Promise<boolean>;
-  listFiles: (dirPath: string, extension?: string) => Promise<string[]>;
-  getAllowedExtensions: () => Promise<string[]>;
-  getPathForFile: (file: File) => string;
-  setMenuBarIcon: (show: boolean) => Promise<boolean>;
-  getMenuBarIconState: () => Promise<boolean>;
-  setDockIcon: (show: boolean) => Promise<boolean>;
-  getDockIconState: () => Promise<boolean>;
-  getSetting: <K extends SettingKey>(key: K) => Promise<Settings[K]>;
-  setSetting: <K extends SettingKey>(key: K, value: Settings[K]) => Promise<void>;
-  getSecretKey: () => Promise<string | null>;
-  getAcpUrl: () => Promise<string | null>;
-  setWakelock: (enable: boolean) => Promise<boolean>;
-  getWakelockState: () => Promise<boolean>;
-  setSpellcheck: (enable: boolean) => Promise<boolean>;
-  getSpellcheckState: () => Promise<boolean>;
-  openNotificationsSettings: () => Promise<boolean>;
-  isAnyWindowFocused: () => Promise<boolean>;
-  getIsFullScreen: () => Promise<boolean>;
-  onMouseBackButtonClicked: (callback: () => void) => void;
-  offMouseBackButtonClicked: (callback: () => void) => void;
-  on: (
-    channel: string,
-    callback: (event: Electron.IpcRendererEvent, ...args: unknown[]) => void
-  ) => void;
-  off: (
-    channel: string,
-    callback: (event: Electron.IpcRendererEvent, ...args: unknown[]) => void
-  ) => void;
-  emit: (channel: string, ...args: unknown[]) => void;
-  broadcastThemeChange: (themeData: {
-    mode: string;
-    useSystemTheme: boolean;
-    theme: string;
-    tokensUpdated?: boolean;
-  }) => void;
-  openExternal: (url: string) => Promise<OpenExternalUrlResult>;
-  // Update-related functions
-  getVersion: () => string;
-  checkForUpdates: () => Promise<{ updateInfo: unknown; error: string | null }>;
-  downloadUpdate: () => Promise<{ success: boolean; error: string | null }>;
-  installUpdate: () => void;
-  restartApp: () => void;
-  onUpdaterEvent: (callback: (event: UpdaterEvent) => void) => void;
-  getUpdateState: () => Promise<{ updateAvailable: boolean; latestVersion?: string } | null>;
-  isUsingGitHubFallback: () => Promise<boolean>;
-  getAutoDownloadDisabled: () => Promise<boolean>;
-  // Recipe warning functions
-  closeWindow: () => void;
-  hasAcceptedRecipeBefore: (recipe: Recipe) => Promise<boolean>;
-  recordRecipeHash: (recipe: Recipe) => Promise<boolean>;
-  openDirectoryInExplorer: (directoryPath: string) => Promise<boolean>;
-  launchApp: (app: GooseApp) => Promise<void>;
-  refreshApp: (app: GooseApp) => Promise<void>;
-  closeApp: (appName: string) => Promise<void>;
-  addRecentDir: (dir: string) => Promise<boolean>;
-  listRecentDirs: () => Promise<string[]>;
-  listGitWorktreeDirs: (dir: string) => Promise<string[]>;
-  getGitBranchInfo: (dir: string) => Promise<{ branch: string } | null>;
-  listGitBranches: (dir: string) => Promise<string[]>;
-  switchGitBranch: (dir: string, branch: string) => Promise<{ success: boolean; error?: string }>;
-};
-
-type AppConfigAPI = {
-  get: (key: string) => unknown;
-  getAll: () => Record<string, unknown>;
-};
 
 const electronAPI: ElectronAPI = {
   platform: process.platform,
@@ -314,7 +190,7 @@ const electronAPI: ElectronAPI = {
     return ipcRenderer.invoke('download-update');
   },
   installUpdate: (): void => {
-    ipcRenderer.invoke('install-update');
+    void ipcRenderer.invoke('install-update');
   },
   restartApp: (): void => {
     ipcRenderer.send('restart-app');

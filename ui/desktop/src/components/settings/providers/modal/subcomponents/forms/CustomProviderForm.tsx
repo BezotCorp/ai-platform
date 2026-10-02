@@ -9,8 +9,63 @@ import { Plus, X, Trash2, AlertTriangle, ExternalLink, Search, Settings } from '
 import { cn } from '../../../../../../utils';
 import ProviderCatalogPicker from '../ProviderCatalogPicker';
 import { defineMessages, useIntl } from '../../../../../../i18n';
+import type { MessageValue, NoMessageValues } from 'react-intl';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly "chooseSetup": NoMessageValues;
+  readonly "startFromTemplate": NoMessageValues;
+  readonly "startFromTemplateDesc": NoMessageValues;
+  readonly "configureManually": NoMessageValues;
+  readonly "configureManuallyDesc": NoMessageValues;
+  readonly "cancel": NoMessageValues;
+  readonly "back": NoMessageValues;
+  readonly "usingTemplate": { readonly "name": MessageValue };
+  readonly "docs": NoMessageValues;
+  readonly "clear": NoMessageValues;
+  readonly "providerType": NoMessageValues;
+  readonly "openaiCompatible": NoMessageValues;
+  readonly "anthropicCompatible": NoMessageValues;
+  readonly "ollamaCompatible": NoMessageValues;
+  readonly "displayName": NoMessageValues;
+  readonly "displayNamePlaceholder": NoMessageValues;
+  readonly "apiUrl": NoMessageValues;
+  readonly "apiUrlPlaceholder": NoMessageValues;
+  readonly "apiBasePath": NoMessageValues;
+  readonly "apiBasePathPlaceholder": NoMessageValues;
+  readonly "apiBasePathHint": NoMessageValues;
+  readonly "authentication": NoMessageValues;
+  readonly "authHint": NoMessageValues;
+  readonly "requiresApiKey": NoMessageValues;
+  readonly "apiKey": NoMessageValues;
+  readonly "apiKeyPlaceholderExisting": NoMessageValues;
+  readonly "apiKeyPlaceholderNew": NoMessageValues;
+  readonly "availableModels": NoMessageValues;
+  readonly "modelsPlaceholder": NoMessageValues;
+  readonly "toolCalling": NoMessageValues;
+  readonly "reasoning": NoMessageValues;
+  readonly "attachments": NoMessageValues;
+  readonly "supportsStreaming": NoMessageValues;
+  readonly "alwaysUseToolshim": NoMessageValues;
+  readonly "customHeaders": NoMessageValues;
+  readonly "customHeadersHint": NoMessageValues;
+  readonly "headerNamePlaceholder": NoMessageValues;
+  readonly "valuePlaceholder": NoMessageValues;
+  readonly "add": NoMessageValues;
+  readonly "headerBothRequired": NoMessageValues;
+  readonly "headerNoSpaces": NoMessageValues;
+  readonly "headerDuplicate": NoMessageValues;
+  readonly "displayNameRequired": NoMessageValues;
+  readonly "apiUrlRequired": NoMessageValues;
+  readonly "apiKeyRequired": NoMessageValues;
+  readonly "modelsRequired": NoMessageValues;
+  readonly "submitError": NoMessageValues;
+  readonly "cannotDeleteActive": NoMessageValues;
+  readonly "deleteConfirmation": NoMessageValues;
+  readonly "confirmDelete": NoMessageValues;
+  readonly "deleteProvider": NoMessageValues;
+  readonly "updateProvider": NoMessageValues;
+  readonly "createProvider": NoMessageValues;
+}>({
   chooseSetup: {
     id: 'customProviderForm.chooseSetup',
     defaultMessage: "Choose how you'd like to set up your provider.",

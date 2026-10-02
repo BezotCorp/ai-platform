@@ -5,8 +5,17 @@ import { defineMessages, useIntl } from '../../../i18n';
 import type { ProviderDetails } from '../../../types/providers';
 import { errorMessage } from '../../../utils/conversionUtils';
 import { Button } from '../../ui/button';
+import type { NoMessageValues } from 'react-intl';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly "adapterFound": NoMessageValues;
+  readonly "adapterNotFound": NoMessageValues;
+  readonly "connected": NoMessageValues;
+  readonly "connectionNotChecked": NoMessageValues;
+  readonly "authenticationHelp": NoMessageValues;
+  readonly "checkAgain": NoMessageValues;
+  readonly "checking": NoMessageValues;
+}>({
   adapterFound: {
     id: 'acpReadinessPanel.adapterFound',
     defaultMessage: 'ACP adapter found',

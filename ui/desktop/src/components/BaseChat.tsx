@@ -20,7 +20,6 @@ import { useChatSession } from '../hooks/useChatSession';
 import { acpUpdateWorkingDir } from '../acp/sessions';
 import { useNavigation } from '../hooks/useNavigation';
 import { RecipeHeader } from './RecipeHeader';
-import type { Recipe } from '../recipe';
 import RecipeActivities from './recipes/RecipeActivities';
 import {
   getTextAndImageContent,
@@ -34,13 +33,19 @@ import { Goose } from './icons';
 import EnvironmentBadge from './GooseSidebar/EnvironmentBadge';
 import SessionActionsHeader from './SessionActionsHeader';
 import { isAcpRecovering, subscribeToAcpRecovery } from '../acp/acpConnection';
-import type { LiveVoiceAvailabilityResponse_unstable } from '@aaif/goose-acp-client';
+import type { LiveVoiceAvailabilityResponseUnstable } from '@aaif/goose-acp-client';
 import { acpGetLiveVoiceAvailability } from '../acp/liveVoice';
 import type { LiveVoiceController } from '../liveVoice/useLiveVoice';
+import type { NoMessageValues } from 'react-intl';
 
 const NEW_LIVE_VOICE_GREETING = 'Hello! What can I help you with?';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly "failedToLoadSession": NoMessageValues;
+  readonly "goHome": NoMessageValues;
+  readonly "retry": NoMessageValues;
+  readonly "reconnecting": NoMessageValues;
+}>({
   failedToLoadSession: {
     id: 'baseChat.failedToLoadSession',
     defaultMessage: 'Failed to Load Session',
@@ -60,6 +65,18 @@ const i18n = defineMessages({
 });
 
 const isUserMessage = (message: Message) => message.role === 'user';
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+function isImageData(value: unknown): value is ImageData {
+  return (
+    isRecord(value) &&
+    typeof value.data === 'string' &&
+    typeof value.mimeType === 'string'
+  );
+}
 
 interface BaseChatProps {
   setChat: (chat: ChatType) => void;
@@ -98,7 +115,7 @@ export default function BaseChat({
   const [hasStartedUsingRecipe, setHasStartedUsingRecipe] = React.useState(false);
   const [acpRecovering, setAcpRecovering] = useState(isAcpRecovering);
   const [liveVoiceAvailability, setLiveVoiceAvailability] =
-    useState<LiveVoiceAvailabilityResponse_unstable | null>(null);
+    useState<LiveVoiceAvailabilityResponseUnstable | null>(null);
   const isMobile = useIsMobile();
   const navContext = useNavigationContextSafe();
   const setView = useNavigation();
@@ -193,9 +210,13 @@ export default function BaseChat({
       void startLiveVoice(NEW_LIVE_VOICE_GREETING);
     }
 
-    navigate(location, {
-      replace: true,
-      state: { ...location.state, startLiveVoice: undefined },
+    void Promise.resolve(
+      navigate(location, {
+        replace: true,
+        state: { ...location.state, startLiveVoice: undefined },
+      })
+    ).catch((error) => {
+      console.error('Failed to clear live voice navigation state:', error);
     });
   }, [
     isActiveSession,
@@ -209,7 +230,7 @@ export default function BaseChat({
   useEffect(() => {
     if (!isActiveSession || !sessionLoaded || acpRecovering || liveVoiceActiveInAnotherSession) {
       setLiveVoiceAvailability(null);
-      return;
+      return undefined;
     }
 
     let current = true;
@@ -252,7 +273,7 @@ export default function BaseChat({
     [session, updateSession]
   );
 
-  const recipe = session?.recipe as Recipe | null | undefined;
+  const recipe = session?.recipe;
 
   const resolvedInitialMessage = useMemo((): UserInput | undefined => {
     if (!initialMessage) return undefined;
@@ -325,7 +346,7 @@ export default function BaseChat({
     if (recipe && input.msg.trim()) {
       setHasStartedUsingRecipe(true);
     }
-    handleSubmit(input);
+    void handleSubmit(input);
   };
 
   const sessionModel = session?.model_config?.model_name ?? null;
@@ -395,14 +416,30 @@ export default function BaseChat({
 
   useEffect(() => {
     const handleSessionForked = (event: Event) => {
-      const customEvent = event as CustomEvent<{
-        newSessionId: string;
-        shouldStartAgent: boolean;
-        editedMessage: string;
-        editedImages: ImageData[];
-      }>;
+      if (!(event instanceof CustomEvent)) {
+        return;
+      }
+
+      const detail: unknown = event.detail;
+      if (
+        !isRecord(detail) ||
+        typeof detail.newSessionId !== 'string' ||
+        typeof detail.shouldStartAgent !== 'boolean' ||
+        typeof detail.editedMessage !== 'string' ||
+        !Array.isArray(detail.editedImages) ||
+        !detail.editedImages.every(isImageData)
+      ) {
+        return;
+      }
+
       window.dispatchEvent(new CustomEvent(AppEvents.SESSION_CREATED));
-      const { newSessionId, shouldStartAgent, editedMessage, editedImages } = customEvent.detail;
+
+      const {
+        newSessionId,
+        shouldStartAgent,
+        editedMessage,
+        editedImages,
+      } = detail;
 
       const params = new URLSearchParams();
       params.set('resumeSessionId', newSessionId);
@@ -410,11 +447,15 @@ export default function BaseChat({
         params.set('shouldStartAgent', 'true');
       }
 
-      navigate(`/pair?${params.toString()}`, {
-        state: {
-          disableAnimation: true,
-          initialMessage: { msg: editedMessage, images: editedImages },
-        },
+      void Promise.resolve(
+        navigate(`/pair?${params.toString()}`, {
+          state: {
+            disableAnimation: true,
+            initialMessage: { msg: editedMessage, images: editedImages },
+          },
+        })
+      ).catch((error) => {
+        console.error('Failed to navigate to forked session:', error);
       });
     };
 

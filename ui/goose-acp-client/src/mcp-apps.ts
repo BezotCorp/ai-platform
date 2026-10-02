@@ -1,16 +1,13 @@
-import { RESOURCE_MIME_TYPE } from "@modelcontextprotocol/ext-apps/app-bridge";
-import type {
-  McpUiAppResourceConfig,
-  McpUiAppToolConfig,
-} from "@modelcontextprotocol/ext-apps/server";
+import { RESOURCE_MIME_TYPE } from '@modelcontextprotocol/ext-apps/app-bridge';
+import type { McpUiAppResourceConfig, McpUiAppToolConfig } from '@modelcontextprotocol/ext-apps/server';
 import type {
   BlobResourceContents,
   ReadResourceResult,
   TextResourceContents,
   Tool,
-} from "@modelcontextprotocol/sdk/types.js";
+} from '@modelcontextprotocol/sdk/types.js';
 
-export const GOOSE_MCP_UI_EXTENSION_ID = "io.modelcontextprotocol/ui" as const;
+export const GOOSE_MCP_UI_EXTENSION_ID = 'io.modelcontextprotocol/ui' as const;
 
 export interface GooseMcpUiExtensionSettings {
   mimeTypes: string[];
@@ -20,12 +17,9 @@ export interface GooseMcpHostCapabilities {
   extensions: Record<string, GooseMcpUiExtensionSettings>;
 }
 
-export type GooseToolUiMetadata = Extract<
-  McpUiAppToolConfig["_meta"],
-  { ui: unknown }
->["ui"];
+export type GooseToolUiMetadata = Extract<McpUiAppToolConfig['_meta'], { ui: unknown }>['ui'];
 
-export type GooseToolMetadata = NonNullable<Tool["_meta"]> & {
+export type GooseToolMetadata = NonNullable<Tool['_meta']> & {
   ui?: GooseToolUiMetadata;
   goose_extension?: string;
 };
@@ -44,7 +38,7 @@ export type GooseResourceContents = TextResourceContents | BlobResourceContents;
 export type GooseReadResourceResult = ReadResourceResult;
 
 export type GooseResourceMetadata = NonNullable<
-  Extract<NonNullable<McpUiAppResourceConfig["_meta"]>, { ui?: unknown }>["ui"]
+  Extract<NonNullable<McpUiAppResourceConfig['_meta']>, { ui?: unknown }>['ui']
 >;
 
 export interface GooseMcpAppToolPayload {

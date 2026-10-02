@@ -10,8 +10,14 @@ import {
 import type { ProviderDetails } from '../../../types/providers';
 import { createNavigationHandler } from '../../../utils/navigationUtils';
 import { defineMessages, useIntl } from '../../../i18n';
+import type { NoMessageValues } from 'react-intl';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly "otherProviders": NoMessageValues;
+  readonly "configurationSettings": NoMessageValues;
+  readonly "onboardingDescription": NoMessageValues;
+  readonly "loadingProviders": NoMessageValues;
+}>({
   otherProviders: {
     id: 'providerSettings.otherProviders',
     defaultMessage: 'Other providers',

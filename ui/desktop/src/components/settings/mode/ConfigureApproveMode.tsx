@@ -3,8 +3,19 @@ import { Card } from '../../ui/card';
 import { Button } from '../../ui/button';
 import { GooseMode, ModeSelectionItem } from './ModeSelectionItem';
 import { defineMessages, useIntl } from '../../../i18n';
+import type { NoMessageValues } from 'react-intl';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly "title": NoMessageValues;
+  readonly "description": NoMessageValues;
+  readonly "manualApproval": NoMessageValues;
+  readonly "manualApprovalDescription": NoMessageValues;
+  readonly "smartApproval": NoMessageValues;
+  readonly "smartApprovalDescription": NoMessageValues;
+  readonly "saving": NoMessageValues;
+  readonly "save": NoMessageValues;
+  readonly "cancel": NoMessageValues;
+}>({
   title: {
     id: 'configureApproveMode.title',
     defaultMessage: 'Configure approve mode',

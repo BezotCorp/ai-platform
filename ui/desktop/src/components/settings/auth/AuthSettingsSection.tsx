@@ -13,8 +13,30 @@ import { Button } from '../../ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../ui/card';
 import { ConfirmationModal } from '../../ui/ConfirmationModal';
 import { defineMessages, useIntl } from '../../../i18n';
+import type { MessageValue, NoMessageValues } from 'react-intl';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly "title": NoMessageValues;
+  readonly "description": NoMessageValues;
+  readonly "loading": NoMessageValues;
+  readonly "empty": NoMessageValues;
+  readonly "failedToLoad": NoMessageValues;
+  readonly "deleteTitle": NoMessageValues;
+  readonly "deleteMessage": { readonly "name": MessageValue; readonly "provider": MessageValue };
+  readonly "activeProviderWarning": NoMessageValues;
+  readonly "delete": NoMessageValues;
+  readonly "cancel": NoMessageValues;
+  readonly "deleted": NoMessageValues;
+  readonly "failedToDelete": { readonly "error": MessageValue };
+  readonly "storageSecretStore": NoMessageValues;
+  readonly "storageProviderCache": NoMessageValues;
+  readonly "expiresAt": { readonly "date": MessageValue };
+  readonly "deleteCredential": NoMessageValues;
+  readonly "signIn": NoMessageValues;
+  readonly "reauthorize": NoMessageValues;
+  readonly "signedIn": NoMessageValues;
+  readonly "failedToConfigure": { readonly "error": MessageValue };
+}>({
   title: {
     id: 'authSettings.title',
     defaultMessage: 'Provider Credentials',

@@ -4,8 +4,14 @@ import type { ExtensionConfig } from '../../../../types/extensions';
 import { FixedExtensionEntry } from '../../../ConfigContext';
 import { combineCmdAndArgs } from '../utils';
 import { defineMessages, useIntl } from '../../../../i18n';
+import type { MessageValue, NoMessageValues } from 'react-intl';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly "defaultExtensions": { readonly "count": MessageValue };
+  readonly "availableExtensions": { readonly "count": MessageValue };
+  readonly "noExtensions": NoMessageValues;
+  readonly "builtInExtension": NoMessageValues;
+}>({
   defaultExtensions: {
     id: 'extensionList.defaultExtensions',
     defaultMessage: 'Default Extensions ({count})',

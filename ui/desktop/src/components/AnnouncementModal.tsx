@@ -6,8 +6,11 @@ import packageJson from '../../package.json';
 import { getAnnouncementContent } from '../../announcements/content';
 import { Button } from './ui/button';
 import { defineMessages, useIntl } from '../i18n';
+import type { NoMessageValues } from 'react-intl';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly gotIt: NoMessageValues;
+}>({
   gotIt: {
     id: 'announcementModal.gotIt',
     defaultMessage: 'Got it!',
@@ -24,14 +27,15 @@ interface AnnouncementMeta {
 // Simple version comparison function for semantic versioning (x.y.z)
 // Returns: -1 if a < b, 0 if a === b, 1 if a > b
 function compareVersions(a: string, b: string): number {
-  const parseVersion = (version: string) => version.split('.').map((part) => parseInt(part, 10));
+  const parseVersion = (version: string): number[] =>
+    version.split('.').map((part: string): number => parseInt(part, 10));
 
-  const versionA = parseVersion(a);
-  const versionB = parseVersion(b);
+  const versionA: number[] = parseVersion(a);
+  const versionB: number[] = parseVersion(b);
 
   for (let i = 0; i < Math.max(versionA.length, versionB.length); i++) {
-    const partA = versionA[i] || 0;
-    const partB = versionB[i] || 0;
+    const partA: number = versionA[i] || 0;
+    const partB: number = versionB[i] || 0;
 
     if (partA < partB) return -1;
     if (partA > partB) return 1;
@@ -40,9 +44,9 @@ function compareVersions(a: string, b: string): number {
   return 0;
 }
 
-export default function AnnouncementModal() {
+export default function AnnouncementModal(): React.JSX.Element | null {
   const intl = useIntl();
-  const [showAnnouncementModal, setShowAnnouncementModal] = useState(false);
+  const [showAnnouncementModal, setShowAnnouncementModal] = useState<boolean>(false);
   const [combinedAnnouncementContent, setCombinedAnnouncementContent] = useState<string | null>(
     null
   );
@@ -50,7 +54,7 @@ export default function AnnouncementModal() {
 
   // Load announcements and check for unseen ones
   useEffect(() => {
-    const loadAnnouncements = async () => {
+    const loadAnnouncements = async (): Promise<void> => {
       // Only proceed if announcements are enabled
       if (!ANNOUNCEMENTS_ENABLED) {
         return;
@@ -58,44 +62,72 @@ export default function AnnouncementModal() {
 
       try {
         // Load the announcements index
-        const indexModule = await import('../../announcements/index.json');
-        const announcements = indexModule.default as AnnouncementMeta[];
+        const indexModule: { default: AnnouncementMeta[] } =
+          await import('../../announcements/index.json');
+        const announcements: AnnouncementMeta[] = indexModule.default;
 
         // Get current app version
-        const currentVersion = packageJson.version;
+        const currentVersion: string = packageJson.version;
 
         // Filter announcements to only include those for current version or earlier
-        const applicableAnnouncements = announcements.filter((announcement) => {
-          // Simple version comparison - assumes semantic versioning
-          const announcementVersion = announcement.version;
-          return compareVersions(announcementVersion, currentVersion) <= 0;
-        });
+        const applicableAnnouncements: AnnouncementMeta[] = announcements.filter(
+          (announcement: AnnouncementMeta): boolean => {
+            // Simple version comparison - assumes semantic versioning
+            const announcementVersion: string = announcement.version;
+            return compareVersions(announcementVersion, currentVersion) <= 0;
+          }
+        );
 
         // Get list of seen announcement IDs
-        const seenAnnouncementIds = await window.electron.getSetting('seenAnnouncementIds');
+        const seenAnnouncementIds: string[] =
+          await window.electron.getSetting('seenAnnouncementIds');
 
         // Find ALL unseen announcements (in order)
-        const unseenAnnouncementsList = applicableAnnouncements.filter(
-          (announcement) => !seenAnnouncementIds.includes(announcement.id)
+        const unseenAnnouncementsList: AnnouncementMeta[] = applicableAnnouncements.filter(
+          (announcement: AnnouncementMeta): boolean =>
+            !seenAnnouncementIds.includes(announcement.id)
         );
 
         if (unseenAnnouncementsList.length > 0) {
           // Load content for all unseen announcements
-          const contentPromises = unseenAnnouncementsList.map(async (announcement) => {
-            const content = getAnnouncementContent(announcement.file);
+          const contentPromises: Array<
+            Promise<{ announcement: AnnouncementMeta; content: string | null }>
+          > = unseenAnnouncementsList.map(async (announcement: AnnouncementMeta) => {
+            const content: string | null = getAnnouncementContent(announcement.file);
             return { announcement, content };
           });
 
-          const loadedAnnouncements = await Promise.all(contentPromises);
-          const validAnnouncements = loadedAnnouncements.filter(({ content }) => content);
+          const loadedAnnouncements: Array<{
+            announcement: AnnouncementMeta;
+            content: string | null;
+          }> = await Promise.all(contentPromises);
+          const validAnnouncements: Array<{
+            announcement: AnnouncementMeta;
+            content: string | null;
+          }> = loadedAnnouncements.filter(
+            ({ content }: { announcement: AnnouncementMeta; content: string | null }): boolean =>
+              Boolean(content)
+          );
 
           if (validAnnouncements.length > 0) {
             // Combine all announcement content with separators
-            const combinedContent = validAnnouncements
-              .map(({ content }) => content)
+            const combinedContent: string = validAnnouncements
+              .map(
+                ({ content }: { announcement: AnnouncementMeta; content: string | null }): string =>
+                  content ?? ''
+              )
               .join('\n\n---\n\n');
 
-            setUnseenAnnouncements(validAnnouncements.map(({ announcement }) => announcement));
+            setUnseenAnnouncements(
+              validAnnouncements.map(
+                ({
+                  announcement,
+                }: {
+                  announcement: AnnouncementMeta;
+                  content: string | null;
+                }): AnnouncementMeta => announcement
+              )
+            );
             setCombinedAnnouncementContent(combinedContent);
             setShowAnnouncementModal(true);
           }
@@ -105,18 +137,18 @@ export default function AnnouncementModal() {
       }
     };
 
-    loadAnnouncements();
+    void loadAnnouncements();
   }, []);
 
-  const handleCloseAnnouncement = async () => {
+  const handleCloseAnnouncement = async (): Promise<void> => {
     if (unseenAnnouncements.length === 0) return;
 
     // Get existing seen announcement IDs
-    const seenAnnouncementIds = await window.electron.getSetting('seenAnnouncementIds');
+    const seenAnnouncementIds: string[] = await window.electron.getSetting('seenAnnouncementIds');
 
     // Add all unseen announcement IDs to the seen list
-    const newSeenIds = [...seenAnnouncementIds];
-    unseenAnnouncements.forEach((announcement) => {
+    const newSeenIds: string[] = [...seenAnnouncementIds];
+    unseenAnnouncements.forEach((announcement: AnnouncementMeta): void => {
       if (!newSeenIds.includes(announcement.id)) {
         newSeenIds.push(announcement.id);
       }

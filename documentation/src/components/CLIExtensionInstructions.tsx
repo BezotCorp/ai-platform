@@ -1,6 +1,6 @@
 import React from 'react';
-import CodeBlock from '@theme/CodeBlock';
-import Admonition from '@theme/Admonition';
+import CodeBlock from "~/components/CodeBlock";
+import Admonition from "~/components/Admonition";
 
 interface EnvVar {
   key: string;
@@ -79,7 +79,7 @@ ${
       <ol start={3}>
         <li>Give your extension a name.</li>
       </ol>
-      <CodeBlock language="sh">{`┌   goose-configure 
+      <CodeBlock language="sh">{`┌   goose-configure
 │
 ◇  What would you like to configure?
 │  Add Extension
@@ -106,10 +106,10 @@ ${
               <br />
             </>
           )}
-          <CodeBlock language="sh">{`┌   goose-configure 
+          <CodeBlock language="sh">{`┌   goose-configure
 │
 ◇  What would you like to configure?
-│  Add Extension 
+│  Add Extension
 │
 ◇  What type of extension would you like to add?
 │  Remote Extension (Streamable HTTP)
@@ -136,13 +136,13 @@ ${
               <br />
             </>
           )}
-          <CodeBlock language="sh">{`┌   goose-configure 
+          <CodeBlock language="sh">{`┌   goose-configure
 │
 ◇  What would you like to configure?
 │  Add Extension
 │
 ◇  What type of extension would you like to add?
-│  Command-line Extension 
+│  Command-line Extension
 │
 ◇  What would you like to call this extension?
 │  ${name}
@@ -161,7 +161,7 @@ ${
           <code>300</code> seconds.
         </li>
       </ol>
-      <CodeBlock language="sh">{`┌   goose-configure 
+      <CodeBlock language="sh">{`┌   goose-configure
 │
 ◇  What would you like to configure?
 │  Add Extension
@@ -186,7 +186,7 @@ ${
       <ol start={6}>
         <li>Enter a description for this extension.</li>
       </ol>
-      <CodeBlock language="sh">{`┌   goose-configure 
+      <CodeBlock language="sh">{`┌   goose-configure
 │
 ◇  What would you like to configure?
 │  Add Extension
@@ -225,10 +225,10 @@ ${
       </ol>
 
       {!hasEnvVars && (
-        <CodeBlock language="sh">{`┌   goose-configure 
+        <CodeBlock language="sh">{`┌   goose-configure
 │
 ◇  What would you like to configure?
-│  Add Extension 
+│  Add Extension
 │
 ◇  What type of extension would you like to add?
 │  ${isHttp ? 'Remote Extension (Streamable HTTP)' : 'Command-line Extension'}
@@ -266,7 +266,7 @@ ${
             </>
           )}
 
-          <CodeBlock language="sh">{`┌   goose-configure 
+          <CodeBlock language="sh">{`┌   goose-configure
 │
 ◇  What would you like to configure?
 │  Add Extension

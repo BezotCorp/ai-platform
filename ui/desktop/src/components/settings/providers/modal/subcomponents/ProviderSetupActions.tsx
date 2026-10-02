@@ -3,8 +3,18 @@ import { Button } from '../../../../ui/button';
 import { Trash2, AlertTriangle } from 'lucide-react';
 import type { ConfigKey } from '../../../../../types/providers';
 import { defineMessages, useIntl } from '../../../../../i18n';
+import type { MessageValue, NoMessageValues } from 'react-intl';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly "cannotDeleteActive": { readonly "providerName": MessageValue };
+  readonly "ok": NoMessageValues;
+  readonly "confirmDeleteMessage": { readonly "providerName": MessageValue };
+  readonly "confirmDelete": NoMessageValues;
+  readonly "cancel": NoMessageValues;
+  readonly "deleteProvider": NoMessageValues;
+  readonly "submit": NoMessageValues;
+  readonly "enableProvider": NoMessageValues;
+}>({
   cannotDeleteActive: {
     id: 'providerSetupActions.cannotDeleteActive',
     defaultMessage:

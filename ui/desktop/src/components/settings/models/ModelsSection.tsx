@@ -1,15 +1,20 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
+import type { JSX } from 'react';
 import { View } from '../../../utils/navigationUtils';
 import ModelSettingsButtons from './subcomponents/ModelSettingsButtons';
 import { acpGetProviderDetails, acpReadDefaults } from '../../../acp/providers';
 import { modelAndProviderMessages, useModelAndProvider } from '../../ModelAndProviderContext';
-import { toastError } from '../../../toasts';
+import { toastError } from '../../../toast_service';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../ui/card';
 import ResetProviderSection from '../reset_provider/ResetProviderSection';
 import { defineMessages, useIntl } from '../../../i18n';
+import type { NoMessageValues } from 'react-intl';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly resetTitle: NoMessageValues;
+  readonly resetDescription: NoMessageValues;
+}>({
   resetTitle: {
     id: 'modelsSection.resetTitle',
     defaultMessage: 'Reset Provider and Model',
@@ -24,8 +29,8 @@ interface ModelsSectionProps {
   setView: (view: View) => void;
 }
 
-export default function ModelsSection({ setView }: ModelsSectionProps) {
-  const intl = useIntl();
+export default function ModelsSection({ setView }: ModelsSectionProps): JSX.Element {
+  const intl: ReturnType<typeof useIntl> = useIntl();
   const [provider, setProvider] = useState<string | null>(null);
   const [displayModelName, setDisplayModelName] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -36,16 +41,16 @@ export default function ModelsSection({ setView }: ModelsSectionProps) {
     currentProvider,
   } = useModelAndProvider();
 
-  const loadModelData = useCallback(async () => {
+  const loadModelData = useCallback(async (): Promise<void> => {
     try {
       setIsLoading(true);
 
       // Get display name (alias if available, otherwise model name)
-      const modelDisplayName = await getCurrentModelDisplayName();
+      const modelDisplayName: string = await getCurrentModelDisplayName();
       setDisplayModelName(modelDisplayName);
 
       // Get provider display name (subtext if available from predefined models, otherwise provider metadata)
-      const providerDisplayName = await getCurrentProviderDisplayName();
+      const providerDisplayName: string | null = await getCurrentProviderDisplayName();
       if (providerDisplayName) {
         setProvider(providerDisplayName);
       } else {
@@ -74,7 +79,9 @@ export default function ModelsSection({ setView }: ModelsSectionProps) {
   }, [getCurrentModelDisplayName, getCurrentProviderDisplayName, intl]);
 
   useEffect(() => {
-    loadModelData();
+    queueMicrotask((): void => {
+      void loadModelData();
+    });
   }, [loadModelData]);
 
   // Update display when model or provider changes - but only if they actually changed
@@ -89,7 +96,7 @@ export default function ModelsSection({ setView }: ModelsSectionProps) {
     ) {
       prevModelRef.current = currentModel;
       prevProviderRef.current = currentProvider;
-      loadModelData();
+      void loadModelData();
     }
   }, [currentModel, currentProvider, loadModelData]);
 

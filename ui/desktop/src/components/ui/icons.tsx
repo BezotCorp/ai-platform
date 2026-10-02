@@ -1,4 +1,4 @@
-export const GPSIcon = ({ size = 16 }: { size: number }) => {
+export const GPSIcon = ({ size = 16 }: { size?: number }) => {
   return (
     <svg
       height={size}

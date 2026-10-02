@@ -9,8 +9,15 @@ import {
 } from '../utils/analytics';
 import PrivacyInfoModal from './onboarding/PrivacyInfoModal';
 import { defineMessages, useIntl } from '../i18n';
+import type { NoMessageValues } from 'react-intl';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly heading: NoMessageValues;
+  readonly description: NoMessageValues;
+  readonly learnMore: NoMessageValues;
+  readonly optIn: NoMessageValues;
+  readonly optOut: NoMessageValues;
+}>({
   heading: {
     id: 'telemetryConsentPrompt.heading',
     defaultMessage: 'Help improve goose',
@@ -36,22 +43,22 @@ const i18n = defineMessages({
 
 const TELEMETRY_CONFIG_KEY = 'GOOSE_TELEMETRY_ENABLED';
 
-export default function TelemetryConsentPrompt() {
+export default function TelemetryConsentPrompt(): React.JSX.Element | null {
   const intl = useIntl();
   const { read, upsert } = useConfig();
-  const [showPrompt, setShowPrompt] = useState(false);
-  const [showPrivacyInfo, setShowPrivacyInfo] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showPrompt, setShowPrompt] = useState<boolean>(false);
+  const [showPrivacyInfo, setShowPrivacyInfo] = useState<boolean>(false);
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
   useEffect(() => {
     if (!TELEMETRY_UI_ENABLED) return;
 
-    (async () => {
+    void (async (): Promise<void> => {
       try {
-        const provider = await read('GOOSE_PROVIDER', false);
+        const provider: unknown = await read('GOOSE_PROVIDER', false);
         if (!provider || provider === '') return;
 
-        const telemetryValue = await read(TELEMETRY_CONFIG_KEY, false);
+        const telemetryValue: unknown = await read(TELEMETRY_CONFIG_KEY, false);
         if (telemetryValue === null) {
           setShowPrompt(true);
         }
@@ -61,7 +68,7 @@ export default function TelemetryConsentPrompt() {
     })();
   }, [read]);
 
-  const handleChoice = async (enabled: boolean) => {
+  const handleChoice = async (enabled: boolean): Promise<void> => {
     setIsSubmitting(true);
     try {
       await upsert(TELEMETRY_CONFIG_KEY, enabled, false);
@@ -81,7 +88,7 @@ export default function TelemetryConsentPrompt() {
     <>
       <Dialog
         open
-        onOpenChange={(open) => {
+        onOpenChange={(open: boolean): void => {
           if (!open) setShowPrompt(false);
         }}
       >
@@ -92,7 +99,7 @@ export default function TelemetryConsentPrompt() {
           <p className="text-text-muted text-sm">
             {intl.formatMessage(i18n.description)}{' '}
             <button
-              onClick={() => setShowPrivacyInfo(true)}
+              onClick={(): void => setShowPrivacyInfo(true)}
               className="text-blue-600 dark:text-blue-400 hover:underline"
             >
               {intl.formatMessage(i18n.learnMore)}
@@ -101,7 +108,9 @@ export default function TelemetryConsentPrompt() {
           <DialogFooter className="flex flex-col gap-2 sm:flex-col">
             <Button
               autoFocus
-              onClick={() => handleChoice(true)}
+              onClick={(): void => {
+                void handleChoice(true);
+              }}
               disabled={isSubmitting}
               className="w-full"
             >
@@ -109,7 +118,9 @@ export default function TelemetryConsentPrompt() {
             </Button>
             <Button
               variant="ghost"
-              onClick={() => handleChoice(false)}
+              onClick={(): void => {
+                void handleChoice(false);
+              }}
               disabled={isSubmitting}
               className="w-full text-text-secondary hover:text-text-primary"
             >

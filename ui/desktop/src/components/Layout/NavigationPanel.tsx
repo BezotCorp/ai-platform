@@ -18,8 +18,9 @@ import { acpRenameSession, type SessionListItem } from '../../acp/sessions';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/Tooltip';
 import { formatMessageTimestamp } from '../../utils/timeUtils';
 import { cn } from '../../utils';
-import type { ProjectGroup } from '../../utils/projectSessions';
+import type { ProjectGroup } from '../../utils/projectGroup';
 import { defineMessages, useIntl } from '../../i18n';
+import type { NoMessageValues } from 'react-intl';
 
 type StreamState = 'idle' | 'loading' | 'streaming' | 'error';
 
@@ -28,7 +29,22 @@ interface SessionStatus {
   hasUnreadActivity: boolean;
 }
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly "chats": NoMessageValues;
+  readonly "noChats": NoMessageValues;
+  readonly "loadingChats": NoMessageValues;
+  readonly "untitledSession": NoMessageValues;
+  readonly "metaModel": NoMessageValues;
+  readonly "metaDirectory": NoMessageValues;
+  readonly "metaStatus": NoMessageValues;
+  readonly "metaCreated": NoMessageValues;
+  readonly "metaUpdated": NoMessageValues;
+  readonly "statusStreaming": NoMessageValues;
+  readonly "statusError": NoMessageValues;
+  readonly "statusUnread": NoMessageValues;
+  readonly "statusIdle": NoMessageValues;
+  readonly "returnToActiveLiveVoice": NoMessageValues;
+}>({
   chats: {
     id: 'navigationPanel.chats',
     defaultMessage: 'Chats',
@@ -275,7 +291,29 @@ export const Navigation: React.FC<{
 
   useEffect(() => {
     const handleStatusUpdate = (event: Event) => {
-      const { sessionId, streamState } = (event as CustomEvent).detail;
+      if (!(event instanceof CustomEvent)) {
+        return;
+      }
+
+      const detail: unknown = event.detail;
+      if (
+        typeof detail !== 'object' ||
+        detail === null ||
+        !('sessionId' in detail) ||
+        typeof detail.sessionId !== 'string' ||
+        !('streamState' in detail) ||
+        !(
+          detail.streamState === 'idle' ||
+          detail.streamState === 'loading' ||
+          detail.streamState === 'streaming' ||
+          detail.streamState === 'error'
+        )
+      ) {
+        return;
+      }
+
+      const { sessionId, streamState } = detail;
+
       setSessionStatuses((prev) => {
         const existing = prev.get(sessionId);
         const shouldMarkUnread = existing?.streamState === 'streaming' && streamState === 'idle';
@@ -308,7 +346,9 @@ export const Navigation: React.FC<{
 
   useEffect(() => {
     if (isNavExpanded) {
-      fetchSessions();
+      void fetchSessions().catch((error) => {
+        console.error('Failed to fetch navigation sessions:', error);
+      });
       requestAnimationFrame(() => navFocusRef.current?.focus());
     }
   }, [isNavExpanded, fetchSessions]);

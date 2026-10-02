@@ -20,8 +20,22 @@ import {
   type RepoVariantsResponse,
 } from '../../../acp/local-inference';
 import { defineMessages, useIntl } from '../../../i18n';
+import type { MessageValue, NoMessageValues } from 'react-intl';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly "searchHuggingFace": NoMessageValues;
+  readonly "searchPlaceholder": NoMessageValues;
+  readonly "loadingVariants": NoMessageValues;
+  readonly "recommended": NoMessageValues;
+  readonly "download": NoMessageValues;
+  readonly "downloaded": NoMessageValues;
+  readonly "downloading": NoMessageValues;
+  readonly "tooLarge": { readonly "available": MessageValue; readonly "size": MessageValue };
+  readonly "noGgufModels": NoMessageValues;
+  readonly "searchError": { readonly "details": MessageValue };
+  readonly "searchNoData": NoMessageValues;
+  readonly "searchFailed": NoMessageValues;
+}>({
   searchHuggingFace: {
     id: 'huggingFaceModelSearch.searchHuggingFace',
     defaultMessage: 'Search HuggingFace',

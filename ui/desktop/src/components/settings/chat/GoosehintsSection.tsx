@@ -3,8 +3,13 @@ import { Button } from '../../ui/button';
 import { FolderKey } from 'lucide-react';
 import { GoosehintsModal } from './GoosehintsModal';
 import { defineMessages, useIntl } from '../../../i18n';
+import type { NoMessageValues } from 'react-intl';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly "title": NoMessageValues;
+  readonly "description": NoMessageValues;
+  readonly "configure": NoMessageValues;
+}>({
   title: {
     id: 'goosehintsSection.title',
     defaultMessage: 'Project Hints (.goosehints)',

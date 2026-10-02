@@ -1,5 +1,4 @@
-import React from 'react';
-import Admonition from '@theme/Admonition';
+import Admonition from "~/components/Admonition";
 
 interface ArchivedExtensionWarningProps {
   extensionName?: string;
@@ -8,7 +7,7 @@ interface ArchivedExtensionWarningProps {
 
 export default function ArchivedExtensionWarning({ extensionName, repoUrl }: ArchivedExtensionWarningProps) {
   const prefix = extensionName ? `The ${extensionName} is` : 'This extension is';
-  
+
   return (
     <Admonition type="warning" title="Archived Extension">
       {prefix} no longer actively maintained. The{' '}

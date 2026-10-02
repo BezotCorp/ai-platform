@@ -1,17 +1,28 @@
 import { useState, useEffect, useCallback } from 'react';
+import type { JSX } from 'react';
 import { Switch } from '../../ui/switch';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../ui/card';
 import { useConfig } from '../../ConfigContext';
 import { TELEMETRY_UI_ENABLED } from '../../../updates';
 import PrivacyInfoModal from '../../onboarding/PrivacyInfoModal';
-import { toastService } from '../../../toasts';
+import { toastService } from '../../../toast_service';
 import {
   setTelemetryEnabled as setAnalyticsTelemetryEnabled,
   trackTelemetryPreference,
 } from '../../../utils/analytics';
 import { defineMessages, useIntl } from '../../../i18n';
+import type { NoMessageValues } from 'react-intl';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly title: NoMessageValues;
+  readonly description: NoMessageValues;
+  readonly toggleLabel: NoMessageValues;
+  readonly toggleDescription: NoMessageValues;
+  readonly learnMore: NoMessageValues;
+  readonly configErrorTitle: NoMessageValues;
+  readonly loadError: NoMessageValues;
+  readonly updateError: NoMessageValues;
+}>({
   title: {
     id: 'telemetrySettings.title',
     defaultMessage: 'Privacy',
@@ -48,16 +59,16 @@ const i18n = defineMessages({
 
 const TELEMETRY_CONFIG_KEY = 'GOOSE_TELEMETRY_ENABLED';
 
-export default function TelemetrySettings() {
-  const intl = useIntl();
+export default function TelemetrySettings(): JSX.Element | null {
+  const intl: ReturnType<typeof useIntl> = useIntl();
   const { read, upsert } = useConfig();
-  const [telemetryEnabled, setTelemetryEnabled] = useState(true);
-  const [isLoading, setIsLoading] = useState(true);
-  const [showModal, setShowModal] = useState(false);
+  const [telemetryEnabled, setTelemetryEnabled] = useState<boolean>(true);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [showModal, setShowModal] = useState<boolean>(false);
 
-  const loadTelemetryStatus = useCallback(async () => {
+  const loadTelemetryStatus = useCallback(async (): Promise<void> => {
     try {
-      const value = await read(TELEMETRY_CONFIG_KEY, false);
+      const value: unknown = await read(TELEMETRY_CONFIG_KEY, false);
       setTelemetryEnabled(value === null ? true : Boolean(value));
     } catch (error) {
       console.error('Failed to load telemetry status:', error);
@@ -72,10 +83,12 @@ export default function TelemetrySettings() {
   }, [read, intl]);
 
   useEffect(() => {
-    loadTelemetryStatus();
+    queueMicrotask((): void => {
+      void loadTelemetryStatus();
+    });
   }, [loadTelemetryStatus]);
 
-  const handleTelemetryToggle = async (checked: boolean) => {
+  const handleTelemetryToggle = async (checked: boolean): Promise<void> => {
     try {
       await upsert(TELEMETRY_CONFIG_KEY, checked, false);
       setTelemetryEnabled(checked);
@@ -91,41 +104,43 @@ export default function TelemetrySettings() {
     }
   };
 
-  const handleModalClose = () => {
+  const handleModalClose = (): void => {
     setShowModal(false);
-    loadTelemetryStatus();
+    void loadTelemetryStatus();
   };
 
   if (!TELEMETRY_UI_ENABLED) {
     return null;
   }
 
-  const title = intl.formatMessage(i18n.title);
-  const description = intl.formatMessage(i18n.description);
-  const toggleLabel = intl.formatMessage(i18n.toggleLabel);
-  const toggleDescription = intl.formatMessage(i18n.toggleDescription);
+  const title: string = intl.formatMessage(i18n.title);
+  const description: string = intl.formatMessage(i18n.description);
+  const toggleLabel: string = intl.formatMessage(i18n.toggleLabel);
+  const toggleDescription: string = intl.formatMessage(i18n.toggleDescription);
 
-  const learnMoreLink = (
+  const learnMoreLink: JSX.Element = (
     <button
-      onClick={() => setShowModal(true)}
+      onClick={(): void => setShowModal(true)}
       className="text-blue-600 dark:text-blue-400 hover:underline"
     >
       {intl.formatMessage(i18n.learnMore)}
     </button>
   );
 
-  const toggle = (
+  const toggle: JSX.Element = (
     <Switch
       checked={telemetryEnabled}
-      onCheckedChange={handleTelemetryToggle}
+      onCheckedChange={(checked: boolean): void => {
+        void handleTelemetryToggle(checked);
+      }}
       disabled={isLoading}
       variant="mono"
     />
   );
 
-  const modal = <PrivacyInfoModal isOpen={showModal} onClose={handleModalClose} />;
+  const modal: JSX.Element = <PrivacyInfoModal isOpen={showModal} onClose={handleModalClose} />;
 
-  const toggleRow = (
+  const toggleRow: JSX.Element = (
     <div className="flex items-center justify-between">
       <div>
         <h4 className="text-text-primary text-xs">{toggleLabel}</h4>

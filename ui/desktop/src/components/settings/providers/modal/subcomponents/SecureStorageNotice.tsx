@@ -1,7 +1,10 @@
 import { Lock } from 'lucide-react';
 import { defineMessages, useIntl } from '../../../../../i18n';
+import type { NoMessageValues } from 'react-intl';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly "defaultMessage": NoMessageValues;
+}>({
   defaultMessage: {
     id: 'secureStorageNotice.defaultMessage',
     defaultMessage: 'Keys are stored securely in the keychain',

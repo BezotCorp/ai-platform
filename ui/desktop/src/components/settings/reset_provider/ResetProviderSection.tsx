@@ -3,8 +3,12 @@ import { RefreshCw } from 'lucide-react';
 import { acpClearDefaults } from '../../../acp/providers';
 import { View, ViewOptions } from '../../../utils/navigationUtils';
 import { defineMessages, useIntl } from '../../../i18n';
+import type { NoMessageValues } from 'react-intl';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly "resetButton": NoMessageValues;
+  readonly "resetDescription": NoMessageValues;
+}>({
   resetButton: {
     id: 'resetProviderSection.resetButton',
     defaultMessage: 'Reset Provider and Model',

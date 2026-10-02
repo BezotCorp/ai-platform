@@ -4,11 +4,62 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../..
 import { Button } from '../../ui/button';
 import { Switch } from '../../ui/switch';
 import { ShortcutRecorder } from './ShortcutRecorder';
-import { KeyboardShortcuts, defaultKeyboardShortcuts } from '../../../utils/settings';
 import { trackSettingToggled } from '../../../utils/analytics';
 import { defineMessages, useIntl } from '../../../i18n';
+import type { MessageValue, NoMessageValues } from 'react-intl';
+import { KeyboardShortcuts } from '../../../utils/keyboardShortcuts';
+import { defaultKeyboardShortcuts } from '../../../utils/settings';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly "focusWindowLabel": NoMessageValues;
+  readonly "focusWindowDescription": NoMessageValues;
+  readonly "quickLauncherLabel": NoMessageValues;
+  readonly "quickLauncherDescription": NoMessageValues;
+  readonly "newChatLabel": NoMessageValues;
+  readonly "newChatDescription": NoMessageValues;
+  readonly "newChatWindowLabel": NoMessageValues;
+  readonly "newChatWindowDescription": NoMessageValues;
+  readonly "openDirectoryLabel": NoMessageValues;
+  readonly "openDirectoryDescription": NoMessageValues;
+  readonly "settingsLabel": NoMessageValues;
+  readonly "settingsDescription": NoMessageValues;
+  readonly "findLabel": NoMessageValues;
+  readonly "findDescription": NoMessageValues;
+  readonly "findNextLabel": NoMessageValues;
+  readonly "findNextDescription": NoMessageValues;
+  readonly "findPreviousLabel": NoMessageValues;
+  readonly "findPreviousDescription": NoMessageValues;
+  readonly "alwaysOnTopLabel": NoMessageValues;
+  readonly "alwaysOnTopDescription": NoMessageValues;
+  readonly "toggleNavigationLabel": NoMessageValues;
+  readonly "toggleNavigationDescription": NoMessageValues;
+  readonly "categoryGlobal": NoMessageValues;
+  readonly "categoryGlobalDescription": NoMessageValues;
+  readonly "categoryApplication": NoMessageValues;
+  readonly "categoryApplicationDescription": NoMessageValues;
+  readonly "categorySearch": NoMessageValues;
+  readonly "categorySearchDescription": NoMessageValues;
+  readonly "categoryWindow": NoMessageValues;
+  readonly "categoryWindowDescription": NoMessageValues;
+  readonly "loading": NoMessageValues;
+  readonly "restartRequired": NoMessageValues;
+  readonly "restartDescription": NoMessageValues;
+  readonly "dismiss": NoMessageValues;
+  readonly "disabled": NoMessageValues;
+  readonly "change": NoMessageValues;
+  readonly "resetToDefaultsHeading": NoMessageValues;
+  readonly "resetToDefaultsDescription": NoMessageValues;
+  readonly "resetAllShortcuts": NoMessageValues;
+  readonly "shortcutConflictTitle": NoMessageValues;
+  readonly "shortcutConflictToggleMessage": { readonly "conflictLabel": MessageValue; readonly "shortcut": MessageValue };
+  readonly "shortcutConflictToggleDetail": { readonly "conflictLabel": MessageValue; readonly "targetLabel": MessageValue };
+  readonly "shortcutConflictSaveDetail": { readonly "conflictLabel": MessageValue; readonly "targetLabel": MessageValue };
+  readonly "reassignShortcut": NoMessageValues;
+  readonly "cancel": NoMessageValues;
+  readonly "resetShortcutsTitle": NoMessageValues;
+  readonly "resetShortcutsMessage": NoMessageValues;
+  readonly "resetShortcutsDetail": NoMessageValues;
+}>({
   // Shortcut labels
   focusWindowLabel: {
     id: 'keyboardShortcuts.focusWindowLabel',

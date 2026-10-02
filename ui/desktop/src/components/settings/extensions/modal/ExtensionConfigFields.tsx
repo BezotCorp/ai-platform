@@ -1,7 +1,15 @@
 import { Input } from '../../../ui/input';
 import { defineMessages, useIntl } from '../../../../i18n';
+import type { NoMessageValues } from 'react-intl';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly "commandLabel": NoMessageValues;
+  readonly "commandPlaceholder": NoMessageValues;
+  readonly "commandRequired": NoMessageValues;
+  readonly "endpointLabel": NoMessageValues;
+  readonly "endpointPlaceholder": NoMessageValues;
+  readonly "endpointRequired": NoMessageValues;
+}>({
   commandLabel: {
     id: 'extensionConfigFields.commandLabel',
     defaultMessage: 'Command',

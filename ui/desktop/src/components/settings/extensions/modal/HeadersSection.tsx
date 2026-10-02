@@ -4,8 +4,18 @@ import { Plus, X } from 'lucide-react';
 import { Input } from '../../../ui/input';
 import { cn } from '../../../../utils';
 import { defineMessages, useIntl } from '../../../../i18n';
+import type { NoMessageValues } from 'react-intl';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly "requestHeaders": NoMessageValues;
+  readonly "headersDescription": NoMessageValues;
+  readonly "headerName": NoMessageValues;
+  readonly "value": NoMessageValues;
+  readonly "bothRequired": NoMessageValues;
+  readonly "noSpaces": NoMessageValues;
+  readonly "duplicateHeader": NoMessageValues;
+  readonly "add": NoMessageValues;
+}>({
   requestHeaders: {
     id: 'headersSection.requestHeaders',
     defaultMessage: 'Request Headers',

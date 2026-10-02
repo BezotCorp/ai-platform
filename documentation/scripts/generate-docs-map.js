@@ -1,9 +1,11 @@
-const fs = require('fs');
-const path = require('path');
-const matter = require('gray-matter');
+import fs from 'node:fs';
+import path from 'node:path';
+import matter from 'gray-matter';
 
-const DOCS_DIR = path.join(__dirname, '..', 'docs');
-const OUTPUT_FILE = path.join(__dirname, '..', 'static', 'goose-docs-map.md');
+import { fileURLToPath } from 'node:url';
+const moduleDir = path.dirname(fileURLToPath(import.meta.url));
+const DOCS_DIR = path.join(moduleDir, '..', 'src', 'content', 'docs', 'docs');
+const OUTPUT_FILE = path.join(moduleDir, '..', 'src/content/docs/docs/public', 'goose-docs-map.md');
 
 function getTitle(frontmatter, content) {
   if (frontmatter.title) {
@@ -42,7 +44,7 @@ function getHeadings(content) {
 
 async function main() {
   const { globby } = await import('globby');
-  
+
   const sections = [
     { name: 'Getting Started', pattern: 'getting-started/*.{md,mdx}' },
     { name: 'Guides', pattern: 'guides/**/*.{md,mdx}' },
@@ -72,7 +74,6 @@ async function main() {
 
         output += `### [${title}](${urlPath})\n\n`;
         if (headings) output += `${headings}\n\n`;
-        
       } catch (err) {
         console.warn(`[generate-docs-map] Warning: Could not process ${file}, skipping`, err);
       }
@@ -86,8 +87,8 @@ async function main() {
 }
 
 // Run main if executed directly
-if (require.main === module) {
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   main();
 }
 
-module.exports = { getTitle, getHeadings };
+export { getTitle, getHeadings };

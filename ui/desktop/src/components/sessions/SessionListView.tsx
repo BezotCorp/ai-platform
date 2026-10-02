@@ -23,7 +23,7 @@ import { ScrollArea } from '../ui/scroll-area';
 import { formatMessageTimestamp } from '../../utils/timeUtils';
 import { SearchView } from '../conversation/SearchView';
 import { MainPanelLayout } from '../Layout/MainPanelLayout';
-import { groupSessionsByDate, sessionActivityAt, type DateGroup } from '../../utils/dateUtils';
+import { groupSessionsByDate, sessionActivityAt, type DateGroup } from '../../utils/dateGroup';
 import { errorMessage } from '../../utils/conversionUtils';
 import { Skeleton } from '../ui/skeleton';
 import { toast } from 'react-toastify';
@@ -43,13 +43,56 @@ import {
   acpRenameSession,
   type SessionListItem,
 } from '../../acp/sessions';
-import type { SessionExportFormat } from '@aaif/goose-acp-client';
+import type { SessionExportFormatKey } from '@aaif/goose-acp-client';
 import { acpChatSessionActions } from '../../acp/chatSessionStore';
 import { cancelAcpPermissionRequestsForSession } from '../../acp/permissionRequests';
 import { cancelAcpElicitationRequestsForSession } from '../../acp/elicitationRequests';
 import { getSearchShortcutText } from '../../utils/keyboardShortcuts';
+import type { MessageValue, NoMessageValues } from 'react-intl';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly editSessionTitle: NoMessageValues;
+  readonly editSessionPlaceholder: NoMessageValues;
+  readonly cancel: NoMessageValues;
+  readonly save: NoMessageValues;
+  readonly saving: NoMessageValues;
+  readonly sessionUpdated: NoMessageValues;
+  readonly sessionUpdateFailed: { readonly error: MessageValue };
+  readonly chatHistory: NoMessageValues;
+  readonly importSession: NoMessageValues;
+  readonly chatHistoryDesc: { readonly shortcut: MessageValue };
+  readonly searchPlaceholder: NoMessageValues;
+  readonly errorLoading: NoMessageValues;
+  readonly tryAgain: NoMessageValues;
+  readonly noSessions: NoMessageValues;
+  readonly noSessionsDesc: NoMessageValues;
+  readonly noMatching: NoMessageValues;
+  readonly noMatchingDesc: NoMessageValues;
+  readonly loadingMore: NoMessageValues;
+  readonly deleteTitle: NoMessageValues;
+  readonly deleteMessage: { readonly name: MessageValue };
+  readonly duplicateSuccess: { readonly name: MessageValue };
+  readonly duplicateFailed: { readonly error: MessageValue };
+  readonly deleteSuccess: NoMessageValues;
+  readonly deleteFailed: { readonly error: MessageValue; readonly name: MessageValue };
+  readonly importSuccess: NoMessageValues;
+  readonly importFailed: { readonly error: MessageValue };
+  readonly exportSuccess: NoMessageValues;
+  readonly exportFailed: { readonly error: MessageValue };
+  readonly copied: NoMessageValues;
+  readonly openInNewWindow: NoMessageValues;
+  readonly editSessionName: NoMessageValues;
+  readonly duplicateSession: NoMessageValues;
+  readonly deleteSession: NoMessageValues;
+  readonly exportSession: NoMessageValues;
+  readonly exportAsJson: NoMessageValues;
+  readonly exportAsMarkdown: NoMessageValues;
+  readonly close: NoMessageValues;
+  readonly scheduledJobs: NoMessageValues;
+  readonly scheduledJobsCount: { readonly count: number | bigint };
+  readonly includeAcpSessions: NoMessageValues;
+  readonly acpBadge: NoMessageValues;
+}>({
   editSessionTitle: { id: 'sessions.edit.title', defaultMessage: 'Edit Session Description' },
   editSessionPlaceholder: {
     id: 'sessions.edit.placeholder',
@@ -156,12 +199,14 @@ const EditSessionModal = React.memo<EditSessionModalProps>(
     const [isUpdating, setIsUpdating] = useState(false);
 
     useEffect(() => {
-      if (session && isOpen) {
-        setDescription(session.name);
-      } else if (!isOpen) {
-        setDescription('');
-        setIsUpdating(false);
-      }
+      queueMicrotask((): void => {
+        if (session && isOpen) {
+          setDescription(session.name);
+        } else if (!isOpen) {
+          setDescription('');
+          setIsUpdating(false);
+        }
+      });
     }, [session, isOpen]);
 
     const handleSave = useCallback(async () => {
@@ -200,7 +245,7 @@ const EditSessionModal = React.memo<EditSessionModalProps>(
     const handleKeyDown = useCallback(
       (e: React.KeyboardEvent<HTMLInputElement>) => {
         if (e.key === 'Enter' && !isUpdating) {
-          handleSave();
+          void handleSave();
         } else if (e.key === 'Escape' && !isUpdating) {
           handleCancel();
         }
@@ -275,6 +320,59 @@ function useDebounce<T>(value: T, delay: number): T {
   return debouncedValue;
 }
 
+interface SessionSkeletonProps {
+  variant?: number;
+}
+
+const SESSION_SKELETON_TITLE_WIDTHS: readonly string[] = ['w-3/4', 'w-2/3', 'w-4/5', 'w-1/2'];
+const SESSION_SKELETON_PATH_WIDTHS: readonly string[] = ['w-32', 'w-28', 'w-36', 'w-24'];
+const SESSION_SKELETON_TOKEN_WIDTHS: readonly string[] = ['w-12', 'w-10', 'w-14', 'w-8'];
+
+const SessionSkeleton = React.memo<SessionSkeletonProps>(
+  ({ variant = 0 }: SessionSkeletonProps): React.JSX.Element => (
+    <Card className="session-skeleton h-full py-3 px-4 flex flex-col justify-between">
+      <div className="flex-1">
+        <Skeleton
+          className={`h-5 ${
+            SESSION_SKELETON_TITLE_WIDTHS[variant % SESSION_SKELETON_TITLE_WIDTHS.length]
+          } mb-2`}
+        />
+        <div className="flex items-center mb-1">
+          <Skeleton className="h-3 w-3 mr-1 rounded-sm" />
+          <Skeleton className="h-4 w-20" />
+        </div>
+        <div className="flex items-center mb-1">
+          <Skeleton className="h-3 w-3 mr-1 rounded-sm" />
+          <Skeleton
+            className={`h-4 ${
+              SESSION_SKELETON_PATH_WIDTHS[variant % SESSION_SKELETON_PATH_WIDTHS.length]
+            }`}
+          />
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between mt-1 pt-2">
+        <div className="flex items-center space-x-3">
+          <div className="flex items-center">
+            <Skeleton className="h-3 w-3 mr-1 rounded-sm" />
+            <Skeleton className="h-4 w-8" />
+          </div>
+          <div className="flex items-center">
+            <Skeleton className="h-3 w-3 mr-1 rounded-sm" />
+            <Skeleton
+              className={`h-4 ${
+                SESSION_SKELETON_TOKEN_WIDTHS[variant % SESSION_SKELETON_TOKEN_WIDTHS.length]
+              }`}
+            />
+          </div>
+        </div>
+      </div>
+    </Card>
+  )
+);
+
+SessionSkeleton.displayName = 'SessionSkeleton';
+
 interface SessionListViewProps {
   onSelectSession: (sessionId: string) => void;
 }
@@ -304,13 +402,17 @@ const SessionListView: React.FC<SessionListViewProps> = React.memo(({ onSelectSe
     () => localStorage.getItem(INCLUDE_ACP_SESSIONS_KEY) === 'true'
   );
   const includeAcpSessionsRef = useRef(includeAcpSessions);
-  includeAcpSessionsRef.current = includeAcpSessions;
+  useEffect((): void => {
+    includeAcpSessionsRef.current = includeAcpSessions;
+  }, [includeAcpSessions]);
 
   // Search state for debouncing
   const [searchTerm, setSearchTerm] = useState('');
   const debouncedSearchTerm = useDebounce(searchTerm, 300); // 300ms debounce
   const debouncedSearchTermRef = useRef(debouncedSearchTerm);
-  debouncedSearchTermRef.current = debouncedSearchTerm;
+  useEffect((): void => {
+    debouncedSearchTermRef.current = debouncedSearchTerm;
+  }, [debouncedSearchTerm]);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const loadGenerationRef = useRef(0);
@@ -340,9 +442,9 @@ const SessionListView: React.FC<SessionListViewProps> = React.memo(({ onSelectSe
     previousSearchTermRef.current = debouncedSearchTerm;
 
     if (isSearching) {
-      setVisibleGroupsCount(memoizedAllDateGroups.length);
+      queueMicrotask((): void => setVisibleGroupsCount(memoizedAllDateGroups.length));
     } else if (wasSearching) {
-      setVisibleGroupsCount(15);
+      queueMicrotask((): void => setVisibleGroupsCount(15));
     }
   }, [debouncedSearchTerm, memoizedAllDateGroups.length]);
 
@@ -434,7 +536,9 @@ const SessionListView: React.FC<SessionListViewProps> = React.memo(({ onSelectSe
   );
 
   useEffect(() => {
-    loadSessions(debouncedSearchTerm, includeAcpSessions);
+    queueMicrotask((): void => {
+      void loadSessions(debouncedSearchTerm, includeAcpSessions);
+    });
     return () => {
       // Bump the generation so any in-flight load for the previous keyword is discarded.
       loadGenerationRef.current += 1;
@@ -444,7 +548,9 @@ const SessionListView: React.FC<SessionListViewProps> = React.memo(({ onSelectSe
   // Timing logic to prevent flicker between skeleton and content on initial load
   useEffect(() => {
     if (!isLoading && showSkeleton) {
-      setShowSkeleton(false);
+      queueMicrotask((): void => {
+        setShowSkeleton(false);
+      });
       // Use startTransition for non-blocking content show
       startTransition(() => {
         setTimeout(() => {
@@ -581,7 +687,7 @@ const SessionListView: React.FC<SessionListViewProps> = React.memo(({ onSelectSe
   }, []);
 
   const handleExportSession = useCallback(
-    async (session: SessionListItem, format: SessionExportFormat) => {
+    async (session: SessionListItem, format: SessionExportFormatKey) => {
       try {
         const data = await acpExportSession(session.id, format);
         const isMarkdown = format === 'markdown';
@@ -675,7 +781,7 @@ const SessionListView: React.FC<SessionListViewProps> = React.memo(({ onSelectSe
     onEditClick: (session: SessionListItem) => void;
     onDuplicateClick: (session: SessionListItem) => void;
     onDeleteClick: (session: SessionListItem) => void;
-    onExportClick: (session: SessionListItem, format: SessionExportFormat) => void;
+    onExportClick: (session: SessionListItem, format: SessionExportFormatKey) => void;
     onOpenInNewWindow: (session: SessionListItem, e: React.MouseEvent) => void;
   }) {
     const handleEditClick = useCallback(
@@ -707,7 +813,7 @@ const SessionListView: React.FC<SessionListViewProps> = React.memo(({ onSelectSe
     }, [session.id]);
 
     const handleExportSelect = useCallback(
-      (format: SessionExportFormat) => {
+      (format: SessionExportFormatKey) => {
         onExportClick(session, format);
       },
       [onExportClick, session]
@@ -810,43 +916,6 @@ const SessionListView: React.FC<SessionListViewProps> = React.memo(({ onSelectSe
     );
   });
 
-  const SessionSkeleton = React.memo(({ variant = 0 }: { variant?: number }) => {
-    const titleWidths = ['w-3/4', 'w-2/3', 'w-4/5', 'w-1/2'];
-    const pathWidths = ['w-32', 'w-28', 'w-36', 'w-24'];
-    const tokenWidths = ['w-12', 'w-10', 'w-14', 'w-8'];
-
-    return (
-      <Card className="session-skeleton h-full py-3 px-4 flex flex-col justify-between">
-        <div className="flex-1">
-          <Skeleton className={`h-5 ${titleWidths[variant % titleWidths.length]} mb-2`} />
-          <div className="flex items-center mb-1">
-            <Skeleton className="h-3 w-3 mr-1 rounded-sm" />
-            <Skeleton className="h-4 w-20" />
-          </div>
-          <div className="flex items-center mb-1">
-            <Skeleton className="h-3 w-3 mr-1 rounded-sm" />
-            <Skeleton className={`h-4 ${pathWidths[variant % pathWidths.length]}`} />
-          </div>
-        </div>
-
-        <div className="flex items-center justify-between mt-1 pt-2">
-          <div className="flex items-center space-x-3">
-            <div className="flex items-center">
-              <Skeleton className="h-3 w-3 mr-1 rounded-sm" />
-              <Skeleton className="h-4 w-8" />
-            </div>
-            <div className="flex items-center">
-              <Skeleton className="h-3 w-3 mr-1 rounded-sm" />
-              <Skeleton className={`h-4 ${tokenWidths[variant % tokenWidths.length]}`} />
-            </div>
-          </div>
-        </div>
-      </Card>
-    );
-  });
-
-  SessionSkeleton.displayName = 'SessionSkeleton';
-
   const renderActualContent = () => {
     if (error) {
       return (
@@ -909,52 +978,54 @@ const SessionListView: React.FC<SessionListViewProps> = React.memo(({ onSelectSe
           visibleGroupsCount >= activeDateGroups.length &&
           memoizedScheduledDateGroups.length > 0 && (
             <div className="space-y-4">
-            <button
-              onClick={() => setIsScheduledExpanded((v) => !v)}
-              aria-expanded={isScheduledExpanded}
-              aria-controls="scheduled-job-sessions"
-              className="sticky top-0 z-10 w-full flex items-center justify-between bg-background-primary/95 backdrop-blur-sm py-2 px-1 rounded-lg hover:bg-background-secondary transition-colors cursor-pointer"
-            >
-              <div className="flex items-center gap-2">
-                <Clock className="w-4 h-4 text-text-secondary" />
-                <h2 className="text-text-secondary font-medium">
-                  {intl.formatMessage(i18n.scheduledJobs)}
-                </h2>
-                <span className="text-xs text-text-tertiary bg-background-secondary px-2 py-0.5 rounded-full">
-                  {intl.formatMessage(i18n.scheduledJobsCount, { count: scheduledSessions.length })}
-                </span>
-              </div>
-              {isScheduledExpanded ? (
-                <ChevronDown className="w-4 h-4 text-text-secondary" />
-              ) : (
-                <ChevronRight className="w-4 h-4 text-text-secondary" />
-              )}
-            </button>
+              <button
+                onClick={() => setIsScheduledExpanded((v) => !v)}
+                aria-expanded={isScheduledExpanded}
+                aria-controls="scheduled-job-sessions"
+                className="sticky top-0 z-10 w-full flex items-center justify-between bg-background-primary/95 backdrop-blur-sm py-2 px-1 rounded-lg hover:bg-background-secondary transition-colors cursor-pointer"
+              >
+                <div className="flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-text-secondary" />
+                  <h2 className="text-text-secondary font-medium">
+                    {intl.formatMessage(i18n.scheduledJobs)}
+                  </h2>
+                  <span className="text-xs text-text-tertiary bg-background-secondary px-2 py-0.5 rounded-full">
+                    {intl.formatMessage(i18n.scheduledJobsCount, {
+                      count: scheduledSessions.length,
+                    })}
+                  </span>
+                </div>
+                {isScheduledExpanded ? (
+                  <ChevronDown className="w-4 h-4 text-text-secondary" />
+                ) : (
+                  <ChevronRight className="w-4 h-4 text-text-secondary" />
+                )}
+              </button>
 
-            {isScheduledExpanded && (
-              <div id="scheduled-job-sessions" className="space-y-8">
-                {memoizedScheduledDateGroups.map((group) => (
-                  <div key={group.label} className="space-y-4">
-                    <div className="sticky top-0 z-10 bg-background-primary/95 backdrop-blur-sm">
-                      <h2 className="text-text-secondary">{group.label}</h2>
+              {isScheduledExpanded && (
+                <div id="scheduled-job-sessions" className="space-y-8">
+                  {memoizedScheduledDateGroups.map((group) => (
+                    <div key={group.label} className="space-y-4">
+                      <div className="sticky top-0 z-10 bg-background-primary/95 backdrop-blur-sm">
+                        <h2 className="text-text-secondary">{group.label}</h2>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
+                        {group.sessions.map((session) => (
+                          <SessionItem
+                            key={session.id}
+                            session={session}
+                            onEditClick={handleEditSession}
+                            onDuplicateClick={handleDuplicateSession}
+                            onDeleteClick={handleDeleteSession}
+                            onExportClick={handleExportSession}
+                            onOpenInNewWindow={handleOpenInNewWindow}
+                          />
+                        ))}
+                      </div>
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
-                      {group.sessions.map((session) => (
-                        <SessionItem
-                          key={session.id}
-                          session={session}
-                          onEditClick={handleEditSession}
-                          onDuplicateClick={handleDuplicateSession}
-                          onDeleteClick={handleDeleteSession}
-                          onExportClick={handleExportSession}
-                          onOpenInNewWindow={handleOpenInNewWindow}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+                  ))}
+                </div>
+              )}
             </div>
           )}
 

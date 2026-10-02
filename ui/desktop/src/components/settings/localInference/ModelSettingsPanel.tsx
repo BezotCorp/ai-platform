@@ -12,8 +12,61 @@ import {
   type ToolCallingMode,
 } from '../../../acp/local-inference';
 import { defineMessages, useIntl } from '../../../i18n';
+import type { NoMessageValues } from 'react-intl';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly "loadingSettings": NoMessageValues;
+  readonly "saving": NoMessageValues;
+  readonly "reset": NoMessageValues;
+  readonly "resetToDefaults": NoMessageValues;
+  readonly "contextAndGeneration": NoMessageValues;
+  readonly "contextSize": NoMessageValues;
+  readonly "contextSizeDescription": NoMessageValues;
+  readonly "maxOutputTokens": NoMessageValues;
+  readonly "maxOutputTokensDescription": NoMessageValues;
+  readonly "samplingStrategy": NoMessageValues;
+  readonly "temperature": NoMessageValues;
+  readonly "topK": NoMessageValues;
+  readonly "topP": NoMessageValues;
+  readonly "minP": NoMessageValues;
+  readonly "seed": NoMessageValues;
+  readonly "tauTargetEntropy": NoMessageValues;
+  readonly "etaLearningRate": NoMessageValues;
+  readonly "repetitionPenalty": NoMessageValues;
+  readonly "repeatPenalty": NoMessageValues;
+  readonly "repeatPenaltyDescription": NoMessageValues;
+  readonly "repeatWindow": NoMessageValues;
+  readonly "repeatWindowDescription": NoMessageValues;
+  readonly "frequencyPenalty": NoMessageValues;
+  readonly "frequencyPenaltyDescription": NoMessageValues;
+  readonly "presencePenalty": NoMessageValues;
+  readonly "presencePenaltyDescription": NoMessageValues;
+  readonly "performance": NoMessageValues;
+  readonly "batchSize": NoMessageValues;
+  readonly "batchSizeDescription": NoMessageValues;
+  readonly "gpuLayers": NoMessageValues;
+  readonly "gpuLayersDescription": NoMessageValues;
+  readonly "threads": NoMessageValues;
+  readonly "threadsDescription": NoMessageValues;
+  readonly "lockModelInRam": NoMessageValues;
+  readonly "lockModelInRamDescription": NoMessageValues;
+  readonly "flashAttention": NoMessageValues;
+  readonly "flashAttentionDescription": NoMessageValues;
+  readonly "toolCalling": NoMessageValues;
+  readonly "toolCallingDescription": NoMessageValues;
+  readonly "toolCallingAuto": NoMessageValues;
+  readonly "toolCallingForceNative": NoMessageValues;
+  readonly "toolCallingForceEmulated": NoMessageValues;
+  readonly "chatTemplate": NoMessageValues;
+  readonly "chatTemplateDescription": NoMessageValues;
+  readonly "chatTemplateEmbedded": NoMessageValues;
+  readonly "chatTemplateBuiltin": NoMessageValues;
+  readonly "chatTemplateCustomInline": NoMessageValues;
+  readonly "builtinChatTemplate": NoMessageValues;
+  readonly "builtinChatTemplateDescription": NoMessageValues;
+  readonly "customChatTemplate": NoMessageValues;
+  readonly "customChatTemplateDescription": NoMessageValues;
+}>({
   loadingSettings: {
     id: 'modelSettingsPanel.loadingSettings',
     defaultMessage: 'Loading settings...',
@@ -253,6 +306,23 @@ const DEFAULT_SETTINGS: ModelSettings = {
 type SamplingType = SamplingConfig['type'];
 type ChatTemplateMode = 'embedded' | 'builtin' | 'custom_inline';
 
+function mergeSamplingConfig(
+  sampling: SamplingConfig | undefined,
+  partial: Partial<SamplingConfig>
+): SamplingConfig {
+  const base: SamplingConfig = sampling ?? DEFAULT_SETTINGS.sampling!;
+
+  if (base.type === 'Greedy') {
+    return { ...base, ...partial, type: 'Greedy' };
+  }
+
+  if (base.type === 'MirostatV2') {
+    return { ...base, ...partial, type: 'MirostatV2' };
+  }
+
+  return { ...base, ...partial, type: 'Temperature' };
+}
+
 function NumberField({
   label,
   description,
@@ -417,22 +487,26 @@ export const ModelSettingsPanel = ({ modelId }: { modelId: string }) => {
   }, [modelId]);
 
   useEffect(() => {
-    load();
+    queueMicrotask((): void => {
+      void load();
+    });
   }, [load]);
 
   useEffect(() => {
-    const chatTemplate = settings.chatTemplate;
-    if (chatTemplate?.type === 'custom_inline') {
-      setChatTemplateDraft(chatTemplate.template ?? '');
-    } else {
-      setChatTemplateDraft('');
-    }
-    if (chatTemplate?.type === 'builtin') {
-      setBuiltinTemplateDraft(chatTemplate.name ?? 'chatml');
-    }
+    queueMicrotask((): void => {
+      const chatTemplate: ChatTemplate | undefined = settings.chatTemplate;
+      if (chatTemplate?.type === 'custom_inline') {
+        setChatTemplateDraft(chatTemplate.template ?? '');
+      } else {
+        setChatTemplateDraft('');
+      }
+      if (chatTemplate?.type === 'builtin') {
+        setBuiltinTemplateDraft(chatTemplate.name ?? 'chatml');
+      }
+    });
   }, [settings.chatTemplate]);
 
-  const save = async (updated: ModelSettings) => {
+  const save = async (updated: ModelSettings): Promise<void> => {
     setSettings(updated);
     setSaving(true);
     try {
@@ -444,10 +518,12 @@ export const ModelSettingsPanel = ({ modelId }: { modelId: string }) => {
     }
   };
 
-  const resetDefaults = () => save(DEFAULT_SETTINGS);
+  const resetDefaults = (): void => {
+    void save(DEFAULT_SETTINGS);
+  };
 
-  const updateField = <K extends keyof ModelSettings>(key: K, value: ModelSettings[K]) => {
-    save({ ...settings, [key]: value });
+  const updateField = <K extends keyof ModelSettings>(key: K, value: ModelSettings[K]): void => {
+    void save({ ...settings, [key]: value });
   };
 
   const samplingType: SamplingType = settings.sampling?.type ?? 'Temperature';
@@ -503,11 +579,11 @@ export const ModelSettingsPanel = ({ modelId }: { modelId: string }) => {
         seed: null,
       };
     }
-    save({ ...settings, sampling });
+    void save({ ...settings, sampling });
   };
 
-  const updateSampling = (partial: Partial<SamplingConfig>) => {
-    save({ ...settings, sampling: { ...settings.sampling!, ...partial } as SamplingConfig });
+  const updateSampling = (partial: Partial<SamplingConfig>): void => {
+    void save({ ...settings, sampling: mergeSamplingConfig(settings.sampling, partial) });
   };
 
   const visibleBuiltinTemplateOptions = builtinTemplateOptions.includes(builtinTemplateDraft)
@@ -559,9 +635,9 @@ export const ModelSettingsPanel = ({ modelId }: { modelId: string }) => {
           label={intl.formatMessage(i18n.samplingStrategy)}
           value={samplingType}
           options={[
-            { value: 'Greedy' as SamplingType, label: 'Greedy' },
-            { value: 'Temperature' as SamplingType, label: 'Temperature' },
-            { value: 'MirostatV2' as SamplingType, label: 'Mirostat v2' },
+            { value: 'Greedy', label: 'Greedy' },
+            { value: 'Temperature', label: 'Temperature' },
+            { value: 'MirostatV2', label: 'Mirostat v2' },
           ]}
           onChange={(v) => setSamplingType(v)}
         />

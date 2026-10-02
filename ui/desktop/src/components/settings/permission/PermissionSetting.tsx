@@ -6,8 +6,13 @@ import { ChevronRight } from 'lucide-react';
 import PermissionModal from './PermissionModal';
 import { Button } from '../../ui/button';
 import { defineMessages, useIntl } from '../../../i18n';
+import type { NoMessageValues } from 'react-intl';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly "permissionRules": NoMessageValues;
+  readonly "permissionRulesDescription": NoMessageValues;
+  readonly "extensionRules": NoMessageValues;
+}>({
   permissionRules: {
     id: 'permissionSetting.permissionRules',
     defaultMessage: 'Permission Rules',
@@ -94,7 +99,9 @@ export default function PermissionSettingsView({ onClose }: { onClose: () => voi
   }, [getExtensions]);
 
   useEffect(() => {
-    fetchExtensions();
+    void fetchExtensions().catch((error) => {
+      console.error('Failed to fetch extensions:', error);
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

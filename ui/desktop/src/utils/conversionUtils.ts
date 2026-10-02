@@ -12,8 +12,8 @@ export async function safeJsonParse<T>(
   }
 }
 
-export function errorMessage(err: Error | unknown, default_value?: string) {
-  const acpData = acpErrorData(err);
+export function errorMessage(err: unknown, default_value?: string): string {
+  const acpData: unknown = acpErrorData(err);
   if (typeof acpData === 'string') {
     return acpData;
   }
@@ -23,8 +23,20 @@ export function errorMessage(err: Error | unknown, default_value?: string) {
   } else if (typeof err === 'object' && err !== null && 'message' in err) {
     return String(err.message);
   } else {
-    return default_value || String(err);
+    return default_value ?? stringifyUnknown(err);
   }
+}
+
+function stringifyUnknown(value: unknown): string {
+  if (typeof value === 'object' && value !== null) {
+    try {
+      return JSON.stringify(value);
+    } catch {
+      return Object.prototype.toString.call(value);
+    }
+  }
+
+  return String(value);
 }
 
 function acpErrorData(err: unknown): unknown {
@@ -32,7 +44,7 @@ function acpErrorData(err: unknown): unknown {
     return undefined;
   }
 
-  const candidate = 'error' in err && isRecord(err.error) ? err.error : err;
+  const candidate: unknown = 'error' in err && isRecord(err.error) ? err.error : err;
   return isRecord(candidate) ? candidate.data : undefined;
 }
 
@@ -48,7 +60,7 @@ export function formatErrorForLogging(error: unknown): string {
     try {
       return JSON.stringify(error, null, 2);
     } catch {
-      return String(error);
+      return Object.prototype.toString.call(error);
     }
   }
   return String(error);
@@ -56,17 +68,17 @@ export function formatErrorForLogging(error: unknown): string {
 
 export async function compressImageDataUrl(dataUrl: string): Promise<string> {
   return new Promise((resolve, reject) => {
-    const img = new globalThis.Image();
+    const img: HTMLImageElement = new globalThis.Image();
     img.onload = () => {
-      const maxDim = 1024;
-      const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
-      const width = Math.floor(img.width * scale);
-      const height = Math.floor(img.height * scale);
+      const maxDim: number = 1024;
+      const scale: number = Math.min(1, maxDim / Math.max(img.width, img.height));
+      const width: number = Math.floor(img.width * scale);
+      const height: number = Math.floor(img.height * scale);
 
-      const canvas = document.createElement('canvas');
+      const canvas: HTMLCanvasElement = document.createElement('canvas');
       canvas.width = width;
       canvas.height = height;
-      const ctx = canvas.getContext('2d');
+      const ctx: CanvasRenderingContext2D | null = canvas.getContext('2d');
       if (!ctx) {
         reject(new Error('Failed to get canvas context'));
         return;
@@ -83,7 +95,7 @@ export async function compressImageDataUrl(dataUrl: string): Promise<string> {
 export function formatAppName(name: string): string {
   return name
     .split(/[-_\s]+/)
-    .filter((word) => word.length > 0)
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .filter((word: string): boolean => word.length > 0)
+    .map((word: string): string => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
     .join(' ');
 }

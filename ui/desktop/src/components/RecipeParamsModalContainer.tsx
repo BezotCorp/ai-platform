@@ -5,7 +5,6 @@ import {
   resolveAcpRecipeParamRequest,
   subscribeAcpRecipeParamRequests,
 } from '../acp/recipeParamRequests';
-import type { Parameter } from '../recipe';
 import ParameterInputModal from './ParameterInputModal';
 
 export default function RecipeParamsModalContainer(): React.ReactElement | null {
@@ -21,7 +20,7 @@ export default function RecipeParamsModalContainer(): React.ReactElement | null 
   return (
     <ParameterInputModal
       key={request.id}
-      parameters={request.parameters as Parameter[]}
+      parameters={request.parameters}
       initialValues={request.initialValues}
       onSubmit={(values) => resolveAcpRecipeParamRequest(request.id, values)}
       onClose={() => cancelAcpRecipeParamRequest(request.id)}

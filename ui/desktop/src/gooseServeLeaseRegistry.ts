@@ -1,18 +1,10 @@
-import type { GooseServeExitSignal, GooseServeResult, Logger } from './gooseServe';
+import { GooseServeExitSignal } from './gooseServeExitSignal';
+import { GooseServeResult } from './gooseServeResult';
+import { GooseServeLease } from './gooseServerLease';
+import { Logger } from './logger';
 
 export const GOOSE_SERVE_EXITED_USER_MESSAGE =
   "This window's Goose backend stopped. Close this window and open a new chat to start a new backend. If this keeps happening, restart Goose Desktop.";
-
-export interface GooseServeLease {
-  acpUrl: string;
-  secretKey: string;
-  cleanup: () => Promise<void>;
-  windowIds: Set<number>;
-  cleanedUp: boolean;
-  exited: boolean;
-  exitCode: number | null;
-  exitSignal: GooseServeExitSignal;
-}
 
 export class GooseServeLeaseRegistry {
   private leasesByWindowId = new Map<number, GooseServeLease>();

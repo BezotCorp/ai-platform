@@ -1,6 +1,7 @@
 import { dialog, shell, type BrowserWindow, type MessageBoxOptions } from 'electron';
 import { getExternalLinkLabels } from './externalLinkTranslations';
-import { BLOCKED_PROTOCOLS, SAFE_PROTOCOLS, type OpenExternalUrlResult } from './urlSecurity';
+import { OpenExternalUrlResult } from './openExternalUrlResult';
+import { BLOCKED_PROTOCOLS, SAFE_PROTOCOLS } from './urlSecurity';
 
 export const openExternalUrl = async (
   url: string,

@@ -4,8 +4,22 @@ import { Input } from '../../ui/input';
 import { acpListProviderDetails } from '../../../acp/providers';
 import { fetchModelsForProviders } from '../../settings/models/modelInterface';
 import { defineMessages, useIntl } from '../../../i18n';
+import type { NoMessageValues } from 'react-intl';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly "fetchError": NoMessageValues;
+  readonly "providerLabel": NoMessageValues;
+  readonly "providerHint": NoMessageValues;
+  readonly "selectProvider": NoMessageValues;
+  readonly "useDefaultProvider": NoMessageValues;
+  readonly "enterModelNotListed": NoMessageValues;
+  readonly "modelLabel": NoMessageValues;
+  readonly "backToModelList": NoMessageValues;
+  readonly "modelHint": NoMessageValues;
+  readonly "enterCustomModel": NoMessageValues;
+  readonly "loadingModels": NoMessageValues;
+  readonly "selectModel": NoMessageValues;
+}>({
   fetchError: {
     id: 'recipeModelSelector.fetchError',
     defaultMessage: 'Failed to fetch models. Please try again later.',
@@ -79,7 +93,7 @@ export const RecipeModelSelector = ({
   const [fetchError, setFetchError] = useState<string | null>(null);
 
   useEffect(() => {
-    (async () => {
+    void (async () => {
       try {
         setFetchError(null);
         const providersResponse = await acpListProviderDetails();
@@ -151,8 +165,25 @@ export const RecipeModelSelector = ({
 
   const handleProviderChange = useCallback(
     (newValue: unknown) => {
-      const option = newValue as { value: string; label: string } | null;
-      const providerValue = option?.value || undefined;
+      if (
+        newValue !== null &&
+        (
+          typeof newValue !== 'object' ||
+          !('value' in newValue) ||
+          typeof newValue.value !== 'string'
+        )
+      ) {
+        return;
+      }
+
+      const providerValue =
+        newValue !== null &&
+        typeof newValue === 'object' &&
+        'value' in newValue &&
+        typeof newValue.value === 'string'
+          ? newValue.value
+          : undefined;
+
       onProviderChange(providerValue === '' ? undefined : providerValue);
       onModelChange(undefined);
       setIsCustomModel(false);
@@ -162,13 +193,31 @@ export const RecipeModelSelector = ({
 
   const handleModelChange = useCallback(
     (newValue: unknown) => {
-      const option = newValue as { value: string; label: string; provider: string } | null;
-      if (option?.value.startsWith('__custom__:')) {
+      if (
+        newValue !== null &&
+        (
+          typeof newValue !== 'object' ||
+          !('value' in newValue) ||
+          typeof newValue.value !== 'string'
+        )
+      ) {
+        return;
+      }
+
+      const modelValue =
+        newValue !== null &&
+        typeof newValue === 'object' &&
+        'value' in newValue &&
+        typeof newValue.value === 'string'
+          ? newValue.value
+          : undefined;
+
+      if (modelValue?.startsWith('__custom__:')) {
         setIsCustomModel(true);
         onModelChange(undefined);
       } else {
         setIsCustomModel(false);
-        onModelChange(option?.value || undefined);
+        onModelChange(modelValue || undefined);
       }
     },
     [onModelChange]

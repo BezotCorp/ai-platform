@@ -12,8 +12,17 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
 import { HardDrive, Key, Plus } from 'lucide-react';
 import { defineMessages, useIntl } from '../../i18n';
 import { useFeatures } from '../../contexts/FeaturesContext';
+import type { NoMessageValues } from 'react-intl';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly "useLocalModel": NoMessageValues;
+  readonly "localModelDescription": NoMessageValues;
+  readonly "connectProvider": NoMessageValues;
+  readonly "connectProviderDescription": NoMessageValues;
+  readonly "selectProvider": NoMessageValues;
+  readonly "addCustomProvider": NoMessageValues;
+  readonly "addCustomProviderTitle": NoMessageValues;
+}>({
   useLocalModel: {
     id: 'providerSelector.useLocalModel',
     defaultMessage: 'Use a Local Model',

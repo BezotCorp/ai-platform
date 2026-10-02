@@ -5,14 +5,30 @@ import { Download } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Recipe, parseDeeplink, parseRecipeFromFile } from '../../recipe';
-import { toastSuccess, toastError } from '../../toasts';
+import { toastSuccess, toastError } from '../../toast_service';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { getRecipeJsonSchema } from '../../recipe/validation';
 import { saveRecipe } from '../../recipe/recipe_management';
 import { errorMessage } from '../../utils/conversionUtils';
 import { defineMessages, useIntl } from '../../i18n';
+import type { NoMessageValues } from 'react-intl';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly "importRecipeTitle": NoMessageValues;
+  readonly "recipeDeeplinkLabel": NoMessageValues;
+  readonly "deeplinkPlaceholder": NoMessageValues;
+  readonly "deeplinkHint": NoMessageValues;
+  readonly "or": NoMessageValues;
+  readonly "recipeFileLabel": NoMessageValues;
+  readonly "recipeFileHint": NoMessageValues;
+  readonly "example": NoMessageValues;
+  readonly "reviewWarning": NoMessageValues;
+  readonly "cancel": NoMessageValues;
+  readonly "importing": NoMessageValues;
+  readonly "importRecipeButton": NoMessageValues;
+  readonly "expectedRecipeStructure": NoMessageValues;
+  readonly "schemaDescription": NoMessageValues;
+}>({
   importRecipeTitle: {
     id: 'importRecipeForm.importRecipeTitle',
     defaultMessage: 'Import Recipe',
@@ -220,10 +236,10 @@ export default function ImportRecipeForm({ isOpen, onClose, onSuccess }: ImportR
           <h3 className="text-lg font-medium text-text-primary mb-4">{intl.formatMessage(i18n.importRecipeTitle)}</h3>
 
           <form
-            onSubmit={(e) => {
+            onSubmit={async (e) => {
               e.preventDefault();
               e.stopPropagation();
-              importRecipeForm.handleSubmit();
+              await importRecipeForm.handleSubmit();
             }}
           >
             <div className="space-y-4">
@@ -267,7 +283,7 @@ export default function ImportRecipeForm({ isOpen, onClose, onSuccess }: ImportR
                                 {typeof field.state.meta.errors[0] === 'string'
                                   ? field.state.meta.errors[0]
                                   : field.state.meta.errors[0]?.message ||
-                                    String(field.state.meta.errors[0])}
+                                    errorMessage(field.state.meta.errors[0])}
                               </p>
                             )}
                           </div>
@@ -305,8 +321,8 @@ export default function ImportRecipeForm({ isOpen, onClose, onSuccess }: ImportR
                                 type="file"
                                 accept=".yaml,.yml,.json"
                                 disabled={isDisabled}
-                                onChange={(e) => {
-                                  handleRecipeUploadChange(e.target.files?.[0]);
+                                onChange={async (e) => {
+                                  await handleRecipeUploadChange(e.target.files?.[0]);
                                 }}
                                 onBlur={field.handleBlur}
                                 className={`file:pt-1 ${field.state.meta.errors.length > 0 ? 'border-red-500' : ''} ${
@@ -334,7 +350,7 @@ export default function ImportRecipeForm({ isOpen, onClose, onSuccess }: ImportR
                                 {typeof field.state.meta.errors[0] === 'string'
                                   ? field.state.meta.errors[0]
                                   : field.state.meta.errors[0]?.message ||
-                                    String(field.state.meta.errors[0])}
+                                    errorMessage(field.state.meta.errors[0])}
                               </p>
                             )}
                           </div>

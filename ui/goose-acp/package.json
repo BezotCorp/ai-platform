@@ -32,10 +32,10 @@
   ],
   "scripts": {
     "build": "tsc",
-    "test": "npm run build && node --test test/*.test.mjs",
+    "test": "pnpm run build && node --test test/*.test.mjs",
     "lint": "tsc --noEmit",
     "format": "prettier --write src/ test/ bin/",
-    "prepack": "npm run build"
+    "prepack": "pnpm run build"
   },
   "optionalDependencies": {
     "@aaif/goose-binary-darwin-arm64": "workspace:*",
@@ -45,8 +45,8 @@
     "@aaif/goose-binary-win32-x64": "workspace:*"
   },
   "devDependencies": {
-    "@types/node": "^26.2.0",
-    "prettier": "^3.9.6",
-    "typescript": "~5.9.3"
+    "@types/node": "^26.6.3",
+    "prettier": "^3.9.9",
+    "typescript": "~7.0.2"
   }
 }

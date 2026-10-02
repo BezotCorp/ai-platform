@@ -1,6 +1,6 @@
-const { test, describe } = require('node:test');
-const assert = require('node:assert');
-const { getTitle, getHeadings } = require('./generate-docs-map');
+import { test, describe } from 'node:test';
+import assert from 'node:assert';
+import { getTitle, getHeadings } from './generate-docs-map';
 
 describe('getTitle', () => {
   test('returns frontmatter title when present', () => {

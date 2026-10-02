@@ -1,4 +1,4 @@
-import { zRecipeDto } from '@aaif/goose-acp-client';
+import { recipeDtoSchema } from '@aaif/goose-acp-client';
 import { z } from 'zod';
 
 type JsonSchema = Record<string, unknown>;
@@ -11,7 +11,7 @@ let recipeJsonSchema: JsonSchema | null = null;
 export function getRecipeJsonSchema(): JsonSchema {
   if (!recipeJsonSchema) {
     recipeJsonSchema = {
-      ...(z.toJSONSchema(zRecipeDto, { target: 'draft-07', reused: 'inline' }) as JsonSchema),
+      ...(z.toJSONSchema(recipeDtoSchema, { target: 'draft-07', reused: 'inline' }) as JsonSchema),
       title: 'Recipe',
       description: recipeDescription,
     };

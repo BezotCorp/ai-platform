@@ -7,8 +7,14 @@ import { LiveVoiceSettings } from './LiveVoiceSettings';
 import { SpellcheckToggle } from './SpellcheckToggle';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../ui/card';
 import { defineMessages, useIntl } from '../../../i18n';
+import type { NoMessageValues } from 'react-intl';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly "modeTitle": NoMessageValues;
+  readonly "modeDescription": NoMessageValues;
+  readonly "responseStylesTitle": NoMessageValues;
+  readonly "responseStylesDescription": NoMessageValues;
+}>({
   modeTitle: {
     id: 'chatSettings.modeTitle',
     defaultMessage: 'Default Mode',

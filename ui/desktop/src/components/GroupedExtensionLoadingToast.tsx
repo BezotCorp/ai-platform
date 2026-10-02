@@ -8,8 +8,22 @@ import { formatExtensionErrorMessage } from '../utils/extensionErrorUtils';
 import { getInitialWorkingDir } from '../utils/workingDir';
 import { formatExtensionName } from './settings/extensions/subcomponents/ExtensionList';
 import { defineMessages, useIntl } from '../i18n';
+import type { MessageValue, NoMessageValues } from 'react-intl';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly "loadingExtensions": { readonly "count": number | bigint };
+  readonly "successfullyLoaded": { readonly "count": number | bigint };
+  readonly "partiallyLoaded": { readonly "successCount": MessageValue; readonly "totalCount": number | bigint };
+  readonly "failedToLoad": { readonly "count": number | bigint };
+  readonly "failedToAddExtension": NoMessageValues;
+  readonly "askGoose": NoMessageValues;
+  readonly "copied": NoMessageValues;
+  readonly "copyError": NoMessageValues;
+  readonly "showLess": NoMessageValues;
+  readonly "showDetails": NoMessageValues;
+  readonly "collapseDetails": NoMessageValues;
+  readonly "expandDetails": NoMessageValues;
+}>({
   loadingExtensions: {
     id: 'groupedExtensionLoadingToast.loadingExtensions',
     defaultMessage: 'Loading {count, plural, one {# extension} other {# extensions}}...',

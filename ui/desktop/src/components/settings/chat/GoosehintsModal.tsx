@@ -11,8 +11,27 @@ import {
 } from '../../ui/dialog';
 import { errorMessage } from '../../../utils/conversionUtils';
 import { defineMessages, useIntl } from '../../../i18n';
+import type { MessageValue, NoMessageValues } from 'react-intl';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly "dialogTitle": NoMessageValues;
+  readonly "dialogDescription": NoMessageValues;
+  readonly "helpText1": NoMessageValues;
+  readonly "helpText2": { readonly "bold": MessageValue };
+  readonly "helpText3": { readonly "link": MessageValue };
+  readonly "helpTextLink": NoMessageValues;
+  readonly "errorReading": { readonly "error": MessageValue };
+  readonly "fileFound": { readonly "filePath": MessageValue };
+  readonly "fileCreating": { readonly "filePath": MessageValue };
+  readonly "placeholder": NoMessageValues;
+  readonly "savedSuccessfully": NoMessageValues;
+  readonly "close": NoMessageValues;
+  readonly "saving": NoMessageValues;
+  readonly "save": NoMessageValues;
+  readonly "failedToAccess": NoMessageValues;
+  readonly "failedToSave": NoMessageValues;
+  readonly "developer": NoMessageValues;
+}>({
   dialogTitle: {
     id: 'goosehintsModal.dialogTitle',
     defaultMessage: 'Configure Project Hints (.goosehints)',

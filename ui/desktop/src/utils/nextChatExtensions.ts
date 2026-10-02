@@ -23,7 +23,7 @@ export function selectNextChatExtensions(
     .filter((extension) => draft.selectedNames.has(extension.name))
     .map((extension) => {
       const { enabled: _enabled, ...config } = extension;
-      return config as ExtensionConfig;
+      return config;
     });
 }
 

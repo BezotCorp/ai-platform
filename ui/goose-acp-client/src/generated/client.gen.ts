@@ -2,281 +2,281 @@
 
 import type { ClientContext } from "@agentclientprotocol/sdk";
 import type {
-  AddConfigExtensionRequest_unstable,
-  AddSessionExtensionRequest_unstable,
-  AppsDeleteRequest_unstable,
-  AppsDeleteResponse_unstable,
-  AppsExportRequest_unstable,
-  AppsExportResponse_unstable,
-  AppsImportRequest_unstable,
-  AppsImportResponse_unstable,
-  AppsListRequest_unstable,
-  AppsListResponse_unstable,
-  ArchiveSessionRequest_unstable,
-  CanonicalModelInfoRequest_unstable,
-  CanonicalModelInfoResponse_unstable,
-  ConfigReadAllRequest_unstable,
-  ConfigReadAllResponse_unstable,
-  ConfigReadRequest_unstable,
-  ConfigReadResponse_unstable,
-  ConfigRemoveRequest_unstable,
-  ConfigUpsertRequest_unstable,
-  CreateScheduleRequest_unstable,
-  CreateScheduleResponse_unstable,
-  CreateSourceRequest_unstable,
-  CreateSourceResponse_unstable,
-  CustomProviderCreateRequest_unstable,
-  CustomProviderCreateResponse_unstable,
-  CustomProviderDeleteRequest_unstable,
-  CustomProviderDeleteResponse_unstable,
-  CustomProviderReadRequest_unstable,
-  CustomProviderReadResponse_unstable,
-  CustomProviderUpdateRequest_unstable,
-  CustomProviderUpdateResponse_unstable,
-  DecodeRecipeRequest_unstable,
-  DecodeRecipeResponse_unstable,
-  DefaultsClearRequest_unstable,
-  DefaultsReadRequest_unstable,
-  DefaultsReadResponse_unstable,
-  DefaultsSaveRequest_unstable,
-  DeleteRecipeRequest_unstable,
-  DeleteScheduleRequest_unstable,
-  DeleteSourceRequest_unstable,
-  DiagnosticsGetRequest_unstable,
-  DiagnosticsGetResponse_unstable,
-  DictationConfigRequest_unstable,
-  DictationConfigResponse_unstable,
-  DictationModelCancelRequest_unstable,
-  DictationModelDeleteRequest_unstable,
-  DictationModelDownloadProgressRequest_unstable,
-  DictationModelDownloadProgressResponse_unstable,
-  DictationModelDownloadRequest_unstable,
-  DictationModelsListRequest_unstable,
-  DictationModelsListResponse_unstable,
-  DictationTranscribeRequest_unstable,
-  DictationTranscribeResponse_unstable,
-  EncodeRecipeRequest_unstable,
-  EncodeRecipeResponse_unstable,
-  ExportSessionRequest_unstable,
-  ExportSessionResponse_unstable,
-  ExportSourceRequest_unstable,
-  ExportSourceResponse_unstable,
-  GetConfigExtensionsRequest_unstable,
-  GetConfigExtensionsResponse_unstable,
-  GetPromptRequest_unstable,
-  GetPromptResponse_unstable,
-  GetSessionExtensionsRequest_unstable,
-  GetSessionExtensionsResponse_unstable,
-  GetSessionInfoRequest_unstable,
-  GetSessionInfoResponse_unstable,
-  GetToolsRequest_unstable,
-  GetToolsResponse_unstable,
-  GooseToolCallRequest_unstable,
-  GooseToolCallResponse_unstable,
-  ImportSessionRequest_unstable,
-  ImportSessionResponse_unstable,
-  ImportSourcesRequest_unstable,
-  ImportSourcesResponse_unstable,
-  InspectRunningJobRequest_unstable,
-  InspectRunningJobResponse_unstable,
-  KillRunningJobRequest_unstable,
-  KillRunningJobResponse_unstable,
-  ListAgentMentionsRequest_unstable,
-  ListAgentMentionsResponse_unstable,
-  ListPromptsRequest_unstable,
-  ListPromptsResponse_unstable,
-  ListProvidersRequest_unstable,
-  ListProvidersResponse_unstable,
-  ListRecipesRequest_unstable,
-  ListRecipesResponse_unstable,
-  ListScheduleSessionsRequest_unstable,
-  ListScheduleSessionsResponse_unstable,
-  ListSchedulesRequest_unstable,
-  ListSchedulesResponse_unstable,
-  ListSlashCommandsRequest_unstable,
-  ListSlashCommandsResponse_unstable,
-  ListSourcesRequest_unstable,
-  ListSourcesResponse_unstable,
-  LiveVoiceAvailabilityRequest_unstable,
-  LiveVoiceAvailabilityResponse_unstable,
-  LiveVoiceStartRequest_unstable,
-  LiveVoiceStartResponse_unstable,
-  LiveVoiceStopRequest_unstable,
-  LocalInferenceBuiltinChatTemplatesListRequest_unstable,
-  LocalInferenceBuiltinChatTemplatesListResponse_unstable,
-  LocalInferenceHuggingFaceRepoVariantsRequest_unstable,
-  LocalInferenceHuggingFaceRepoVariantsResponse_unstable,
-  LocalInferenceHuggingFaceSearchRequest_unstable,
-  LocalInferenceHuggingFaceSearchResponse_unstable,
-  LocalInferenceModelDeleteRequest_unstable,
-  LocalInferenceModelDownloadCancelRequest_unstable,
-  LocalInferenceModelDownloadProgressRequest_unstable,
-  LocalInferenceModelDownloadProgressResponse_unstable,
-  LocalInferenceModelDownloadRequest_unstable,
-  LocalInferenceModelDownloadResponse_unstable,
-  LocalInferenceModelEvictRequest_unstable,
-  LocalInferenceModelSettingsReadRequest_unstable,
-  LocalInferenceModelSettingsReadResponse_unstable,
-  LocalInferenceModelSettingsUpdateRequest_unstable,
-  LocalInferenceModelSettingsUpdateResponse_unstable,
-  LocalInferenceModelsListRequest_unstable,
-  LocalInferenceModelsListResponse_unstable,
-  OnboardingImportApplyRequest_unstable,
-  OnboardingImportApplyResponse_unstable,
-  OnboardingImportScanRequest_unstable,
-  OnboardingImportScanResponse_unstable,
-  ParseRecipeRequest_unstable,
-  ParseRecipeResponse_unstable,
-  PauseScheduleRequest_unstable,
-  PreferencesReadRequest_unstable,
-  PreferencesReadResponse_unstable,
-  PreferencesSaveRequest_unstable,
-  PromptOperationResponse_unstable,
-  ProviderCatalogListRequest_unstable,
-  ProviderCatalogListResponse_unstable,
-  ProviderCatalogTemplateRequest_unstable,
-  ProviderCatalogTemplateResponse_unstable,
-  ProviderConfigAuthenticateRequest_unstable,
-  ProviderConfigChangeResponse_unstable,
-  ProviderConfigDeleteRequest_unstable,
-  ProviderConfigReadRequest_unstable,
-  ProviderConfigReadResponse_unstable,
-  ProviderConfigSaveRequest_unstable,
-  ProviderConfigStatusRequest_unstable,
-  ProviderConfigStatusResponse_unstable,
-  ProviderReadinessCheckRequest_unstable,
-  ProviderReadinessCheckResponse_unstable,
-  ProviderSecretDeleteRequest_unstable,
-  ProviderSecretsListRequest_unstable,
-  ProviderSecretsListResponse_unstable,
-  ProviderSetupCatalogListRequest_unstable,
-  ProviderSetupCatalogListResponse_unstable,
-  ProviderSupportedModelsListRequest_unstable,
-  ProviderSupportedModelsListResponse_unstable,
-  ReadResourceRequest_unstable,
-  ReadResourceResponse_unstable,
-  RecipeToYamlRequest_unstable,
-  RecipeToYamlResponse_unstable,
-  RefreshProviderInventoryRequest_unstable,
-  RefreshProviderInventoryResponse_unstable,
-  RemoveConfigExtensionRequest_unstable,
-  RemoveSessionExtensionRequest_unstable,
-  RenameSessionRequest_unstable,
-  ResetPromptRequest_unstable,
-  RunScheduleNowRequest_unstable,
-  RunScheduleNowResponse_unstable,
-  SavePromptRequest_unstable,
-  SaveRecipeRequest_unstable,
-  SaveRecipeResponse_unstable,
-  ScanRecipeRequest_unstable,
-  ScanRecipeResponse_unstable,
-  ScheduleRecipeRequest_unstable,
-  SetConfigExtensionEnabledRequest_unstable,
-  SetRecipeSlashCommandRequest_unstable,
-  SetSessionSystemPromptRequest_unstable,
-  SetToolPermissionsRequest_unstable,
-  SetToolPermissionsResponse_unstable,
-  SteerSessionRequest_unstable,
-  SteerSessionResponse_unstable,
-  TruncateSessionConversationRequest_unstable,
-  UnarchiveSessionRequest_unstable,
-  UnpauseScheduleRequest_unstable,
-  UpdateScheduleRequest_unstable,
-  UpdateScheduleResponse_unstable,
-  UpdateSessionProjectRequest_unstable,
-  UpdateSourceRequest_unstable,
-  UpdateSourceResponse_unstable,
-  UpdateWorkingDirRequest_unstable,
-} from './types.gen.js';
+  AddConfigExtensionRequestUnstable,
+  AddSessionExtensionRequestUnstable,
+  AppsDeleteRequestUnstable,
+  AppsDeleteResponseUnstable,
+  AppsExportRequestUnstable,
+  AppsExportResponseUnstable,
+  AppsImportRequestUnstable,
+  AppsImportResponseUnstable,
+  AppsListRequestUnstable,
+  AppsListResponseUnstable,
+  ArchiveSessionRequestUnstable,
+  CanonicalModelInfoRequestUnstable,
+  CanonicalModelInfoResponseUnstable,
+  ConfigReadAllRequestUnstable,
+  ConfigReadAllResponseUnstable,
+  ConfigReadRequestUnstable,
+  ConfigReadResponseUnstable,
+  ConfigRemoveRequestUnstable,
+  ConfigUpsertRequestUnstable,
+  CreateScheduleRequestUnstable,
+  CreateScheduleResponseUnstable,
+  CreateSourceRequestUnstable,
+  CreateSourceResponseUnstable,
+  CustomProviderCreateRequestUnstable,
+  CustomProviderCreateResponseUnstable,
+  CustomProviderDeleteRequestUnstable,
+  CustomProviderDeleteResponseUnstable,
+  CustomProviderReadRequestUnstable,
+  CustomProviderReadResponseUnstable,
+  CustomProviderUpdateRequestUnstable,
+  CustomProviderUpdateResponseUnstable,
+  DecodeRecipeRequestUnstable,
+  DecodeRecipeResponseUnstable,
+  DefaultsClearRequestUnstable,
+  DefaultsReadRequestUnstable,
+  DefaultsReadResponseUnstable,
+  DefaultsSaveRequestUnstable,
+  DeleteRecipeRequestUnstable,
+  DeleteScheduleRequestUnstable,
+  DeleteSourceRequestUnstable,
+  DiagnosticsGetRequestUnstable,
+  DiagnosticsGetResponseUnstable,
+  DictationConfigRequestUnstable,
+  DictationConfigResponseUnstable,
+  DictationModelCancelRequestUnstable,
+  DictationModelDeleteRequestUnstable,
+  DictationModelDownloadProgressRequestUnstable,
+  DictationModelDownloadProgressResponseUnstable,
+  DictationModelDownloadRequestUnstable,
+  DictationModelsListRequestUnstable,
+  DictationModelsListResponseUnstable,
+  DictationTranscribeRequestUnstable,
+  DictationTranscribeResponseUnstable,
+  EncodeRecipeRequestUnstable,
+  EncodeRecipeResponseUnstable,
+  ExportSessionRequestUnstable,
+  ExportSessionResponseUnstable,
+  ExportSourceRequestUnstable,
+  ExportSourceResponseUnstable,
+  GetConfigExtensionsRequestUnstable,
+  GetConfigExtensionsResponseUnstable,
+  GetPromptRequestUnstable,
+  GetPromptResponseUnstable,
+  GetSessionExtensionsRequestUnstable,
+  GetSessionExtensionsResponseUnstable,
+  GetSessionInfoRequestUnstable,
+  GetSessionInfoResponseUnstable,
+  GetToolsRequestUnstable,
+  GetToolsResponseUnstable,
+  GooseToolCallRequestUnstable,
+  GooseToolCallResponseUnstable,
+  ImportSessionRequestUnstable,
+  ImportSessionResponseUnstable,
+  ImportSourcesRequestUnstable,
+  ImportSourcesResponseUnstable,
+  InspectRunningJobRequestUnstable,
+  InspectRunningJobResponseUnstable,
+  KillRunningJobRequestUnstable,
+  KillRunningJobResponseUnstable,
+  ListAgentMentionsRequestUnstable,
+  ListAgentMentionsResponseUnstable,
+  ListPromptsRequestUnstable,
+  ListPromptsResponseUnstable,
+  ListProvidersRequestUnstable,
+  ListProvidersResponseUnstable,
+  ListRecipesRequestUnstable,
+  ListRecipesResponseUnstable,
+  ListScheduleSessionsRequestUnstable,
+  ListScheduleSessionsResponseUnstable,
+  ListSchedulesRequestUnstable,
+  ListSchedulesResponseUnstable,
+  ListSlashCommandsRequestUnstable,
+  ListSlashCommandsResponseUnstable,
+  ListSourcesRequestUnstable,
+  ListSourcesResponseUnstable,
+  LiveVoiceAvailabilityRequestUnstable,
+  LiveVoiceAvailabilityResponseUnstable,
+  LiveVoiceStartRequestUnstable,
+  LiveVoiceStartResponseUnstable,
+  LiveVoiceStopRequestUnstable,
+  LocalInferenceBuiltinChatTemplatesListRequestUnstable,
+  LocalInferenceBuiltinChatTemplatesListResponseUnstable,
+  LocalInferenceHuggingFaceRepoVariantsRequestUnstable,
+  LocalInferenceHuggingFaceRepoVariantsResponseUnstable,
+  LocalInferenceHuggingFaceSearchRequestUnstable,
+  LocalInferenceHuggingFaceSearchResponseUnstable,
+  LocalInferenceModelDeleteRequestUnstable,
+  LocalInferenceModelDownloadCancelRequestUnstable,
+  LocalInferenceModelDownloadProgressRequestUnstable,
+  LocalInferenceModelDownloadProgressResponseUnstable,
+  LocalInferenceModelDownloadRequestUnstable,
+  LocalInferenceModelDownloadResponseUnstable,
+  LocalInferenceModelEvictRequestUnstable,
+  LocalInferenceModelSettingsReadRequestUnstable,
+  LocalInferenceModelSettingsReadResponseUnstable,
+  LocalInferenceModelSettingsUpdateRequestUnstable,
+  LocalInferenceModelSettingsUpdateResponseUnstable,
+  LocalInferenceModelsListRequestUnstable,
+  LocalInferenceModelsListResponseUnstable,
+  OnboardingImportApplyRequestUnstable,
+  OnboardingImportApplyResponseUnstable,
+  OnboardingImportScanRequestUnstable,
+  OnboardingImportScanResponseUnstable,
+  ParseRecipeRequestUnstable,
+  ParseRecipeResponseUnstable,
+  PauseScheduleRequestUnstable,
+  PreferencesReadRequestUnstable,
+  PreferencesReadResponseUnstable,
+  PreferencesSaveRequestUnstable,
+  PromptOperationResponseUnstable,
+  ProviderCatalogListRequestUnstable,
+  ProviderCatalogListResponseUnstable,
+  ProviderCatalogTemplateRequestUnstable,
+  ProviderCatalogTemplateResponseUnstable,
+  ProviderConfigAuthenticateRequestUnstable,
+  ProviderConfigChangeResponseUnstable,
+  ProviderConfigDeleteRequestUnstable,
+  ProviderConfigReadRequestUnstable,
+  ProviderConfigReadResponseUnstable,
+  ProviderConfigSaveRequestUnstable,
+  ProviderConfigStatusRequestUnstable,
+  ProviderConfigStatusResponseUnstable,
+  ProviderReadinessCheckRequestUnstable,
+  ProviderReadinessCheckResponseUnstable,
+  ProviderSecretDeleteRequestUnstable,
+  ProviderSecretsListRequestUnstable,
+  ProviderSecretsListResponseUnstable,
+  ProviderSetupCatalogListRequestUnstable,
+  ProviderSetupCatalogListResponseUnstable,
+  ProviderSupportedModelsListRequestUnstable,
+  ProviderSupportedModelsListResponseUnstable,
+  ReadResourceRequestUnstable,
+  ReadResourceResponseUnstable,
+  RecipeToYamlRequestUnstable,
+  RecipeToYamlResponseUnstable,
+  RefreshProviderInventoryRequestUnstable,
+  RefreshProviderInventoryResponseUnstable,
+  RemoveConfigExtensionRequestUnstable,
+  RemoveSessionExtensionRequestUnstable,
+  RenameSessionRequestUnstable,
+  ResetPromptRequestUnstable,
+  RunScheduleNowRequestUnstable,
+  RunScheduleNowResponseUnstable,
+  SavePromptRequestUnstable,
+  SaveRecipeRequestUnstable,
+  SaveRecipeResponseUnstable,
+  ScanRecipeRequestUnstable,
+  ScanRecipeResponseUnstable,
+  ScheduleRecipeRequestUnstable,
+  SetConfigExtensionEnabledRequestUnstable,
+  SetRecipeSlashCommandRequestUnstable,
+  SetSessionSystemPromptRequestUnstable,
+  SetToolPermissionsRequestUnstable,
+  SetToolPermissionsResponseUnstable,
+  SteerSessionRequestUnstable,
+  SteerSessionResponseUnstable,
+  TruncateSessionConversationRequestUnstable,
+  UnarchiveSessionRequestUnstable,
+  UnpauseScheduleRequestUnstable,
+  UpdateScheduleRequestUnstable,
+  UpdateScheduleResponseUnstable,
+  UpdateSessionProjectRequestUnstable,
+  UpdateSourceRequestUnstable,
+  UpdateSourceResponseUnstable,
+  UpdateWorkingDirRequestUnstable,
+} from "./types.gen.js";
 import {
-  zAppsDeleteResponse_unstable,
-  zAppsExportResponse_unstable,
-  zAppsImportResponse_unstable,
-  zAppsListResponse_unstable,
-  zCanonicalModelInfoResponse_unstable,
-  zConfigReadAllResponse_unstable,
-  zConfigReadResponse_unstable,
-  zCreateScheduleResponse_unstable,
-  zCreateSourceResponse_unstable,
-  zCustomProviderCreateResponse_unstable,
-  zCustomProviderDeleteResponse_unstable,
-  zCustomProviderReadResponse_unstable,
-  zCustomProviderUpdateResponse_unstable,
-  zDecodeRecipeResponse_unstable,
-  zDefaultsReadResponse_unstable,
-  zDiagnosticsGetResponse_unstable,
-  zDictationConfigResponse_unstable,
-  zDictationModelDownloadProgressResponse_unstable,
-  zDictationModelsListResponse_unstable,
-  zDictationTranscribeResponse_unstable,
-  zEncodeRecipeResponse_unstable,
-  zExportSessionResponse_unstable,
-  zExportSourceResponse_unstable,
-  zGetConfigExtensionsResponse_unstable,
-  zGetPromptResponse_unstable,
-  zGetSessionExtensionsResponse_unstable,
-  zGetSessionInfoResponse_unstable,
-  zGetToolsResponse_unstable,
-  zGooseToolCallResponse_unstable,
-  zImportSessionResponse_unstable,
-  zImportSourcesResponse_unstable,
-  zInspectRunningJobResponse_unstable,
-  zKillRunningJobResponse_unstable,
-  zListAgentMentionsResponse_unstable,
-  zListPromptsResponse_unstable,
-  zListProvidersResponse_unstable,
-  zListRecipesResponse_unstable,
-  zListScheduleSessionsResponse_unstable,
-  zListSchedulesResponse_unstable,
-  zListSlashCommandsResponse_unstable,
-  zListSourcesResponse_unstable,
-  zLiveVoiceAvailabilityResponse_unstable,
-  zLiveVoiceStartResponse_unstable,
-  zLocalInferenceBuiltinChatTemplatesListResponse_unstable,
-  zLocalInferenceHuggingFaceRepoVariantsResponse_unstable,
-  zLocalInferenceHuggingFaceSearchResponse_unstable,
-  zLocalInferenceModelDownloadProgressResponse_unstable,
-  zLocalInferenceModelDownloadResponse_unstable,
-  zLocalInferenceModelSettingsReadResponse_unstable,
-  zLocalInferenceModelSettingsUpdateResponse_unstable,
-  zLocalInferenceModelsListResponse_unstable,
-  zOnboardingImportApplyResponse_unstable,
-  zOnboardingImportScanResponse_unstable,
-  zParseRecipeResponse_unstable,
-  zPreferencesReadResponse_unstable,
-  zPromptOperationResponse_unstable,
-  zProviderCatalogListResponse_unstable,
-  zProviderCatalogTemplateResponse_unstable,
-  zProviderConfigChangeResponse_unstable,
-  zProviderConfigReadResponse_unstable,
-  zProviderConfigStatusResponse_unstable,
-  zProviderReadinessCheckResponse_unstable,
-  zProviderSecretsListResponse_unstable,
-  zProviderSetupCatalogListResponse_unstable,
-  zProviderSupportedModelsListResponse_unstable,
-  zReadResourceResponse_unstable,
-  zRecipeToYamlResponse_unstable,
-  zRefreshProviderInventoryResponse_unstable,
-  zRunScheduleNowResponse_unstable,
-  zSaveRecipeResponse_unstable,
-  zScanRecipeResponse_unstable,
-  zSetToolPermissionsResponse_unstable,
-  zSteerSessionResponse_unstable,
-  zUpdateScheduleResponse_unstable,
-  zUpdateSourceResponse_unstable,
-} from './zod.gen.js';
+  appsDeleteResponseUnstableSchema,
+  appsExportResponseUnstableSchema,
+  appsImportResponseUnstableSchema,
+  appsListResponseUnstableSchema,
+  canonicalModelInfoResponseUnstableSchema,
+  configReadAllResponseUnstableSchema,
+  configReadResponseUnstableSchema,
+  createScheduleResponseUnstableSchema,
+  createSourceResponseUnstableSchema,
+  customProviderCreateResponseUnstableSchema,
+  customProviderDeleteResponseUnstableSchema,
+  customProviderReadResponseUnstableSchema,
+  customProviderUpdateResponseUnstableSchema,
+  decodeRecipeResponseUnstableSchema,
+  defaultsReadResponseUnstableSchema,
+  diagnosticsGetResponseUnstableSchema,
+  dictationConfigResponseUnstableSchema,
+  dictationModelDownloadProgressResponseUnstableSchema,
+  dictationModelsListResponseUnstableSchema,
+  dictationTranscribeResponseUnstableSchema,
+  encodeRecipeResponseUnstableSchema,
+  exportSessionResponseUnstableSchema,
+  exportSourceResponseUnstableSchema,
+  getConfigExtensionsResponseUnstableSchema,
+  getPromptResponseUnstableSchema,
+  getSessionExtensionsResponseUnstableSchema,
+  getSessionInfoResponseUnstableSchema,
+  getToolsResponseUnstableSchema,
+  gooseToolCallResponseUnstableSchema,
+  importSessionResponseUnstableSchema,
+  importSourcesResponseUnstableSchema,
+  inspectRunningJobResponseUnstableSchema,
+  killRunningJobResponseUnstableSchema,
+  listAgentMentionsResponseUnstableSchema,
+  listPromptsResponseUnstableSchema,
+  listProvidersResponseUnstableSchema,
+  listRecipesResponseUnstableSchema,
+  listScheduleSessionsResponseUnstableSchema,
+  listSchedulesResponseUnstableSchema,
+  listSlashCommandsResponseUnstableSchema,
+  listSourcesResponseUnstableSchema,
+  liveVoiceAvailabilityResponseUnstableSchema,
+  liveVoiceStartResponseUnstableSchema,
+  localInferenceBuiltinChatTemplatesListResponseUnstableSchema,
+  localInferenceHuggingFaceRepoVariantsResponseUnstableSchema,
+  localInferenceHuggingFaceSearchResponseUnstableSchema,
+  localInferenceModelDownloadProgressResponseUnstableSchema,
+  localInferenceModelDownloadResponseUnstableSchema,
+  localInferenceModelSettingsReadResponseUnstableSchema,
+  localInferenceModelSettingsUpdateResponseUnstableSchema,
+  localInferenceModelsListResponseUnstableSchema,
+  onboardingImportApplyResponseUnstableSchema,
+  onboardingImportScanResponseUnstableSchema,
+  parseRecipeResponseUnstableSchema,
+  preferencesReadResponseUnstableSchema,
+  promptOperationResponseUnstableSchema,
+  providerCatalogListResponseUnstableSchema,
+  providerCatalogTemplateResponseUnstableSchema,
+  providerConfigChangeResponseUnstableSchema,
+  providerConfigReadResponseUnstableSchema,
+  providerConfigStatusResponseUnstableSchema,
+  providerReadinessCheckResponseUnstableSchema,
+  providerSecretsListResponseUnstableSchema,
+  providerSetupCatalogListResponseUnstableSchema,
+  providerSupportedModelsListResponseUnstableSchema,
+  readResourceResponseUnstableSchema,
+  recipeToYamlResponseUnstableSchema,
+  refreshProviderInventoryResponseUnstableSchema,
+  runScheduleNowResponseUnstableSchema,
+  saveRecipeResponseUnstableSchema,
+  scanRecipeResponseUnstableSchema,
+  setToolPermissionsResponseUnstableSchema,
+  steerSessionResponseUnstableSchema,
+  updateScheduleResponseUnstableSchema,
+  updateSourceResponseUnstableSchema,
+} from "./zod.gen.js";
 
 export class GooseExtClient {
   constructor(private conn: Pick<ClientContext, "request">) {}
 
-  async sessionExtensionsAdd_unstable(
-    params: AddSessionExtensionRequest_unstable,
+  async sessionExtensionsAddUnstable(
+    params: AddSessionExtensionRequestUnstable,
   ): Promise<void> {
     await this.conn.request("_goose/unstable/session/extensions/add", params);
   }
 
-  async sessionExtensionsRemove_unstable(
-    params: RemoveSessionExtensionRequest_unstable,
+  async sessionExtensionsRemoveUnstable(
+    params: RemoveSessionExtensionRequestUnstable,
   ): Promise<void> {
     await this.conn.request(
       "_goose/unstable/session/extensions/remove",
@@ -284,82 +284,86 @@ export class GooseExtClient {
     );
   }
 
-  async toolsList_unstable(
-    params: GetToolsRequest_unstable,
-  ): Promise<GetToolsResponse_unstable> {
+  async toolsListUnstable(
+    params: GetToolsRequestUnstable,
+  ): Promise<GetToolsResponseUnstable> {
     const raw = await this.conn.request("_goose/unstable/tools/list", params);
-    return zGetToolsResponse_unstable.parse(raw) as GetToolsResponse_unstable;
+    return getToolsResponseUnstableSchema.parse(
+      raw,
+    ) as GetToolsResponseUnstable;
   }
 
-  async toolsPermissionsSet_unstable(
-    params: SetToolPermissionsRequest_unstable,
-  ): Promise<SetToolPermissionsResponse_unstable> {
+  async toolsPermissionsSetUnstable(
+    params: SetToolPermissionsRequestUnstable,
+  ): Promise<SetToolPermissionsResponseUnstable> {
     const raw = await this.conn.request(
       "_goose/unstable/tools/permissions/set",
       params,
     );
-    return zSetToolPermissionsResponse_unstable.parse(
+    return setToolPermissionsResponseUnstableSchema.parse(
       raw,
-    ) as SetToolPermissionsResponse_unstable;
+    ) as SetToolPermissionsResponseUnstable;
   }
 
-  async toolsCall_unstable(
-    params: GooseToolCallRequest_unstable,
-  ): Promise<GooseToolCallResponse_unstable> {
+  async toolsCallUnstable(
+    params: GooseToolCallRequestUnstable,
+  ): Promise<GooseToolCallResponseUnstable> {
     const raw = await this.conn.request("_goose/unstable/tools/call", params);
-    return zGooseToolCallResponse_unstable.parse(
+    return gooseToolCallResponseUnstableSchema.parse(
       raw,
-    ) as GooseToolCallResponse_unstable;
+    ) as GooseToolCallResponseUnstable;
   }
 
-  async resourcesRead_unstable(
-    params: ReadResourceRequest_unstable,
-  ): Promise<ReadResourceResponse_unstable> {
+  async resourcesReadUnstable(
+    params: ReadResourceRequestUnstable,
+  ): Promise<ReadResourceResponseUnstable> {
     const raw = await this.conn.request(
       "_goose/unstable/resources/read",
       params,
     );
-    return zReadResourceResponse_unstable.parse(
+    return readResourceResponseUnstableSchema.parse(
       raw,
-    ) as ReadResourceResponse_unstable;
+    ) as ReadResourceResponseUnstable;
   }
 
-  async appsList_unstable(
-    params: AppsListRequest_unstable,
-  ): Promise<AppsListResponse_unstable> {
+  async appsListUnstable(
+    params: AppsListRequestUnstable,
+  ): Promise<AppsListResponseUnstable> {
     const raw = await this.conn.request("_goose/unstable/apps/list", params);
-    return zAppsListResponse_unstable.parse(raw) as AppsListResponse_unstable;
+    return appsListResponseUnstableSchema.parse(
+      raw,
+    ) as AppsListResponseUnstable;
   }
 
-  async appsExport_unstable(
-    params: AppsExportRequest_unstable,
-  ): Promise<AppsExportResponse_unstable> {
+  async appsExportUnstable(
+    params: AppsExportRequestUnstable,
+  ): Promise<AppsExportResponseUnstable> {
     const raw = await this.conn.request("_goose/unstable/apps/export", params);
-    return zAppsExportResponse_unstable.parse(
+    return appsExportResponseUnstableSchema.parse(
       raw,
-    ) as AppsExportResponse_unstable;
+    ) as AppsExportResponseUnstable;
   }
 
-  async appsImport_unstable(
-    params: AppsImportRequest_unstable,
-  ): Promise<AppsImportResponse_unstable> {
+  async appsImportUnstable(
+    params: AppsImportRequestUnstable,
+  ): Promise<AppsImportResponseUnstable> {
     const raw = await this.conn.request("_goose/unstable/apps/import", params);
-    return zAppsImportResponse_unstable.parse(
+    return appsImportResponseUnstableSchema.parse(
       raw,
-    ) as AppsImportResponse_unstable;
+    ) as AppsImportResponseUnstable;
   }
 
-  async appsDelete_unstable(
-    params: AppsDeleteRequest_unstable,
-  ): Promise<AppsDeleteResponse_unstable> {
+  async appsDeleteUnstable(
+    params: AppsDeleteRequestUnstable,
+  ): Promise<AppsDeleteResponseUnstable> {
     const raw = await this.conn.request("_goose/unstable/apps/delete", params);
-    return zAppsDeleteResponse_unstable.parse(
+    return appsDeleteResponseUnstableSchema.parse(
       raw,
-    ) as AppsDeleteResponse_unstable;
+    ) as AppsDeleteResponseUnstable;
   }
 
-  async sessionWorkingDirUpdate_unstable(
-    params: UpdateWorkingDirRequest_unstable,
+  async sessionWorkingDirUpdateUnstable(
+    params: UpdateWorkingDirRequestUnstable,
   ): Promise<void> {
     await this.conn.request(
       "_goose/unstable/session/working-dir/update",
@@ -367,8 +371,8 @@ export class GooseExtClient {
     );
   }
 
-  async sessionSystemPromptSet_unstable(
-    params: SetSessionSystemPromptRequest_unstable,
+  async sessionSystemPromptSetUnstable(
+    params: SetSessionSystemPromptRequestUnstable,
   ): Promise<void> {
     await this.conn.request(
       "_goose/unstable/session/system-prompt/set",
@@ -376,132 +380,134 @@ export class GooseExtClient {
     );
   }
 
-  async sessionSteer_unstable(
-    params: SteerSessionRequest_unstable,
-  ): Promise<SteerSessionResponse_unstable> {
+  async sessionSteerUnstable(
+    params: SteerSessionRequestUnstable,
+  ): Promise<SteerSessionResponseUnstable> {
     const raw = await this.conn.request(
       "_goose/unstable/session/steer",
       params,
     );
-    return zSteerSessionResponse_unstable.parse(
+    return steerSessionResponseUnstableSchema.parse(
       raw,
-    ) as SteerSessionResponse_unstable;
+    ) as SteerSessionResponseUnstable;
   }
 
-  async sessionLiveVoiceAvailability_unstable(
-    params: LiveVoiceAvailabilityRequest_unstable,
-  ): Promise<LiveVoiceAvailabilityResponse_unstable> {
+  async sessionLiveVoiceAvailabilityUnstable(
+    params: LiveVoiceAvailabilityRequestUnstable,
+  ): Promise<LiveVoiceAvailabilityResponseUnstable> {
     const raw = await this.conn.request(
       "_goose/unstable/session/live-voice/availability",
       params,
     );
-    return zLiveVoiceAvailabilityResponse_unstable.parse(
+    return liveVoiceAvailabilityResponseUnstableSchema.parse(
       raw,
-    ) as LiveVoiceAvailabilityResponse_unstable;
+    ) as LiveVoiceAvailabilityResponseUnstable;
   }
 
-  async sessionLiveVoiceStart_unstable(
-    params: LiveVoiceStartRequest_unstable,
-  ): Promise<LiveVoiceStartResponse_unstable> {
+  async sessionLiveVoiceStartUnstable(
+    params: LiveVoiceStartRequestUnstable,
+  ): Promise<LiveVoiceStartResponseUnstable> {
     const raw = await this.conn.request(
       "_goose/unstable/session/live-voice/start",
       params,
     );
-    return zLiveVoiceStartResponse_unstable.parse(
+    return liveVoiceStartResponseUnstableSchema.parse(
       raw,
-    ) as LiveVoiceStartResponse_unstable;
+    ) as LiveVoiceStartResponseUnstable;
   }
 
-  async sessionLiveVoiceStop_unstable(
-    params: LiveVoiceStopRequest_unstable,
+  async sessionLiveVoiceStopUnstable(
+    params: LiveVoiceStopRequestUnstable,
   ): Promise<void> {
     await this.conn.request("_goose/unstable/session/live-voice/stop", params);
   }
 
-  async diagnosticsGet_unstable(
-    params: DiagnosticsGetRequest_unstable,
-  ): Promise<DiagnosticsGetResponse_unstable> {
+  async diagnosticsGetUnstable(
+    params: DiagnosticsGetRequestUnstable,
+  ): Promise<DiagnosticsGetResponseUnstable> {
     const raw = await this.conn.request(
       "_goose/unstable/diagnostics/get",
       params,
     );
-    return zDiagnosticsGetResponse_unstable.parse(
+    return diagnosticsGetResponseUnstableSchema.parse(
       raw,
-    ) as DiagnosticsGetResponse_unstable;
+    ) as DiagnosticsGetResponseUnstable;
   }
 
-  async configPromptsList_unstable(
-    params: ListPromptsRequest_unstable,
-  ): Promise<ListPromptsResponse_unstable> {
+  async configPromptsListUnstable(
+    params: ListPromptsRequestUnstable,
+  ): Promise<ListPromptsResponseUnstable> {
     const raw = await this.conn.request(
       "_goose/unstable/config/prompts/list",
       params,
     );
-    return zListPromptsResponse_unstable.parse(
+    return listPromptsResponseUnstableSchema.parse(
       raw,
-    ) as ListPromptsResponse_unstable;
+    ) as ListPromptsResponseUnstable;
   }
 
-  async configPromptsGet_unstable(
-    params: GetPromptRequest_unstable,
-  ): Promise<GetPromptResponse_unstable> {
+  async configPromptsGetUnstable(
+    params: GetPromptRequestUnstable,
+  ): Promise<GetPromptResponseUnstable> {
     const raw = await this.conn.request(
       "_goose/unstable/config/prompts/get",
       params,
     );
-    return zGetPromptResponse_unstable.parse(raw) as GetPromptResponse_unstable;
+    return getPromptResponseUnstableSchema.parse(
+      raw,
+    ) as GetPromptResponseUnstable;
   }
 
-  async configPromptsSave_unstable(
-    params: SavePromptRequest_unstable,
-  ): Promise<PromptOperationResponse_unstable> {
+  async configPromptsSaveUnstable(
+    params: SavePromptRequestUnstable,
+  ): Promise<PromptOperationResponseUnstable> {
     const raw = await this.conn.request(
       "_goose/unstable/config/prompts/save",
       params,
     );
-    return zPromptOperationResponse_unstable.parse(
+    return promptOperationResponseUnstableSchema.parse(
       raw,
-    ) as PromptOperationResponse_unstable;
+    ) as PromptOperationResponseUnstable;
   }
 
-  async configPromptsReset_unstable(
-    params: ResetPromptRequest_unstable,
-  ): Promise<PromptOperationResponse_unstable> {
+  async configPromptsResetUnstable(
+    params: ResetPromptRequestUnstable,
+  ): Promise<PromptOperationResponseUnstable> {
     const raw = await this.conn.request(
       "_goose/unstable/config/prompts/reset",
       params,
     );
-    return zPromptOperationResponse_unstable.parse(
+    return promptOperationResponseUnstableSchema.parse(
       raw,
-    ) as PromptOperationResponse_unstable;
+    ) as PromptOperationResponseUnstable;
   }
 
-  async configExtensionsList_unstable(
-    params: GetConfigExtensionsRequest_unstable,
-  ): Promise<GetConfigExtensionsResponse_unstable> {
+  async configExtensionsListUnstable(
+    params: GetConfigExtensionsRequestUnstable,
+  ): Promise<GetConfigExtensionsResponseUnstable> {
     const raw = await this.conn.request(
       "_goose/unstable/config/extensions/list",
       params,
     );
-    return zGetConfigExtensionsResponse_unstable.parse(
+    return getConfigExtensionsResponseUnstableSchema.parse(
       raw,
-    ) as GetConfigExtensionsResponse_unstable;
+    ) as GetConfigExtensionsResponseUnstable;
   }
 
-  async configExtensionsAdd_unstable(
-    params: AddConfigExtensionRequest_unstable,
+  async configExtensionsAddUnstable(
+    params: AddConfigExtensionRequestUnstable,
   ): Promise<void> {
     await this.conn.request("_goose/unstable/config/extensions/add", params);
   }
 
-  async configExtensionsRemove_unstable(
-    params: RemoveConfigExtensionRequest_unstable,
+  async configExtensionsRemoveUnstable(
+    params: RemoveConfigExtensionRequestUnstable,
   ): Promise<void> {
     await this.conn.request("_goose/unstable/config/extensions/remove", params);
   }
 
-  async configExtensionsSetEnabled_unstable(
-    params: SetConfigExtensionEnabledRequest_unstable,
+  async configExtensionsSetEnabledUnstable(
+    params: SetConfigExtensionEnabledRequestUnstable,
   ): Promise<void> {
     await this.conn.request(
       "_goose/unstable/config/extensions/set-enabled",
@@ -509,581 +515,581 @@ export class GooseExtClient {
     );
   }
 
-  async sessionExtensionsList_unstable(
-    params: GetSessionExtensionsRequest_unstable,
-  ): Promise<GetSessionExtensionsResponse_unstable> {
+  async sessionExtensionsListUnstable(
+    params: GetSessionExtensionsRequestUnstable,
+  ): Promise<GetSessionExtensionsResponseUnstable> {
     const raw = await this.conn.request(
       "_goose/unstable/session/extensions/list",
       params,
     );
-    return zGetSessionExtensionsResponse_unstable.parse(
+    return getSessionExtensionsResponseUnstableSchema.parse(
       raw,
-    ) as GetSessionExtensionsResponse_unstable;
+    ) as GetSessionExtensionsResponseUnstable;
   }
 
-  async providersList_unstable(
-    params: ListProvidersRequest_unstable,
-  ): Promise<ListProvidersResponse_unstable> {
+  async providersListUnstable(
+    params: ListProvidersRequestUnstable,
+  ): Promise<ListProvidersResponseUnstable> {
     const raw = await this.conn.request(
       "_goose/unstable/providers/list",
       params,
     );
-    return zListProvidersResponse_unstable.parse(
+    return listProvidersResponseUnstableSchema.parse(
       raw,
-    ) as ListProvidersResponse_unstable;
+    ) as ListProvidersResponseUnstable;
   }
 
-  async providersSupportedModelsList_unstable(
-    params: ProviderSupportedModelsListRequest_unstable,
-  ): Promise<ProviderSupportedModelsListResponse_unstable> {
+  async providersSupportedModelsListUnstable(
+    params: ProviderSupportedModelsListRequestUnstable,
+  ): Promise<ProviderSupportedModelsListResponseUnstable> {
     const raw = await this.conn.request(
       "_goose/unstable/providers/supported-models/list",
       params,
     );
-    return zProviderSupportedModelsListResponse_unstable.parse(
+    return providerSupportedModelsListResponseUnstableSchema.parse(
       raw,
-    ) as ProviderSupportedModelsListResponse_unstable;
+    ) as ProviderSupportedModelsListResponseUnstable;
   }
 
-  async providersCatalogList_unstable(
-    params: ProviderCatalogListRequest_unstable,
-  ): Promise<ProviderCatalogListResponse_unstable> {
+  async providersCatalogListUnstable(
+    params: ProviderCatalogListRequestUnstable,
+  ): Promise<ProviderCatalogListResponseUnstable> {
     const raw = await this.conn.request(
       "_goose/unstable/providers/catalog/list",
       params,
     );
-    return zProviderCatalogListResponse_unstable.parse(
+    return providerCatalogListResponseUnstableSchema.parse(
       raw,
-    ) as ProviderCatalogListResponse_unstable;
+    ) as ProviderCatalogListResponseUnstable;
   }
 
-  async providersSetupCatalogList_unstable(
-    params: ProviderSetupCatalogListRequest_unstable,
-  ): Promise<ProviderSetupCatalogListResponse_unstable> {
+  async providersSetupCatalogListUnstable(
+    params: ProviderSetupCatalogListRequestUnstable,
+  ): Promise<ProviderSetupCatalogListResponseUnstable> {
     const raw = await this.conn.request(
       "_goose/unstable/providers/setup/catalog/list",
       params,
     );
-    return zProviderSetupCatalogListResponse_unstable.parse(
+    return providerSetupCatalogListResponseUnstableSchema.parse(
       raw,
-    ) as ProviderSetupCatalogListResponse_unstable;
+    ) as ProviderSetupCatalogListResponseUnstable;
   }
 
-  async providersCatalogTemplate_unstable(
-    params: ProviderCatalogTemplateRequest_unstable,
-  ): Promise<ProviderCatalogTemplateResponse_unstable> {
+  async providersCatalogTemplateUnstable(
+    params: ProviderCatalogTemplateRequestUnstable,
+  ): Promise<ProviderCatalogTemplateResponseUnstable> {
     const raw = await this.conn.request(
       "_goose/unstable/providers/catalog/template",
       params,
     );
-    return zProviderCatalogTemplateResponse_unstable.parse(
+    return providerCatalogTemplateResponseUnstableSchema.parse(
       raw,
-    ) as ProviderCatalogTemplateResponse_unstable;
+    ) as ProviderCatalogTemplateResponseUnstable;
   }
 
-  async providersCustomCreate_unstable(
-    params: CustomProviderCreateRequest_unstable,
-  ): Promise<CustomProviderCreateResponse_unstable> {
+  async providersCustomCreateUnstable(
+    params: CustomProviderCreateRequestUnstable,
+  ): Promise<CustomProviderCreateResponseUnstable> {
     const raw = await this.conn.request(
       "_goose/unstable/providers/custom/create",
       params,
     );
-    return zCustomProviderCreateResponse_unstable.parse(
+    return customProviderCreateResponseUnstableSchema.parse(
       raw,
-    ) as CustomProviderCreateResponse_unstable;
+    ) as CustomProviderCreateResponseUnstable;
   }
 
-  async providersCustomRead_unstable(
-    params: CustomProviderReadRequest_unstable,
-  ): Promise<CustomProviderReadResponse_unstable> {
+  async providersCustomReadUnstable(
+    params: CustomProviderReadRequestUnstable,
+  ): Promise<CustomProviderReadResponseUnstable> {
     const raw = await this.conn.request(
       "_goose/unstable/providers/custom/read",
       params,
     );
-    return zCustomProviderReadResponse_unstable.parse(
+    return customProviderReadResponseUnstableSchema.parse(
       raw,
-    ) as CustomProviderReadResponse_unstable;
+    ) as CustomProviderReadResponseUnstable;
   }
 
-  async providersCustomUpdate_unstable(
-    params: CustomProviderUpdateRequest_unstable,
-  ): Promise<CustomProviderUpdateResponse_unstable> {
+  async providersCustomUpdateUnstable(
+    params: CustomProviderUpdateRequestUnstable,
+  ): Promise<CustomProviderUpdateResponseUnstable> {
     const raw = await this.conn.request(
       "_goose/unstable/providers/custom/update",
       params,
     );
-    return zCustomProviderUpdateResponse_unstable.parse(
+    return customProviderUpdateResponseUnstableSchema.parse(
       raw,
-    ) as CustomProviderUpdateResponse_unstable;
+    ) as CustomProviderUpdateResponseUnstable;
   }
 
-  async providersCustomDelete_unstable(
-    params: CustomProviderDeleteRequest_unstable,
-  ): Promise<CustomProviderDeleteResponse_unstable> {
+  async providersCustomDeleteUnstable(
+    params: CustomProviderDeleteRequestUnstable,
+  ): Promise<CustomProviderDeleteResponseUnstable> {
     const raw = await this.conn.request(
       "_goose/unstable/providers/custom/delete",
       params,
     );
-    return zCustomProviderDeleteResponse_unstable.parse(
+    return customProviderDeleteResponseUnstableSchema.parse(
       raw,
-    ) as CustomProviderDeleteResponse_unstable;
+    ) as CustomProviderDeleteResponseUnstable;
   }
 
-  async providersInventoryRefresh_unstable(
-    params: RefreshProviderInventoryRequest_unstable,
-  ): Promise<RefreshProviderInventoryResponse_unstable> {
+  async providersInventoryRefreshUnstable(
+    params: RefreshProviderInventoryRequestUnstable,
+  ): Promise<RefreshProviderInventoryResponseUnstable> {
     const raw = await this.conn.request(
       "_goose/unstable/providers/inventory/refresh",
       params,
     );
-    return zRefreshProviderInventoryResponse_unstable.parse(
+    return refreshProviderInventoryResponseUnstableSchema.parse(
       raw,
-    ) as RefreshProviderInventoryResponse_unstable;
+    ) as RefreshProviderInventoryResponseUnstable;
   }
 
-  async providersReadinessCheck_unstable(
-    params: ProviderReadinessCheckRequest_unstable,
-  ): Promise<ProviderReadinessCheckResponse_unstable> {
+  async providersReadinessCheckUnstable(
+    params: ProviderReadinessCheckRequestUnstable,
+  ): Promise<ProviderReadinessCheckResponseUnstable> {
     const raw = await this.conn.request(
       "_goose/unstable/providers/readiness/check",
       params,
     );
-    return zProviderReadinessCheckResponse_unstable.parse(
+    return providerReadinessCheckResponseUnstableSchema.parse(
       raw,
-    ) as ProviderReadinessCheckResponse_unstable;
+    ) as ProviderReadinessCheckResponseUnstable;
   }
 
-  async providersConfigRead_unstable(
-    params: ProviderConfigReadRequest_unstable,
-  ): Promise<ProviderConfigReadResponse_unstable> {
+  async providersConfigReadUnstable(
+    params: ProviderConfigReadRequestUnstable,
+  ): Promise<ProviderConfigReadResponseUnstable> {
     const raw = await this.conn.request(
       "_goose/unstable/providers/config/read",
       params,
     );
-    return zProviderConfigReadResponse_unstable.parse(
+    return providerConfigReadResponseUnstableSchema.parse(
       raw,
-    ) as ProviderConfigReadResponse_unstable;
+    ) as ProviderConfigReadResponseUnstable;
   }
 
-  async providersConfigStatus_unstable(
-    params: ProviderConfigStatusRequest_unstable,
-  ): Promise<ProviderConfigStatusResponse_unstable> {
+  async providersConfigStatusUnstable(
+    params: ProviderConfigStatusRequestUnstable,
+  ): Promise<ProviderConfigStatusResponseUnstable> {
     const raw = await this.conn.request(
       "_goose/unstable/providers/config/status",
       params,
     );
-    return zProviderConfigStatusResponse_unstable.parse(
+    return providerConfigStatusResponseUnstableSchema.parse(
       raw,
-    ) as ProviderConfigStatusResponse_unstable;
+    ) as ProviderConfigStatusResponseUnstable;
   }
 
-  async providersConfigSave_unstable(
-    params: ProviderConfigSaveRequest_unstable,
-  ): Promise<ProviderConfigChangeResponse_unstable> {
+  async providersConfigSaveUnstable(
+    params: ProviderConfigSaveRequestUnstable,
+  ): Promise<ProviderConfigChangeResponseUnstable> {
     const raw = await this.conn.request(
       "_goose/unstable/providers/config/save",
       params,
     );
-    return zProviderConfigChangeResponse_unstable.parse(
+    return providerConfigChangeResponseUnstableSchema.parse(
       raw,
-    ) as ProviderConfigChangeResponse_unstable;
+    ) as ProviderConfigChangeResponseUnstable;
   }
 
-  async providersConfigDelete_unstable(
-    params: ProviderConfigDeleteRequest_unstable,
-  ): Promise<ProviderConfigChangeResponse_unstable> {
+  async providersConfigDeleteUnstable(
+    params: ProviderConfigDeleteRequestUnstable,
+  ): Promise<ProviderConfigChangeResponseUnstable> {
     const raw = await this.conn.request(
       "_goose/unstable/providers/config/delete",
       params,
     );
-    return zProviderConfigChangeResponse_unstable.parse(
+    return providerConfigChangeResponseUnstableSchema.parse(
       raw,
-    ) as ProviderConfigChangeResponse_unstable;
+    ) as ProviderConfigChangeResponseUnstable;
   }
 
-  async providersConfigAuthenticate_unstable(
-    params: ProviderConfigAuthenticateRequest_unstable,
-  ): Promise<ProviderConfigChangeResponse_unstable> {
+  async providersConfigAuthenticateUnstable(
+    params: ProviderConfigAuthenticateRequestUnstable,
+  ): Promise<ProviderConfigChangeResponseUnstable> {
     const raw = await this.conn.request(
       "_goose/unstable/providers/config/authenticate",
       params,
     );
-    return zProviderConfigChangeResponse_unstable.parse(
+    return providerConfigChangeResponseUnstableSchema.parse(
       raw,
-    ) as ProviderConfigChangeResponse_unstable;
+    ) as ProviderConfigChangeResponseUnstable;
   }
 
-  async providersSecretsList_unstable(
-    params: ProviderSecretsListRequest_unstable,
-  ): Promise<ProviderSecretsListResponse_unstable> {
+  async providersSecretsListUnstable(
+    params: ProviderSecretsListRequestUnstable,
+  ): Promise<ProviderSecretsListResponseUnstable> {
     const raw = await this.conn.request(
       "_goose/unstable/providers/secrets/list",
       params,
     );
-    return zProviderSecretsListResponse_unstable.parse(
+    return providerSecretsListResponseUnstableSchema.parse(
       raw,
-    ) as ProviderSecretsListResponse_unstable;
+    ) as ProviderSecretsListResponseUnstable;
   }
 
-  async providersSecretsDelete_unstable(
-    params: ProviderSecretDeleteRequest_unstable,
+  async providersSecretsDeleteUnstable(
+    params: ProviderSecretDeleteRequestUnstable,
   ): Promise<void> {
     await this.conn.request("_goose/unstable/providers/secrets/delete", params);
   }
 
-  async providersCanonicalModelInfo_unstable(
-    params: CanonicalModelInfoRequest_unstable,
-  ): Promise<CanonicalModelInfoResponse_unstable> {
+  async providersCanonicalModelInfoUnstable(
+    params: CanonicalModelInfoRequestUnstable,
+  ): Promise<CanonicalModelInfoResponseUnstable> {
     const raw = await this.conn.request(
       "_goose/unstable/providers/canonical-model-info",
       params,
     );
-    return zCanonicalModelInfoResponse_unstable.parse(
+    return canonicalModelInfoResponseUnstableSchema.parse(
       raw,
-    ) as CanonicalModelInfoResponse_unstable;
+    ) as CanonicalModelInfoResponseUnstable;
   }
 
-  async preferencesRead_unstable(
-    params: PreferencesReadRequest_unstable,
-  ): Promise<PreferencesReadResponse_unstable> {
+  async preferencesReadUnstable(
+    params: PreferencesReadRequestUnstable,
+  ): Promise<PreferencesReadResponseUnstable> {
     const raw = await this.conn.request(
       "_goose/unstable/preferences/read",
       params,
     );
-    return zPreferencesReadResponse_unstable.parse(
+    return preferencesReadResponseUnstableSchema.parse(
       raw,
-    ) as PreferencesReadResponse_unstable;
+    ) as PreferencesReadResponseUnstable;
   }
 
-  async preferencesSave_unstable(
-    params: PreferencesSaveRequest_unstable,
+  async preferencesSaveUnstable(
+    params: PreferencesSaveRequestUnstable,
   ): Promise<void> {
     await this.conn.request("_goose/unstable/preferences/save", params);
   }
 
-  async configRead_unstable(
-    params: ConfigReadRequest_unstable,
-  ): Promise<ConfigReadResponse_unstable> {
+  async configReadUnstable(
+    params: ConfigReadRequestUnstable,
+  ): Promise<ConfigReadResponseUnstable> {
     const raw = await this.conn.request("_goose/unstable/config/read", params);
-    return zConfigReadResponse_unstable.parse(
+    return configReadResponseUnstableSchema.parse(
       raw,
-    ) as ConfigReadResponse_unstable;
+    ) as ConfigReadResponseUnstable;
   }
 
-  async configUpsert_unstable(
-    params: ConfigUpsertRequest_unstable,
+  async configUpsertUnstable(
+    params: ConfigUpsertRequestUnstable,
   ): Promise<void> {
     await this.conn.request("_goose/unstable/config/upsert", params);
   }
 
-  async configRemove_unstable(
-    params: ConfigRemoveRequest_unstable,
+  async configRemoveUnstable(
+    params: ConfigRemoveRequestUnstable,
   ): Promise<void> {
     await this.conn.request("_goose/unstable/config/remove", params);
   }
 
-  async configReadAll_unstable(
-    params: ConfigReadAllRequest_unstable,
-  ): Promise<ConfigReadAllResponse_unstable> {
+  async configReadAllUnstable(
+    params: ConfigReadAllRequestUnstable,
+  ): Promise<ConfigReadAllResponseUnstable> {
     const raw = await this.conn.request(
       "_goose/unstable/config/read-all",
       params,
     );
-    return zConfigReadAllResponse_unstable.parse(
+    return configReadAllResponseUnstableSchema.parse(
       raw,
-    ) as ConfigReadAllResponse_unstable;
+    ) as ConfigReadAllResponseUnstable;
   }
 
-  async defaultsRead_unstable(
-    params: DefaultsReadRequest_unstable,
-  ): Promise<DefaultsReadResponse_unstable> {
+  async defaultsReadUnstable(
+    params: DefaultsReadRequestUnstable,
+  ): Promise<DefaultsReadResponseUnstable> {
     const raw = await this.conn.request(
       "_goose/unstable/defaults/read",
       params,
     );
-    return zDefaultsReadResponse_unstable.parse(
+    return defaultsReadResponseUnstableSchema.parse(
       raw,
-    ) as DefaultsReadResponse_unstable;
+    ) as DefaultsReadResponseUnstable;
   }
 
-  async defaultsSave_unstable(
-    params: DefaultsSaveRequest_unstable,
-  ): Promise<DefaultsReadResponse_unstable> {
+  async defaultsSaveUnstable(
+    params: DefaultsSaveRequestUnstable,
+  ): Promise<DefaultsReadResponseUnstable> {
     const raw = await this.conn.request(
       "_goose/unstable/defaults/save",
       params,
     );
-    return zDefaultsReadResponse_unstable.parse(
+    return defaultsReadResponseUnstableSchema.parse(
       raw,
-    ) as DefaultsReadResponse_unstable;
+    ) as DefaultsReadResponseUnstable;
   }
 
-  async defaultsClear_unstable(
-    params: DefaultsClearRequest_unstable,
-  ): Promise<DefaultsReadResponse_unstable> {
+  async defaultsClearUnstable(
+    params: DefaultsClearRequestUnstable,
+  ): Promise<DefaultsReadResponseUnstable> {
     const raw = await this.conn.request(
       "_goose/unstable/defaults/clear",
       params,
     );
-    return zDefaultsReadResponse_unstable.parse(
+    return defaultsReadResponseUnstableSchema.parse(
       raw,
-    ) as DefaultsReadResponse_unstable;
+    ) as DefaultsReadResponseUnstable;
   }
 
-  async onboardingImportScan_unstable(
-    params: OnboardingImportScanRequest_unstable,
-  ): Promise<OnboardingImportScanResponse_unstable> {
+  async onboardingImportScanUnstable(
+    params: OnboardingImportScanRequestUnstable,
+  ): Promise<OnboardingImportScanResponseUnstable> {
     const raw = await this.conn.request(
       "_goose/unstable/onboarding/import/scan",
       params,
     );
-    return zOnboardingImportScanResponse_unstable.parse(
+    return onboardingImportScanResponseUnstableSchema.parse(
       raw,
-    ) as OnboardingImportScanResponse_unstable;
+    ) as OnboardingImportScanResponseUnstable;
   }
 
-  async onboardingImportApply_unstable(
-    params: OnboardingImportApplyRequest_unstable,
-  ): Promise<OnboardingImportApplyResponse_unstable> {
+  async onboardingImportApplyUnstable(
+    params: OnboardingImportApplyRequestUnstable,
+  ): Promise<OnboardingImportApplyResponseUnstable> {
     const raw = await this.conn.request(
       "_goose/unstable/onboarding/import/apply",
       params,
     );
-    return zOnboardingImportApplyResponse_unstable.parse(
+    return onboardingImportApplyResponseUnstableSchema.parse(
       raw,
-    ) as OnboardingImportApplyResponse_unstable;
+    ) as OnboardingImportApplyResponseUnstable;
   }
 
-  async sessionExport_unstable(
-    params: ExportSessionRequest_unstable,
-  ): Promise<ExportSessionResponse_unstable> {
+  async sessionExportUnstable(
+    params: ExportSessionRequestUnstable,
+  ): Promise<ExportSessionResponseUnstable> {
     const raw = await this.conn.request(
       "_goose/unstable/session/export",
       params,
     );
-    return zExportSessionResponse_unstable.parse(
+    return exportSessionResponseUnstableSchema.parse(
       raw,
-    ) as ExportSessionResponse_unstable;
+    ) as ExportSessionResponseUnstable;
   }
 
-  async sessionImport_unstable(
-    params: ImportSessionRequest_unstable,
-  ): Promise<ImportSessionResponse_unstable> {
+  async sessionImportUnstable(
+    params: ImportSessionRequestUnstable,
+  ): Promise<ImportSessionResponseUnstable> {
     const raw = await this.conn.request(
       "_goose/unstable/session/import",
       params,
     );
-    return zImportSessionResponse_unstable.parse(
+    return importSessionResponseUnstableSchema.parse(
       raw,
-    ) as ImportSessionResponse_unstable;
+    ) as ImportSessionResponseUnstable;
   }
 
-  async recipesEncode_unstable(
-    params: EncodeRecipeRequest_unstable,
-  ): Promise<EncodeRecipeResponse_unstable> {
+  async recipesEncodeUnstable(
+    params: EncodeRecipeRequestUnstable,
+  ): Promise<EncodeRecipeResponseUnstable> {
     const raw = await this.conn.request(
       "_goose/unstable/recipes/encode",
       params,
     );
-    return zEncodeRecipeResponse_unstable.parse(
+    return encodeRecipeResponseUnstableSchema.parse(
       raw,
-    ) as EncodeRecipeResponse_unstable;
+    ) as EncodeRecipeResponseUnstable;
   }
 
-  async recipesDecode_unstable(
-    params: DecodeRecipeRequest_unstable,
-  ): Promise<DecodeRecipeResponse_unstable> {
+  async recipesDecodeUnstable(
+    params: DecodeRecipeRequestUnstable,
+  ): Promise<DecodeRecipeResponseUnstable> {
     const raw = await this.conn.request(
       "_goose/unstable/recipes/decode",
       params,
     );
-    return zDecodeRecipeResponse_unstable.parse(
+    return decodeRecipeResponseUnstableSchema.parse(
       raw,
-    ) as DecodeRecipeResponse_unstable;
+    ) as DecodeRecipeResponseUnstable;
   }
 
-  async recipesScan_unstable(
-    params: ScanRecipeRequest_unstable,
-  ): Promise<ScanRecipeResponse_unstable> {
+  async recipesScanUnstable(
+    params: ScanRecipeRequestUnstable,
+  ): Promise<ScanRecipeResponseUnstable> {
     const raw = await this.conn.request("_goose/unstable/recipes/scan", params);
-    return zScanRecipeResponse_unstable.parse(
+    return scanRecipeResponseUnstableSchema.parse(
       raw,
-    ) as ScanRecipeResponse_unstable;
+    ) as ScanRecipeResponseUnstable;
   }
 
-  async recipesList_unstable(
-    params: ListRecipesRequest_unstable,
-  ): Promise<ListRecipesResponse_unstable> {
+  async recipesListUnstable(
+    params: ListRecipesRequestUnstable,
+  ): Promise<ListRecipesResponseUnstable> {
     const raw = await this.conn.request("_goose/unstable/recipes/list", params);
-    return zListRecipesResponse_unstable.parse(
+    return listRecipesResponseUnstableSchema.parse(
       raw,
-    ) as ListRecipesResponse_unstable;
+    ) as ListRecipesResponseUnstable;
   }
 
-  async recipesDelete_unstable(
-    params: DeleteRecipeRequest_unstable,
+  async recipesDeleteUnstable(
+    params: DeleteRecipeRequestUnstable,
   ): Promise<void> {
     await this.conn.request("_goose/unstable/recipes/delete", params);
   }
 
-  async recipesSchedule_unstable(
-    params: ScheduleRecipeRequest_unstable,
+  async recipesScheduleUnstable(
+    params: ScheduleRecipeRequestUnstable,
   ): Promise<void> {
     await this.conn.request("_goose/unstable/recipes/schedule", params);
   }
 
-  async recipesSlashCommand_unstable(
-    params: SetRecipeSlashCommandRequest_unstable,
+  async recipesSlashCommandUnstable(
+    params: SetRecipeSlashCommandRequestUnstable,
   ): Promise<void> {
     await this.conn.request("_goose/unstable/recipes/slash-command", params);
   }
 
-  async recipesSave_unstable(
-    params: SaveRecipeRequest_unstable,
-  ): Promise<SaveRecipeResponse_unstable> {
+  async recipesSaveUnstable(
+    params: SaveRecipeRequestUnstable,
+  ): Promise<SaveRecipeResponseUnstable> {
     const raw = await this.conn.request("_goose/unstable/recipes/save", params);
-    return zSaveRecipeResponse_unstable.parse(
+    return saveRecipeResponseUnstableSchema.parse(
       raw,
-    ) as SaveRecipeResponse_unstable;
+    ) as SaveRecipeResponseUnstable;
   }
 
-  async recipesParse_unstable(
-    params: ParseRecipeRequest_unstable,
-  ): Promise<ParseRecipeResponse_unstable> {
+  async recipesParseUnstable(
+    params: ParseRecipeRequestUnstable,
+  ): Promise<ParseRecipeResponseUnstable> {
     const raw = await this.conn.request(
       "_goose/unstable/recipes/parse",
       params,
     );
-    return zParseRecipeResponse_unstable.parse(
+    return parseRecipeResponseUnstableSchema.parse(
       raw,
-    ) as ParseRecipeResponse_unstable;
+    ) as ParseRecipeResponseUnstable;
   }
 
-  async recipesToYaml_unstable(
-    params: RecipeToYamlRequest_unstable,
-  ): Promise<RecipeToYamlResponse_unstable> {
+  async recipesToYamlUnstable(
+    params: RecipeToYamlRequestUnstable,
+  ): Promise<RecipeToYamlResponseUnstable> {
     const raw = await this.conn.request(
       "_goose/unstable/recipes/to-yaml",
       params,
     );
-    return zRecipeToYamlResponse_unstable.parse(
+    return recipeToYamlResponseUnstableSchema.parse(
       raw,
-    ) as RecipeToYamlResponse_unstable;
+    ) as RecipeToYamlResponseUnstable;
   }
 
-  async schedulesList_unstable(
-    params: ListSchedulesRequest_unstable,
-  ): Promise<ListSchedulesResponse_unstable> {
+  async schedulesListUnstable(
+    params: ListSchedulesRequestUnstable,
+  ): Promise<ListSchedulesResponseUnstable> {
     const raw = await this.conn.request(
       "_goose/unstable/schedules/list",
       params,
     );
-    return zListSchedulesResponse_unstable.parse(
+    return listSchedulesResponseUnstableSchema.parse(
       raw,
-    ) as ListSchedulesResponse_unstable;
+    ) as ListSchedulesResponseUnstable;
   }
 
-  async schedulesSessionsList_unstable(
-    params: ListScheduleSessionsRequest_unstable,
-  ): Promise<ListScheduleSessionsResponse_unstable> {
+  async schedulesSessionsListUnstable(
+    params: ListScheduleSessionsRequestUnstable,
+  ): Promise<ListScheduleSessionsResponseUnstable> {
     const raw = await this.conn.request(
       "_goose/unstable/schedules/sessions/list",
       params,
     );
-    return zListScheduleSessionsResponse_unstable.parse(
+    return listScheduleSessionsResponseUnstableSchema.parse(
       raw,
-    ) as ListScheduleSessionsResponse_unstable;
+    ) as ListScheduleSessionsResponseUnstable;
   }
 
-  async schedulesCreate_unstable(
-    params: CreateScheduleRequest_unstable,
-  ): Promise<CreateScheduleResponse_unstable> {
+  async schedulesCreateUnstable(
+    params: CreateScheduleRequestUnstable,
+  ): Promise<CreateScheduleResponseUnstable> {
     const raw = await this.conn.request(
       "_goose/unstable/schedules/create",
       params,
     );
-    return zCreateScheduleResponse_unstable.parse(
+    return createScheduleResponseUnstableSchema.parse(
       raw,
-    ) as CreateScheduleResponse_unstable;
+    ) as CreateScheduleResponseUnstable;
   }
 
-  async schedulesDelete_unstable(
-    params: DeleteScheduleRequest_unstable,
+  async schedulesDeleteUnstable(
+    params: DeleteScheduleRequestUnstable,
   ): Promise<void> {
     await this.conn.request("_goose/unstable/schedules/delete", params);
   }
 
-  async schedulesPause_unstable(
-    params: PauseScheduleRequest_unstable,
+  async schedulesPauseUnstable(
+    params: PauseScheduleRequestUnstable,
   ): Promise<void> {
     await this.conn.request("_goose/unstable/schedules/pause", params);
   }
 
-  async schedulesUnpause_unstable(
-    params: UnpauseScheduleRequest_unstable,
+  async schedulesUnpauseUnstable(
+    params: UnpauseScheduleRequestUnstable,
   ): Promise<void> {
     await this.conn.request("_goose/unstable/schedules/unpause", params);
   }
 
-  async schedulesUpdate_unstable(
-    params: UpdateScheduleRequest_unstable,
-  ): Promise<UpdateScheduleResponse_unstable> {
+  async schedulesUpdateUnstable(
+    params: UpdateScheduleRequestUnstable,
+  ): Promise<UpdateScheduleResponseUnstable> {
     const raw = await this.conn.request(
       "_goose/unstable/schedules/update",
       params,
     );
-    return zUpdateScheduleResponse_unstable.parse(
+    return updateScheduleResponseUnstableSchema.parse(
       raw,
-    ) as UpdateScheduleResponse_unstable;
+    ) as UpdateScheduleResponseUnstable;
   }
 
-  async schedulesRunNow_unstable(
-    params: RunScheduleNowRequest_unstable,
-  ): Promise<RunScheduleNowResponse_unstable> {
+  async schedulesRunNowUnstable(
+    params: RunScheduleNowRequestUnstable,
+  ): Promise<RunScheduleNowResponseUnstable> {
     const raw = await this.conn.request(
       "_goose/unstable/schedules/run-now",
       params,
     );
-    return zRunScheduleNowResponse_unstable.parse(
+    return runScheduleNowResponseUnstableSchema.parse(
       raw,
-    ) as RunScheduleNowResponse_unstable;
+    ) as RunScheduleNowResponseUnstable;
   }
 
-  async schedulesRunningJobKill_unstable(
-    params: KillRunningJobRequest_unstable,
-  ): Promise<KillRunningJobResponse_unstable> {
+  async schedulesRunningJobKillUnstable(
+    params: KillRunningJobRequestUnstable,
+  ): Promise<KillRunningJobResponseUnstable> {
     const raw = await this.conn.request(
       "_goose/unstable/schedules/running-job/kill",
       params,
     );
-    return zKillRunningJobResponse_unstable.parse(
+    return killRunningJobResponseUnstableSchema.parse(
       raw,
-    ) as KillRunningJobResponse_unstable;
+    ) as KillRunningJobResponseUnstable;
   }
 
-  async schedulesRunningJobInspect_unstable(
-    params: InspectRunningJobRequest_unstable,
-  ): Promise<InspectRunningJobResponse_unstable> {
+  async schedulesRunningJobInspectUnstable(
+    params: InspectRunningJobRequestUnstable,
+  ): Promise<InspectRunningJobResponseUnstable> {
     const raw = await this.conn.request(
       "_goose/unstable/schedules/running-job/inspect",
       params,
     );
-    return zInspectRunningJobResponse_unstable.parse(
+    return inspectRunningJobResponseUnstableSchema.parse(
       raw,
-    ) as InspectRunningJobResponse_unstable;
+    ) as InspectRunningJobResponseUnstable;
   }
 
-  async sessionInfo_unstable(
-    params: GetSessionInfoRequest_unstable,
-  ): Promise<GetSessionInfoResponse_unstable> {
+  async sessionInfoUnstable(
+    params: GetSessionInfoRequestUnstable,
+  ): Promise<GetSessionInfoResponseUnstable> {
     const raw = await this.conn.request("_goose/unstable/session/info", params);
-    return zGetSessionInfoResponse_unstable.parse(
+    return getSessionInfoResponseUnstableSchema.parse(
       raw,
-    ) as GetSessionInfoResponse_unstable;
+    ) as GetSessionInfoResponseUnstable;
   }
 
-  async sessionConversationTruncate_unstable(
-    params: TruncateSessionConversationRequest_unstable,
+  async sessionConversationTruncateUnstable(
+    params: TruncateSessionConversationRequestUnstable,
   ): Promise<void> {
     await this.conn.request(
       "_goose/unstable/session/conversation/truncate",
@@ -1091,155 +1097,155 @@ export class GooseExtClient {
     );
   }
 
-  async sessionProjectUpdate_unstable(
-    params: UpdateSessionProjectRequest_unstable,
+  async sessionProjectUpdateUnstable(
+    params: UpdateSessionProjectRequestUnstable,
   ): Promise<void> {
     await this.conn.request("_goose/unstable/session/project/update", params);
   }
 
-  async sessionRename_unstable(
-    params: RenameSessionRequest_unstable,
+  async sessionRenameUnstable(
+    params: RenameSessionRequestUnstable,
   ): Promise<void> {
     await this.conn.request("_goose/unstable/session/rename", params);
   }
 
-  async sessionArchive_unstable(
-    params: ArchiveSessionRequest_unstable,
+  async sessionArchiveUnstable(
+    params: ArchiveSessionRequestUnstable,
   ): Promise<void> {
     await this.conn.request("_goose/unstable/session/archive", params);
   }
 
-  async sessionUnarchive_unstable(
-    params: UnarchiveSessionRequest_unstable,
+  async sessionUnarchiveUnstable(
+    params: UnarchiveSessionRequestUnstable,
   ): Promise<void> {
     await this.conn.request("_goose/unstable/session/unarchive", params);
   }
 
-  async sourcesCreate_unstable(
-    params: CreateSourceRequest_unstable,
-  ): Promise<CreateSourceResponse_unstable> {
+  async sourcesCreateUnstable(
+    params: CreateSourceRequestUnstable,
+  ): Promise<CreateSourceResponseUnstable> {
     const raw = await this.conn.request(
       "_goose/unstable/sources/create",
       params,
     );
-    return zCreateSourceResponse_unstable.parse(
+    return createSourceResponseUnstableSchema.parse(
       raw,
-    ) as CreateSourceResponse_unstable;
+    ) as CreateSourceResponseUnstable;
   }
 
-  async sourcesList_unstable(
-    params: ListSourcesRequest_unstable,
-  ): Promise<ListSourcesResponse_unstable> {
+  async sourcesListUnstable(
+    params: ListSourcesRequestUnstable,
+  ): Promise<ListSourcesResponseUnstable> {
     const raw = await this.conn.request("_goose/unstable/sources/list", params);
-    return zListSourcesResponse_unstable.parse(
+    return listSourcesResponseUnstableSchema.parse(
       raw,
-    ) as ListSourcesResponse_unstable;
+    ) as ListSourcesResponseUnstable;
   }
 
-  async agentMentionsList_unstable(
-    params: ListAgentMentionsRequest_unstable,
-  ): Promise<ListAgentMentionsResponse_unstable> {
+  async agentMentionsListUnstable(
+    params: ListAgentMentionsRequestUnstable,
+  ): Promise<ListAgentMentionsResponseUnstable> {
     const raw = await this.conn.request(
       "_goose/unstable/agent-mentions/list",
       params,
     );
-    return zListAgentMentionsResponse_unstable.parse(
+    return listAgentMentionsResponseUnstableSchema.parse(
       raw,
-    ) as ListAgentMentionsResponse_unstable;
+    ) as ListAgentMentionsResponseUnstable;
   }
 
-  async slashCommandsList_unstable(
-    params: ListSlashCommandsRequest_unstable,
-  ): Promise<ListSlashCommandsResponse_unstable> {
+  async slashCommandsListUnstable(
+    params: ListSlashCommandsRequestUnstable,
+  ): Promise<ListSlashCommandsResponseUnstable> {
     const raw = await this.conn.request(
       "_goose/unstable/slash-commands/list",
       params,
     );
-    return zListSlashCommandsResponse_unstable.parse(
+    return listSlashCommandsResponseUnstableSchema.parse(
       raw,
-    ) as ListSlashCommandsResponse_unstable;
+    ) as ListSlashCommandsResponseUnstable;
   }
 
-  async sourcesUpdate_unstable(
-    params: UpdateSourceRequest_unstable,
-  ): Promise<UpdateSourceResponse_unstable> {
+  async sourcesUpdateUnstable(
+    params: UpdateSourceRequestUnstable,
+  ): Promise<UpdateSourceResponseUnstable> {
     const raw = await this.conn.request(
       "_goose/unstable/sources/update",
       params,
     );
-    return zUpdateSourceResponse_unstable.parse(
+    return updateSourceResponseUnstableSchema.parse(
       raw,
-    ) as UpdateSourceResponse_unstable;
+    ) as UpdateSourceResponseUnstable;
   }
 
-  async sourcesDelete_unstable(
-    params: DeleteSourceRequest_unstable,
+  async sourcesDeleteUnstable(
+    params: DeleteSourceRequestUnstable,
   ): Promise<void> {
     await this.conn.request("_goose/unstable/sources/delete", params);
   }
 
-  async sourcesExport_unstable(
-    params: ExportSourceRequest_unstable,
-  ): Promise<ExportSourceResponse_unstable> {
+  async sourcesExportUnstable(
+    params: ExportSourceRequestUnstable,
+  ): Promise<ExportSourceResponseUnstable> {
     const raw = await this.conn.request(
       "_goose/unstable/sources/export",
       params,
     );
-    return zExportSourceResponse_unstable.parse(
+    return exportSourceResponseUnstableSchema.parse(
       raw,
-    ) as ExportSourceResponse_unstable;
+    ) as ExportSourceResponseUnstable;
   }
 
-  async sourcesImport_unstable(
-    params: ImportSourcesRequest_unstable,
-  ): Promise<ImportSourcesResponse_unstable> {
+  async sourcesImportUnstable(
+    params: ImportSourcesRequestUnstable,
+  ): Promise<ImportSourcesResponseUnstable> {
     const raw = await this.conn.request(
       "_goose/unstable/sources/import",
       params,
     );
-    return zImportSourcesResponse_unstable.parse(
+    return importSourcesResponseUnstableSchema.parse(
       raw,
-    ) as ImportSourcesResponse_unstable;
+    ) as ImportSourcesResponseUnstable;
   }
 
-  async dictationTranscribe_unstable(
-    params: DictationTranscribeRequest_unstable,
-  ): Promise<DictationTranscribeResponse_unstable> {
+  async dictationTranscribeUnstable(
+    params: DictationTranscribeRequestUnstable,
+  ): Promise<DictationTranscribeResponseUnstable> {
     const raw = await this.conn.request(
       "_goose/unstable/dictation/transcribe",
       params,
     );
-    return zDictationTranscribeResponse_unstable.parse(
+    return dictationTranscribeResponseUnstableSchema.parse(
       raw,
-    ) as DictationTranscribeResponse_unstable;
+    ) as DictationTranscribeResponseUnstable;
   }
 
-  async dictationConfig_unstable(
-    params: DictationConfigRequest_unstable,
-  ): Promise<DictationConfigResponse_unstable> {
+  async dictationConfigUnstable(
+    params: DictationConfigRequestUnstable,
+  ): Promise<DictationConfigResponseUnstable> {
     const raw = await this.conn.request(
       "_goose/unstable/dictation/config",
       params,
     );
-    return zDictationConfigResponse_unstable.parse(
+    return dictationConfigResponseUnstableSchema.parse(
       raw,
-    ) as DictationConfigResponse_unstable;
+    ) as DictationConfigResponseUnstable;
   }
 
-  async dictationModelsList_unstable(
-    params: DictationModelsListRequest_unstable,
-  ): Promise<DictationModelsListResponse_unstable> {
+  async dictationModelsListUnstable(
+    params: DictationModelsListRequestUnstable,
+  ): Promise<DictationModelsListResponseUnstable> {
     const raw = await this.conn.request(
       "_goose/unstable/dictation/models/list",
       params,
     );
-    return zDictationModelsListResponse_unstable.parse(
+    return dictationModelsListResponseUnstableSchema.parse(
       raw,
-    ) as DictationModelsListResponse_unstable;
+    ) as DictationModelsListResponseUnstable;
   }
 
-  async dictationModelsDownload_unstable(
-    params: DictationModelDownloadRequest_unstable,
+  async dictationModelsDownloadUnstable(
+    params: DictationModelDownloadRequestUnstable,
   ): Promise<void> {
     await this.conn.request(
       "_goose/unstable/dictation/models/download",
@@ -1247,68 +1253,68 @@ export class GooseExtClient {
     );
   }
 
-  async dictationModelsDownloadProgress_unstable(
-    params: DictationModelDownloadProgressRequest_unstable,
-  ): Promise<DictationModelDownloadProgressResponse_unstable> {
+  async dictationModelsDownloadProgressUnstable(
+    params: DictationModelDownloadProgressRequestUnstable,
+  ): Promise<DictationModelDownloadProgressResponseUnstable> {
     const raw = await this.conn.request(
       "_goose/unstable/dictation/models/download/progress",
       params,
     );
-    return zDictationModelDownloadProgressResponse_unstable.parse(
+    return dictationModelDownloadProgressResponseUnstableSchema.parse(
       raw,
-    ) as DictationModelDownloadProgressResponse_unstable;
+    ) as DictationModelDownloadProgressResponseUnstable;
   }
 
-  async dictationModelsCancel_unstable(
-    params: DictationModelCancelRequest_unstable,
+  async dictationModelsCancelUnstable(
+    params: DictationModelCancelRequestUnstable,
   ): Promise<void> {
     await this.conn.request("_goose/unstable/dictation/models/cancel", params);
   }
 
-  async dictationModelsDelete_unstable(
-    params: DictationModelDeleteRequest_unstable,
+  async dictationModelsDeleteUnstable(
+    params: DictationModelDeleteRequestUnstable,
   ): Promise<void> {
     await this.conn.request("_goose/unstable/dictation/models/delete", params);
   }
 
-  async localInferenceModelsList_unstable(
-    params: LocalInferenceModelsListRequest_unstable,
-  ): Promise<LocalInferenceModelsListResponse_unstable> {
+  async localInferenceModelsListUnstable(
+    params: LocalInferenceModelsListRequestUnstable,
+  ): Promise<LocalInferenceModelsListResponseUnstable> {
     const raw = await this.conn.request(
       "_goose/unstable/local-inference/models/list",
       params,
     );
-    return zLocalInferenceModelsListResponse_unstable.parse(
+    return localInferenceModelsListResponseUnstableSchema.parse(
       raw,
-    ) as LocalInferenceModelsListResponse_unstable;
+    ) as LocalInferenceModelsListResponseUnstable;
   }
 
-  async localInferenceModelsDownload_unstable(
-    params: LocalInferenceModelDownloadRequest_unstable,
-  ): Promise<LocalInferenceModelDownloadResponse_unstable> {
+  async localInferenceModelsDownloadUnstable(
+    params: LocalInferenceModelDownloadRequestUnstable,
+  ): Promise<LocalInferenceModelDownloadResponseUnstable> {
     const raw = await this.conn.request(
       "_goose/unstable/local-inference/models/download",
       params,
     );
-    return zLocalInferenceModelDownloadResponse_unstable.parse(
+    return localInferenceModelDownloadResponseUnstableSchema.parse(
       raw,
-    ) as LocalInferenceModelDownloadResponse_unstable;
+    ) as LocalInferenceModelDownloadResponseUnstable;
   }
 
-  async localInferenceModelsDownloadProgress_unstable(
-    params: LocalInferenceModelDownloadProgressRequest_unstable,
-  ): Promise<LocalInferenceModelDownloadProgressResponse_unstable> {
+  async localInferenceModelsDownloadProgressUnstable(
+    params: LocalInferenceModelDownloadProgressRequestUnstable,
+  ): Promise<LocalInferenceModelDownloadProgressResponseUnstable> {
     const raw = await this.conn.request(
       "_goose/unstable/local-inference/models/download/progress",
       params,
     );
-    return zLocalInferenceModelDownloadProgressResponse_unstable.parse(
+    return localInferenceModelDownloadProgressResponseUnstableSchema.parse(
       raw,
-    ) as LocalInferenceModelDownloadProgressResponse_unstable;
+    ) as LocalInferenceModelDownloadProgressResponseUnstable;
   }
 
-  async localInferenceModelsDownloadCancel_unstable(
-    params: LocalInferenceModelDownloadCancelRequest_unstable,
+  async localInferenceModelsDownloadCancelUnstable(
+    params: LocalInferenceModelDownloadCancelRequestUnstable,
   ): Promise<void> {
     await this.conn.request(
       "_goose/unstable/local-inference/models/download/cancel",
@@ -1316,8 +1322,8 @@ export class GooseExtClient {
     );
   }
 
-  async localInferenceModelsDelete_unstable(
-    params: LocalInferenceModelDeleteRequest_unstable,
+  async localInferenceModelsDeleteUnstable(
+    params: LocalInferenceModelDeleteRequestUnstable,
   ): Promise<void> {
     await this.conn.request(
       "_goose/unstable/local-inference/models/delete",
@@ -1325,8 +1331,8 @@ export class GooseExtClient {
     );
   }
 
-  async localInferenceModelsEvict_unstable(
-    params: LocalInferenceModelEvictRequest_unstable,
+  async localInferenceModelsEvictUnstable(
+    params: LocalInferenceModelEvictRequestUnstable,
   ): Promise<void> {
     await this.conn.request(
       "_goose/unstable/local-inference/models/evict",
@@ -1334,63 +1340,63 @@ export class GooseExtClient {
     );
   }
 
-  async localInferenceModelsSettingsRead_unstable(
-    params: LocalInferenceModelSettingsReadRequest_unstable,
-  ): Promise<LocalInferenceModelSettingsReadResponse_unstable> {
+  async localInferenceModelsSettingsReadUnstable(
+    params: LocalInferenceModelSettingsReadRequestUnstable,
+  ): Promise<LocalInferenceModelSettingsReadResponseUnstable> {
     const raw = await this.conn.request(
       "_goose/unstable/local-inference/models/settings/read",
       params,
     );
-    return zLocalInferenceModelSettingsReadResponse_unstable.parse(
+    return localInferenceModelSettingsReadResponseUnstableSchema.parse(
       raw,
-    ) as LocalInferenceModelSettingsReadResponse_unstable;
+    ) as LocalInferenceModelSettingsReadResponseUnstable;
   }
 
-  async localInferenceModelsSettingsUpdate_unstable(
-    params: LocalInferenceModelSettingsUpdateRequest_unstable,
-  ): Promise<LocalInferenceModelSettingsUpdateResponse_unstable> {
+  async localInferenceModelsSettingsUpdateUnstable(
+    params: LocalInferenceModelSettingsUpdateRequestUnstable,
+  ): Promise<LocalInferenceModelSettingsUpdateResponseUnstable> {
     const raw = await this.conn.request(
       "_goose/unstable/local-inference/models/settings/update",
       params,
     );
-    return zLocalInferenceModelSettingsUpdateResponse_unstable.parse(
+    return localInferenceModelSettingsUpdateResponseUnstableSchema.parse(
       raw,
-    ) as LocalInferenceModelSettingsUpdateResponse_unstable;
+    ) as LocalInferenceModelSettingsUpdateResponseUnstable;
   }
 
-  async localInferenceHuggingfaceSearch_unstable(
-    params: LocalInferenceHuggingFaceSearchRequest_unstable,
-  ): Promise<LocalInferenceHuggingFaceSearchResponse_unstable> {
+  async localInferenceHuggingfaceSearchUnstable(
+    params: LocalInferenceHuggingFaceSearchRequestUnstable,
+  ): Promise<LocalInferenceHuggingFaceSearchResponseUnstable> {
     const raw = await this.conn.request(
       "_goose/unstable/local-inference/huggingface/search",
       params,
     );
-    return zLocalInferenceHuggingFaceSearchResponse_unstable.parse(
+    return localInferenceHuggingFaceSearchResponseUnstableSchema.parse(
       raw,
-    ) as LocalInferenceHuggingFaceSearchResponse_unstable;
+    ) as LocalInferenceHuggingFaceSearchResponseUnstable;
   }
 
-  async localInferenceHuggingfaceRepoVariants_unstable(
-    params: LocalInferenceHuggingFaceRepoVariantsRequest_unstable,
-  ): Promise<LocalInferenceHuggingFaceRepoVariantsResponse_unstable> {
+  async localInferenceHuggingfaceRepoVariantsUnstable(
+    params: LocalInferenceHuggingFaceRepoVariantsRequestUnstable,
+  ): Promise<LocalInferenceHuggingFaceRepoVariantsResponseUnstable> {
     const raw = await this.conn.request(
       "_goose/unstable/local-inference/huggingface/repo/variants",
       params,
     );
-    return zLocalInferenceHuggingFaceRepoVariantsResponse_unstable.parse(
+    return localInferenceHuggingFaceRepoVariantsResponseUnstableSchema.parse(
       raw,
-    ) as LocalInferenceHuggingFaceRepoVariantsResponse_unstable;
+    ) as LocalInferenceHuggingFaceRepoVariantsResponseUnstable;
   }
 
-  async localInferenceChatTemplatesBuiltinList_unstable(
-    params: LocalInferenceBuiltinChatTemplatesListRequest_unstable,
-  ): Promise<LocalInferenceBuiltinChatTemplatesListResponse_unstable> {
+  async localInferenceChatTemplatesBuiltinListUnstable(
+    params: LocalInferenceBuiltinChatTemplatesListRequestUnstable,
+  ): Promise<LocalInferenceBuiltinChatTemplatesListResponseUnstable> {
     const raw = await this.conn.request(
       "_goose/unstable/local-inference/chat-templates/builtin/list",
       params,
     );
-    return zLocalInferenceBuiltinChatTemplatesListResponse_unstable.parse(
+    return localInferenceBuiltinChatTemplatesListResponseUnstableSchema.parse(
       raw,
-    ) as LocalInferenceBuiltinChatTemplatesListResponse_unstable;
+    ) as LocalInferenceBuiltinChatTemplatesListResponseUnstable;
   }
 }

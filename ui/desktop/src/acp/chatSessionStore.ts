@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import type { GooseSessionNotification_unstable } from '@aaif/goose-acp-client';
+import { useSyncExternalStore } from 'react';
+import type { GooseSessionNotificationUnstable } from '@aaif/goose-acp-client';
 import type { SessionNotification } from '@agentclientprotocol/sdk';
 import type { TokenState } from '../types/chat';
 import { ChatState } from '../types/chatState';
@@ -64,7 +64,7 @@ export interface AcpChatSessionActions {
 
   applyAcpSessionNotification(notification: SessionNotification): AcpChatSessionSnapshot;
   applyAcpGooseSessionNotification(
-    notification: GooseSessionNotification_unstable
+    notification: GooseSessionNotificationUnstable
   ): AcpChatSessionSnapshot;
   applyPermissionRequest(request: AcpPermissionRequest): AcpChatSessionSnapshot;
   cancelPermissionRequest(
@@ -583,67 +583,94 @@ export const acpChatSessionActions: AcpChatSessionActions = actionsFromStore(
   acpChatSessionStoreInternal
 );
 
-interface AcpChatSessionSnapshotState {
-  sessionId: string;
-  snapshot: AcpChatSessionSnapshot | undefined;
-}
-
 export function useAcpChatSessionSnapshot(sessionId: string): AcpChatSessionSnapshot | undefined {
-  const [snapshotState, setSnapshotState] = useState<AcpChatSessionSnapshotState>(() => ({
-    sessionId,
-    snapshot: acpChatSessionStoreInternal.getSnapshot(sessionId),
-  }));
-
-  useEffect(() => {
-    setSnapshotState({
-      sessionId,
-      snapshot: acpChatSessionStoreInternal.getSnapshot(sessionId),
-    });
-
-    return acpChatSessionStoreInternal.subscribe(sessionId, (snapshot) => {
-      setSnapshotState({ sessionId, snapshot });
-    });
-  }, [sessionId]);
-
-  if (snapshotState.sessionId !== sessionId) {
-    return acpChatSessionStoreInternal.getSnapshot(sessionId);
-  }
-
-  return snapshotState.snapshot;
+  return useSyncExternalStore(
+    (onStoreChange: () => void): (() => void) =>
+      acpChatSessionStoreInternal.subscribe(sessionId, onStoreChange),
+    (): AcpChatSessionSnapshot | undefined => acpChatSessionStoreInternal.getSnapshot(sessionId),
+    (): AcpChatSessionSnapshot | undefined => acpChatSessionStoreInternal.getSnapshot(sessionId)
+  );
 }
 
 function storeFromInternal(store: AcpChatSessionStoreInternal): AcpChatSessionStore {
   return {
-    getSnapshot: store.getSnapshot,
+    getSnapshot: (sessionId: string): AcpChatSessionSnapshot | undefined =>
+      store.getSnapshot(sessionId),
   };
 }
 
 function actionsFromStore(store: AcpChatSessionStoreInternal): AcpChatSessionActions {
   return {
-    deleteSnapshot: store.deleteSnapshot,
-    applyAcpSessionNotification: store.applyAcpSessionNotification,
-    applyAcpGooseSessionNotification: store.applyAcpGooseSessionNotification,
-    applyPermissionRequest: store.applyPermissionRequest,
-    cancelPermissionRequest: store.cancelPermissionRequest,
-    applyElicitationRequest: store.applyElicitationRequest,
-    setElicitationStatus: store.setElicitationStatus,
-    setSessionMetadata: store.setSessionMetadata,
-    startSessionLoad: store.startSessionLoad,
-    finishSessionLoad: store.finishSessionLoad,
-    failSessionLoad: store.failSessionLoad,
-    setSessionLoadError: store.setSessionLoadError,
-    setMessages: store.setMessages,
-    addPendingLocalSteerMessage: store.addPendingLocalSteerMessage,
-    setChatState: store.setChatState,
-    resolveUserInputRequest: store.resolveUserInputRequest,
-    startPromptAttempt: store.startPromptAttempt,
-    startPromptCancellation: store.startPromptCancellation,
-    clearPromptCancellation: store.clearPromptCancellation,
-    restorePromptCancellation: store.restorePromptCancellation,
-    waitForPromptCancellation: store.waitForPromptCancellation,
-    finishPromptAttemptIfCurrent: store.finishPromptAttemptIfCurrent,
-    clearActivePromptAttempt: store.clearActivePromptAttempt,
-    isCurrentPromptAttempt: store.isCurrentPromptAttempt,
+    deleteSnapshot: (sessionId: string): void => store.deleteSnapshot(sessionId),
+    applyAcpSessionNotification: (notification: SessionNotification): AcpChatSessionSnapshot =>
+      store.applyAcpSessionNotification(notification),
+    applyAcpGooseSessionNotification: (
+      notification: GooseSessionNotificationUnstable
+    ): AcpChatSessionSnapshot => store.applyAcpGooseSessionNotification(notification),
+    applyPermissionRequest: (request: AcpPermissionRequest): AcpChatSessionSnapshot =>
+      store.applyPermissionRequest(request),
+    cancelPermissionRequest: (
+      sessionId: string,
+      toolCallId: string,
+      generation: string
+    ): AcpChatSessionSnapshot | undefined =>
+      store.cancelPermissionRequest(sessionId, toolCallId, generation),
+    applyElicitationRequest: (request: AcpElicitationRequest): AcpChatSessionSnapshot =>
+      store.applyElicitationRequest(request),
+    setElicitationStatus: (
+      sessionId: string,
+      elicitationId: string,
+      status: ElicitationStatus
+    ): AcpChatSessionSnapshot | undefined =>
+      store.setElicitationStatus(sessionId, elicitationId, status),
+    setSessionMetadata: (sessionId: string, session: Session | undefined): AcpChatSessionSnapshot =>
+      store.setSessionMetadata(sessionId, session),
+    startSessionLoad: (sessionId: string): AcpChatSessionSnapshot =>
+      store.startSessionLoad(sessionId),
+    finishSessionLoad: (sessionId: string, session: Session): AcpChatSessionSnapshot =>
+      store.finishSessionLoad(sessionId, session),
+    failSessionLoad: (sessionId: string, sessionLoadError: string): AcpChatSessionSnapshot =>
+      store.failSessionLoad(sessionId, sessionLoadError),
+    setSessionLoadError: (
+      sessionId: string,
+      sessionLoadError: string | undefined
+    ): AcpChatSessionSnapshot => store.setSessionLoadError(sessionId, sessionLoadError),
+    setMessages: (sessionId: string, messages: Message[]): AcpChatSessionSnapshot =>
+      store.setMessages(sessionId, messages),
+    addPendingLocalSteerMessage: (sessionId: string, message: Message): AcpChatSessionSnapshot =>
+      store.addPendingLocalSteerMessage(sessionId, message),
+    setChatState: (sessionId: string, chatState: ChatState): AcpChatSessionSnapshot =>
+      store.setChatState(sessionId, chatState),
+    resolveUserInputRequest: (
+      sessionId: string,
+      userInputRequestId: string
+    ): AcpChatSessionSnapshot | undefined =>
+      store.resolveUserInputRequest(sessionId, userInputRequestId),
+    startPromptAttempt: (sessionId: string, promptAttemptId: string): AcpChatSessionSnapshot =>
+      store.startPromptAttempt(sessionId, promptAttemptId),
+    startPromptCancellation: (
+      sessionId: string,
+      promptAttemptId: string
+    ): AcpChatSessionSnapshot | undefined =>
+      store.startPromptCancellation(sessionId, promptAttemptId),
+    clearPromptCancellation: (
+      sessionId: string,
+      promptAttemptId: string
+    ): AcpChatSessionSnapshot | undefined =>
+      store.clearPromptCancellation(sessionId, promptAttemptId),
+    restorePromptCancellation: (
+      sessionId: string,
+      promptAttemptId: string
+    ): AcpChatSessionSnapshot | undefined =>
+      store.restorePromptCancellation(sessionId, promptAttemptId),
+    waitForPromptCancellation: (sessionId: string, promptAttemptId: string): Promise<void> =>
+      store.waitForPromptCancellation(sessionId, promptAttemptId),
+    finishPromptAttemptIfCurrent: (sessionId: string, promptAttemptId: string): boolean =>
+      store.finishPromptAttemptIfCurrent(sessionId, promptAttemptId),
+    clearActivePromptAttempt: (sessionId: string): AcpChatSessionSnapshot | undefined =>
+      store.clearActivePromptAttempt(sessionId),
+    isCurrentPromptAttempt: (sessionId: string, promptAttemptId: string): boolean =>
+      store.isCurrentPromptAttempt(sessionId, promptAttemptId),
   };
 }
 

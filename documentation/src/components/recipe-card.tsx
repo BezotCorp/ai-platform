@@ -1,7 +1,7 @@
 // Full updated RecipeCard.tsx
 import React, { useState } from "react";
 import toast from "react-hot-toast";
-import Link from "@docusaurus/Link";
+import Link from "~/components/Link";
 
 export type Recipe = {
   id: string;

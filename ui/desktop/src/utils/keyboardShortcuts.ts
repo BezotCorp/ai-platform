@@ -1,5 +1,19 @@
 import type { IntlShape } from 'react-intl';
 
+export interface KeyboardShortcuts {
+  focusWindow: string | null;
+  quickLauncher: string | null;
+  newChat: string | null;
+  newChatWindow: string | null;
+  openDirectory: string | null;
+  settings: string | null;
+  find: string | null;
+  findNext: string | null;
+  findPrevious: string | null;
+  alwaysOnTop: string | null;
+  toggleNavigation: string | null;
+}
+
 function isMac(): boolean {
   return window.electron?.platform === 'darwin';
 }

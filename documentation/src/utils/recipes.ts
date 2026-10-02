@@ -1,8 +1,8 @@
-import type { Recipe } from "@site/src/components/recipe-card";
+import type { Recipe } from "~/components/recipe-card";
 
 // Load all YAML files from your recipes folder
 const recipeFiles = require.context(
-  "@site/src/pages/recipes/data/recipes",
+  "~/pages/recipes/data/recipes",
   false,
   /\.ya?ml$/
 );
@@ -26,10 +26,16 @@ export async function searchRecipes(query: string): Promise<Recipe[]> {
 }
 
 function loadAllRecipes(): Recipe[] {
-  return recipeFiles.keys().map((key: string) => {
-    const parsed = recipeFiles(key).default || recipeFiles(key);
-    const id = key.replace(/^.*[\\/]/, "").replace(/\.(yaml|yml)$/, "");
-    return normalizeRecipe({ ...parsed, id });
+  return Object.entries(recipeFiles).map(([path, source]) => {
+    const parsed = parseYaml(source) as Record<string, unknown>;
+    const id = path
+      .replace(/^.*[\/]/, "")
+      .replace(/\.(yaml|yml)$/, "");
+
+    return normalizeRecipe({
+      ...parsed,
+      id,
+    });
   });
 }
 

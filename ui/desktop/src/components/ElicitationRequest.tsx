@@ -4,8 +4,18 @@ import { defineMessages, useIntl } from '../i18n';
 import { Button } from './ui/button';
 import JsonSchemaForm from './ui/JsonSchemaForm';
 import type { JsonSchema } from './ui/JsonSchemaForm';
+import type { MessageValue, NoMessageValues } from 'react-intl';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly "cancelled": NoMessageValues;
+  readonly "submitted": NoMessageValues;
+  readonly "expired": NoMessageValues;
+  readonly "defaultMessage": NoMessageValues;
+  readonly "submit": NoMessageValues;
+  readonly "accept": NoMessageValues;
+  readonly "waitingForResponse": { readonly "timeRemaining": MessageValue };
+  readonly "submitError": NoMessageValues;
+}>({
   cancelled: {
     id: 'elicitationRequest.cancelled',
     defaultMessage: 'Information request was cancelled.',
@@ -76,7 +86,7 @@ export default function ElicitationRequest({
   }, [isClicked]);
 
   useEffect(() => {
-    if (submitted || isCancelledMessage || isClicked) return;
+    if (submitted || isCancelledMessage || isClicked) return undefined;
 
     const interval = setInterval(() => {
       const elapsed = Math.floor((Date.now() - startTimeRef.current) / 1000);

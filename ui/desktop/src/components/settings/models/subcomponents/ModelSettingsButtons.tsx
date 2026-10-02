@@ -4,8 +4,12 @@ import { SwitchModelModal } from './SwitchModelModal';
 import type { View } from '../../../../utils/navigationUtils';
 import { shouldShowPredefinedModels } from '../predefinedModelsUtils';
 import { defineMessages, useIntl } from '../../../../i18n';
+import type { NoMessageValues } from 'react-intl';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly "switchModels": NoMessageValues;
+  readonly "configureProviders": NoMessageValues;
+}>({
   switchModels: {
     id: 'modelSettingsButtons.switchModels',
     defaultMessage: 'Switch models',

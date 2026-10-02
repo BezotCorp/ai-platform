@@ -1,6 +1,5 @@
 import { spawn } from 'child_process';
-
-import type { Logger } from './gooseServe';
+import type { Logger } from './logger';
 
 const RESOLVE_TIMEOUT_MS = 5000;
 

@@ -11,8 +11,27 @@ import { trackOnboardingSetupFailed } from '../../utils/analytics';
 import { defineMessages, useIntl } from '../../i18n';
 import { errorMessage as formatErrorMessage } from '../../utils/conversionUtils';
 import { HuggingFaceModelSearch } from '../settings/localInference/HuggingFaceModelSearch';
+import type { MessageValue, NoMessageValues } from 'react-intl';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly "checkingModels": NoMessageValues;
+  readonly "tryAgain": NoMessageValues;
+  readonly "bestForMachine": NoMessageValues;
+  readonly "ready": NoMessageValues;
+  readonly "showOtherSizes": { readonly "count": MessageValue };
+  readonly "hideOtherSizes": NoMessageValues;
+  readonly "selectModel": NoMessageValues;
+  readonly "useModel": { readonly "modelId": MessageValue };
+  readonly "downloadModel": { readonly "modelId": MessageValue; readonly "size": MessageValue };
+  readonly "downloading": { readonly "modelId": MessageValue };
+  readonly "startingDownload": NoMessageValues;
+  readonly "cancelDownload": NoMessageValues;
+  readonly "localModelsNote": NoMessageValues;
+  readonly "failedToLoad": NoMessageValues;
+  readonly "modelNotFound": NoMessageValues;
+  readonly "failedToStartDownload": NoMessageValues;
+  readonly "lostConnection": NoMessageValues;
+}>({
   checkingModels: {
     id: 'localModelPicker.checkingModels',
     defaultMessage: 'Checking available models...',

@@ -1,6 +1,6 @@
 import React, {type ReactNode} from 'react';
 import clsx from 'clsx';
-import useBaseUrl from '@docusaurus/useBaseUrl';
+import useBaseUrl from "~/utils/useBaseUrl";
 import {
   PageMetadata,
   HtmlClassNameProvider,

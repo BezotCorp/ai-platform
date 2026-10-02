@@ -2,10 +2,14 @@ import { useEffect, useState } from 'react';
 import { useConfig } from '../../ConfigContext';
 import { Switch } from '../../ui/switch';
 import { defineMessages, useIntl } from '../../../i18n';
+import type { NoMessageValues } from 'react-intl';
 
 const LIVE_VOICE_ENABLED_CONFIG_KEY = 'GOOSE_LIVE_VOICE_ENABLED';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly "title": NoMessageValues;
+  readonly "description": NoMessageValues;
+}>({
   title: {
     id: 'liveVoiceSettings.title',
     defaultMessage: 'Live voice',

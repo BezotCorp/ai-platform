@@ -2,8 +2,30 @@ import React, { useState } from 'react';
 import type { Parameter, RecipeExtension } from '../../../recipe';
 import { ChevronDown } from 'lucide-react';
 import { defineMessages, useIntl } from '../../../i18n';
+import type { MessageValue, NoMessageValues } from 'react-intl';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly titleLabel: NoMessageValues;
+  readonly titlePlaceholder: NoMessageValues;
+  readonly descriptionLabel: NoMessageValues;
+  readonly descriptionPlaceholder: NoMessageValues;
+  readonly instructionsLabel: NoMessageValues;
+  readonly openEditor: NoMessageValues;
+  readonly instructionsPlaceholder: NoMessageValues;
+  readonly templateVarHint: NoMessageValues;
+  readonly initialPrompt: NoMessageValues;
+  readonly promptOptionalHint: NoMessageValues;
+  readonly promptPlaceholder: NoMessageValues;
+  readonly advancedOptions: NoMessageValues;
+  readonly advancedOptionsHint: NoMessageValues;
+  readonly parametersLabel: NoMessageValues;
+  readonly parametersDescription: NoMessageValues;
+  readonly parameterNamePlaceholder: NoMessageValues;
+  readonly addParameter: NoMessageValues;
+  readonly enterValueFor: { readonly key: MessageValue };
+  readonly responseJsonSchema: NoMessageValues;
+  readonly responseJsonSchemaDescription: NoMessageValues;
+}>({
   titleLabel: {
     id: 'recipeFormFields.titleLabel',
     defaultMessage: 'Title',
@@ -95,13 +117,14 @@ import InstructionsEditor from './InstructionsEditor';
 import SubRecipeEditor from './SubRecipeEditor';
 import { Button } from '../../ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../../ui/collapsible';
-import { RecipeFormApi, RecipeFormData, SubRecipeFormData } from './recipeFormSchema';
+import {
+  type RecipeFormApi,
+  type RecipeFormData,
+  type RecipeFormFieldApi,
+  type SubRecipeFormData,
+} from './recipeFormSchema';
 import { RecipeModelSelector } from './RecipeModelSelector';
 import { RecipeExtensionSelector } from './RecipeExtensionSelector';
-
-// Type for field API to avoid linting issues - use any to bypass complex type constraints
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type FormFieldApi<_T = any> = any;
 
 interface RecipeFormFieldsProps {
   // Form instance from parent
@@ -116,9 +139,9 @@ interface RecipeFormFieldsProps {
 }
 
 export const extractTemplateVariables = (content: string): string[] => {
-  const templateVarRegex = /\{\{(.*?)\}\}/g;
+  const templateVarRegex: RegExp = /\{\{(.*?)\}\}/g;
   const variables: string[] = [];
-  let match;
+  let match: RegExpExecArray | null;
 
   while ((match = templateVarRegex.exec(content)) !== null) {
     const variable = match[1].trim();
@@ -136,6 +159,18 @@ export const extractTemplateVariables = (content: string): string[] => {
   return variables;
 };
 
+const formatFieldError = (error: unknown): string => {
+  if (typeof error === 'string') {
+    return error;
+  }
+
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  return String(error);
+};
+
 export function RecipeFormFields({
   form,
   onTitleChange,
@@ -143,18 +178,18 @@ export function RecipeFormFields({
   onInstructionsChange,
   onPromptChange,
   onJsonSchemaChange,
-}: RecipeFormFieldsProps) {
+}: RecipeFormFieldsProps): React.JSX.Element {
   const intl = useIntl();
-  const [showJsonSchemaEditor, setShowJsonSchemaEditor] = useState(false);
-  const [showInstructionsEditor, setShowInstructionsEditor] = useState(false);
-  const [newParameterName, setNewParameterName] = useState('');
+  const [showJsonSchemaEditor, setShowJsonSchemaEditor] = useState<boolean>(false);
+  const [showInstructionsEditor, setShowInstructionsEditor] = useState<boolean>(false);
+  const [newParameterName, setNewParameterName] = useState<string>('');
   const [expandedParameters, setExpandedParameters] = useState<Set<string>>(new Set());
 
   // Force re-render when instructions, prompt, or activities change
-  const [_forceRender, setForceRender] = useState(0);
+  const [_forceRender, setForceRender] = useState<number>(0);
 
   React.useEffect(() => {
-    const subscription = form.store.subscribe(() => {
+    const subscription: { unsubscribe: () => void } = form.store.subscribe((): void => {
       // Force re-render when any form field changes to update parameter usage indicators
       setForceRender((prev) => prev + 1);
     });
@@ -164,14 +199,14 @@ export function RecipeFormFields({
 
   const parseParametersFromInstructions = React.useCallback(
     (instructions: string, prompt?: string, activities?: string[]): Parameter[] => {
-      const instructionVars = extractTemplateVariables(instructions);
-      const promptVars = prompt ? extractTemplateVariables(prompt) : [];
-      const activityVars = activities
-        ? activities.flatMap((activity) => extractTemplateVariables(activity))
+      const instructionVars: string[] = extractTemplateVariables(instructions);
+      const promptVars: string[] = prompt ? extractTemplateVariables(prompt) : [];
+      const activityVars: string[] = activities
+        ? activities.flatMap((activity: string): string[] => extractTemplateVariables(activity))
         : [];
 
       // Combine and deduplicate
-      const allVars = [...new Set([...instructionVars, ...promptVars, ...activityVars])];
+      const allVars: string[] = [...new Set([...instructionVars, ...promptVars, ...activityVars])];
 
       return allVars.map((key: string) => ({
         key,
@@ -184,32 +219,39 @@ export function RecipeFormFields({
   );
 
   // Function to update parameters based on current field values
-  const updateParametersFromFields = React.useCallback(() => {
-    const currentValues = form.state.values;
+  const updateParametersFromFields = React.useCallback((): void => {
+    const currentValues: RecipeFormData = form.state.values;
     const { instructions, prompt, activities, parameters: currentParams } = currentValues;
 
-    const newParams = parseParametersFromInstructions(instructions, prompt, activities);
+    const newParams: Parameter[] = parseParametersFromInstructions(
+      instructions,
+      prompt,
+      activities
+    );
 
     // Separate manually added parameters (those not found in instructions/prompt/activities)
-    const manualParams = currentParams.filter((param: Parameter) => {
+    const manualParams: Parameter[] = currentParams.filter((param: Parameter): boolean => {
       // Only keep manual params that have a valid key and are not found in the parsed params
       return (
-        param.key && param.key.trim() && !newParams.some((newParam) => newParam.key === param.key)
+        Boolean(param.key && param.key.trim()) &&
+        !newParams.some((newParam: Parameter): boolean => newParam.key === param.key)
       );
     });
 
     // Combine parsed parameters with manually added ones, filtering out empty ones
-    const combinedParams = [
-      ...newParams.map((newParam) => {
-        const existing = currentParams.find((cp: Parameter) => cp.key === newParam.key);
+    const combinedParams: Parameter[] = [
+      ...newParams.map((newParam: Parameter): Parameter => {
+        const existing: Parameter | undefined = currentParams.find(
+          (cp: Parameter): boolean => cp.key === newParam.key
+        );
         return existing ? { ...existing } : newParam;
       }),
       ...manualParams,
-    ].filter((param: Parameter) => param.key && param.key.trim()) as Parameter[];
+    ].filter((param: Parameter): boolean => Boolean(param.key && param.key.trim()));
 
     // Only update if parameters actually changed
-    const currentParamKeys = currentParams.map((p: Parameter) => p.key).sort();
-    const newParamKeys = combinedParams.map((p) => p.key).sort();
+    const currentParamKeys: string[] = currentParams.map((p: Parameter): string => p.key).sort();
+    const newParamKeys: string[] = combinedParams.map((p: Parameter): string => p.key).sort();
 
     if (JSON.stringify(currentParamKeys) !== JSON.stringify(newParamKeys)) {
       form.setFieldValue('parameters', combinedParams);
@@ -222,14 +264,14 @@ export function RecipeFormFields({
     prompt?: string,
     activities?: string[]
   ): boolean => {
-    const regex = new RegExp(
+    const regex: RegExp = new RegExp(
       `\\{\\{\\s*${paramKey.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*\\}\\}`,
       'g'
     );
-    const usedInInstructions = regex.test(instructions);
-    const usedInPrompt = prompt ? regex.test(prompt) : false;
-    const usedInActivities = activities
-      ? activities.some((activity) => {
+    const usedInInstructions: boolean = regex.test(instructions);
+    const usedInPrompt: boolean = prompt ? regex.test(prompt) : false;
+    const usedInActivities: boolean = activities
+      ? activities.some((activity: string): boolean => {
           // For activities, we need to check the full activity string, including message: prefixes
           return regex.test(activity);
         })
@@ -237,25 +279,27 @@ export function RecipeFormFields({
     return usedInInstructions || usedInPrompt || usedInActivities;
   };
 
-  const checkHasAdvancedData = React.useCallback((values: RecipeFormData) => {
-    const hasActivities = Boolean(values.activities && values.activities.length > 0);
-    const hasParameters = Boolean(values.parameters && values.parameters.length > 0);
-    const hasJsonSchema = Boolean(values.jsonSchema && values.jsonSchema.trim());
-    const hasModel = Boolean(values.model && values.model.trim());
-    const hasProvider = Boolean(values.provider && values.provider.trim());
-    const hasExtensions = Boolean(values.extensions && values.extensions.length > 0);
+  const checkHasAdvancedData = React.useCallback((values: RecipeFormData): boolean => {
+    const hasActivities: boolean = values.activities.length > 0;
+    const hasParameters: boolean = values.parameters.length > 0;
+    const hasJsonSchema: boolean = Boolean(values.jsonSchema && values.jsonSchema.trim());
+    const hasModel: boolean = Boolean(values.model && values.model.trim());
+    const hasProvider: boolean = Boolean(values.provider && values.provider.trim());
+    const hasExtensions: boolean = Boolean(values.extensions && values.extensions.length > 0);
     return (
       hasActivities || hasParameters || hasJsonSchema || hasModel || hasProvider || hasExtensions
     );
   }, []);
 
-  const [advancedOpen, setAdvancedOpen] = useState(() => checkHasAdvancedData(form.state.values));
+  const [advancedOpen, setAdvancedOpen] = useState<boolean>(() =>
+    checkHasAdvancedData(form.state.values)
+  );
 
   return (
     <div className="space-y-4" data-testid="recipe-form">
       {/* Title Field */}
       <form.Field name="title">
-        {(field: FormFieldApi<string>) => (
+        {(field: RecipeFormFieldApi<string>) => (
           <div>
             <label
               htmlFor="recipe-title"
@@ -271,7 +315,7 @@ export function RecipeFormFields({
                 field.handleChange(e.target.value);
                 onTitleChange?.(e.target.value);
               }}
-              onBlur={field.handleBlur}
+              onBlur={() => field.handleBlur()}
               className={`w-full p-3 border rounded-lg bg-background-primary text-text-primary focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                 field.state.meta.errors.length > 0 ? 'border-red-500' : 'border-border-primary'
               }`}
@@ -279,7 +323,9 @@ export function RecipeFormFields({
               data-testid="title-input"
             />
             {field.state.meta.errors.length > 0 && (
-              <p className="text-red-500 text-sm mt-1">{field.state.meta.errors[0]}</p>
+              <p className="text-red-500 text-sm mt-1">
+                {formatFieldError(field.state.meta.errors[0])}
+              </p>
             )}
           </div>
         )}
@@ -287,7 +333,7 @@ export function RecipeFormFields({
 
       {/* Description Field */}
       <form.Field name="description">
-        {(field: FormFieldApi<string>) => (
+        {(field: RecipeFormFieldApi<string>) => (
           <div>
             <label
               htmlFor="recipe-description"
@@ -303,7 +349,7 @@ export function RecipeFormFields({
                 field.handleChange(e.target.value);
                 onDescriptionChange?.(e.target.value);
               }}
-              onBlur={field.handleBlur}
+              onBlur={() => field.handleBlur()}
               className={`w-full p-3 border rounded-lg bg-background-primary text-text-primary focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                 field.state.meta.errors.length > 0 ? 'border-red-500' : 'border-border-primary'
               }`}
@@ -311,7 +357,9 @@ export function RecipeFormFields({
               data-testid="description-input"
             />
             {field.state.meta.errors.length > 0 && (
-              <p className="text-red-500 text-sm mt-1">{field.state.meta.errors[0]}</p>
+              <p className="text-red-500 text-sm mt-1">
+                {formatFieldError(field.state.meta.errors[0])}
+              </p>
             )}
           </div>
         )}
@@ -319,7 +367,7 @@ export function RecipeFormFields({
 
       {/* Instructions Field */}
       <form.Field name="instructions">
-        {(field: FormFieldApi<string>) => (
+        {(field: RecipeFormFieldApi<string>) => (
           <div>
             <div className="flex items-center justify-between mb-2">
               <label
@@ -360,7 +408,9 @@ export function RecipeFormFields({
               {intl.formatMessage(i18n.templateVarHint)}
             </p>
             {field.state.meta.errors.length > 0 && (
-              <p className="text-red-500 text-sm mt-1">{field.state.meta.errors[0]}</p>
+              <p className="text-red-500 text-sm mt-1">
+                {formatFieldError(field.state.meta.errors[0])}
+              </p>
             )}
 
             {/* Instructions Editor Modal */}
@@ -373,7 +423,11 @@ export function RecipeFormFields({
                 onInstructionsChange?.(value);
                 updateParametersFromFields();
               }}
-              error={field.state.meta.errors.length > 0 ? field.state.meta.errors[0] : undefined}
+              error={
+                field.state.meta.errors.length > 0
+                  ? formatFieldError(field.state.meta.errors[0])
+                  : undefined
+              }
             />
           </div>
         )}
@@ -381,7 +435,7 @@ export function RecipeFormFields({
 
       {/* Initial Prompt Field */}
       <form.Field name="prompt">
-        {(field: FormFieldApi<string | undefined>) => (
+        {(field: RecipeFormFieldApi<string | undefined>) => (
           <div>
             <label
               htmlFor="recipe-prompt"
@@ -431,7 +485,7 @@ export function RecipeFormFields({
         <CollapsibleContent className="mt-4 space-y-4 pl-6 border-l-2 border-border-primary ml-2">
           {/* Activities Field */}
           <form.Field name="activities">
-            {(field: FormFieldApi<string[]>) => (
+            {(field: RecipeFormFieldApi<string[]>) => (
               <div>
                 <RecipeActivityEditor
                   activities={field.state.value}
@@ -444,7 +498,7 @@ export function RecipeFormFields({
 
           {/* Parameters Field */}
           <form.Field name="parameters">
-            {(field: FormFieldApi<Parameter[]>) => {
+            {(field: RecipeFormFieldApi<Parameter[]>) => {
               const handleAddParameter = () => {
                 if (newParameterName.trim()) {
                   const newParam: Parameter = {
@@ -563,9 +617,9 @@ export function RecipeFormFields({
 
           {/* Model and Provider Fields */}
           <form.Field name="provider">
-            {(providerField: FormFieldApi<string | undefined>) => (
+            {(providerField: RecipeFormFieldApi<string | undefined>) => (
               <form.Field name="model">
-                {(modelField: FormFieldApi<string | undefined>) => (
+                {(modelField: RecipeFormFieldApi<string | undefined>) => (
                   <RecipeModelSelector
                     selectedProvider={providerField.state.value}
                     selectedModel={modelField.state.value}
@@ -579,7 +633,7 @@ export function RecipeFormFields({
 
           {/* Extensions Field */}
           <form.Field name="extensions">
-            {(field: FormFieldApi<RecipeExtension[] | undefined>) => (
+            {(field: RecipeFormFieldApi<RecipeExtension[] | undefined>) => (
               <RecipeExtensionSelector
                 selectedExtensions={field.state.value || []}
                 onExtensionsChange={(extensions) =>
@@ -591,7 +645,7 @@ export function RecipeFormFields({
 
           {/* JSON Schema Field */}
           <form.Field name="jsonSchema">
-            {(field: FormFieldApi<string | undefined>) => (
+            {(field: RecipeFormFieldApi<string | undefined>) => (
               <div>
                 <label className="block text-md text-text-primary mb-2 font-bold">
                   {intl.formatMessage(i18n.responseJsonSchema)}
@@ -626,7 +680,9 @@ export function RecipeFormFields({
                 )}
 
                 {field.state.meta.errors.length > 0 && (
-                  <p className="text-red-500 text-sm mt-1">{field.state.meta.errors[0]}</p>
+                  <p className="text-red-500 text-sm mt-1">
+                    {formatFieldError(field.state.meta.errors[0])}
+                  </p>
                 )}
 
                 {/* JSON Schema Editor Modal */}
@@ -639,7 +695,9 @@ export function RecipeFormFields({
                     onJsonSchemaChange?.(value);
                   }}
                   error={
-                    field.state.meta.errors.length > 0 ? field.state.meta.errors[0] : undefined
+                    field.state.meta.errors.length > 0
+                      ? formatFieldError(field.state.meta.errors[0])
+                      : undefined
                   }
                 />
               </div>
@@ -648,7 +706,7 @@ export function RecipeFormFields({
 
           {/* Subrecipes Field */}
           <form.Field name="subRecipes">
-            {(field: FormFieldApi<SubRecipeFormData[]>) => (
+            {(field: RecipeFormFieldApi<SubRecipeFormData[]>) => (
               <div>
                 <SubRecipeEditor
                   subRecipes={field.state.value}

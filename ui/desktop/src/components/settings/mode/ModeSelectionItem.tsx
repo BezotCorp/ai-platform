@@ -3,8 +3,18 @@ import { Gear } from '../../icons';
 import { ConfigureApproveMode } from './ConfigureApproveMode';
 import PermissionRulesModal from '../permission/PermissionRulesModal';
 import { defineMessages, useIntl } from '../../../i18n';
+import type { NoMessageValues } from 'react-intl';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly "autonomousLabel": NoMessageValues;
+  readonly "autonomousDescription": NoMessageValues;
+  readonly "manualLabel": NoMessageValues;
+  readonly "manualDescription": NoMessageValues;
+  readonly "smartLabel": NoMessageValues;
+  readonly "smartDescription": NoMessageValues;
+  readonly "chatOnlyLabel": NoMessageValues;
+  readonly "chatOnlyDescription": NoMessageValues;
+}>({
   autonomousLabel: {
     id: 'modeSelectionItem.autonomousLabel',
     defaultMessage: 'Autonomous',

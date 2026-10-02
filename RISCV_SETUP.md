@@ -37,6 +37,7 @@ different name.
 ## Overview
 
 V8 152.2.0 is the first version with pre-built RISC-V binaries. However:
+
 - Current goose uses v8 145.0.0 via deno_core 0.381.1 (no RISC-V support)
 - Upgrading requires patching deno_core and serde_v8 for V8 152 API changes
 - These patches are intrusive and affect all platforms if applied via Cargo.toml patches
@@ -124,6 +125,7 @@ These patches adapt deno_core 0.381.1 to V8 152 API changes.
 #### Wrap `v8::Global::open()` calls in `unsafe {}`
 
 V8 152 marked `Global::open()` as unsafe. Affected files:
+
 - `error.rs` (2 locations)
 - `modules/map.rs` (9 locations)
 - `runtime/jsrealm.rs` (1 location)
@@ -131,6 +133,7 @@ V8 152 marked `Global::open()` as unsafe. Affected files:
 - `ops_builtin_v8.rs` (1 location)
 
 Example:
+
 ```rust
 // Before:
 let cb = callback.open(scope);
@@ -241,6 +244,7 @@ cargo update deno_core_icudata icu_calendar icu_locale temporal_rs
 ```
 
 Expected changes:
+
 - v8: 145.0.0 → 152.2.0 (local, via the patch)
 - deno_core_icudata: 0.77.0 → 0.78.0
 - temporal_rs: 0.1.2 → 0.2.6
@@ -267,6 +271,7 @@ See `scripts/setup-riscv.sh` for automated setup.
 ## Alternative: Conditional Compilation
 
 For production PR, consider:
+
 1. Keep deno_core/serde_v8 patches in separate git branch
 2. Document manual setup steps
 3. Only commit minimal changes (update.rs, CI workflow)

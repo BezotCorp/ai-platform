@@ -3,6 +3,9 @@ import { exec, spawn, ChildProcess } from 'child_process';
 import { join } from 'path';
 import { promisify } from 'util';
 
+import * as path from "node:path";
+import { fileURLToPath } from "node:url";
+const moduleDir = path.dirname(fileURLToPath(import.meta.url));
 const execAsync = promisify(exec);
 
 type GooseTestFixtures = {
@@ -44,7 +47,7 @@ export const test = base.extend<GooseTestFixtures>({
       // Start the electron-forge process with Playwright remote debugging enabled
       // Use detached mode on Unix to create a process group we can kill together
       appProcess = spawn('pnpm', ['run', 'start-gui'], {
-        cwd: join(__dirname, '../..'),
+        cwd: join(moduleDir, '../..'),
         stdio: 'pipe',
         detached: process.platform !== 'win32',
         env: {

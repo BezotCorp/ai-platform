@@ -16,23 +16,23 @@
         overlays = [ rust-overlay.overlays.default ];
         pkgs = import nixpkgs { inherit system overlays; };
         rust = pkgs.rust-bin.fromRustupToolchainFile ./rust-toolchain.toml;
-        
+
         # Read package metadata from Cargo.toml
         cargoToml = builtins.fromTOML (builtins.readFile ./crates/goose-cli/Cargo.toml);
         workspaceToml = builtins.fromTOML (builtins.readFile ./Cargo.toml);
-        
+
         commonInputs = [
           rust
           pkgs.rust-analyzer
           pkgs.pkg-config
           pkgs.openssl
         ];
-        
+
         darwinInputs = with pkgs; [
           libiconv
           apple-sdk
         ];
-        
+
         buildInputs = commonInputs
           ++ pkgs.lib.optionals pkgs.stdenv.isDarwin darwinInputs;
       in
@@ -88,7 +88,7 @@
 
           # Build only the CLI package
           cargoBuildFlags = [ "--package" "goose-cli" ];
-          
+
           # Enable tests with proper environment
           # Tests need writable HOME and XDG directories for config/cache access
           doCheck = true;
@@ -99,7 +99,7 @@
             export XDG_STATE_HOME=$HOME/.local/state
             export XDG_CACHE_HOME=$HOME/.cache
             mkdir -p $XDG_CONFIG_HOME $XDG_DATA_HOME $XDG_STATE_HOME $XDG_CACHE_HOME
-            
+
             # Run tests for goose-cli package only
             cargo test --package goose-cli --release
           '';
@@ -127,7 +127,7 @@
             dbus
             yarn # 'just' install-deps
           ]);
-          
+
           shellHook = ''
             echo "goose development environment"
             echo "Rust version: $(rustc --version)"

@@ -2,19 +2,9 @@ import fs from 'node:fs/promises';
 import { constants as fsConstants } from 'node:fs';
 import type { Stats } from 'node:fs';
 import path from 'node:path';
-
-export interface FileReadResult {
-  file: string;
-  filePath: string;
-  error: string | null;
-  found: boolean;
-}
-
-interface FileAccessRequestProvenance {
-  isRegisteredWindow: boolean;
-  isMainFrame: boolean;
-  rendererUrl: string;
-}
+import type { FileAccessRequestProvenance } from './fileAccessRequestProvenance';
+import type { FileReadResult } from './fileReadResult';
+import { WorkingDirectoryBinding } from './workingDirectoryBinding';
 
 export function isAppRendererUrl(rendererUrl: string, expectedUrl: URL): boolean {
   try {
@@ -59,11 +49,6 @@ function missingFile(filePath: string): FileReadResult {
 function failedRead(filePath: string, message: string): FileReadResult {
   return { file: '', filePath, error: message, found: false };
 }
-
-type WorkingDirectoryBinding =
-  | { status: 'ready'; path: string; dev: bigint; ino: bigint }
-  | { status: 'missing'; path: string }
-  | { status: 'error'; path: string };
 
 export class DesktopFileAccess {
   private readonly workingDirectories = new Map<number, WorkingDirectoryBinding>();

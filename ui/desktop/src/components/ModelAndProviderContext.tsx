@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
-import { toastError, toastSuccess } from '../toasts';
+import { toastError, toastSuccess } from '../toast_service';
 import Model, { getProviderMetadata } from './settings/models/modelInterface';
 import type { ProviderMetadata } from '../types/providers';
 import { acpChatSessionActions, acpChatSessionStore } from '../acp/chatSessionStore';
@@ -15,8 +15,16 @@ import {
   getProviderDisplayName,
 } from './settings/models/predefinedModelsUtils';
 import { defineMessages, useIntl } from '../i18n';
+import type { MessageValue, NoMessageValues } from 'react-intl';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly "unknownProviderTitle": NoMessageValues;
+  readonly "unknownProviderMsg": NoMessageValues;
+  readonly "modelChangedTitle": NoMessageValues;
+  readonly "switchModelSuccess": { readonly "model": MessageValue; readonly "provider": MessageValue };
+  readonly "modelChangeFailed": { readonly "model": MessageValue; readonly "provider": MessageValue };
+  readonly "selectModel": NoMessageValues;
+}>({
   unknownProviderTitle: {
     id: 'modelAndProviderContext.unknownProviderTitle',
     defaultMessage: 'Provider name lookup',

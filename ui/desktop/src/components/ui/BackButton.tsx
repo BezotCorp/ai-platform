@@ -5,8 +5,11 @@ import type { VariantProps } from 'class-variance-authority';
 import { buttonVariants } from './button';
 import { cn } from '../../utils';
 import { defineMessages, useIntl } from '../../i18n';
+import type { NoMessageValues } from 'react-intl';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly "back": NoMessageValues;
+}>({
   back: {
     id: 'backButton.back',
     defaultMessage: 'Back',

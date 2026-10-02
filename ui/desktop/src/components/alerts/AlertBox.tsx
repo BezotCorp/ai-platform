@@ -6,6 +6,7 @@ import { errorMessage } from '../../utils/conversionUtils';
 import { Alert, AlertType } from './types';
 import { useConfig } from '../ConfigContext';
 import { defineMessages, useIntl } from '../../i18n';
+import type { MessageValue, NoMessageValues } from 'react-intl';
 
 const alertIcons: Record<AlertType, React.ReactNode> = {
   [AlertType.Error]: <IoIosCloseCircle className="h-5 w-5" />,
@@ -19,7 +20,11 @@ interface AlertBoxProps {
   compactButtonEnabled?: boolean;
 }
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly autoCompactAt: NoMessageValues;
+  readonly compactNow: NoMessageValues;
+  readonly failedToSaveThreshold: { readonly error: MessageValue };
+}>({
   autoCompactAt: {
     id: 'alertBox.autoCompactAt',
     defaultMessage: 'Auto compact at',
@@ -40,18 +45,18 @@ const alertStyles: Record<AlertType, string> = {
   [AlertType.Info]: 'dark:bg-white dark:text-black bg-black text-white',
 };
 
-export const AlertBox = ({ alert, className }: AlertBoxProps) => {
+export const AlertBox = ({ alert, className }: AlertBoxProps): React.JSX.Element => {
   const intl = useIntl();
   const { read, upsert } = useConfig();
-  const [isEditingThreshold, setIsEditingThreshold] = useState(false);
+  const [isEditingThreshold, setIsEditingThreshold] = useState<boolean>(false);
   const [loadedThreshold, setLoadedThreshold] = useState<number>(0.8);
-  const [thresholdValue, setThresholdValue] = useState(80);
-  const [isSaving, setIsSaving] = useState(false);
+  const [thresholdValue, setThresholdValue] = useState<number>(80);
+  const [isSaving, setIsSaving] = useState<boolean>(false);
 
   useEffect(() => {
-    const loadThreshold = async () => {
+    const loadThreshold = async (): Promise<void> => {
       try {
-        const threshold = await read('GOOSE_AUTO_COMPACT_THRESHOLD', false);
+        const threshold: unknown = await read('GOOSE_AUTO_COMPACT_THRESHOLD', false);
         if (threshold !== undefined && threshold !== null && typeof threshold === 'number') {
           setLoadedThreshold(threshold);
           setThresholdValue(Math.max(1, Math.min(99, Math.round(threshold * 100))));
@@ -61,22 +66,22 @@ export const AlertBox = ({ alert, className }: AlertBoxProps) => {
       }
     };
 
-    loadThreshold();
+    void loadThreshold();
   }, [read]);
 
-  const currentThreshold = loadedThreshold;
+  const currentThreshold: number = loadedThreshold;
 
-  const handleSaveThreshold = async () => {
+  const handleSaveThreshold = async (): Promise<void> => {
     if (isSaving) return; // Prevent double-clicks
 
-    let validThreshold = Math.max(1, Math.min(99, thresholdValue));
+    const validThreshold: number = Math.max(1, Math.min(99, thresholdValue));
     if (validThreshold !== thresholdValue) {
       setThresholdValue(validThreshold);
     }
 
     setIsSaving(true);
     try {
-      const newThreshold = validThreshold / 100; // Convert percentage to decimal
+      const newThreshold: number = validThreshold / 100; // Convert percentage to decimal
 
       await upsert('GOOSE_AUTO_COMPACT_THRESHOLD', newThreshold, false);
 
@@ -89,7 +94,11 @@ export const AlertBox = ({ alert, className }: AlertBoxProps) => {
       }
     } catch (error) {
       console.error('Error saving threshold:', error);
-      window.alert(intl.formatMessage(i18n.failedToSaveThreshold, { error: errorMessage(error, 'Unknown error') }));
+      window.alert(
+        intl.formatMessage(i18n.failedToSaveThreshold, {
+          error: errorMessage(error, 'Unknown error'),
+        })
+      );
     } finally {
       setIsSaving(false);
     }
@@ -98,7 +107,7 @@ export const AlertBox = ({ alert, className }: AlertBoxProps) => {
   return (
     <div
       className={cn('flex flex-col gap-2 px-3 py-3', alertStyles[alert.type], className)}
-      onMouseDown={(e) => {
+      onMouseDown={(e: React.MouseEvent<HTMLDivElement>): void => {
         // Prevent popover from closing when clicking inside the alert box
         if (isEditingThreshold) {
           e.stopPropagation();
@@ -111,42 +120,44 @@ export const AlertBox = ({ alert, className }: AlertBoxProps) => {
           <div className="flex items-center justify-center gap-1 min-h-[20px]">
             {isEditingThreshold ? (
               <>
-                <span className="text-[10px] opacity-70">{intl.formatMessage(i18n.autoCompactAt)}</span>
+                <span className="text-[10px] opacity-70">
+                  {intl.formatMessage(i18n.autoCompactAt)}
+                </span>
                 <input
                   type="number"
                   min="1"
                   max="99"
                   step="1"
                   value={thresholdValue}
-                  onChange={(e) => {
-                    const val = parseInt(e.target.value, 10);
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>): void => {
+                    const val: number = parseInt(e.target.value, 10);
                     if (e.target.value === '') {
                       setThresholdValue(1);
                     } else if (!isNaN(val)) {
                       setThresholdValue(Math.max(1, Math.min(99, val)));
                     }
                   }}
-                  onBlur={(e) => {
-                    const val = parseInt(e.target.value, 10);
+                  onBlur={(e: React.FocusEvent<HTMLInputElement>): void => {
+                    const val: number = parseInt(e.target.value, 10);
                     if (isNaN(val) || val < 1) {
                       setThresholdValue(1);
                     } else if (val > 99) {
                       setThresholdValue(99);
                     }
                   }}
-                  onKeyDown={(e) => {
+                  onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>): void => {
                     if (e.key === 'Enter') {
-                      handleSaveThreshold();
+                      void handleSaveThreshold();
                     } else if (e.key === 'Escape') {
                       setIsEditingThreshold(false);
-                      const resetValue = Math.round(currentThreshold * 100);
+                      const resetValue: number = Math.round(currentThreshold * 100);
                       setThresholdValue(Math.max(1, Math.min(99, resetValue)));
                     }
                   }}
-                  onFocus={(e) => {
+                  onFocus={(e: React.FocusEvent<HTMLInputElement>): void => {
                     e.target.select();
                   }}
-                  onClick={(e) => {
+                  onClick={(e: React.MouseEvent<HTMLInputElement>): void => {
                     e.stopPropagation();
                   }}
                   className="w-12 px-1 text-[10px] bg-white/10 border border-current/30 rounded outline-none text-center focus:bg-white/20 focus:border-current/50 transition-colors"
@@ -156,10 +167,10 @@ export const AlertBox = ({ alert, className }: AlertBoxProps) => {
                 <span className="text-[10px] opacity-70">%</span>
                 <button
                   type="button"
-                  onMouseDown={(e) => {
+                  onMouseDown={(e: React.MouseEvent<HTMLButtonElement>): void => {
                     e.preventDefault();
                     e.stopPropagation();
-                    handleSaveThreshold();
+                    void handleSaveThreshold();
                   }}
                   disabled={isSaving}
                   className="p-1 hover:opacity-60 transition-opacity cursor-pointer relative z-50"
@@ -175,7 +186,7 @@ export const AlertBox = ({ alert, className }: AlertBoxProps) => {
                 </span>
                 <button
                   type="button"
-                  onClick={(e) => {
+                  onClick={(e: React.MouseEvent<HTMLButtonElement>): void => {
                     e.preventDefault();
                     e.stopPropagation();
                     setIsEditingThreshold(true);
@@ -190,7 +201,7 @@ export const AlertBox = ({ alert, className }: AlertBoxProps) => {
           </div>
           {alert.showCompactButton && alert.onCompact && (
             <button
-              onClick={(e) => {
+              onClick={(e: React.MouseEvent<HTMLButtonElement>): void => {
                 e.preventDefault();
                 e.stopPropagation();
                 alert.onCompact!();

@@ -1,15 +1,17 @@
 #!/usr/bin/env node
+import { fileURLToPath } from 'node:url';
+const moduleDir = path.dirname(fileURLToPath(import.meta.url));
 /**
  * Cross-platform i18n check script.
  * Extracts messages to a temp file and compares against the committed file
  * to ensure src/i18n/messages/en.json is up to date.
  */
-const fs = require('fs');
-const os = require('os');
-const path = require('path');
-const { execFileSync } = require('child_process');
+import * as fs from 'node:fs';
+import * as os from 'node:os';
+import * as path from 'node:path';
+import { execFileSync } from 'node:child_process';
 
-const projectDir = path.join(__dirname, '..');
+const projectDir = path.join(moduleDir, '..');
 const formatjs = require.resolve('@formatjs/cli/bin/formatjs');
 const enFile = path.join(projectDir, 'src', 'i18n', 'messages', 'en.json');
 const tmpFile = path.join(os.tmpdir(), 'en.i18n-check.json');

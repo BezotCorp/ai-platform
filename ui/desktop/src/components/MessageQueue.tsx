@@ -4,8 +4,30 @@ import { Button } from './ui/button';
 import { ImageData } from '../types/message';
 import { getTextDirection } from '../utils/textDirection';
 import { defineMessages, useIntl } from '../i18n';
+import type { MessageValue, NoMessageValues } from 'react-intl';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly "paused": NoMessageValues;
+  readonly "next": NoMessageValues;
+  readonly "sendNow": NoMessageValues;
+  readonly "expandQueue": NoMessageValues;
+  readonly "queuePausedCompact": NoMessageValues;
+  readonly "queuePaused": NoMessageValues;
+  readonly "messageQueue": NoMessageValues;
+  readonly "messageCount": { readonly "count": number | bigint; readonly "status": MessageValue };
+  readonly "waiting": NoMessageValues;
+  readonly "queued": NoMessageValues;
+  readonly "clearAll": NoMessageValues;
+  readonly "collapseQueue": NoMessageValues;
+  readonly "queuePausedExpanded": NoMessageValues;
+  readonly "save": NoMessageValues;
+  readonly "cancel": NoMessageValues;
+  readonly "clickToEdit": { readonly "content": MessageValue };
+  readonly "cannotSendWhileEditing": NoMessageValues;
+  readonly "stopAndSend": NoMessageValues;
+  readonly "removeFromQueue": NoMessageValues;
+  readonly "dragToReorder": NoMessageValues;
+}>({
   paused: {
     id: 'messageQueue.paused',
     defaultMessage: 'Paused',

@@ -1,13 +1,15 @@
 #!/usr/bin/env node
+import { fileURLToPath } from 'node:url';
+const moduleDir = path.dirname(fileURLToPath(import.meta.url));
 /**
  * Cross-platform i18n compile script.
  * Compiles all JSON message files in src/i18n/messages/ using formatjs.
  */
-const fs = require('fs');
-const path = require('path');
-const { execFileSync } = require('child_process');
+import * as fs from 'node:fs';
+import * as path from 'node:path';
+import { execFileSync } from 'node:child_process';
 
-const projectDir = path.join(__dirname, '..');
+const projectDir = path.join(moduleDir, '..');
 const formatjs = require.resolve('@formatjs/cli/bin/formatjs');
 const messagesDir = path.join(projectDir, 'src', 'i18n', 'messages');
 const compiledDir = path.join(projectDir, 'src', 'i18n', 'compiled');

@@ -1,10 +1,10 @@
-import type { GooseSessionNotification_unstable } from '@aaif/goose-acp-client';
+import type { GooseSessionNotificationUnstable } from '@aaif/goose-acp-client';
 import type { MessageUsage } from '../../types/message';
 import { type AcpChatStateChange, type AdapterState, messagesChange } from './shared';
 
 export function applyGooseSessionNotification(
   state: AdapterState,
-  notification: GooseSessionNotification_unstable
+  notification: GooseSessionNotificationUnstable
 ): AcpChatStateChange[] {
   const update = notification.update;
 
@@ -37,7 +37,7 @@ export function applyGooseSessionNotification(
 function applyStatusMessage(
   state: AdapterState,
   sessionId: string,
-  update: Extract<GooseSessionNotification_unstable['update'], { sessionUpdate: 'status_message' }>
+  update: Extract<GooseSessionNotificationUnstable['update'], { sessionUpdate: 'status_message' }>
 ): AcpChatStateChange[] {
   if (update.status.type === 'progress') {
     return [{ type: 'progressMessage', message: update.status.message }];
@@ -65,7 +65,7 @@ function applyStatusMessage(
 
 function applyMessageUsage(
   state: AdapterState,
-  update: Extract<GooseSessionNotification_unstable['update'], { sessionUpdate: 'message_usage' }>
+  update: Extract<GooseSessionNotificationUnstable['update'], { sessionUpdate: 'message_usage' }>
 ): AcpChatStateChange[] {
   // Live tool-call turns carry a server-side id the client never saw, so an
   // id miss falls back to the most recent assistant message with provider

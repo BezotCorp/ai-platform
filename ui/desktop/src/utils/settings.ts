@@ -1,38 +1,8 @@
-export type RecentModel = {
-  provider: string;
-  model: string;
-};
-
-export interface ExternalBackendConfig {
-  enabled: boolean;
-  url: string;
-  secret: string;
-  certFingerprint?: string;
-  workingDir?: string;
-}
-
-export interface KeyboardShortcuts {
-  focusWindow: string | null;
-  quickLauncher: string | null;
-  newChat: string | null;
-  newChatWindow: string | null;
-  openDirectory: string | null;
-  settings: string | null;
-  find: string | null;
-  findNext: string | null;
-  findPrevious: string | null;
-  alwaysOnTop: string | null;
-  toggleNavigation: string | null;
-}
-
-export type DefaultKeyboardShortcuts = {
-  [K in keyof KeyboardShortcuts]: string;
-};
-
-// prettier-ignore
-export type LanguageSetting =
-  | 'system' | 'en' | 'es' | 'fr' | 'de' | 'it' | 'pt' | 'id' | 'ms' | 'vi'
-  | 'hi' | 'ja' | 'ko' | 'ru' | 'tr' | 'zh-CN' | 'zh-TW';
+import type { ExternalBackendConfig } from './externalBackendConfig';
+import type { KeyboardShortcuts } from './keyboardShortcuts';
+import type { DefaultKeyboardShortcuts } from './defaultKeyboardShortcuts';
+import type { RecentModel } from './RecentModel';
+import { LanguageSetting } from './language_setting';
 
 export interface Settings {
   // Desktop app settings
@@ -57,8 +27,6 @@ export interface Settings {
   recentModels: RecentModel[];
   useLegacyAgentLoop: boolean;
 }
-
-export type SettingKey = keyof Settings;
 
 export const defaultKeyboardShortcuts: DefaultKeyboardShortcuts = {
   focusWindow: 'CommandOrControl+Alt+G',

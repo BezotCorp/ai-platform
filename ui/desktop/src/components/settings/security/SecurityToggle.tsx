@@ -3,8 +3,30 @@ import { Switch } from '../../ui/switch';
 import { useConfig } from '../../ConfigContext';
 import { trackSettingToggled } from '../../../utils/analytics';
 import { defineMessages, useIntl } from '../../../i18n';
+import type { NoMessageValues } from 'react-intl';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly "enablePromptInjection": NoMessageValues;
+  readonly "promptInjectionDescription": NoMessageValues;
+  readonly "detectionThreshold": NoMessageValues;
+  readonly "thresholdDescription": NoMessageValues;
+  readonly "enableCommandInjection": NoMessageValues;
+  readonly "commandInjectionDescription": NoMessageValues;
+  readonly "commandClassifierActive": NoMessageValues;
+  readonly "enablePromptInjectionMl": NoMessageValues;
+  readonly "promptInjectionMlDescription": NoMessageValues;
+  readonly "detectionModel": NoMessageValues;
+  readonly "detectionModelDescription": NoMessageValues;
+  readonly "classificationEndpoint": NoMessageValues;
+  readonly "classificationEndpointDescription": NoMessageValues;
+  readonly "apiTokenOptional": NoMessageValues;
+  readonly "apiTokenDescription": NoMessageValues;
+  readonly "overrideNotice": NoMessageValues;
+  readonly "warpNotice": NoMessageValues;
+  readonly "commandEndpointDescription": NoMessageValues;
+  readonly "mlEndpointDescription": NoMessageValues;
+  readonly "mlTokenDescription": NoMessageValues;
+}>({
   enablePromptInjection: {
     id: 'securityToggle.enablePromptInjection',
     defaultMessage: 'Enable Prompt Injection Detection',

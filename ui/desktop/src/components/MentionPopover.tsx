@@ -11,8 +11,15 @@ import { ItemIcon } from './ItemIcon';
 import { getInitialWorkingDir } from '../utils/workingDir';
 import { defineMessages, useIntl } from '../i18n';
 import { listAgentMentionItems, listSlashCommandItems } from '../acp/autocomplete';
+import type { MessageValue, NoMessageValues } from 'react-intl';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly "scanningFiles": NoMessageValues;
+  readonly "loadingCommands": NoMessageValues;
+  readonly "itemsFound": { readonly "count": number | bigint };
+  readonly "noItemsFound": { readonly "query": MessageValue };
+  readonly "noCommandsFound": { readonly "query": MessageValue };
+}>({
   scanningFiles: {
     id: 'mentionPopover.scanningFiles',
     defaultMessage: 'Scanning files...',

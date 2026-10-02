@@ -1,8 +1,20 @@
 import { Input } from '../../../ui/input';
 import { Select } from '../../../ui/Select';
 import { defineMessages, useIntl } from '../../../../i18n';
+import type { NoMessageValues } from 'react-intl';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly "extensionName": NoMessageValues;
+  readonly "extensionNamePlaceholder": NoMessageValues;
+  readonly "nameRequired": NoMessageValues;
+  readonly "typeLabel": NoMessageValues;
+  readonly "typeStdio": NoMessageValues;
+  readonly "typeHttp": NoMessageValues;
+  readonly "typeStandardIo": NoMessageValues;
+  readonly "typeStreamableHttp": NoMessageValues;
+  readonly "descriptionLabel": NoMessageValues;
+  readonly "descriptionPlaceholder": NoMessageValues;
+}>({
   extensionName: {
     id: 'extensionInfoFields.extensionName',
     defaultMessage: 'Extension Name',
@@ -105,9 +117,13 @@ export default function ExtensionInfoFields({
                     : type.toUpperCase(),
             }}
             onChange={(newValue: unknown) => {
-              const option = newValue as { value: string; label: string } | null;
-              if (option) {
-                onChange('type', option.value);
+              if (
+                newValue !== null &&
+                typeof newValue === 'object' &&
+                'value' in newValue &&
+                typeof newValue.value === 'string'
+              ) {
+                onChange('type', newValue.value);
               }
             }}
             options={[

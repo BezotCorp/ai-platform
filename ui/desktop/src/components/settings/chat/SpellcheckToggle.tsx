@@ -1,8 +1,12 @@
 import { useState, useEffect } from 'react';
 import { Switch } from '../../ui/switch';
 import { defineMessages, useIntl } from '../../../i18n';
+import type { NoMessageValues } from 'react-intl';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly "title": NoMessageValues;
+  readonly "description": NoMessageValues;
+}>({
   title: {
     id: 'spellcheckToggle.title',
     defaultMessage: 'Enable Spellcheck',

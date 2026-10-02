@@ -1,9 +1,13 @@
 import { test as base, expect } from './fixtures';
 import { Page } from '@playwright/test';
 import { showTestName, clearTestName } from './test-overlay';
-import { join } from 'path';
+import { join } from 'node:path';
+import * as fs from 'node:fs';
 
-const { runningQuotes } = require('./basic-mcp');
+import * as path from "node:path";
+import { fileURLToPath } from "node:url";
+const moduleDir = path.dirname(fileURLToPath(import.meta.url));
+import { runningQuotes } from './basic-mcp';
 
 // Define provider interface
 type Provider = {
@@ -359,7 +363,6 @@ test.describe('Goose App', () => {
           console.log(`Testing Running Quotes MCP server integration with ${provider.name}...`);
 
           // Create test-results directory if it doesn't exist
-          const fs = require('fs');
           if (!fs.existsSync('test-results')) {
             fs.mkdirSync('test-results', { recursive: true });
           }
@@ -471,7 +474,7 @@ test.describe('Goose App', () => {
             await descriptionInput.fill('Inspirational running quotes MCP server');
 
             // Fill Command
-            const mcpScriptPath = join(__dirname, 'basic-mcp.ts');
+            const mcpScriptPath = join(moduleDir, 'basic-mcp.ts');
             const commandInput = await mainWindow.waitForSelector('input[placeholder="e.g. npx -y @modelcontextprotocol/my-extension <filepath>"]', {
               timeout: 2000,
               state: 'visible'

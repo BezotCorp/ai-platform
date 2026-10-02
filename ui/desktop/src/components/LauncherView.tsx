@@ -1,8 +1,11 @@
 import { useRef, useState } from 'react';
 import { defineMessages, useIntl } from '../i18n';
 import { getInitialWorkingDir } from '../utils/workingDir';
+import type { NoMessageValues } from 'react-intl';
 
-const messages = defineMessages({
+const messages = defineMessages<{
+  readonly "placeholder": NoMessageValues;
+}>({
   placeholder: {
     id: 'launcher.placeholder',
     defaultMessage: 'Ask goose anything...',

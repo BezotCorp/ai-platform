@@ -1,1 +1,1 @@
-export { resolveGooseBinary } from "./resolve-binary.js";
+export { resolveGooseBinary } from "./resolve-binary.ts";

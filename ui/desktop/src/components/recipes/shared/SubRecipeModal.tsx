@@ -4,10 +4,33 @@ import { Button } from '../../ui/button';
 import { SubRecipeFormData } from './recipeFormSchema';
 import { useEscapeKey } from '../../../hooks/useEscapeKey';
 import KeyValueEditor from './KeyValueEditor';
-import { toastError } from '../../../toasts';
+import { toastError } from '../../../toast_service';
 import { defineMessages, useIntl } from '../../../i18n';
+import type { NoMessageValues } from 'react-intl';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly "configureTitle": NoMessageValues;
+  readonly "addTitle": NoMessageValues;
+  readonly "subtitle": NoMessageValues;
+  readonly "closeModal": NoMessageValues;
+  readonly "nameLabel": NoMessageValues;
+  readonly "namePlaceholder": NoMessageValues;
+  readonly "nameHint": NoMessageValues;
+  readonly "pathLabel": NoMessageValues;
+  readonly "pathPlaceholder": NoMessageValues;
+  readonly "browse": NoMessageValues;
+  readonly "pathHint": NoMessageValues;
+  readonly "descriptionLabel": NoMessageValues;
+  readonly "descriptionPlaceholder": NoMessageValues;
+  readonly "sequentialLabel": NoMessageValues;
+  readonly "sequentialHint": NoMessageValues;
+  readonly "preconfiguredValues": NoMessageValues;
+  readonly "preconfiguredValuesHint": NoMessageValues;
+  readonly "cancel": NoMessageValues;
+  readonly "apply": NoMessageValues;
+  readonly "invalidFile": NoMessageValues;
+  readonly "invalidFileMsg": NoMessageValues;
+}>({
   configureTitle: {
     id: 'subRecipeModal.configureTitle',
     defaultMessage: 'Configure Subrecipe',

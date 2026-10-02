@@ -19,7 +19,6 @@ _your native open source AI agent — desktop app, CLI, and API — for code, wo
 
 </div>
 
-
 goose is a general-purpose AI agent that runs on your machine. Not just for code — use it for research, writing, automation, data analysis, or anything you need to get done.
 
 A native desktop app for macOS, Linux, and Windows. A full CLI for terminal workflows. An API to embed it anywhere. Built in Rust for performance and portability.
@@ -39,6 +38,7 @@ curl -fsSL https://github.com/aaif-goose/goose/releases/download/stable/download
 ```
 
 # Quick links
+
 - [Quickstart](https://goose-docs.ai/docs/quickstart)
 - [Installation](https://goose-docs.ai/docs/getting-started/installation)
 - [Tutorials](https://goose-docs.ai/docs/category/tutorials)
@@ -47,16 +47,18 @@ curl -fsSL https://github.com/aaif-goose/goose/releases/download/stable/download
 - [Custom Distributions](https://github.com/aaif-goose/goose/blob/main/CUSTOM_DISTROS.md) — build your own goose distro with preconfigured providers, extensions, and branding
 
 ## Need help?
+
 - [Diagnostics & Reporting](https://goose-docs.ai/docs/troubleshooting/diagnostics-and-reporting)
 - [Known Issues](https://goose-docs.ai/docs/troubleshooting/known-issues)
 
 # a little goose humor 🪿
 
 > Why did the developer choose goose as their AI agent?
-> 
+>
 > Because it always helps them "migrate" their code to production! 🚀
 
 # goose around with us
+
 - [Discord](https://discord.gg/n8R5VaWDAn)
 - [YouTube](https://www.youtube.com/@goose-oss)
 - [LinkedIn](https://www.linkedin.com/company/goose-oss)

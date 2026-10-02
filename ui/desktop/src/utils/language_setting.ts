@@ -1,0 +1,18 @@
+export type LanguageSetting =
+  | 'system'
+  | 'en'
+  | 'es'
+  | 'fr'
+  | 'de'
+  | 'it'
+  | 'pt'
+  | 'id'
+  | 'ms'
+  | 'vi'
+  | 'hi'
+  | 'ja'
+  | 'ko'
+  | 'ru'
+  | 'tr'
+  | 'zh-CN'
+  | 'zh-TW';

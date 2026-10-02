@@ -26,7 +26,7 @@ type DeprecatedBundledExtension = {
 };
 
 export function getDeprecatedBundledExtensions(): DeprecatedBundledExtension[] {
-  return deprecatedBundledExtensionsData as DeprecatedBundledExtension[];
+  return deprecatedBundledExtensionsData;
 }
 
 function isBundledExtension(extension: FixedExtensionEntry): boolean {

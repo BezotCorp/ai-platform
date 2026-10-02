@@ -1,8 +1,13 @@
 import { AlertCircle, Loader2 } from 'lucide-react';
 import React from 'react';
 import { defineMessages, useIntl } from '../i18n';
+import type { NoMessageValues } from 'react-intl';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly "error": NoMessageValues;
+  readonly "streaming": NoMessageValues;
+  readonly "newActivity": NoMessageValues;
+}>({
   error: {
     id: 'sessionIndicators.error',
     defaultMessage: 'Session encountered an error',

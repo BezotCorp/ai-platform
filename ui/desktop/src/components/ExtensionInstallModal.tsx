@@ -14,11 +14,30 @@ import { addExtensionFromDeepLink } from './settings/extensions/deeplink';
 import type { ExtensionConfig } from '../types/extensions';
 import { View, ViewOptions } from '../utils/navigationUtils';
 import { useConfig } from './ConfigContext';
-import { toastService } from '../toasts';
+import { toastService } from '../toast_service';
 import { errorMessage } from '../utils/conversionUtils';
 import { defineMessages, useIntl } from '../i18n';
+import type { MessageValue, NoMessageValues } from 'react-intl';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly "unknownCommand": NoMessageValues;
+  readonly "blockedTitle": NoMessageValues;
+  readonly "blockedMessage": { readonly "command": MessageValue; readonly "name": MessageValue };
+  readonly "ok": NoMessageValues;
+  readonly "untrustedTitle": NoMessageValues;
+  readonly "untrustedSecurityMessage": NoMessageValues;
+  readonly "untrustedMessageWithUrl": { readonly "name": MessageValue; readonly "securityMessage": MessageValue; readonly "url": MessageValue };
+  readonly "untrustedMessageWithCommand": { readonly "command": MessageValue; readonly "name": MessageValue; readonly "securityMessage": MessageValue };
+  readonly "installAnyway": NoMessageValues;
+  readonly "cancel": NoMessageValues;
+  readonly "trustedTitle": NoMessageValues;
+  readonly "trustedMessage": { readonly "command": MessageValue; readonly "name": MessageValue };
+  readonly "yes": NoMessageValues;
+  readonly "no": NoMessageValues;
+  readonly "alreadyInstalledTitle": { readonly "name": MessageValue };
+  readonly "alreadyInstalledMessage": { readonly "name": MessageValue };
+  readonly "installing": NoMessageValues;
+}>({
   unknownCommand: {
     id: 'extensionInstallModal.unknownCommand',
     defaultMessage: 'Unknown Command',

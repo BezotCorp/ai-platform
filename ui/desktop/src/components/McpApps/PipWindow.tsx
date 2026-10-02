@@ -19,8 +19,15 @@ import { Maximize2, PictureInPicture2, X } from 'lucide-react';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { defineMessages, useIntl } from '../../i18n';
 import { cn } from '../../utils';
+import type { NoMessageValues } from 'react-intl';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly "fullscreen": NoMessageValues;
+  readonly "close": NoMessageValues;
+  readonly "movePipWindow": NoMessageValues;
+  readonly "resizePipWindow": NoMessageValues;
+  readonly "playingInPip": NoMessageValues;
+}>({
   fullscreen: {
     id: 'mcpAppRenderer.fullscreen',
     defaultMessage: 'Fullscreen',

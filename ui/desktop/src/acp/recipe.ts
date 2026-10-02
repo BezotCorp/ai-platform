@@ -1,7 +1,7 @@
 import type {
   RecipeDto,
-  SaveRecipeResponse_unstable,
-  ScanRecipeResponse_unstable,
+  SaveRecipeResponseUnstable,
+  ScanRecipeResponseUnstable,
   RecipeListEntryDto,
 } from '@aaif/goose-acp-client';
 import { getAcpClient } from './acpConnection';
@@ -41,7 +41,7 @@ function normalizeAcpError(error: unknown, fallback: string): Error {
 export async function encodeRecipe(recipe: RecipeDto): Promise<string> {
   try {
     const client = await getAcpClient();
-    const response = await client.goose.recipesEncode_unstable({ recipe });
+    const response = await client.goose.recipesEncodeUnstable({ recipe });
     return response.deeplink;
   } catch (error) {
     throw normalizeAcpError(error, 'Failed to encode recipe');
@@ -51,17 +51,17 @@ export async function encodeRecipe(recipe: RecipeDto): Promise<string> {
 export async function decodeRecipe(deeplink: string): Promise<RecipeDto> {
   try {
     const client = await getAcpClient();
-    const response = await client.goose.recipesDecode_unstable({ deeplink });
+    const response = await client.goose.recipesDecodeUnstable({ deeplink });
     return response.recipe;
   } catch (error) {
     throw normalizeAcpError(error, 'Failed to decode recipe');
   }
 }
 
-export async function scanRecipe(recipe: RecipeDto): Promise<ScanRecipeResponse_unstable> {
+export async function scanRecipe(recipe: RecipeDto): Promise<ScanRecipeResponseUnstable> {
   try {
     const client = await getAcpClient();
-    return await client.goose.recipesScan_unstable({ recipe });
+    return await client.goose.recipesScanUnstable({ recipe });
   } catch (error) {
     throw normalizeAcpError(error, 'Failed to scan recipe');
   }
@@ -70,7 +70,7 @@ export async function scanRecipe(recipe: RecipeDto): Promise<ScanRecipeResponse_
 export async function parseRecipe(content: string): Promise<RecipeDto> {
   try {
     const client = await getAcpClient();
-    const response = await client.goose.recipesParse_unstable({ content });
+    const response = await client.goose.recipesParseUnstable({ content });
     return response.recipe;
   } catch (error) {
     throw normalizeAcpError(error, 'Failed to parse recipe');
@@ -80,10 +80,10 @@ export async function parseRecipe(content: string): Promise<RecipeDto> {
 export async function saveRecipe(
   recipe: RecipeDto,
   id?: string | null
-): Promise<SaveRecipeResponse_unstable> {
+): Promise<SaveRecipeResponseUnstable> {
   try {
     const client = await getAcpClient();
-    return await client.goose.recipesSave_unstable({
+    return await client.goose.recipesSaveUnstable({
       recipe,
       id,
     });
@@ -100,7 +100,7 @@ export async function listRecipes(): Promise<RecipeListEntryDto[]> {
 
   const listPromise = (async () => {
     const client = await getAcpClient();
-    const response = await client.goose.recipesList_unstable({});
+    const response = await client.goose.recipesListUnstable({});
     return response.recipes;
   })().catch((error) => {
     throw normalizeAcpError(error, 'Failed to list recipes');
@@ -120,7 +120,7 @@ export async function listRecipes(): Promise<RecipeListEntryDto[]> {
 export async function deleteRecipe(id: string): Promise<void> {
   try {
     const client = await getAcpClient();
-    await client.goose.recipesDelete_unstable({ id });
+    await client.goose.recipesDeleteUnstable({ id });
   } catch (error) {
     throw normalizeAcpError(error, 'Failed to delete recipe');
   }
@@ -129,7 +129,7 @@ export async function deleteRecipe(id: string): Promise<void> {
 export async function scheduleRecipe(id: string, cronSchedule?: string | null): Promise<void> {
   try {
     const client = await getAcpClient();
-    await client.goose.recipesSchedule_unstable({ id, cron_schedule: cronSchedule });
+    await client.goose.recipesScheduleUnstable({ id, cron_schedule: cronSchedule });
   } catch (error) {
     throw normalizeAcpError(error, 'Failed to schedule recipe');
   }
@@ -141,7 +141,7 @@ export async function setRecipeSlashCommand(
 ): Promise<void> {
   try {
     const client = await getAcpClient();
-    await client.goose.recipesSlashCommand_unstable({ id, slash_command: slashCommand });
+    await client.goose.recipesSlashCommandUnstable({ id, slash_command: slashCommand });
   } catch (error) {
     throw normalizeAcpError(error, 'Failed to set recipe slash command');
   }
@@ -150,7 +150,7 @@ export async function setRecipeSlashCommand(
 export async function recipeToYaml(recipe: RecipeDto): Promise<string> {
   try {
     const client = await getAcpClient();
-    const response = await client.goose.recipesToYaml_unstable({ recipe });
+    const response = await client.goose.recipesToYamlUnstable({ recipe });
     return response.yaml;
   } catch (error) {
     throw normalizeAcpError(error, 'Failed to convert recipe to YAML');

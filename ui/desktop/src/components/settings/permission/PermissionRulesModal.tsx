@@ -5,8 +5,13 @@ import { ChevronRight } from 'lucide-react';
 import PermissionModal from './PermissionModal';
 import { Button } from '../../ui/button';
 import { defineMessages, useIntl } from '../../../i18n';
+import type { NoMessageValues } from 'react-intl';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly "title": NoMessageValues;
+  readonly "description": NoMessageValues;
+  readonly "extensionRules": NoMessageValues;
+}>({
   title: {
     id: 'permissionRulesModal.title',
     defaultMessage: 'Permission Rules',

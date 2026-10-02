@@ -1,6 +1,6 @@
 import React from 'react';
 import MDXComponents from '@theme-original/MDXComponents';
-import InstallButton from '@site/src/components/Button/installButton';
+import InstallButton from '~/components/Button/installButton';
 
 export default {
   ...MDXComponents,

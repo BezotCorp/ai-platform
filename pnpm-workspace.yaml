@@ -1,0 +1,34 @@
+packages:
+  - "documentation"
+  - "ui"
+  - "ui/desktop"
+  - "ui/goose-acp"
+  - "ui/goose-acp-client"
+  - "ui/goose-binary/*"
+  - "services/ask-ai-bot"
+  - "oidc-proxy"
+
+registry: https://registry.npmjs.org/
+preferOffline: true
+nodeLinker: hoisted
+blockExoticSubdeps: false
+
+supportedArchitectures:
+  os:
+    - current
+    - linux
+    - darwin
+    - win32
+  cpu:
+    - current
+    - x64
+    - arm64
+
+allowBuilds:
+  "@modelcontextprotocol/ext-apps": true
+  core-js: true
+  electron: true
+  electron-winstaller: true
+  esbuild: true
+  sharp: true
+  workerd: true

@@ -23,24 +23,19 @@ npm install @aaif/goose-acp-client @agentclientprotocol/sdk
 Compose the Goose extension client with the standard ACP SDK:
 
 ```typescript
-import {
-  client as createAcpClient,
-  methods,
-  PROTOCOL_VERSION,
-  type Stream,
-} from "@agentclientprotocol/sdk";
-import { GooseExtClient } from "@aaif/goose-acp-client";
+import { client as createAcpClient, methods, PROTOCOL_VERSION, type Stream } from '@agentclientprotocol/sdk';
+import { GooseExtClient } from '@aaif/goose-acp-client';
 
 async function connectToGoose(stream: Stream) {
-  const app = createAcpClient({ name: "my-product" });
+  const app = createAcpClient({ name: 'my-product' });
   const connection = app.connect(stream);
   const goose = new GooseExtClient(connection.agent);
 
   await connection.agent.request(methods.agent.initialize, {
     protocolVersion: PROTOCOL_VERSION,
     clientInfo: {
-      name: "my-product",
-      version: "1.0.0",
+      name: 'my-product',
+      version: '1.0.0',
     },
     clientCapabilities: {},
   });

@@ -6,8 +6,12 @@ import { FixedExtensionEntry } from '../../../ConfigContext';
 import { getSubtitle, getFriendlyTitle } from './ExtensionList';
 import { Card, CardHeader, CardTitle, CardContent, CardAction } from '../../../ui/card';
 import { defineMessages, useIntl } from '../../../../i18n';
+import type { MessageValue } from 'react-intl';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly "configureExtension": { readonly "name": MessageValue };
+  readonly "toggleExtension": { readonly "name": MessageValue };
+}>({
   configureExtension: {
     id: 'extensionItem.configureExtension',
     defaultMessage: 'Configure {name} Extension',

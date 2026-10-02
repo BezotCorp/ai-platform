@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Button } from '../../ui/button';
 import { ChevronDownIcon, SlidersHorizontal, AlertCircle } from 'lucide-react';
 import { listTools, setToolPermissions } from '../../../acp/permissions';
-import type { ToolListItem, ToolPermissionLevel } from '../../../acp/permissions';
+import type { ToolListItem, ToolPermissionLevelKey } from '../../../acp/permissions';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '../../ui/dialog';
 import {
   DropdownMenu,
@@ -12,8 +12,21 @@ import {
 } from '../../ui/dropdown-menu';
 import { useChatContext } from '../../../contexts/ChatContext';
 import { defineMessages, useIntl } from '../../../i18n';
+import type { NoMessageValues } from 'react-intl';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly "alwaysAllow": NoMessageValues;
+  readonly "askBefore": NoMessageValues;
+  readonly "neverAllow": NoMessageValues;
+  readonly "noActiveSession": NoMessageValues;
+  readonly "noActiveSessionDescription": NoMessageValues;
+  readonly "failedToLoadTools": NoMessageValues;
+  readonly "failedToLoadToolsDescription": NoMessageValues;
+  readonly "noToolsAvailable": NoMessageValues;
+  readonly "close": NoMessageValues;
+  readonly "cancel": NoMessageValues;
+  readonly "saveChanges": NoMessageValues;
+}>({
   alwaysAllow: {
     id: 'permissionModal.alwaysAllow',
     defaultMessage: 'Always allow',
@@ -79,7 +92,7 @@ export default function PermissionModal({ extensionName, onClose }: PermissionMo
     { value: 'always_allow', label: intl.formatMessage(i18n.alwaysAllow) },
     { value: 'ask_before', label: intl.formatMessage(i18n.askBefore) },
     { value: 'never_allow', label: intl.formatMessage(i18n.neverAllow) },
-  ] as { value: ToolPermissionLevel; label: string }[];
+  ] as { value: ToolPermissionLevelKey; label: string }[];
 
   const chatContext = useChatContext();
   const sessionId = chatContext?.chat.sessionId || '';
@@ -125,7 +138,7 @@ export default function PermissionModal({ extensionName, onClose }: PermissionMo
     fetchTools();
   }, [extensionName, sessionId]);
 
-  const handleSettingChange = (toolName: string, newPermission: ToolPermissionLevel) => {
+  const handleSettingChange = (toolName: string, newPermission: ToolPermissionLevelKey) => {
     setUpdatedPermissions((prev) => ({
       ...prev,
       [toolName]: newPermission,
@@ -140,7 +153,7 @@ export default function PermissionModal({ extensionName, onClose }: PermissionMo
     try {
       const toolPermissions = Object.entries(updatedPermissions).map(([toolName, permission]) => ({
         toolName,
-        permission: permission as ToolPermissionLevel,
+        permission: permission as ToolPermissionLevelKey,
       }));
 
       if (toolPermissions.length === 0) {

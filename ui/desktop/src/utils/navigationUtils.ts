@@ -1,6 +1,6 @@
 import type { NavigateFunction } from 'react-router';
 import type { Recipe } from '../recipe';
-import { UserInput } from '../types/message';
+import type { UserInput } from '../types/message';
 
 export type View =
   | 'chat'
@@ -33,51 +33,54 @@ export type ViewOptions = {
   pendingScheduleDeepLink?: string;
 };
 
-export const createNavigationHandler = (navigate: NavigateFunction) => {
-  return (view: View, options?: ViewOptions) => {
+export type NavigationHandler = (view: View, options?: ViewOptions) => void;
+
+export const createNavigationHandler = (navigate: NavigateFunction): NavigationHandler => {
+  return (view: View, options?: ViewOptions): void => {
     switch (view) {
       case 'chat':
-        navigate('/', { state: options });
+        void navigate('/', { state: options });
         break;
       case 'pair': {
         // Put resumeSessionId in URL search params (not just state) so that:
         // 1. The sidebar can read it to highlight the active session
         // 2. Page refresh preserves which session is active
         // 3. Browser back/forward navigation works correctly
-        const searchParams = new URLSearchParams();
+        const searchParams: URLSearchParams = new URLSearchParams();
         if (options?.resumeSessionId) {
           searchParams.set('resumeSessionId', options.resumeSessionId);
         }
-        const url = searchParams.toString() ? `/pair?${searchParams.toString()}` : '/pair';
-        navigate(url, { state: options });
+        const search: string = searchParams.toString();
+        const url: string = search ? `/pair?${search}` : '/pair';
+        void navigate(url, { state: options });
         break;
       }
       case 'settings':
-        navigate('/settings', { state: options });
+        void navigate('/settings', { state: options });
         break;
       case 'sessions':
-        navigate('/sessions', { state: options });
+        void navigate('/sessions', { state: options });
         break;
       case 'schedules':
-        navigate('/schedules', { state: options });
+        void navigate('/schedules', { state: options });
         break;
       case 'recipes':
-        navigate('/recipes', { state: options });
+        void navigate('/recipes', { state: options });
         break;
       case 'skills':
-        navigate('/skills', { state: options });
+        void navigate('/skills', { state: options });
         break;
       case 'permission':
-        navigate('/permission', { state: options });
+        void navigate('/permission', { state: options });
         break;
       case 'ConfigureProviders':
-        navigate('/configure-providers', { state: options });
+        void navigate('/configure-providers', { state: options });
         break;
       case 'extensions':
-        navigate('/extensions', { state: options });
+        void navigate('/extensions', { state: options });
         break;
       default:
-        navigate('/', { state: options });
+        void navigate('/', { state: options });
     }
   };
 };

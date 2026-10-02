@@ -9,10 +9,52 @@ import {
   getValidDayOfMonth,
   parseCron,
   quarterDayLimitByStartMonth,
-  type Period,
-} from '../../utils/cronSchedule';
 
-const i18n = defineMessages({
+} from '../../utils/cronSchedule';
+import type { MessageValue, NoMessageValues } from 'react-intl';
+import { Period } from '../../utils/period';
+
+const i18n = defineMessages<{
+  readonly "every": NoMessageValues;
+  readonly "mode": NoMessageValues;
+  readonly "minute": NoMessageValues;
+  readonly "hour": NoMessageValues;
+  readonly "day": NoMessageValues;
+  readonly "week": NoMessageValues;
+  readonly "month": NoMessageValues;
+  readonly "quarter": NoMessageValues;
+  readonly "year": NoMessageValues;
+  readonly "custom": NoMessageValues;
+  readonly "cronExpression": NoMessageValues;
+  readonly "emptyCronError": NoMessageValues;
+  readonly "invalidDayOfMonth": { readonly "max": MessageValue };
+  readonly "inMonth": NoMessageValues;
+  readonly "startingMonth": NoMessageValues;
+  readonly "january": NoMessageValues;
+  readonly "february": NoMessageValues;
+  readonly "march": NoMessageValues;
+  readonly "april": NoMessageValues;
+  readonly "may": NoMessageValues;
+  readonly "june": NoMessageValues;
+  readonly "july": NoMessageValues;
+  readonly "august": NoMessageValues;
+  readonly "september": NoMessageValues;
+  readonly "october": NoMessageValues;
+  readonly "november": NoMessageValues;
+  readonly "december": NoMessageValues;
+  readonly "onDay": NoMessageValues;
+  readonly "on": NoMessageValues;
+  readonly "sunday": NoMessageValues;
+  readonly "monday": NoMessageValues;
+  readonly "tuesday": NoMessageValues;
+  readonly "wednesday": NoMessageValues;
+  readonly "thursday": NoMessageValues;
+  readonly "friday": NoMessageValues;
+  readonly "saturday": NoMessageValues;
+  readonly "at": NoMessageValues;
+  readonly "atMinute": NoMessageValues;
+  readonly "atSecond": NoMessageValues;
+}>({
   every: { id: 'cronPicker.every', defaultMessage: 'Every' },
   mode: { id: 'cronPicker.mode', defaultMessage: 'Mode' },
   minute: { id: 'cronPicker.minute', defaultMessage: 'Minute' },

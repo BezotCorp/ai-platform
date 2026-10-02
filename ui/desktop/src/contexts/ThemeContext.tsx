@@ -40,15 +40,18 @@ interface ThemeProviderProps {
   children: React.ReactNode;
 }
 
-export function ThemeProvider({ children }: ThemeProviderProps) {
+export function ThemeProvider({ children }: ThemeProviderProps): React.JSX.Element {
   // Start with light theme to avoid flash, will update once settings load
   const [userThemePreference, setUserThemePreferenceState] = useState<ThemePreference>('light');
   const [resolvedThemeId, setResolvedThemeId] = useState<ThemeId>('light');
-  const resolvedTheme = themes[resolvedThemeId].variant;
-  const mcpHostStyles = useMemo(() => buildMcpHostStyles(resolvedThemeId), [resolvedThemeId]);
+  const resolvedTheme: ResolvedTheme = themes[resolvedThemeId].variant;
+  const mcpHostStyles: McpUiHostStyles = useMemo<McpUiHostStyles>(
+    () => buildMcpHostStyles(resolvedThemeId),
+    [resolvedThemeId]
+  );
 
   useEffect(() => {
-    async function loadThemeFromSettings() {
+    async function loadThemeFromSettings(): Promise<void> {
       try {
         const [useSystemTheme, savedTheme] = await Promise.all([
           window.electron.getSetting('useSystemTheme'),
@@ -64,7 +67,7 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
       }
     }
 
-    loadThemeFromSettings();
+    void loadThemeFromSettings();
   }, []);
 
   const setUserThemePreference = useCallback(async (preference: ThemePreference) => {
@@ -95,11 +98,13 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
 
   // Listen for system theme changes when preference is 'system'
   useEffect(() => {
-    if (userThemePreference !== 'system') return;
+    if (userThemePreference !== 'system') {
+      return undefined;
+    }
 
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    const mediaQuery: MediaQueryList = window.matchMedia('(prefers-color-scheme: dark)');
 
-    const handleChange = () => {
+    const handleChange = (): void => {
       setResolvedThemeId(getSystemTheme());
     };
 
@@ -109,28 +114,32 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
 
   // Listen for theme changes from other windows (via Electron IPC)
   useEffect(() => {
-    if (!window.electron) return;
+    if (!window.electron) {
+      return undefined;
+    }
 
-    const handleThemeChanged = (_event: unknown, ...args: unknown[]) => {
-      const themeData = args[0] as { useSystemTheme: boolean; theme: ThemeId };
-      const newPreference: ThemePreference = themeData.useSystemTheme
-        ? 'system'
-        : themeData.theme;
+    const handleThemeChanged = (_event: unknown, ...args: unknown[]): void => {
+      const themeData: unknown = args[0];
+      if (!isThemeChangePayload(themeData)) {
+        return;
+      }
+
+      const newPreference: ThemePreference = themeData.useSystemTheme ? 'system' : themeData.theme;
 
       setUserThemePreferenceState(newPreference);
       setResolvedThemeId(resolveThemeId(newPreference));
 
       // Save to settings (don't await, fire and forget)
       if (newPreference === 'system') {
-        window.electron.setSetting('useSystemTheme', true);
+        void window.electron.setSetting('useSystemTheme', true);
       } else {
-        window.electron.setSetting('useSystemTheme', false);
-        window.electron.setSetting('theme', newPreference);
+        void window.electron.setSetting('useSystemTheme', false);
+        void window.electron.setSetting('theme', newPreference);
       }
     };
 
     window.electron.on('theme-changed', handleThemeChanged);
-    return () => {
+    return (): void => {
       window.electron.off('theme-changed', handleThemeChanged);
     };
   }, []);
@@ -151,6 +160,23 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
   };
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
+}
+
+function isThemeChangePayload(
+  value: unknown
+): value is { useSystemTheme: boolean; theme: ThemeId } {
+  if (!isRecord(value)) {
+    return false;
+  }
+
+  return (
+    typeof value.useSystemTheme === 'boolean' &&
+    (value.theme === 'light' || value.theme === 'dark' || value.theme === 'aura')
+  );
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
 }
 
 export function useTheme(): ThemeContextValue {

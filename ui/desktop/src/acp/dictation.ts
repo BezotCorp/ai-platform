@@ -13,7 +13,7 @@ export type LocalDictationDownloadProgress = DictationDownloadProgress;
 
 export async function getDictationConfig(): Promise<DictationProviders> {
   const client = await getAcpClient();
-  const response = await client.goose.dictationConfig_unstable({});
+  const response = await client.goose.dictationConfigUnstable({});
   return response.providers ?? {};
 }
 
@@ -23,35 +23,35 @@ export async function transcribeDictation(
   provider: string
 ): Promise<string> {
   const client = await getAcpClient();
-  const response = await client.goose.dictationTranscribe_unstable({ audio, mimeType, provider });
+  const response = await client.goose.dictationTranscribeUnstable({ audio, mimeType, provider });
   return response.text;
 }
 
 export async function listLocalDictationModels(): Promise<LocalDictationModel[]> {
   const client = await getAcpClient();
-  const response = await client.goose.dictationModelsList_unstable({});
+  const response = await client.goose.dictationModelsListUnstable({});
   return response.models;
 }
 
 export async function downloadLocalDictationModel(modelId: string): Promise<void> {
   const client = await getAcpClient();
-  await client.goose.dictationModelsDownload_unstable({ modelId });
+  await client.goose.dictationModelsDownloadUnstable({ modelId });
 }
 
 export async function getLocalDictationModelDownloadProgress(
   modelId: string
 ): Promise<LocalDictationDownloadProgress | null> {
   const client = await getAcpClient();
-  const response = await client.goose.dictationModelsDownloadProgress_unstable({ modelId });
+  const response = await client.goose.dictationModelsDownloadProgressUnstable({ modelId });
   return response.progress ?? null;
 }
 
 export async function cancelLocalDictationModelDownload(modelId: string): Promise<void> {
   const client = await getAcpClient();
-  await client.goose.dictationModelsCancel_unstable({ modelId });
+  await client.goose.dictationModelsCancelUnstable({ modelId });
 }
 
 export async function deleteLocalDictationModel(modelId: string): Promise<void> {
   const client = await getAcpClient();
-  await client.goose.dictationModelsDelete_unstable({ modelId });
+  await client.goose.dictationModelsDeleteUnstable({ modelId });
 }

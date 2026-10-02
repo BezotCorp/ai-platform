@@ -15,8 +15,15 @@ import {
   setTelemetryEnabled as setAnalyticsTelemetryEnabled,
 } from '../../utils/analytics';
 import { defineMessages, useIntl } from '../../i18n';
+import type { NoMessageValues } from 'react-intl';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly "welcomeTitle": NoMessageValues;
+  readonly "welcomeDescription": NoMessageValues;
+  readonly "checkProviderErrorTitle": NoMessageValues;
+  readonly "checkProviderErrorDescription": NoMessageValues;
+  readonly "retry": NoMessageValues;
+}>({
   welcomeTitle: {
     id: 'onboardingGuard.welcomeTitle',
     defaultMessage: 'Welcome to goose',

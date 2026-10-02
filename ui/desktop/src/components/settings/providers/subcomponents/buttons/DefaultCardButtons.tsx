@@ -1,8 +1,14 @@
 import { ConfigureSettingsButton, RocketButton } from './CardButtons';
 import type { ProviderDetails } from '../../../../../types/providers';
 import { defineMessages, useIntl } from '../../../../../i18n';
+import type { MessageValue, NoMessageValues } from 'react-intl';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly "configureSettings": { readonly "name": MessageValue };
+  readonly "editSettings": { readonly "name": MessageValue };
+  readonly "deleteSettings": { readonly "name": MessageValue };
+  readonly "getStarted": NoMessageValues;
+}>({
   configureSettings: {
     id: 'defaultCardButtons.configureSettings',
     defaultMessage: 'Configure {name} settings',

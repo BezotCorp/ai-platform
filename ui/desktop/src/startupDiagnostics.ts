@@ -1,37 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
-
-export interface StartupTraceEvent {
-  name: string;
-  at: string;
-  elapsedMs: number;
-  details?: Record<string, unknown>;
-}
-
-export interface GooseServeStartupDiagnostics {
-  attemptId: string;
-  startedAt: string;
-  binaryPath: string | null;
-  workingDir: string;
-  httpBaseUrl: string | null;
-  readinessUrl: string | null;
-  statusUrl: string | null;
-  healthUrl: string | null;
-  acpUrl: string | null;
-  pid: number | null;
-  healthCheckSucceeded: boolean;
-  childExitCode: number | null;
-  childExitSignal: string | null;
-  stderrTail: string[];
-  events: StartupTraceEvent[];
-}
-
-export interface GooseServeStartupTrace {
-  diagnosticsPath: string;
-  diagnostics: GooseServeStartupDiagnostics;
-  record: (name: string, details?: Record<string, unknown>) => void;
-  flush: () => void;
-}
+import { GooseServeStartupTrace } from './gosseServerStartupTrace';
+import { GooseServeStartupDiagnostics } from './gooseServeStatupDiagnostics';
 
 const STARTUP_TAIL_LIMIT = 80;
 const STARTUP_LOGS_TO_KEEP = 20;

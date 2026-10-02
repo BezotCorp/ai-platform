@@ -3,8 +3,29 @@ import { Button } from '../../ui/button';
 import { Loader2, Download, CheckCircle, AlertCircle } from 'lucide-react';
 import { errorMessage } from '../../../utils/conversionUtils';
 import { defineMessages, useIntl } from '../../../i18n';
+import type { MessageValue, NoMessageValues } from 'react-intl';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly disableAutoDownload: NoMessageValues;
+  readonly disableAutoDownloadDesc: NoMessageValues;
+  readonly autoDownloadDisabledByEnv: NoMessageValues;
+  readonly downloadNow: NoMessageValues;
+  readonly autoDownloadDisabledNote: NoMessageValues;
+  readonly loading: NoMessageValues;
+  readonly currentVersion: NoMessageValues;
+  readonly versionAvailable: { readonly version: MessageValue };
+  readonly upToDate: NoMessageValues;
+  readonly checkForUpdates: NoMessageValues;
+  readonly installAndRestart: NoMessageValues;
+  readonly checking: NoMessageValues;
+  readonly downloadingProgress: { readonly percent: MessageValue };
+  readonly downloadReady: NoMessageValues;
+  readonly latestVersion: NoMessageValues;
+  readonly updateAvailable: NoMessageValues;
+  readonly versionIsAvailable: { readonly version: MessageValue };
+  readonly downloadingUpdate: NoMessageValues;
+  readonly autoDownload: NoMessageValues;
+}>({
   disableAutoDownload: {
     id: 'updateSection.disableAutoDownload',
     defaultMessage: 'Disable automatic update downloads',
@@ -87,13 +108,7 @@ const i18n = defineMessages({
 });
 
 type UpdateStatus =
-  | 'idle'
-  | 'checking'
-  | 'downloading'
-  | 'installing'
-  | 'success'
-  | 'error'
-  | 'ready';
+  'idle' | 'checking' | 'downloading' | 'installing' | 'success' | 'error' | 'ready';
 
 interface UpdateInfo {
   currentVersion: string;
@@ -107,11 +122,11 @@ interface UpdateEventData {
   percent?: number;
 }
 
-export default function UpdateSection() {
-  const intl = useIntl();
+export default function UpdateSection(): React.JSX.Element {
+  const intl: ReturnType<typeof useIntl> = useIntl();
   const [updateStatus, setUpdateStatus] = useState<UpdateStatus>('idle');
   const [updateInfo, setUpdateInfo] = useState<UpdateInfo>({
-    currentVersion: '',
+    currentVersion: window.electron.getVersion(),
   });
   const [progress, setProgress] = useState<number>(0);
   const [disableAutoDownload, setDisableAutoDownload] = useState<boolean>(false);
@@ -120,10 +135,7 @@ export default function UpdateSection() {
   const lastProgressRef = React.useRef<number>(0);
 
   useEffect(() => {
-    const currentVersion = window.electron.getVersion();
-    setUpdateInfo((prev) => ({ ...prev, currentVersion }));
-
-    window.electron.getUpdateState().then((state) => {
+    void window.electron.getUpdateState().then((state) => {
       if (state) {
         setUpdateInfo((prev) => ({
           ...prev,
@@ -133,11 +145,11 @@ export default function UpdateSection() {
       }
     });
 
-    window.electron.getSetting('disableAutoDownload').then((stored) => {
-      setDisableAutoDownload(!!stored);
+    void window.electron.getSetting('disableAutoDownload').then((stored) => {
+      setDisableAutoDownload(stored);
     });
-    window.electron.getAutoDownloadDisabled().then((effective) => {
-      window.electron.getSetting('disableAutoDownload').then((stored) => {
+    void window.electron.getAutoDownloadDisabled().then((effective) => {
+      void window.electron.getSetting('disableAutoDownload').then((stored) => {
         setAutoDownloadForcedByEnv(effective && !stored);
       });
     });
@@ -152,7 +164,7 @@ export default function UpdateSection() {
           setUpdateStatus('idle');
           setUpdateInfo((prev) => ({
             ...prev,
-            latestVersion: (event.data as UpdateEventData)?.version,
+            latestVersion: isUpdateEventData(event.data) ? event.data.version : undefined,
             isUpdateAvailable: true,
           }));
           break;
@@ -168,8 +180,10 @@ export default function UpdateSection() {
         case 'download-progress': {
           setUpdateStatus('downloading');
 
-          const rawPercent = (event.data as UpdateEventData)?.percent;
-          const newProgress = typeof rawPercent === 'number' ? Math.round(rawPercent) : 0;
+          const rawPercent: number | undefined = isUpdateEventData(event.data)
+            ? event.data.percent
+            : undefined;
+          const newProgress: number = typeof rawPercent === 'number' ? Math.round(rawPercent) : 0;
 
           if (newProgress > lastProgressRef.current) {
             lastProgressRef.current = newProgress;
@@ -178,7 +192,7 @@ export default function UpdateSection() {
               clearTimeout(progressTimeoutRef.current);
             }
 
-            progressTimeoutRef.current = setTimeout(() => {
+            progressTimeoutRef.current = setTimeout((): void => {
               setProgress(newProgress);
             }, 50);
           }
@@ -194,9 +208,9 @@ export default function UpdateSection() {
           setUpdateStatus('error');
           setUpdateInfo((prev) => ({
             ...prev,
-            error: String(event.data || 'An error occurred'),
+            error: errorMessage(event.data, 'An error occurred'),
           }));
-          setTimeout(() => setUpdateStatus('idle'), 5000);
+          setTimeout((): void => setUpdateStatus('idle'), 5000);
           break;
       }
     });
@@ -208,13 +222,14 @@ export default function UpdateSection() {
     };
   }, []);
 
-  const checkForUpdates = async () => {
+  const checkForUpdates = async (): Promise<void> => {
     setUpdateStatus('checking');
     setProgress(0);
     lastProgressRef.current = 0;
 
     try {
-      const result = await window.electron.checkForUpdates();
+      const result: Awaited<ReturnType<typeof window.electron.checkForUpdates>> =
+        await window.electron.checkForUpdates();
 
       if (result.error) {
         throw new Error(result.error);
@@ -222,7 +237,7 @@ export default function UpdateSection() {
 
       if (!result.error && updateInfo.isUpdateAvailable === false) {
         setUpdateStatus('success');
-        setTimeout(() => setUpdateStatus('idle'), 3000);
+        setTimeout((): void => setUpdateStatus('idle'), 3000);
       }
     } catch (error) {
       console.error('Error checking for updates:', error);
@@ -231,20 +246,21 @@ export default function UpdateSection() {
         error: errorMessage(error, 'Failed to check for updates'),
       }));
       setUpdateStatus('error');
-      setTimeout(() => setUpdateStatus('idle'), 5000);
+      setTimeout((): void => setUpdateStatus('idle'), 5000);
     }
   };
 
-  const installUpdate = () => {
+  const installUpdate = (): void => {
     window.electron.installUpdate();
   };
 
-  const downloadUpdate = async () => {
+  const downloadUpdate = async (): Promise<void> => {
     setUpdateStatus('downloading');
     setProgress(0);
     lastProgressRef.current = 0;
     try {
-      const result = await window.electron.downloadUpdate();
+      const result: Awaited<ReturnType<typeof window.electron.downloadUpdate>> =
+        await window.electron.downloadUpdate();
       if (result.error) {
         throw new Error(result.error);
       }
@@ -254,16 +270,16 @@ export default function UpdateSection() {
         error: errorMessage(error, 'Failed to download update'),
       }));
       setUpdateStatus('error');
-      setTimeout(() => setUpdateStatus('idle'), 5000);
+      setTimeout((): void => setUpdateStatus('idle'), 5000);
     }
   };
 
-  const toggleAutoDownload = async (disabled: boolean) => {
+  const toggleAutoDownload = async (disabled: boolean): Promise<void> => {
     setDisableAutoDownload(disabled);
     await window.electron.setSetting('disableAutoDownload', disabled);
   };
 
-  const getStatusMessage = () => {
+  const getStatusMessage = (): string => {
     switch (updateStatus) {
       case 'checking':
         return intl.formatMessage(i18n.checking);
@@ -285,7 +301,7 @@ export default function UpdateSection() {
     }
   };
 
-  const getStatusIcon = () => {
+  const getStatusIcon = (): React.JSX.Element | null => {
     switch (updateStatus) {
       case 'checking':
       case 'downloading':
@@ -301,7 +317,7 @@ export default function UpdateSection() {
     }
   };
 
-  const autoDownloadEffectivelyDisabled = disableAutoDownload || autoDownloadForcedByEnv;
+  const autoDownloadEffectivelyDisabled: boolean = disableAutoDownload || autoDownloadForcedByEnv;
 
   return (
     <div>
@@ -328,7 +344,9 @@ export default function UpdateSection() {
       <div className="flex gap-2">
         <div className="flex items-center gap-2">
           <Button
-            onClick={checkForUpdates}
+            onClick={(): void => {
+              void checkForUpdates();
+            }}
             disabled={updateStatus !== 'idle' && updateStatus !== 'error'}
             variant="secondary"
             size="sm"
@@ -339,7 +357,13 @@ export default function UpdateSection() {
           {updateInfo.isUpdateAvailable &&
             updateStatus === 'idle' &&
             autoDownloadEffectivelyDisabled && (
-              <Button onClick={downloadUpdate} variant="secondary" size="sm">
+              <Button
+                onClick={(): void => {
+                  void downloadUpdate();
+                }}
+                variant="secondary"
+                size="sm"
+              >
                 {intl.formatMessage(i18n.downloadNow)}
               </Button>
             )}
@@ -397,7 +421,9 @@ export default function UpdateSection() {
               type="checkbox"
               className="mt-0.5 cursor-pointer accent-bgApp"
               checked={disableAutoDownload}
-              onChange={(e) => toggleAutoDownload(e.target.checked)}
+              onChange={(event: React.ChangeEvent<HTMLInputElement>): void => {
+                void toggleAutoDownload(event.target.checked);
+              }}
             />
             <div>
               <p className="text-sm text-text-primary group-hover:text-text-primary">
@@ -412,4 +438,8 @@ export default function UpdateSection() {
       </div>
     </div>
   );
+}
+
+function isUpdateEventData(value: unknown): value is UpdateEventData {
+  return typeof value === 'object' && value !== null;
 }

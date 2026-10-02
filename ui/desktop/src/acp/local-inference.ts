@@ -2,7 +2,7 @@ import type {
   LocalInferenceDownloadProgressDto,
   LocalInferenceHfModelInfoDto,
   LocalInferenceHfModelVariantDto,
-  LocalInferenceModelDownloadRequest_unstable,
+  LocalInferenceModelDownloadRequestUnstable,
   LocalInferenceModelDto,
   LocalInferenceModelSettingsDto,
 } from '@aaif/goose-acp-client';
@@ -10,7 +10,7 @@ import { getAcpClient } from './acpConnection';
 
 export type LocalModelResponse = LocalInferenceModelDto;
 export type DownloadProgress = LocalInferenceDownloadProgressDto;
-export type DownloadModelRequest = LocalInferenceModelDownloadRequest_unstable;
+export type DownloadModelRequest = LocalInferenceModelDownloadRequestUnstable;
 export type HfModelInfo = LocalInferenceHfModelInfoDto;
 export type HfModelVariant = LocalInferenceHfModelVariantDto;
 export type ModelSettings = LocalInferenceModelSettingsDto;
@@ -28,13 +28,13 @@ export type RepoVariantsResponse = {
 
 export async function listLocalModels(): Promise<LocalModelResponse[]> {
   const client = await getAcpClient();
-  const response = await client.goose.localInferenceModelsList_unstable({});
+  const response = await client.goose.localInferenceModelsListUnstable({});
   return response.models;
 }
 
 export async function downloadHfModel(request: DownloadModelRequest): Promise<string> {
   const client = await getAcpClient();
-  const response = await client.goose.localInferenceModelsDownload_unstable(request);
+  const response = await client.goose.localInferenceModelsDownloadUnstable(request);
   return response.modelId;
 }
 
@@ -42,28 +42,28 @@ export async function getLocalModelDownloadProgress(
   modelId: string
 ): Promise<DownloadProgress | null> {
   const client = await getAcpClient();
-  const response = await client.goose.localInferenceModelsDownloadProgress_unstable({ modelId });
+  const response = await client.goose.localInferenceModelsDownloadProgressUnstable({ modelId });
   return response.progress ?? null;
 }
 
 export async function cancelLocalModelDownload(modelId: string): Promise<void> {
   const client = await getAcpClient();
-  await client.goose.localInferenceModelsDownloadCancel_unstable({ modelId });
+  await client.goose.localInferenceModelsDownloadCancelUnstable({ modelId });
 }
 
 export async function deleteLocalModel(modelId: string): Promise<void> {
   const client = await getAcpClient();
-  await client.goose.localInferenceModelsDelete_unstable({ modelId });
+  await client.goose.localInferenceModelsDeleteUnstable({ modelId });
 }
 
 export async function evictLocalModel(modelId: string): Promise<void> {
   const client = await getAcpClient();
-  await client.goose.localInferenceModelsEvict_unstable({ modelId });
+  await client.goose.localInferenceModelsEvictUnstable({ modelId });
 }
 
 export async function getModelSettings(modelId: string): Promise<ModelSettings> {
   const client = await getAcpClient();
-  const response = await client.goose.localInferenceModelsSettingsRead_unstable({ modelId });
+  const response = await client.goose.localInferenceModelsSettingsReadUnstable({ modelId });
   return response.settings;
 }
 
@@ -72,7 +72,7 @@ export async function updateModelSettings(
   settings: ModelSettings
 ): Promise<ModelSettings> {
   const client = await getAcpClient();
-  const response = await client.goose.localInferenceModelsSettingsUpdate_unstable({
+  const response = await client.goose.localInferenceModelsSettingsUpdateUnstable({
     modelId,
     settings,
   });
@@ -81,13 +81,13 @@ export async function updateModelSettings(
 
 export async function searchHfModels(query: string, limit?: number): Promise<HfModelInfo[]> {
   const client = await getAcpClient();
-  const response = await client.goose.localInferenceHuggingfaceSearch_unstable({ query, limit });
+  const response = await client.goose.localInferenceHuggingfaceSearchUnstable({ query, limit });
   return response.models;
 }
 
 export async function getRepoFiles(repoId: string): Promise<RepoVariantsResponse> {
   const client = await getAcpClient();
-  const response = await client.goose.localInferenceHuggingfaceRepoVariants_unstable({ repoId });
+  const response = await client.goose.localInferenceHuggingfaceRepoVariantsUnstable({ repoId });
   return {
     variants: response.variants,
     recommendedIndex: response.recommendedIndex ?? null,
@@ -99,6 +99,6 @@ export async function getRepoFiles(repoId: string): Promise<RepoVariantsResponse
 
 export async function listBuiltinChatTemplates(): Promise<string[]> {
   const client = await getAcpClient();
-  const response = await client.goose.localInferenceChatTemplatesBuiltinList_unstable({});
+  const response = await client.goose.localInferenceChatTemplatesBuiltinListUnstable({});
   return response.templates;
 }

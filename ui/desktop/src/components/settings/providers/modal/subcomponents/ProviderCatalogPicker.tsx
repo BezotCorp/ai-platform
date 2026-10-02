@@ -9,8 +9,23 @@ import {
   acpListProviderCatalogEntries,
 } from '../../../../../acp/providers';
 import { defineMessages, useIntl } from '../../../../../i18n';
+import type { MessageValue, NoMessageValues } from 'react-intl';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly "chooseProvider": NoMessageValues;
+  readonly "selectFormatDescription": NoMessageValues;
+  readonly "apiFormat": NoMessageValues;
+  readonly "openaiCompatible": NoMessageValues;
+  readonly "anthropicCompatible": NoMessageValues;
+  readonly "searchProviders": NoMessageValues;
+  readonly "loadingProviders": NoMessageValues;
+  readonly "errorPrefix": { readonly "error": MessageValue };
+  readonly "noProvidersFound": { readonly "query": MessageValue };
+  readonly "noProvidersAvailable": NoMessageValues;
+  readonly "modelsAvailable": { readonly "count": MessageValue };
+  readonly "requiresEnvVar": { readonly "envVar": MessageValue };
+  readonly "cancel": NoMessageValues;
+}>({
   chooseProvider: {
     id: 'providerCatalogPicker.chooseProvider',
     defaultMessage: 'Choose Provider',

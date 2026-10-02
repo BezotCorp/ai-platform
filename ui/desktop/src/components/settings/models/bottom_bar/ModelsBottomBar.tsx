@@ -18,11 +18,21 @@ import { ModelSettingsPanel } from '../../localInference/ModelSettingsPanel';
 import { ScrollArea } from '../../../ui/scroll-area';
 import { defineMessages, useIntl } from '../../../../i18n';
 import type { Message } from '../../../../types/message';
-import type { RecentModel } from '../../../../utils/settings';
 import { addToRecentModels } from '../../../../utils/recentModels';
 import { trackModelChanged } from '../../../../utils/analytics';
+import type { MessageValue, NoMessageValues } from 'react-intl';
+import { RecentModel } from '../../../../utils/RecentModel';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly "selectModel": NoMessageValues;
+  readonly "currentModel": NoMessageValues;
+  readonly "loadingModel": NoMessageValues;
+  readonly "changeModel": NoMessageValues;
+  readonly "localModelSettings": NoMessageValues;
+  readonly "localModelSettingsTitle": { readonly "modelName": MessageValue };
+  readonly "resolvedModel": NoMessageValues;
+  readonly "recentModels": NoMessageValues;
+}>({
   selectModel: {
     id: 'modelsBottomBar.selectModel',
     defaultMessage: 'Select Model',

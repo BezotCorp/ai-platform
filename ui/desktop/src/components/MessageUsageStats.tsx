@@ -11,8 +11,25 @@ import {
   formatTokensPerSecond,
   tokensPerSecond,
 } from '../utils/usageFormatting';
+import type { MessageValue, NoMessageValues } from 'react-intl';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly "tokensPerSecondUnit": NoMessageValues;
+  readonly "tokenUnit": NoMessageValues;
+  readonly "input": NoMessageValues;
+  readonly "cacheRead": NoMessageValues;
+  readonly "cacheWrite": NoMessageValues;
+  readonly "cacheHitRate": { readonly "percent": MessageValue };
+  readonly "output": NoMessageValues;
+  readonly "total": NoMessageValues;
+  readonly "firstToken": NoMessageValues;
+  readonly "totalTime": NoMessageValues;
+  readonly "speed": NoMessageValues;
+  readonly "cost": NoMessageValues;
+  readonly "estimated": NoMessageValues;
+  readonly "reported": NoMessageValues;
+  readonly "compaction": NoMessageValues;
+}>({
   tokensPerSecondUnit: {
     id: 'messageUsageStats.tokensPerSecondUnit',
     defaultMessage: 'tok/s',

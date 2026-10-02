@@ -2,8 +2,29 @@ import React from 'react';
 import { AlertTriangle, Trash2, ChevronDown, ChevronRight } from 'lucide-react';
 import { Parameter } from '../../recipe';
 import { defineMessages, useIntl } from '../../i18n';
+import type { MessageValue, NoMessageValues } from 'react-intl';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly "unusedWarningTitle": NoMessageValues;
+  readonly "unused": NoMessageValues;
+  readonly "deleteParameter": { readonly "key": MessageValue };
+  readonly "description": NoMessageValues;
+  readonly "descriptionPlaceholder": NoMessageValues;
+  readonly "descriptionHelp": NoMessageValues;
+  readonly "inputType": NoMessageValues;
+  readonly "typeString": NoMessageValues;
+  readonly "typeSelect": NoMessageValues;
+  readonly "typeNumber": NoMessageValues;
+  readonly "typeBoolean": NoMessageValues;
+  readonly "requirement": NoMessageValues;
+  readonly "required": NoMessageValues;
+  readonly "optional": NoMessageValues;
+  readonly "defaultValue": NoMessageValues;
+  readonly "defaultValuePlaceholder": NoMessageValues;
+  readonly "optionsLabel": NoMessageValues;
+  readonly "optionsPlaceholder": NoMessageValues;
+  readonly "optionsHelp": NoMessageValues;
+}>({
   unusedWarningTitle: {
     id: 'parameterInput.unusedWarningTitle',
     defaultMessage:
@@ -106,7 +127,10 @@ const ParameterInput: React.FC<ParameterInputProps> = ({
 
   const handleToggleExpanded = (e: React.MouseEvent) => {
     // Only toggle if we're not clicking on the delete button
-    if (onToggleExpanded && !(e.target as HTMLElement).closest('button')) {
+    const target = e.target;
+    const clickedButton = target instanceof Element && target.closest('button');
+
+    if (onToggleExpanded && !clickedButton) {
       onToggleExpanded(key);
     }
   };
@@ -196,9 +220,18 @@ const ParameterInput: React.FC<ParameterInputProps> = ({
                 <select
                   className="w-full p-3 border rounded-lg bg-background-primary text-text-primary"
                   value={parameter.input_type || 'string'}
-                  onChange={(e) =>
-                    onChange(key, { input_type: e.target.value as Parameter['input_type'] })
-                  }
+                  onChange={(e) => {
+                    const inputType = e.target.value;
+
+                    if (
+                      inputType === 'string' ||
+                      inputType === 'select' ||
+                      inputType === 'number' ||
+                      inputType === 'boolean'
+                    ) {
+                      onChange(key, { input_type: inputType });
+                    }
+                  }}
                 >
                   <option value="string">{intl.formatMessage(i18n.typeString)}</option>
                   <option value="select">{intl.formatMessage(i18n.typeSelect)}</option>
@@ -214,9 +247,16 @@ const ParameterInput: React.FC<ParameterInputProps> = ({
                 <select
                   className="w-full p-3 border rounded-lg bg-background-primary text-text-primary"
                   value={requirement}
-                  onChange={(e) =>
-                    onChange(key, { requirement: e.target.value as Parameter['requirement'] })
-                  }
+                  onChange={(e) => {
+                    const requirementValue = e.target.value;
+
+                    if (
+                      requirementValue === 'required' ||
+                      requirementValue === 'optional'
+                    ) {
+                      onChange(key, { requirement: requirementValue });
+                    }
+                  }}
                 >
                   <option value="required">{intl.formatMessage(i18n.required)}</option>
                   <option value="optional">{intl.formatMessage(i18n.optional)}</option>

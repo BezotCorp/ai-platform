@@ -1,5 +1,5 @@
 import React from 'react';
-import Link from '@docusaurus/Link';
+import Link from "~/components/Link";
 import styles from './styles.module.css';
 
 interface CardProps {

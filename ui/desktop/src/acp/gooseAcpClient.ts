@@ -9,13 +9,13 @@ import {
   GOOSE_EXT_AGENT_REQUESTS,
   GOOSE_EXT_NOTIFICATIONS,
   GooseExtClient,
-  type GooseSessionNotification_unstable,
-  type ProviderDeviceCodeNotification_unstable,
-  type RecipeParamsResponse_unstable,
-  type RequestRecipeParams_unstable,
-  zGooseSessionNotification_unstable,
-  zProviderDeviceCodeNotification_unstable,
-  zRequestRecipeParams_unstable,
+  type GooseSessionNotificationUnstable,
+  type ProviderDeviceCodeNotificationUnstable,
+  type RecipeParamsResponseUnstable,
+  type RequestRecipeParamsUnstable,
+  gooseSessionNotificationUnstableSchema,
+  providerDeviceCodeNotificationUnstableSchema,
+  requestRecipeParamsUnstableSchema,
 } from '@aaif/goose-acp-client';
 
 const [gooseSessionUpdate, providerDeviceCode] = GOOSE_EXT_NOTIFICATIONS;
@@ -25,11 +25,11 @@ export type GooseAcpCallbacks = Required<
   Pick<Client, 'requestPermission' | 'sessionUpdate' | 'createElicitation'>
 > & {
   unstable_sessionRecipeRequestParams: (
-    request: RequestRecipeParams_unstable
-  ) => Promise<RecipeParamsResponse_unstable>;
-  unstable_sessionUpdate: (notification: GooseSessionNotification_unstable) => Promise<void>;
+    request: RequestRecipeParamsUnstable
+  ) => Promise<RecipeParamsResponseUnstable>;
+  unstable_sessionUpdate: (notification: GooseSessionNotificationUnstable) => Promise<void>;
   unstable_providerDeviceCode: (
-    notification: ProviderDeviceCodeNotification_unstable
+    notification: ProviderDeviceCodeNotificationUnstable
   ) => Promise<void>;
 };
 
@@ -52,15 +52,15 @@ export function connectGooseAcpClient(
     .onRequest(methods.client.elicitation.create, (context) =>
       callbacks.createElicitation(context.params)
     )
-    .onRequest(gooseRecipeParamsRequest.method, zRequestRecipeParams_unstable, (context) =>
+    .onRequest(gooseRecipeParamsRequest.method, requestRecipeParamsUnstableSchema, (context) =>
       callbacks.unstable_sessionRecipeRequestParams(context.params)
     )
-    .onNotification(gooseSessionUpdate.method, zGooseSessionNotification_unstable, (context) =>
+    .onNotification(gooseSessionUpdate.method, gooseSessionNotificationUnstableSchema, (context) =>
       callbacks.unstable_sessionUpdate(context.params)
     )
     .onNotification(
       providerDeviceCode.method,
-      zProviderDeviceCodeNotification_unstable,
+      providerDeviceCodeNotificationUnstableSchema,
       (context) => callbacks.unstable_providerDeviceCode(context.params)
     );
 

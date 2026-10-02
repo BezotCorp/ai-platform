@@ -1,7 +1,13 @@
 import { useState } from 'react';
 import { defineMessages, useIntl } from '../i18n';
+import type { NoMessageValues } from 'react-intl';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly "unableToLoad": NoMessageValues;
+  readonly "altText": NoMessageValues;
+  readonly "clickToCollapse": NoMessageValues;
+  readonly "clickToExpand": NoMessageValues;
+}>({
   unableToLoad: {
     id: 'imagePreview.unableToLoad',
     defaultMessage: 'Unable to load image',

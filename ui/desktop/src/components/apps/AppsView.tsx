@@ -9,8 +9,25 @@ import { formatAppName } from '../../utils/conversionUtils';
 import { errorMessage } from '../../utils/conversionUtils';
 import { isRetiredGooseChatApp } from '../../utils/retiredApps';
 import { defineMessages, useIntl } from '../../i18n';
+import type { MessageValue, NoMessageValues } from 'react-intl';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly "errorLoading": { readonly "error": MessageValue };
+  readonly "retry": NoMessageValues;
+  readonly "title": NoMessageValues;
+  readonly "importApp": NoMessageValues;
+  readonly "description": NoMessageValues;
+  readonly "loading": NoMessageValues;
+  readonly "noAppsTitle": NoMessageValues;
+  readonly "noAppsDescription": NoMessageValues;
+  readonly "customApp": NoMessageValues;
+  readonly "launch": NoMessageValues;
+  readonly "retiredChatApp": NoMessageValues;
+  readonly "retiredChatAppDetail": NoMessageValues;
+  readonly "deleteConfirm": { readonly "name": MessageValue };
+  readonly "deleteApp": NoMessageValues;
+  readonly "errorPrefix": { readonly "error": MessageValue };
+}>({
   errorLoading: {
     id: 'appsView.errorLoading',
     defaultMessage: 'Error loading apps: {error}',
@@ -112,7 +129,7 @@ export default function AppsView() {
       }
     };
 
-    loadCachedApps();
+    void loadCachedApps();
   }, []);
 
   const refreshAppsExtensionList = useCallback(async (activeSessionId?: string) => {
@@ -149,20 +166,35 @@ export default function AppsView() {
   useEffect(() => {
     if (!sessionId) return;
 
-    refreshAppsExtensionList(sessionId);
+    void refreshAppsExtensionList(sessionId).catch((err) => {
+      console.warn('Failed to refresh apps from session:', err);
+    });
   }, [sessionId, refreshAppsExtensionList]);
 
   useEffect(() => {
     const handlePlatformEvent = (event: Event) => {
-      const customEvent = event as CustomEvent;
-      const eventData = customEvent.detail;
-
-      if (eventData?.extension === 'apps') {
-        const eventSessionId = eventData.sessionId || sessionId;
-        refreshAppsExtensionList(eventSessionId).catch((err) => {
-          console.warn('Failed to refresh apps after platform event:', err);
-        });
+      if (!(event instanceof CustomEvent)) {
+        return;
       }
+
+      const eventData: unknown = event.detail;
+      if (
+        typeof eventData !== 'object' ||
+        eventData === null ||
+        !('extension' in eventData) ||
+        eventData.extension !== 'apps'
+      ) {
+        return;
+      }
+
+      const eventSessionId =
+        'sessionId' in eventData && typeof eventData.sessionId === 'string'
+          ? eventData.sessionId
+          : sessionId;
+
+      void refreshAppsExtensionList(eventSessionId).catch((err) => {
+        console.warn('Failed to refresh apps after platform event:', err);
+      });
     };
 
     window.addEventListener('platform-event', handlePlatformEvent);

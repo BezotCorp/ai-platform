@@ -4,8 +4,14 @@ import { AlertTriangle } from 'lucide-react';
 import { errorMessage, formatErrorForLogging } from '../utils/conversionUtils';
 import { trackErrorWithContext, trackEvent, getErrorType } from '../utils/analytics';
 import { defineMessages, useIntl } from '../i18n';
+import type { MessageValue, NoMessageValues } from 'react-intl';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly "heading": NoMessageValues;
+  readonly "errorWithVersion": { readonly "version": MessageValue };
+  readonly "errorGeneric": NoMessageValues;
+  readonly "reload": NoMessageValues;
+}>({
   heading: {
     id: 'errorBoundary.heading',
     defaultMessage: 'Honk!',

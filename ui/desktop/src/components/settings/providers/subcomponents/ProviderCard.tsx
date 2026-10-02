@@ -5,8 +5,13 @@ import CardBody from './CardBody';
 import DefaultCardButtons from './buttons/DefaultCardButtons';
 import type { ProviderDetails, ProviderMetadata } from '../../../../types/providers';
 import { defineMessages, useIntl } from '../../../../i18n';
+import type { MessageValue, NoMessageValues } from 'react-intl';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly "noMetadata": NoMessageValues;
+  readonly "unknownProvider": NoMessageValues;
+  readonly "deprecatedReplacement": { readonly "replacement": MessageValue };
+}>({
   noMetadata: {
     id: 'providerCard.noMetadata',
     defaultMessage: 'ProviderCard error: No metadata provided',

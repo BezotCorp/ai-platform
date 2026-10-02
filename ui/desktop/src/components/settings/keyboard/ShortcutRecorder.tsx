@@ -1,10 +1,17 @@
 import { useState, useEffect, useRef } from 'react';
 import { Button } from '../../ui/button';
-import { KeyboardShortcuts } from '../../../utils/settings';
+import { KeyboardShortcuts } from '../../../utils/keyboardShortcuts';
 import { getShortcutLabel, formatShortcut } from './KeyboardShortcutsSection';
 import { defineMessages, useIntl } from '../../../i18n';
+import type { MessageValue, NoMessageValues } from 'react-intl';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly "pressShortcut": NoMessageValues;
+  readonly "clickToRecord": NoMessageValues;
+  readonly "save": NoMessageValues;
+  readonly "cancel": NoMessageValues;
+  readonly "conflictWarning": { readonly "label": MessageValue };
+}>({
   pressShortcut: {
     id: 'shortcutRecorder.pressShortcut',
     defaultMessage: 'Press shortcut...',

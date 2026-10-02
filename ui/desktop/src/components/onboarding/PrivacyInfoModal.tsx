@@ -1,7 +1,19 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
 import { defineMessages, useIntl } from '../../i18n';
+import type { NoMessageValues } from 'react-intl';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly "title": NoMessageValues;
+  readonly "description": NoMessageValues;
+  readonly "whatWeCollect": NoMessageValues;
+  readonly "collectOs": NoMessageValues;
+  readonly "collectVersion": NoMessageValues;
+  readonly "collectProvider": NoMessageValues;
+  readonly "collectExtensions": NoMessageValues;
+  readonly "collectSession": NoMessageValues;
+  readonly "collectErrors": NoMessageValues;
+  readonly "neverCollect": NoMessageValues;
+}>({
   title: {
     id: 'privacyInfoModal.title',
     defaultMessage: 'Privacy details',

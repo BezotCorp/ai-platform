@@ -2,8 +2,14 @@ import React, { useState } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 import { Button } from '../../ui/button';
 import { defineMessages, useIntl } from '../../../i18n';
+import type { MessageValue, NoMessageValues } from 'react-intl';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly "addValue": NoMessageValues;
+  readonly "removeValue": { readonly "key": MessageValue };
+  readonly "defaultKeyPlaceholder": NoMessageValues;
+  readonly "defaultValuePlaceholder": NoMessageValues;
+}>({
   addValue: {
     id: 'keyValueEditor.addValue',
     defaultMessage: 'Add pre-configured value',

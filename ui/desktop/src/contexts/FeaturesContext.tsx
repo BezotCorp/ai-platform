@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState, useMemo } from 'react';
+import type { ReactNode } from 'react';
 import { getAcpFeatureCapabilities } from '../acp/capabilities';
 
 interface FeaturesContextValue {
@@ -8,14 +9,15 @@ interface FeaturesContextValue {
 
 const FeaturesContext = createContext<FeaturesContextValue | null>(null);
 
-export function FeaturesProvider({ children }: { children: React.ReactNode }) {
-  const [localInference, setLocalInference] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+export function FeaturesProvider({ children }: { children: ReactNode }): React.JSX.Element {
+  const [localInference, setLocalInference] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
 
   useEffect(() => {
-    (async () => {
+    void (async (): Promise<void> => {
       try {
-        const capabilities = await getAcpFeatureCapabilities();
+        const capabilities: Awaited<ReturnType<typeof getAcpFeatureCapabilities>> =
+          await getAcpFeatureCapabilities();
         setLocalInference(capabilities.localInference);
       } catch (error) {
         console.warn('[FeaturesContext] Failed to fetch features:', error);

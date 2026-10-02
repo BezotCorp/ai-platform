@@ -3,8 +3,12 @@ import { AlertTriangle, ExternalLink } from 'lucide-react';
 import type { Message, SystemNotificationContent } from '../../types/message';
 import { WEB_PROTOCOLS } from '../../utils/urlSecurity';
 import { defineMessages, useIntl } from '../../i18n';
+import type { NoMessageValues } from 'react-intl';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly "insufficientCredits": NoMessageValues;
+  readonly "addCredits": NoMessageValues;
+}>({
   insufficientCredits: {
     id: 'creditsExhaustedNotification.insufficientCredits',
     defaultMessage: 'Insufficient Credits',
@@ -24,7 +28,7 @@ function getValidatedTopUpUrl(data: unknown): string | null {
     return null;
   }
 
-  const rawUrl = (data as Record<string, unknown>).top_up_url;
+  const rawUrl = 'top_up_url' in data ? data.top_up_url : undefined;
   if (typeof rawUrl !== 'string') {
     return null;
   }
@@ -53,7 +57,9 @@ export const CreditsExhaustedNotification: React.FC<CreditsExhaustedNotification
 
   const handleTopUp = () => {
     if (topUpUrl) {
-      window.electron.openExternal(topUpUrl);
+      void window.electron.openExternal(topUpUrl).catch((error) => {
+        console.error('Failed to open top-up URL:', error);
+      });
     }
   };
 

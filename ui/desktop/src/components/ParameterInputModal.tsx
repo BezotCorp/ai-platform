@@ -2,8 +2,22 @@ import React, { useId, useState, useEffect } from 'react';
 import { Parameter } from '../recipe';
 import { Button } from './ui/button';
 import { defineMessages, useIntl } from '../i18n';
+import type { MessageValue, NoMessageValues } from 'react-intl';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly "cancelRecipeSetup": NoMessageValues;
+  readonly "whatToDo": NoMessageValues;
+  readonly "backToForm": NoMessageValues;
+  readonly "startNewChat": NoMessageValues;
+  readonly "recipeParameters": NoMessageValues;
+  readonly "selectOption": NoMessageValues;
+  readonly "select": NoMessageValues;
+  readonly "true": NoMessageValues;
+  readonly "false": NoMessageValues;
+  readonly "enterValue": { readonly "key": MessageValue };
+  readonly "cancel": NoMessageValues;
+  readonly "startRecipe": NoMessageValues;
+}>({
   cancelRecipeSetup: {
     id: 'parameterInputModal.cancelRecipeSetup',
     defaultMessage: 'Cancel Recipe Setup',

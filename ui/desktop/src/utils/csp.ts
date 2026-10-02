@@ -1,4 +1,4 @@
-import type { ExternalBackendConfig } from './settings';
+import { ExternalBackendConfig } from './externalBackendConfig';
 
 const DEFAULT_CONNECT_SOURCES = [
   "'self'",

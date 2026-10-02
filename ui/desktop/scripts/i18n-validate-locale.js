@@ -1,11 +1,13 @@
 #!/usr/bin/env node
+import { fileURLToPath } from 'node:url';
+const moduleDir = path.dirname(fileURLToPath(import.meta.url));
 /**
  * Validate that translated locale catalogs mirror en.json and preserve ICU placeholders.
  * Pass one or more locale codes to validate specific catalogs, or no arguments to validate all locales.
  */
-const fs = require('fs');
-const path = require('path');
-const { TYPE, parse } = require('@formatjs/icu-messageformat-parser');
+import * as fs from 'node:fs';
+import * as path from 'node:path';
+import { TYPE, parse } from '@formatjs/icu-messageformat-parser';
 
 const requestedLocales = process.argv.slice(2);
 
@@ -14,7 +16,7 @@ if (requestedLocales.includes('en')) {
   process.exit(1);
 }
 
-const projectDir = path.join(__dirname, '..');
+const projectDir = path.join(moduleDir, '..');
 const messagesDir = path.join(projectDir, 'src', 'i18n', 'messages');
 const enPath = path.join(messagesDir, 'en.json');
 

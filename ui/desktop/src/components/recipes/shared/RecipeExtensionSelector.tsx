@@ -5,8 +5,16 @@ import { Input } from '../../ui/input';
 import { Switch } from '../../ui/switch';
 import { formatExtensionName } from '../../settings/extensions/subcomponents/ExtensionList';
 import { defineMessages, useIntl } from '../../../i18n';
+import type { NoMessageValues } from 'react-intl';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly "label": NoMessageValues;
+  readonly "description": NoMessageValues;
+  readonly "searchPlaceholder": NoMessageValues;
+  readonly "extensionsSelected": { readonly "count": number | bigint };
+  readonly "noExtensionsFound": NoMessageValues;
+  readonly "noExtensionsAvailable": NoMessageValues;
+}>({
   label: {
     id: 'recipeExtensionSelector.label',
     defaultMessage: 'Extensions (Optional)',

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import type { ChangeEvent, JSX, ReactNode } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { getDictationConfig, DictationProviderStatusEntry } from '../../../acp/dictation';
 import { useConfig } from '../../ConfigContext';
@@ -18,8 +19,25 @@ import {
   DropdownMenuTrigger,
 } from '../../ui/dropdown-menu';
 import { defineMessages, useIntl } from '../../../i18n';
+import type { MessageTag, MessageValue, NoMessageValues } from 'react-intl';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly voiceDictationProvider: NoMessageValues;
+  readonly chooseVoiceConversion: NoMessageValues;
+  readonly disabled: NoMessageValues;
+  readonly notConfigured: NoMessageValues;
+  readonly configureApiKey: { readonly b: MessageTag; readonly settingsPath: MessageValue };
+  readonly configuredIn: { readonly settingsPath: MessageValue };
+  readonly apiKey: NoMessageValues;
+  readonly requiredForTranscription: NoMessageValues;
+  readonly configured: NoMessageValues;
+  readonly updateApiKey: NoMessageValues;
+  readonly addApiKey: NoMessageValues;
+  readonly removeApiKey: NoMessageValues;
+  readonly enterApiKey: NoMessageValues;
+  readonly save: NoMessageValues;
+  readonly cancel: NoMessageValues;
+}>({
   voiceDictationProvider: {
     id: 'dictationSettings.voiceDictationProvider',
     defaultMessage: 'Voice Dictation Provider',
@@ -82,29 +100,31 @@ const i18n = defineMessages({
   },
 });
 
-export const DictationSettings = () => {
-  const intl = useIntl();
+export const DictationSettings = (): JSX.Element => {
+  const intl: ReturnType<typeof useIntl> = useIntl();
   const { localInference, isLoading: isFeaturesLoading } = useFeatures();
   const [provider, setProvider] = useState<DictationProvider | null>(null);
-  const [providerStatuses, setProviderStatuses] = useState<Record<string, DictationProviderStatusEntry>>(
-    {}
-  );
+  const [providerStatuses, setProviderStatuses] = useState<
+    Record<string, DictationProviderStatusEntry>
+  >({});
   const [preferredMic, setPreferredMic] = useState<string | null>(null);
-  const [apiKey, setApiKey] = useState('');
-  const [isEditingKey, setIsEditingKey] = useState(false);
+  const [apiKey, setApiKey] = useState<string>('');
+  const [isEditingKey, setIsEditingKey] = useState<boolean>(false);
   const { read, upsert, remove } = useConfig();
 
-  const refreshStatuses = async () => {
-    const audioConfig = await getDictationConfig();
+  const refreshStatuses = async (): Promise<void> => {
+    const audioConfig: Record<string, DictationProviderStatusEntry> = await getDictationConfig();
     setProviderStatuses(audioConfig);
   };
 
   useEffect(() => {
     if (isFeaturesLoading) return;
 
-    const loadSettings = async () => {
-      const providerValue = await read('voice_dictation_provider', false);
-      let loadedProvider: DictationProvider | null = (providerValue as DictationProvider) || null;
+    const loadSettings = async (): Promise<void> => {
+      const providerValue: unknown = await read('voice_dictation_provider', false);
+      let loadedProvider: DictationProvider | null = isDictationProvider(providerValue)
+        ? providerValue
+        : null;
 
       if (
         DICTATION_ALLOWED_PROVIDERS &&
@@ -122,68 +142,72 @@ export const DictationSettings = () => {
 
       setProvider(loadedProvider);
 
-      const micValue = await read('voice_dictation_preferred_mic', false);
-      setPreferredMic((micValue as string) || null);
+      const micValue: unknown = await read('voice_dictation_preferred_mic', false);
+      setPreferredMic(typeof micValue === 'string' ? micValue : null);
 
       await refreshStatuses();
     };
 
-    loadSettings();
+    void loadSettings();
   }, [read, upsert, localInference, isFeaturesLoading]);
 
-  const handleProviderChange = (value: string) => {
-    const newProvider = value === 'disabled' ? null : (value as DictationProvider);
+  const handleProviderChange = (value: string): void => {
+    const newProvider: DictationProvider | null =
+      value === 'disabled' || !isDictationProvider(value) ? null : value;
     setProvider(newProvider);
-    upsert('voice_dictation_provider', newProvider || '', false);
+    void upsert('voice_dictation_provider', newProvider || '', false);
     trackSettingToggled('voice_dictation', newProvider !== null);
   };
 
-  const handleMicChange = (deviceId: string | null) => {
+  const handleMicChange = (deviceId: string | null): void => {
     setPreferredMic(deviceId);
-    upsert('voice_dictation_preferred_mic', deviceId || '', false);
+    void upsert('voice_dictation_preferred_mic', deviceId || '', false);
   };
 
-  const handleSaveKey = async () => {
+  const handleSaveKey = async (): Promise<void> => {
     if (!provider) return;
     const providerConfig = providerStatuses[provider];
     if (!providerConfig || providerConfig.usesProviderConfig) return;
 
-    const trimmedKey = apiKey.trim();
+    const trimmedKey: string = apiKey.trim();
     if (!trimmedKey) return;
 
-    const keyName = providerConfig.configKey!;
+    const keyName: string = providerConfig.configKey!;
     await upsert(keyName, trimmedKey, true);
     setApiKey('');
     setIsEditingKey(false);
     await refreshStatuses();
   };
 
-  const handleRemoveKey = async () => {
+  const handleRemoveKey = async (): Promise<void> => {
     if (!provider) return;
     const providerConfig = providerStatuses[provider];
     if (!providerConfig || providerConfig.usesProviderConfig) return;
 
-    const keyName = providerConfig.configKey!;
+    const keyName: string = providerConfig.configKey!;
     await remove(keyName, true);
     setApiKey('');
     setIsEditingKey(false);
     await refreshStatuses();
   };
 
-  const handleCancelEdit = () => {
+  const handleCancelEdit = (): void => {
     setApiKey('');
     setIsEditingKey(false);
   };
 
   const getProviderLabel = (p: DictationProvider | null): string => {
     if (!p) return intl.formatMessage(i18n.disabled);
-    if (p === "model") return "Model (Native Audio)";
+    if (p === 'model') return 'Model (Native Audio)';
     return p.charAt(0).toUpperCase() + p.slice(1);
   };
 
-  const visibleProviders = (Object.keys(providerStatuses) as DictationProvider[]).filter(
-    (p) => !DICTATION_ALLOWED_PROVIDERS || DICTATION_ALLOWED_PROVIDERS.includes(p)
-  );
+  const visibleProviders: DictationProvider[] = Object.keys(providerStatuses)
+    .filter(isDictationProvider)
+    .filter(
+      (p: DictationProvider): boolean =>
+        !DICTATION_ALLOWED_PROVIDERS || DICTATION_ALLOWED_PROVIDERS.includes(p)
+    );
 
   return (
     <div className="space-y-4">
@@ -194,7 +218,13 @@ export const DictationSettings = () => {
             {intl.formatMessage(i18n.chooseVoiceConversion)}
           </p>
         </div>
-        <DropdownMenu onOpenChange={(open) => open && refreshStatuses()}>
+        <DropdownMenu
+          onOpenChange={(open: boolean): void => {
+            if (open) {
+              void refreshStatuses();
+            }
+          }}
+        >
           <DropdownMenuTrigger className="flex items-center gap-2 px-3 py-1.5 text-sm border border-border-primary rounded-md hover:border-border-primary transition-colors text-text-primary bg-background-primary">
             {getProviderLabel(provider)}
             <ChevronDown className="w-4 h-4" />
@@ -204,12 +234,16 @@ export const DictationSettings = () => {
               value={provider ?? 'disabled'}
               onValueChange={handleProviderChange}
             >
-              <DropdownMenuRadioItem value="disabled">{intl.formatMessage(i18n.disabled)}</DropdownMenuRadioItem>
+              <DropdownMenuRadioItem value="disabled">
+                {intl.formatMessage(i18n.disabled)}
+              </DropdownMenuRadioItem>
               {visibleProviders.map((p) => (
                 <DropdownMenuRadioItem key={p} value={p}>
                   {getProviderLabel(p)}
                   {!providerStatuses[p]?.configured && (
-                    <span className="text-xs ml-1 text-text-secondary">{intl.formatMessage(i18n.notConfigured)}</span>
+                    <span className="text-xs ml-1 text-text-secondary">
+                      {intl.formatMessage(i18n.notConfigured)}
+                    </span>
                   )}
                 </DropdownMenuRadioItem>
               ))}
@@ -228,11 +262,16 @@ export const DictationSettings = () => {
             <div className="py-2 px-2 bg-background-secondary rounded-lg">
               {!providerStatuses[provider].configured ? (
                 <p className="text-xs text-text-secondary">
-                  {intl.formatMessage(i18n.configureApiKey, { settingsPath: providerStatuses[provider].settingsPath, b: (chunks: React.ReactNode) => <b>{chunks}</b> })}
+                  {intl.formatMessage(i18n.configureApiKey, {
+                    settingsPath: providerStatuses[provider].settingsPath,
+                    b: (chunks: ReactNode): JSX.Element => <b>{chunks}</b>,
+                  })}
                 </p>
               ) : (
                 <p className="text-xs text-green-600">
-                  {intl.formatMessage(i18n.configuredIn, { settingsPath: providerStatuses[provider].settingsPath })}
+                  {intl.formatMessage(i18n.configuredIn, {
+                    settingsPath: providerStatuses[provider].settingsPath,
+                  })}
                 </p>
               )}
             </div>
@@ -243,7 +282,9 @@ export const DictationSettings = () => {
                 <p className="text-xs text-text-secondary mt-[2px]">
                   {intl.formatMessage(i18n.requiredForTranscription)}
                   {providerStatuses[provider]?.configured && (
-                    <span className="text-green-600 ml-2">{intl.formatMessage(i18n.configured)}</span>
+                    <span className="text-green-600 ml-2">
+                      {intl.formatMessage(i18n.configured)}
+                    </span>
                   )}
                 </p>
               </div>
@@ -251,10 +292,18 @@ export const DictationSettings = () => {
               {!isEditingKey ? (
                 <div className="flex gap-2 flex-wrap">
                   <Button variant="outline" size="sm" onClick={() => setIsEditingKey(true)}>
-                    {providerStatuses[provider]?.configured ? intl.formatMessage(i18n.updateApiKey) : intl.formatMessage(i18n.addApiKey)}
+                    {providerStatuses[provider]?.configured
+                      ? intl.formatMessage(i18n.updateApiKey)
+                      : intl.formatMessage(i18n.addApiKey)}
                   </Button>
                   {providerStatuses[provider]?.configured && (
-                    <Button variant="destructive" size="sm" onClick={handleRemoveKey}>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={(): void => {
+                        void handleRemoveKey();
+                      }}
+                    >
                       {intl.formatMessage(i18n.removeApiKey)}
                     </Button>
                   )}
@@ -264,13 +313,20 @@ export const DictationSettings = () => {
                   <Input
                     type="password"
                     value={apiKey}
-                    onChange={(e) => setApiKey(e.target.value)}
+                    onChange={(event: ChangeEvent<HTMLInputElement>): void =>
+                      setApiKey(event.target.value)
+                    }
                     placeholder={intl.formatMessage(i18n.enterApiKey)}
                     className="max-w-md"
                     autoFocus
                   />
                   <div className="flex gap-2">
-                    <Button size="sm" onClick={handleSaveKey}>
+                    <Button
+                      size="sm"
+                      onClick={(): void => {
+                        void handleSaveKey();
+                      }}
+                    >
                       {intl.formatMessage(i18n.save)}
                     </Button>
                     <Button variant="outline" size="sm" onClick={handleCancelEdit}>
@@ -288,3 +344,13 @@ export const DictationSettings = () => {
     </div>
   );
 };
+
+function isDictationProvider(value: unknown): value is DictationProvider {
+  return (
+    value === 'openai' ||
+    value === 'elevenlabs' ||
+    value === 'groq' ||
+    value === 'local' ||
+    value === 'model'
+  );
+}

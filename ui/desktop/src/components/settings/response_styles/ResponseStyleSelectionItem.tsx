@@ -1,8 +1,14 @@
 import { useEffect, useState } from 'react';
 import { defineMessages, useIntl } from '../../../i18n';
 import type { MessageDescriptor } from 'react-intl';
+import type { NoMessageValues } from 'react-intl';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly "detailedLabel": NoMessageValues;
+  readonly "detailedDescription": NoMessageValues;
+  readonly "conciseLabel": NoMessageValues;
+  readonly "conciseDescription": NoMessageValues;
+}>({
   detailedLabel: {
     id: 'responseStyle.detailedLabel',
     defaultMessage: 'Detailed',

@@ -1,5 +1,6 @@
 import { z } from 'zod';
-import type { RecipeExtension } from '../../../recipe';
+import type { ElementType } from 'react';
+import type { Parameter, RecipeExtension } from '../../../recipe';
 
 // Zod schema for Parameter - matching ACP RecipeParameterDto type
 const parameterSchema = z.object({
@@ -63,6 +64,24 @@ export const recipeFormSchema = z.object({
 
 export type RecipeFormData = z.infer<typeof recipeFormSchema>;
 
-// Type for the form API - using any to avoid complex generic constraints
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type RecipeFormApi = any;
+export interface RecipeFormFieldApi<TValue> {
+  state: {
+    value: TValue;
+    meta: {
+      errors: unknown[];
+    };
+  };
+  handleBlur(): void;
+  handleChange(value: TValue): void;
+}
+
+export interface RecipeFormApi {
+  state: {
+    values: RecipeFormData;
+  };
+  store: {
+    subscribe(listener: () => void): { unsubscribe: () => void };
+  };
+  Field: ElementType;
+  setFieldValue(name: 'parameters', value: Parameter[]): void;
+}

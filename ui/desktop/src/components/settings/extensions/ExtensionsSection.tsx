@@ -16,8 +16,15 @@ import {
 
 import { activateExtensionDefault, deleteExtension, toggleExtensionDefault } from './index';
 import type { ExtensionConfig } from '../../../types/extensions';
+import type { NoMessageValues } from 'react-intl';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly "addCustomExtension": NoMessageValues;
+  readonly "browseExtensions": NoMessageValues;
+  readonly "updateExtension": NoMessageValues;
+  readonly "saveChanges": NoMessageValues;
+  readonly "addExtension": NoMessageValues;
+}>({
   addCustomExtension: {
     id: 'extensionsSection.addCustomExtension',
     defaultMessage: 'Add custom extension',

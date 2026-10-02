@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import type { ChangeEvent, JSX } from 'react';
 import {
   acpGetPrompt,
   acpListPrompts,
@@ -12,8 +13,39 @@ import { Button } from '../ui/button';
 import { AlertTriangle, RotateCcw, ArrowLeft } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { defineMessages, useIntl } from '../../i18n';
+import type { MessageValue, NoMessageValues } from 'react-intl';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly failedToLoadPrompts: NoMessageValues;
+  readonly failedToLoadPrompt: NoMessageValues;
+  readonly confirmResetAll: NoMessageValues;
+  readonly allPromptsReset: NoMessageValues;
+  readonly failedToResetPrompts: NoMessageValues;
+  readonly promptSaved: NoMessageValues;
+  readonly failedToSavePrompt: NoMessageValues;
+  readonly confirmResetOne: NoMessageValues;
+  readonly promptResetToDefault: NoMessageValues;
+  readonly failedToResetPrompt: NoMessageValues;
+  readonly confirmReplaceWithDefault: NoMessageValues;
+  readonly confirmUnsavedBack: NoMessageValues;
+  readonly backToList: NoMessageValues;
+  readonly resetToDefault: NoMessageValues;
+  readonly save: NoMessageValues;
+  readonly editPromptTitle: { readonly name: MessageValue };
+  readonly customized: NoMessageValues;
+  readonly templateTip: {
+    readonly extensionsExample: MessageValue;
+    readonly forExample: MessageValue;
+  };
+  readonly editingLabel: { readonly name: MessageValue };
+  readonly restoreDefault: NoMessageValues;
+  readonly enterPromptContent: NoMessageValues;
+  readonly unsavedChanges: NoMessageValues;
+  readonly promptEditingTitle: NoMessageValues;
+  readonly promptEditingDescription: NoMessageValues;
+  readonly resetAll: NoMessageValues;
+  readonly edit: NoMessageValues;
+}>({
   failedToLoadPrompts: {
     id: 'promptsSettings.failedToLoadPrompts',
     defaultMessage: 'Failed to load prompts',
@@ -124,18 +156,21 @@ const i18n = defineMessages({
   },
 });
 
-export default function PromptsSettingsSection() {
-  const intl = useIntl();
+export default function PromptsSettingsSection(): JSX.Element {
+  const intl: ReturnType<typeof useIntl> = useIntl();
   const [prompts, setPrompts] = useState<PromptTemplate[]>([]);
   const [selectedPrompt, setSelectedPrompt] = useState<string | null>(null);
   const [promptData, setPromptData] = useState<PromptContent | null>(null);
-  const [content, setContent] = useState('');
-  const [hasChanges, setHasChanges] = useState(false);
+  const [content, setContent] = useState<string>('');
+  const hasChanges: boolean = useMemo<boolean>(
+    (): boolean => (promptData ? content !== promptData.content : false),
+    [content, promptData]
+  );
 
-  const fetchPrompts = useCallback(async () => {
+  const fetchPrompts = useCallback(async (): Promise<void> => {
     try {
-      const prompts = await acpListPrompts();
-      setPrompts(prompts);
+      const promptList: PromptTemplate[] = await acpListPrompts();
+      setPrompts(promptList);
     } catch (error) {
       console.error('Failed to fetch prompts:', error);
       toast.error(intl.formatMessage(i18n.failedToLoadPrompts));
@@ -143,14 +178,16 @@ export default function PromptsSettingsSection() {
   }, [intl]);
 
   useEffect(() => {
-    fetchPrompts();
+    queueMicrotask((): void => {
+      void fetchPrompts();
+    });
   }, [fetchPrompts]);
 
   useEffect(() => {
     if (selectedPrompt) {
-      const fetchPrompt = async () => {
+      const fetchPrompt = async (): Promise<void> => {
         try {
-          const prompt = await acpGetPrompt(selectedPrompt);
+          const prompt: PromptContent = await acpGetPrompt(selectedPrompt);
           setPromptData(prompt);
           setContent(prompt.content);
         } catch (error) {
@@ -158,48 +195,46 @@ export default function PromptsSettingsSection() {
           toast.error(intl.formatMessage(i18n.failedToLoadPrompt));
         }
       };
-      fetchPrompt();
+      void fetchPrompt();
     }
   }, [selectedPrompt, intl]);
 
-  useEffect(() => {
-    if (promptData) {
-      setHasChanges(content !== promptData.content);
-    }
-  }, [content, promptData]);
-
-  const handleResetAll = async () => {
+  const handleResetAll = async (): Promise<void> => {
     if (!window.confirm(intl.formatMessage(i18n.confirmResetAll))) {
       return;
     }
 
     try {
-      const customizedPrompts = prompts.filter((p) => p.isCustomized);
+      const customizedPrompts: PromptTemplate[] = prompts.filter(
+        (prompt: PromptTemplate): boolean => prompt.isCustomized
+      );
       for (const prompt of customizedPrompts) {
         await acpResetPrompt(prompt.name);
       }
       toast.success(intl.formatMessage(i18n.allPromptsReset));
-      fetchPrompts();
+      void fetchPrompts();
     } catch (error) {
       console.error('Failed to reset all prompts:', error);
       toast.error(intl.formatMessage(i18n.failedToResetPrompts));
     }
   };
 
-  const handleSave = async () => {
+  const handleSave = async (): Promise<void> => {
     if (!selectedPrompt) return;
     try {
       await acpSavePrompt(selectedPrompt, content);
       toast.success(intl.formatMessage(i18n.promptSaved));
-      setPromptData((prev) => (prev ? { ...prev, content, isCustomized: true } : null));
-      fetchPrompts();
+      setPromptData((prev: PromptContent | null): PromptContent | null =>
+        prev ? { ...prev, content, isCustomized: true } : null
+      );
+      void fetchPrompts();
     } catch (error) {
       console.error('Failed to save prompt:', error);
       toast.error(intl.formatMessage(i18n.failedToSavePrompt));
     }
   };
 
-  const handleReset = async () => {
+  const handleReset = async (): Promise<void> => {
     if (!selectedPrompt) return;
     if (!window.confirm(intl.formatMessage(i18n.confirmResetOne))) {
       return;
@@ -211,7 +246,7 @@ export default function PromptsSettingsSection() {
         setContent(promptData.defaultContent);
         setPromptData({ ...promptData, content: promptData.defaultContent, isCustomized: false });
       }
-      fetchPrompts();
+      void fetchPrompts();
       toast.success(intl.formatMessage(i18n.promptResetToDefault));
     } catch (error) {
       console.error('Failed to reset prompt:', error);
@@ -219,7 +254,7 @@ export default function PromptsSettingsSection() {
     }
   };
 
-  const handleRestoreDefault = () => {
+  const handleRestoreDefault = (): void => {
     if (promptData) {
       if (hasChanges) {
         if (!window.confirm(intl.formatMessage(i18n.confirmReplaceWithDefault))) {
@@ -230,7 +265,7 @@ export default function PromptsSettingsSection() {
     }
   };
 
-  const handleBack = () => {
+  const handleBack = (): void => {
     if (hasChanges) {
       if (!window.confirm(intl.formatMessage(i18n.confirmUnsavedBack))) {
         return;
@@ -241,7 +276,9 @@ export default function PromptsSettingsSection() {
     setContent('');
   };
 
-  const hasCustomizedPrompts = prompts.some((p) => p.isCustomized);
+  const hasCustomizedPrompts: boolean = prompts.some(
+    (prompt: PromptTemplate): boolean => prompt.isCustomized
+  );
 
   if (selectedPrompt) {
     return (
@@ -263,14 +300,22 @@ export default function PromptsSettingsSection() {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={handleReset}
+                    onClick={(): void => {
+                      void handleReset();
+                    }}
                     className="flex items-center gap-2"
                   >
                     <RotateCcw className="h-4 w-4" />
                     {intl.formatMessage(i18n.resetToDefault)}
                   </Button>
                 )}
-                <Button onClick={handleSave} disabled={!hasChanges} size="sm">
+                <Button
+                  onClick={(): void => {
+                    void handleSave();
+                  }}
+                  disabled={!hasChanges}
+                  size="sm"
+                >
                   {intl.formatMessage(i18n.save)}
                 </Button>
               </div>
@@ -315,7 +360,9 @@ export default function PromptsSettingsSection() {
               <textarea
                 value={content}
                 className="w-full flex-1 min-h-[500px] border rounded-md p-3 text-sm font-mono resize-y bg-background-primary text-text-primary border-border-primary focus:outline-none focus:ring-2 focus:ring-blue-500"
-                onChange={(e) => setContent(e.target.value)}
+                onChange={(event: ChangeEvent<HTMLTextAreaElement>): void => {
+                  setContent(event.target.value);
+                }}
                 placeholder={intl.formatMessage(i18n.enterPromptContent)}
                 spellCheck={false}
               />
@@ -350,7 +397,9 @@ export default function PromptsSettingsSection() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={handleResetAll}
+                onClick={(): void => {
+                  void handleResetAll();
+                }}
                 className="flex items-center gap-2 border-yellow-500/50 hover:bg-yellow-500/20"
               >
                 <RotateCcw className="h-4 w-4" />
@@ -382,7 +431,7 @@ export default function PromptsSettingsSection() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setSelectedPrompt(prompt.name)}
+                  onClick={(): void => setSelectedPrompt(prompt.name)}
                   className="ml-4"
                 >
                   {intl.formatMessage(i18n.edit)}

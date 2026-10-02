@@ -1,54 +1,60 @@
-import {
-  env,
-  createExecutionContext,
-  waitOnExecutionContext,
-  fetchMock,
-} from "cloudflare:test";
-import { describe, it, expect, beforeAll, afterEach } from "vitest";
-import worker from "../src/index.js";
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import worker from '../src/index.js';
 
 let testKeyPair;
 let testJwk;
-const TEST_KID = "test-kid-001";
+const TEST_KID = 'test-kid-001';
+
+function createExecutionContext() {
+  const pending = [];
+
+  return {
+    passThroughOnException() {},
+    waitUntil(promise) {
+      pending.push(Promise.resolve(promise));
+    },
+    __pending: pending,
+  };
+}
+
+async function waitOnExecutionContext(context) {
+  await Promise.all(context.__pending);
+}
 
 beforeAll(async () => {
   testKeyPair = await crypto.subtle.generateKey(
     {
-      name: "RSASSA-PKCS1-v1_5",
+      name: 'RSASSA-PKCS1-v1_5',
       modulusLength: 2048,
       publicExponent: new Uint8Array([1, 0, 1]),
-      hash: "SHA-256",
+      hash: 'SHA-256',
     },
     true,
-    ["sign", "verify"],
+    ['sign', 'verify'],
   );
-  const exported = await crypto.subtle.exportKey("jwk", testKeyPair.publicKey);
-  testJwk = { ...exported, kid: TEST_KID, alg: "RS256", use: "sig" };
+  const exported = await crypto.subtle.exportKey('jwk', testKeyPair.publicKey);
+  testJwk = { ...exported, kid: TEST_KID, alg: 'RS256', use: 'sig' };
 });
 
 afterEach(() => {
-  fetchMock.deactivate();
+  vi.unstubAllGlobals();
 });
 
 function base64UrlEncode(data) {
-  const str = typeof data === "string" ? data : JSON.stringify(data);
-  return btoa(str).replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
+  const str = typeof data === 'string' ? data : JSON.stringify(data);
+  return btoa(str).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
 }
 
 async function createSignedJwt(payload, kid = TEST_KID) {
-  const header = { alg: "RS256", typ: "JWT", kid };
+  const header = { alg: 'RS256', typ: 'JWT', kid };
   const headerB64 = base64UrlEncode(header);
   const payloadB64 = base64UrlEncode(payload);
   const data = new TextEncoder().encode(`${headerB64}.${payloadB64}`);
-  const signature = await crypto.subtle.sign(
-    "RSASSA-PKCS1-v1_5",
-    testKeyPair.privateKey,
-    data,
-  );
+  const signature = await crypto.subtle.sign('RSASSA-PKCS1-v1_5', testKeyPair.privateKey, data);
   const sigB64 = btoa(String.fromCharCode(...new Uint8Array(signature)))
-    .replace(/=/g, "")
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_");
+    .replace(/=/g, '')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_');
   return `${headerB64}.${payloadB64}.${sigB64}`;
 }
 
@@ -56,69 +62,55 @@ let jtiCounter = 0;
 function validPayload(overrides = {}) {
   const now = Math.floor(Date.now() / 1000);
   return {
-    iss: "https://token.actions.githubusercontent.com",
-    aud: "goose-oidc-proxy",
+    iss: 'https://token.actions.githubusercontent.com',
+    aud: 'goose-oidc-proxy',
     iat: now - 10,
     exp: now + 300,
     jti: `test-jti-${++jtiCounter}`,
-    repository: "aaif-goose/goose",
-    ref: "refs/heads/main",
-    sub: "repo:aaif-goose/goose:ref:refs/heads/main",
+    repository: 'aaif-goose/goose',
+    ref: 'refs/heads/main',
+    sub: 'repo:aaif-goose/goose:ref:refs/heads/main',
     ...overrides,
   };
 }
 
 function mockAll(upstreamStatus = 200, upstreamBody = { ok: true }) {
-  fetchMock.activate();
-  fetchMock.disableNetConnect();
+  const mockedFetch = vi.fn(async (input) => {
+    const request = input instanceof Request ? input : new Request(String(input));
 
-  const oidc = fetchMock.get("https://token.actions.githubusercontent.com");
-  oidc
-    .intercept({ path: "/.well-known/openid-configuration", method: "GET" })
-    .reply(
-      200,
-      JSON.stringify({
-        jwks_uri:
-          "https://token.actions.githubusercontent.com/.well-known/jwks",
-      }),
-    )
-    .persist();
-  oidc
-    .intercept({ path: "/.well-known/jwks", method: "GET" })
-    .reply(200, JSON.stringify({ keys: [testJwk] }))
-    .persist();
+    const url = new URL(request.url);
 
-  const upstream = fetchMock.get("https://api.anthropic.com");
-  upstream
-    .intercept({ path: /.*/, method: "POST" })
-    .reply(upstreamStatus, JSON.stringify(upstreamBody));
+    if (
+      url.origin === 'https://token.actions.githubusercontent.com' &&
+      url.pathname === '/.well-known/openid-configuration'
+    ) {
+      return Response.json({
+        jwks_uri: 'https://token.actions.githubusercontent.com/.well-known/jwks',
+      });
+    }
+
+    if (url.origin === 'https://token.actions.githubusercontent.com' && url.pathname === '/.well-known/jwks') {
+      return Response.json({
+        keys: [testJwk],
+      });
+    }
+
+    if (url.origin === 'https://api.anthropic.com') {
+      return Response.json(upstreamBody, {
+        status: upstreamStatus,
+      });
+    }
+
+    throw new Error(`Unexpected outbound request in oidc-proxy test: ${url}`);
+  });
+
+  vi.stubGlobal('fetch', mockedFetch);
+
+  return mockedFetch;
 }
 
 function mockAllPersistent(upstreamStatus = 200, upstreamBody = { ok: true }) {
-  fetchMock.activate();
-  fetchMock.disableNetConnect();
-
-  const oidc = fetchMock.get("https://token.actions.githubusercontent.com");
-  oidc
-    .intercept({ path: "/.well-known/openid-configuration", method: "GET" })
-    .reply(
-      200,
-      JSON.stringify({
-        jwks_uri:
-          "https://token.actions.githubusercontent.com/.well-known/jwks",
-      }),
-    )
-    .persist();
-  oidc
-    .intercept({ path: "/.well-known/jwks", method: "GET" })
-    .reply(200, JSON.stringify({ keys: [testJwk] }))
-    .persist();
-
-  const upstream = fetchMock.get("https://api.anthropic.com");
-  upstream
-    .intercept({ path: /.*/, method: "POST" })
-    .reply(upstreamStatus, JSON.stringify(upstreamBody))
-    .persist();
+  return mockAll(upstreamStatus, upstreamBody);
 }
 
 // Mock TokenBucket Durable Object for unit tests
@@ -127,7 +119,7 @@ function mockTokenBucket(overrides = {}) {
   const response = { ...defaults, ...overrides };
 
   return {
-    idFromName: () => "mock-id",
+    idFromName: () => 'mock-id',
     get: () => ({
       fetch: async () => Response.json(response),
     }),
@@ -136,52 +128,52 @@ function mockTokenBucket(overrides = {}) {
 
 function testEnv(overrides = {}) {
   return {
-    OIDC_ISSUER: "https://token.actions.githubusercontent.com",
-    OIDC_AUDIENCE: "goose-oidc-proxy",
-    UPSTREAM_URL: "https://api.anthropic.com",
-    UPSTREAM_AUTH_HEADER: "x-api-key",
-    UPSTREAM_API_KEY: "sk-ant-real-key",
-    ALLOWED_REPOS: "aaif-goose/goose",
-    MAX_TOKEN_AGE_SECONDS: "1200",
-    MAX_REQUESTS_PER_TOKEN: "200",
-    RATE_LIMIT_PER_SECOND: "2",
+    OIDC_ISSUER: 'https://token.actions.githubusercontent.com',
+    OIDC_AUDIENCE: 'goose-oidc-proxy',
+    UPSTREAM_URL: 'https://api.anthropic.com',
+    UPSTREAM_AUTH_HEADER: 'x-api-key',
+    UPSTREAM_API_KEY: 'sk-ant-real-key',
+    ALLOWED_REPOS: 'aaif-goose/goose',
+    MAX_TOKEN_AGE_SECONDS: '1200',
+    MAX_REQUESTS_PER_TOKEN: '200',
+    RATE_LIMIT_PER_SECOND: '2',
     TOKEN_BUCKET: mockTokenBucket(),
     ...overrides,
   };
 }
 
-describe("rejects invalid requests", () => {
-  it("missing auth", async () => {
-    const request = new Request("https://proxy.example.com/v1/messages");
+describe('rejects invalid requests', () => {
+  it('missing auth', async () => {
+    const request = new Request('https://proxy.example.com/v1/messages');
     const ctx = createExecutionContext();
     const response = await worker.fetch(request, testEnv(), ctx);
     await waitOnExecutionContext(ctx);
 
     expect(response.status).toBe(401);
-    expect((await response.json()).error).toBe("Missing authentication");
+    expect((await response.json()).error).toBe('Missing authentication');
   });
 
-  it("malformed token", async () => {
-    const request = new Request("https://proxy.example.com/v1/messages", {
-      headers: { "x-api-key": "not-a-jwt" },
+  it('malformed token', async () => {
+    const request = new Request('https://proxy.example.com/v1/messages', {
+      headers: { 'x-api-key': 'not-a-jwt' },
     });
     const ctx = createExecutionContext();
     const response = await worker.fetch(request, testEnv(), ctx);
     await waitOnExecutionContext(ctx);
 
     expect(response.status).toBe(401);
-    expect((await response.json()).error).toBe("Malformed JWT");
+    expect((await response.json()).error).toBe('Malformed JWT');
   });
 
-  it("wrong claims (repo, audience, issuer)", async () => {
+  it('wrong claims (repo, audience, issuer)', async () => {
     for (const [override, expectedError] of [
-      [{ repository: "evil/repo" }, "not allowed"],
-      [{ aud: "wrong" }, "Invalid audience"],
-      [{ iss: "https://evil.example.com" }, "Invalid issuer"],
+      [{ repository: 'evil/repo' }, 'not allowed'],
+      [{ aud: 'wrong' }, 'Invalid audience'],
+      [{ iss: 'https://evil.example.com' }, 'Invalid issuer'],
     ]) {
       const token = await createSignedJwt(validPayload(override));
-      const request = new Request("https://proxy.example.com/v1/messages", {
-        headers: { "x-api-key": token },
+      const request = new Request('https://proxy.example.com/v1/messages', {
+        headers: { 'x-api-key': token },
       });
       const ctx = createExecutionContext();
       const response = await worker.fetch(request, testEnv(), ctx);
@@ -192,45 +184,39 @@ describe("rejects invalid requests", () => {
     }
   });
 
-  it("token too old", async () => {
-    const token = await createSignedJwt(
-      validPayload({ iat: Math.floor(Date.now() / 1000) - 1500 }),
-    );
-    const request = new Request("https://proxy.example.com/v1/messages", {
-      headers: { "x-api-key": token },
+  it('token too old', async () => {
+    const token = await createSignedJwt(validPayload({ iat: Math.floor(Date.now() / 1000) - 1500 }));
+    const request = new Request('https://proxy.example.com/v1/messages', {
+      headers: { 'x-api-key': token },
     });
     const ctx = createExecutionContext();
     const response = await worker.fetch(request, testEnv(), ctx);
     await waitOnExecutionContext(ctx);
 
     expect(response.status).toBe(401);
-    expect((await response.json()).error).toBe("Token too old");
+    expect((await response.json()).error).toBe('Token too old');
   });
 
-  it("age cap fires independently of exp (iat past cap, exp still valid)", async () => {
+  it('age cap fires independently of exp (iat past cap, exp still valid)', async () => {
     const now = Math.floor(Date.now() / 1000);
-    const token = await createSignedJwt(
-      validPayload({ iat: now - 1500, exp: now + 300 }),
-    );
-    const request = new Request("https://proxy.example.com/v1/messages", {
-      headers: { "x-api-key": token },
+    const token = await createSignedJwt(validPayload({ iat: now - 1500, exp: now + 300 }));
+    const request = new Request('https://proxy.example.com/v1/messages', {
+      headers: { 'x-api-key': token },
     });
     const ctx = createExecutionContext();
     const response = await worker.fetch(request, testEnv(), ctx);
     await waitOnExecutionContext(ctx);
 
     expect(response.status).toBe(401);
-    expect((await response.json()).error).toBe("Token too old");
+    expect((await response.json()).error).toBe('Token too old');
   });
 
-  it("rejects expired token even when MAX_TOKEN_AGE_SECONDS is set", async () => {
+  it('rejects expired token even when MAX_TOKEN_AGE_SECONDS is set', async () => {
     const now = Math.floor(Date.now() / 1000);
-    const token = await createSignedJwt(
-      validPayload({ iat: now - 600, exp: now - 300 }),
-    );
-    const request = new Request("https://proxy.example.com/v1/messages", {
-      method: "POST",
-      headers: { "x-api-key": token, "Content-Type": "application/json" },
+    const token = await createSignedJwt(validPayload({ iat: now - 600, exp: now - 300 }));
+    const request = new Request('https://proxy.example.com/v1/messages', {
+      method: 'POST',
+      headers: { 'x-api-key': token, 'Content-Type': 'application/json' },
       body: JSON.stringify({}),
     });
     const ctx = createExecutionContext();
@@ -238,63 +224,55 @@ describe("rejects invalid requests", () => {
     await waitOnExecutionContext(ctx);
 
     expect(response.status).toBe(401);
-    expect((await response.json()).error).toBe("Token expired");
+    expect((await response.json()).error).toBe('Token expired');
   });
 
-  it("rejects expired token when MAX_TOKEN_AGE_SECONDS is unset", async () => {
+  it('rejects expired token when MAX_TOKEN_AGE_SECONDS is unset', async () => {
     const now = Math.floor(Date.now() / 1000);
-    const token = await createSignedJwt(
-      validPayload({ iat: now - 600, exp: now - 300 }),
-    );
-    const request = new Request("https://proxy.example.com/v1/messages", {
-      method: "POST",
-      headers: { "x-api-key": token, "Content-Type": "application/json" },
+    const token = await createSignedJwt(validPayload({ iat: now - 600, exp: now - 300 }));
+    const request = new Request('https://proxy.example.com/v1/messages', {
+      method: 'POST',
+      headers: { 'x-api-key': token, 'Content-Type': 'application/json' },
       body: JSON.stringify({}),
     });
     const ctx = createExecutionContext();
-    const response = await worker.fetch(
-      request,
-      testEnv({ MAX_TOKEN_AGE_SECONDS: undefined }),
-      ctx,
-    );
+    const response = await worker.fetch(request, testEnv({ MAX_TOKEN_AGE_SECONDS: undefined }), ctx);
     await waitOnExecutionContext(ctx);
 
     expect(response.status).toBe(401);
-    expect((await response.json()).error).toBe("Token expired");
+    expect((await response.json()).error).toBe('Token expired');
   });
 });
 
-describe("proxies valid requests", () => {
-  it("forwards to upstream with injected API key", async () => {
+describe('proxies valid requests', () => {
+  it('forwards to upstream with injected API key', async () => {
     const token = await createSignedJwt(validPayload());
-    mockAll(200, { id: "msg_123", type: "message" });
+    mockAll(200, { id: 'msg_123', type: 'message' });
 
-    const request = new Request("https://proxy.example.com/v1/messages", {
-      method: "POST",
+    const request = new Request('https://proxy.example.com/v1/messages', {
+      method: 'POST',
       headers: {
-        "x-api-key": token,
-        "Content-Type": "application/json",
+        'x-api-key': token,
+        'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ model: "claude-sonnet-4-20250514", messages: [] }),
+      body: JSON.stringify({ model: 'claude-sonnet-4-20250514', messages: [] }),
     });
     const ctx = createExecutionContext();
     const response = await worker.fetch(request, testEnv(), ctx);
     await waitOnExecutionContext(ctx);
 
     expect(response.status).toBe(200);
-    expect((await response.json()).id).toBe("msg_123");
+    expect((await response.json()).id).toBe('msg_123');
   });
 
-  it("rejects expired token even when within MAX_TOKEN_AGE_SECONDS", async () => {
+  it('rejects expired token even when within MAX_TOKEN_AGE_SECONDS', async () => {
     const now = Math.floor(Date.now() / 1000);
-    const token = await createSignedJwt(
-      validPayload({ iat: now - 600, exp: now - 300 }),
-    );
+    const token = await createSignedJwt(validPayload({ iat: now - 600, exp: now - 300 }));
     mockAll(200, { ok: true });
 
-    const request = new Request("https://proxy.example.com/v1/messages", {
-      method: "POST",
-      headers: { "x-api-key": token, "Content-Type": "application/json" },
+    const request = new Request('https://proxy.example.com/v1/messages', {
+      method: 'POST',
+      headers: { 'x-api-key': token, 'Content-Type': 'application/json' },
       body: JSON.stringify({}),
     });
     const ctx = createExecutionContext();
@@ -302,18 +280,18 @@ describe("proxies valid requests", () => {
     await waitOnExecutionContext(ctx);
 
     expect(response.status).toBe(401);
-    expect((await response.json()).error).toBe("Token expired");
+    expect((await response.json()).error).toBe('Token expired');
   });
 });
 
-describe("token budget and rate limiting", () => {
-  it("rejects when budget exhausted", async () => {
+describe('token budget and rate limiting', () => {
+  it('rejects when budget exhausted', async () => {
     const token = await createSignedJwt(validPayload());
     mockAll();
 
-    const request = new Request("https://proxy.example.com/v1/messages", {
-      method: "POST",
-      headers: { "x-api-key": token, "Content-Type": "application/json" },
+    const request = new Request('https://proxy.example.com/v1/messages', {
+      method: 'POST',
+      headers: { 'x-api-key': token, 'Content-Type': 'application/json' },
       body: JSON.stringify({}),
     });
     const ctx = createExecutionContext();
@@ -322,7 +300,7 @@ describe("token budget and rate limiting", () => {
       testEnv({
         TOKEN_BUCKET: mockTokenBucket({
           allowed: false,
-          error: "budget_exhausted",
+          error: 'budget_exhausted',
         }),
       }),
       ctx,
@@ -330,17 +308,17 @@ describe("token budget and rate limiting", () => {
     await waitOnExecutionContext(ctx);
 
     expect(response.status).toBe(429);
-    expect((await response.json()).error).toBe("Token budget exhausted");
-    expect(response.headers.get("Retry-After")).toBeNull();
+    expect((await response.json()).error).toBe('Token budget exhausted');
+    expect(response.headers.get('Retry-After')).toBeNull();
   });
 
-  it("rejects with Retry-After when rate limited", async () => {
+  it('rejects with Retry-After when rate limited', async () => {
     const token = await createSignedJwt(validPayload());
     mockAll();
 
-    const request = new Request("https://proxy.example.com/v1/messages", {
-      method: "POST",
-      headers: { "x-api-key": token, "Content-Type": "application/json" },
+    const request = new Request('https://proxy.example.com/v1/messages', {
+      method: 'POST',
+      headers: { 'x-api-key': token, 'Content-Type': 'application/json' },
       body: JSON.stringify({}),
     });
     const ctx = createExecutionContext();
@@ -349,7 +327,7 @@ describe("token budget and rate limiting", () => {
       testEnv({
         TOKEN_BUCKET: mockTokenBucket({
           allowed: false,
-          error: "rate_limited",
+          error: 'rate_limited',
         }),
       }),
       ctx,
@@ -357,7 +335,7 @@ describe("token budget and rate limiting", () => {
     await waitOnExecutionContext(ctx);
 
     expect(response.status).toBe(429);
-    expect((await response.json()).error).toBe("Rate limit exceeded");
-    expect(response.headers.get("Retry-After")).toBe("1");
+    expect((await response.json()).error).toBe('Rate limit exceeded');
+    expect(response.headers.get('Retry-After')).toBe('1');
   });
 });

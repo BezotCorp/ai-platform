@@ -26,8 +26,36 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from './ui/dropdown-menu';
+import type { MessageValue, NoMessageValues } from 'react-intl';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly "actionsLabel": NoMessageValues;
+  readonly "renameSession": NoMessageValues;
+  readonly "duplicateSession": NoMessageValues;
+  readonly "viewJson": NoMessageValues;
+  readonly "viewModelInteractions": NoMessageValues;
+  readonly "renameTitle": NoMessageValues;
+  readonly "renamePlaceholder": NoMessageValues;
+  readonly "cancel": NoMessageValues;
+  readonly "save": NoMessageValues;
+  readonly "saving": NoMessageValues;
+  readonly "renamed": NoMessageValues;
+  readonly "renameFailed": { readonly "error": MessageValue };
+  readonly "duplicated": NoMessageValues;
+  readonly "duplicateFailed": { readonly "error": MessageValue };
+  readonly "jsonTitle": NoMessageValues;
+  readonly "modelInteractionsTitle": NoMessageValues;
+  readonly "loadingJson": NoMessageValues;
+  readonly "jsonFailed": { readonly "error": MessageValue };
+  readonly "modelInteractionsFailed": { readonly "error": MessageValue };
+  readonly "close": NoMessageValues;
+  readonly "copyJson": NoMessageValues;
+  readonly "copiedJson": NoMessageValues;
+  readonly "copiedModelInteractions": NoMessageValues;
+  readonly "fullTextTitle": NoMessageValues;
+  readonly "copyText": NoMessageValues;
+  readonly "copiedText": NoMessageValues;
+}>({
   actionsLabel: {
     id: 'sessionActionsHeader.actionsLabel',
     defaultMessage: 'Session actions',
@@ -239,7 +267,11 @@ function JsonPrimitiveValue({
     return <span className="text-text-secondary">null</span>;
   }
 
-  return <span className="text-text-secondary">{String(value)}</span>;
+  return (
+    <span className="text-text-secondary">
+      {JSON.stringify(value) ?? 'undefined'}
+    </span>
+  );
 }
 
 function JsonTreeNode({

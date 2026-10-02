@@ -10,8 +10,42 @@ import type { RecipeManifest } from '../../recipe';
 import { listSavedRecipes } from '../../recipe/recipe_management';
 import ClockIcon from '../../assets/clock-icon.svg';
 import { defineMessages, useIntl } from '../../i18n';
+import type { MessageValue, NoMessageValues } from 'react-intl';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly editSchedule: NoMessageValues;
+  readonly createNewSchedule: NoMessageValues;
+  readonly nameLabel: NoMessageValues;
+  readonly namePlaceholder: NoMessageValues;
+  readonly sourceLabel: NoMessageValues;
+  readonly yaml: NoMessageValues;
+  readonly deepLink: NoMessageValues;
+  readonly savedRecipes: NoMessageValues;
+  readonly browseYaml: NoMessageValues;
+  readonly selected: { readonly path: MessageValue };
+  readonly deepLinkPlaceholder: NoMessageValues;
+  readonly selectRecipePlaceholder: NoMessageValues;
+  readonly alreadyScheduledOption: { readonly title: MessageValue };
+  readonly recipeAlreadyScheduled: NoMessageValues;
+  readonly loadingRecipes: NoMessageValues;
+  readonly noSavedRecipes: NoMessageValues;
+  readonly failedLoadRecipes: NoMessageValues;
+  readonly recipeParsed: NoMessageValues;
+  readonly recipeTitle: { readonly title: MessageValue };
+  readonly recipeDescription: { readonly description: MessageValue };
+  readonly scheduleLabel: NoMessageValues;
+  readonly cancel: NoMessageValues;
+  readonly updating: NoMessageValues;
+  readonly creating: NoMessageValues;
+  readonly updateSchedule: NoMessageValues;
+  readonly createSchedule: NoMessageValues;
+  readonly invalidDeepLink: NoMessageValues;
+  readonly failedReadFile: NoMessageValues;
+  readonly failedParseRecipe: NoMessageValues;
+  readonly invalidFileType: NoMessageValues;
+  readonly scheduleIdRequired: NoMessageValues;
+  readonly provideValidRecipe: NoMessageValues;
+}>({
   editSchedule: { id: 'scheduleModal.editSchedule', defaultMessage: 'Edit Schedule' },
   createNewSchedule: {
     id: 'scheduleModal.createNewSchedule',
@@ -88,7 +122,7 @@ const i18n = defineMessages({
   },
 });
 
-export type SourceType = 'file' | 'deeplink' | 'saved';
+export type SourceTypeKey = 'file' | 'deeplink' | 'saved';
 
 export type NewSchedulePayload =
   | {
@@ -128,7 +162,7 @@ export const ScheduleModal: React.FC<ScheduleModalProps> = ({
   const isEditMode = !!schedule;
 
   const [scheduleId, setScheduleId] = useState<string>('');
-  const [sourceType, setSourceType] = useState<SourceType>('file');
+  const [sourceType, setSourceTypeKey] = useState<SourceTypeKey>('file');
   const [recipeSourcePath, setRecipeSourcePath] = useState<string>('');
   const [deepLinkInput, setDeepLinkInput] = useState<string>('');
   const [parsedRecipe, setParsedRecipe] = useState<Recipe | null>(null);
@@ -162,14 +196,14 @@ export const ScheduleModal: React.FC<ScheduleModalProps> = ({
     setInternalValidationError(null);
   }, []);
 
-  const handleSourceTypeChange = useCallback(
-    (next: SourceType) => {
+  const handleSourceTypeKeyChange = useCallback(
+    (next: SourceTypeKey) => {
       if (next === sourceType) {
         return;
       }
       bumpSourceRequest();
       clearRecipeSourceState();
-      setSourceType(next);
+      setSourceTypeKey(next);
     },
     [clearRecipeSourceState, sourceType]
   );
@@ -227,51 +261,57 @@ export const ScheduleModal: React.FC<ScheduleModalProps> = ({
 
   useEffect(() => {
     if (isOpen) {
-      setInternalValidationError(null);
-      if (schedule) {
-        setScheduleId(schedule.id);
-        setCronExpression(schedule.cron);
-      } else {
-        bumpSourceRequest();
-        setScheduleId('');
-        setSourceType('file');
-        setRecipeSourcePath('');
-        setDeepLinkInput('');
-        setParsedRecipe(null);
-        setCronExpression('0 0 14 * * *');
-        setSavedRecipes([]);
-        setSavedRecipesLoading(false);
-        setSavedRecipesError(null);
-        setSelectedSavedRecipeId(null);
-        if (initialDeepLink) {
-          setSourceType('deeplink');
-          handleDeepLinkChange(initialDeepLink);
+      queueMicrotask((): void => {
+        setInternalValidationError(null);
+        if (schedule) {
+          setScheduleId(schedule.id);
+          setCronExpression(schedule.cron);
+        } else {
+          bumpSourceRequest();
+          setScheduleId('');
+          setSourceTypeKey('file');
+          setRecipeSourcePath('');
+          setDeepLinkInput('');
+          setParsedRecipe(null);
+          setCronExpression('0 0 14 * * *');
+          setSavedRecipes([]);
+          setSavedRecipesLoading(false);
+          setSavedRecipesError(null);
+          setSelectedSavedRecipeId(null);
+          if (initialDeepLink) {
+            setSourceTypeKey('deeplink');
+            void handleDeepLinkChange(initialDeepLink);
+          }
         }
-      }
+      });
     }
   }, [isOpen, schedule, initialDeepLink, handleDeepLinkChange]);
 
   useEffect(() => {
     if (sourceType !== 'saved') {
-      return;
+      return undefined;
     }
     let cancelled = false;
-    setSavedRecipesLoading(true);
-    setSavedRecipesError(null);
-    listSavedRecipes()
-      .then((recipes) => {
-        if (!cancelled) {
-          setSavedRecipes(recipes);
-          setSavedRecipesLoading(false);
-        }
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setSavedRecipesError(intl.formatMessage(i18n.failedLoadRecipes));
-          setSavedRecipesLoading(false);
-        }
-      });
-    return () => {
+
+    queueMicrotask((): void => {
+      setSavedRecipesLoading(true);
+      setSavedRecipesError(null);
+      void listSavedRecipes()
+        .then((recipes): void => {
+          if (!cancelled) {
+            setSavedRecipes(recipes);
+            setSavedRecipesLoading(false);
+          }
+        })
+        .catch((): void => {
+          if (!cancelled) {
+            setSavedRecipesError(intl.formatMessage(i18n.failedLoadRecipes));
+            setSavedRecipesLoading(false);
+          }
+        });
+    });
+
+    return (): void => {
       cancelled = true;
     };
   }, [sourceType, intl]);
@@ -458,7 +498,7 @@ export const ScheduleModal: React.FC<ScheduleModalProps> = ({
                   <div className="flex bg-gray-100 dark:bg-gray-700 rounded-full p-1">
                     <button
                       type="button"
-                      onClick={() => handleSourceTypeChange('file')}
+                      onClick={() => handleSourceTypeKeyChange('file')}
                       className={`flex-1 px-4 py-2 text-sm font-medium rounded-full transition-all ${
                         sourceType === 'file'
                           ? 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm'
@@ -469,7 +509,7 @@ export const ScheduleModal: React.FC<ScheduleModalProps> = ({
                     </button>
                     <button
                       type="button"
-                      onClick={() => handleSourceTypeChange('deeplink')}
+                      onClick={() => handleSourceTypeKeyChange('deeplink')}
                       className={`flex-1 px-4 py-2 text-sm font-medium rounded-full transition-all ${
                         sourceType === 'deeplink'
                           ? 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm'
@@ -480,7 +520,7 @@ export const ScheduleModal: React.FC<ScheduleModalProps> = ({
                     </button>
                     <button
                       type="button"
-                      onClick={() => handleSourceTypeChange('saved')}
+                      onClick={() => handleSourceTypeKeyChange('saved')}
                       className={`flex-1 px-4 py-2 text-sm font-medium rounded-full transition-all ${
                         sourceType === 'saved'
                           ? 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm'

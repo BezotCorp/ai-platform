@@ -19,7 +19,7 @@ import { useModelAndProvider } from './ModelAndProviderContext';
 import { acpGetProviderDetails } from '../acp/providers';
 import { useAudioRecorder } from '../hooks/useAudioRecorder';
 import { useFocusOnTyping } from '../hooks/useFocusOnTyping';
-import { toastError } from '../toasts';
+import { toastError } from '../toast_service';
 import MentionPopover, { DisplayItemWithMatch } from './MentionPopover';
 import { COST_TRACKING_ENABLED } from '../updates';
 import { CostTracker } from './bottom_menu/CostTracker';
@@ -36,14 +36,15 @@ import { trackFileAttached, trackVoiceDictation, trackDiagnosticsOpened } from '
 import { getNavigationShortcutText } from '../utils/keyboardShortcuts';
 import { UserInput, ImageData } from '../types/message';
 import { compressImageDataUrl } from '../utils/conversionUtils';
-import { fetchCanonicalModelInfo } from '../utils/canonical';
+import { fetchCanonicalModelInfo } from '../utils/canonicalModelInfo';
 import { getTextDirection } from '../utils/textDirection';
 import { defineMessages, useIntl } from '../i18n';
 import TurndownService from 'turndown';
 import type { NextChatExtensionDraft } from '../utils/nextChatExtensions';
 import { LiveVoiceButton } from './LiveVoiceButton';
-import type { LiveVoiceAvailabilityResponse_unstable } from '@aaif/goose-acp-client';
+import type { LiveVoiceAvailabilityResponseUnstable } from '@aaif/goose-acp-client';
 import { isLiveVoiceActive, type LiveVoiceController } from '../liveVoice/useLiveVoice';
+import type { NoMessageValues } from 'react-intl';
 
 const turndown = new TurndownService({
   headingStyle: 'atx',
@@ -58,7 +59,7 @@ turndown.addRule('complexLinks', {
     );
   },
   replacement: (content, node) => {
-    const el = node as HTMLElement;
+    const el = node;
     const href = el.getAttribute('href')!;
     const label = content.replace(/\n+/g, ' ').trim();
     return `[${label}](${href})`;
@@ -76,7 +77,7 @@ type ChatInputLiveVoice = Pick<
   LiveVoiceController,
   'phase' | 'muted' | 'stop' | 'toggleMute'
 > & {
-  availability: LiveVoiceAvailabilityResponse_unstable | null;
+  availability: LiveVoiceAvailabilityResponseUnstable | null;
   activeInAnotherSession: boolean;
   start: () => Promise<void>;
 };
@@ -108,7 +109,23 @@ const getContextAlertType = (totalTokens: number, tokenLimit: number): AlertType
 // Manual compact trigger message - must match backend constant
 const MANUAL_COMPACT_TRIGGER = '/compact';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly "dictationError": NoMessageValues;
+  readonly "removeImage": NoMessageValues;
+  readonly "removeFile": NoMessageValues;
+  readonly "unknownType": NoMessageValues;
+  readonly "contextWindow": NoMessageValues;
+  readonly "waitingForImages": NoMessageValues;
+  readonly "processingDroppedFiles": NoMessageValues;
+  readonly "recording": NoMessageValues;
+  readonly "transcribing": NoMessageValues;
+  readonly "restartingSession": NoMessageValues;
+  readonly "typeMessage": NoMessageValues;
+  readonly "send": NoMessageValues;
+  readonly "waitingForCancellation": NoMessageValues;
+  readonly "failedToReadImage": NoMessageValues;
+  readonly "viewEditRecipe": NoMessageValues;
+}>({
   dictationError: {
     id: 'chatInput.dictationError',
     defaultMessage: 'Dictation Error',

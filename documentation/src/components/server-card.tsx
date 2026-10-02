@@ -1,10 +1,10 @@
 import { Star, Download, Terminal, ChevronRight, Info } from "lucide-react";
-import type { MCPServer } from "@site/src/types/server";
-import Link from "@docusaurus/Link";
+import type { MCPServer } from "~/types/server";
+import Link from "~/components/Link";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { getGooseInstallLink } from "@site/src/utils/install-links";
-import { fetchGitHubStars, formatStarCount } from "@site/src/utils/github-stars";
+import { getGooseInstallLink } from "~/utils/install-links";
+import { fetchGitHubStars, formatStarCount } from "~/utils/github-stars";
 
 const getExtensionCommand = (server: MCPServer): string => {
   switch (server.type) {

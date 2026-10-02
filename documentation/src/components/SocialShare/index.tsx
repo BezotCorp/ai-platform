@@ -1,9 +1,9 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Share2, Link, Check } from 'lucide-react';
-import { IconTwitter } from '@site/src/components/icons/twitter';
-import { IconLinkedIn } from '@site/src/components/icons/linkedin';
-import { IconFacebook } from '@site/src/components/icons/facebook';
-import { IconReddit } from '@site/src/components/icons/reddit';
+import { IconTwitter } from '~/components/icons/twitter';
+import { IconLinkedIn } from '~/components/icons/linkedin';
+import { IconFacebook } from '~/components/icons/facebook';
+import { IconReddit } from '~/components/icons/reddit';
 import styles from './styles.module.css';
 
 interface SocialShareProps {

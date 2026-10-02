@@ -2,10 +2,20 @@ import { useState } from 'react';
 import { Button } from '../ui/button';
 import PrivacyInfoModal from './PrivacyInfoModal';
 import { defineMessages, useIntl } from '../../i18n';
+import type { MessageValue, NoMessageValues } from 'react-intl';
 
 const LOCAL_PROVIDER = 'local';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly "localModelReady": NoMessageValues;
+  readonly "connectedTo": { readonly "providerName": MessageValue };
+  readonly "allSet": NoMessageValues;
+  readonly "privacyTitle": NoMessageValues;
+  readonly "privacyDescription": NoMessageValues;
+  readonly "learnMore": NoMessageValues;
+  readonly "shareUsageData": NoMessageValues;
+  readonly "getStarted": NoMessageValues;
+}>({
   localModelReady: {
     id: 'onboardingSuccess.localModelReady',
     defaultMessage: 'Local model ready',

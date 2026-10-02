@@ -13,8 +13,12 @@ import { Z_INDEX } from './constants';
 import { cn } from '../../utils';
 import { UserInput } from '../../types/message';
 import type { LiveVoiceController } from '../../liveVoice/useLiveVoice';
+import type { NoMessageValues } from 'react-intl';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly "openNavigation": NoMessageValues;
+  readonly "collapseNavigation": NoMessageValues;
+}>({
   openNavigation: {
     id: 'appLayout.openNavigation',
     defaultMessage: 'Open navigation',
@@ -45,7 +49,7 @@ const AppLayoutContent: React.FC<AppLayoutContentProps> = ({ activeSessions, liv
   const [isFullScreen, setIsFullScreen] = useState(false);
 
   useEffect(() => {
-    if (!safeIsMacOS) return;
+    if (!safeIsMacOS) return undefined;
     window.electron
       .getIsFullScreen()
       .then(setIsFullScreen)

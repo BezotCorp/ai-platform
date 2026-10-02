@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useConfig, type FixedExtensionEntry } from '../ConfigContext';
-import { toastService } from '../../toasts';
+import { toastService } from '../../toast_service';
 import { formatExtensionName } from '../settings/extensions/subcomponents/ExtensionList';
 import {
   getSessionExtensions as getAcpSessionExtensions,
@@ -15,8 +15,19 @@ import {
   toggleNextChatExtension,
   type NextChatExtensionDraft,
 } from '../../utils/nextChatExtensions';
+import type { MessageValue, NoMessageValues } from 'react-intl';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly "manageExtensions": NoMessageValues;
+  readonly "searchExtensions": NoMessageValues;
+  readonly "extensionsForNewChats": NoMessageValues;
+  readonly "extensionsForThisSession": NoMessageValues;
+  readonly "noExtensionsFound": NoMessageValues;
+  readonly "noExtensionsAvailable": NoMessageValues;
+  readonly "extensionUpdated": NoMessageValues;
+  readonly "extensionWillBeEnabled": { readonly "name": MessageValue };
+  readonly "extensionWillBeDisabled": { readonly "name": MessageValue };
+}>({
   manageExtensions: {
     id: 'bottomMenuExtensionSelection.manageExtensions',
     defaultMessage: 'manage extensions',
@@ -253,7 +264,7 @@ function DraftExtensionsMenu({
         ({
           ...extension,
           enabled: isNextChatExtensionSelected(extension, visibleDraft),
-        }) as FixedExtensionEntry
+        })
     );
   }, [allExtensions, visibleDraft]);
 

@@ -43,6 +43,7 @@ We are replacing the legacy agent loop in `crates/goose/src/agents/agent.rs` wit
 Until the migration is complete, changes to agent-loop behavior must be implemented and tested in both paths. When reviewing code, check whether a change to either path also applies to the other and flag missing parity.
 
 ## Setup
+
 ```bash
 source bin/activate-hermit
 cargo build
@@ -51,13 +52,15 @@ cargo build
 ## Commands
 
 ### Build
+
 ```bash
 cargo build                   # debug
-cargo build --release         # release  
+cargo build --release         # release
 just release-binary           # release binary
 ```
 
 ### Test
+
 ```bash
 cargo test                   # all tests
 cargo test -p goose          # specific crate
@@ -66,12 +69,14 @@ just record-mcp-tests        # record MCP
 ```
 
 ### Lint/Format
+
 ```bash
 cargo fmt
 cargo clippy --all-targets -- -D warnings
 ```
 
 ### UI
+
 ```bash
 just run-ui                  # start desktop
 cd ui/desktop && pnpm run typecheck
@@ -79,7 +84,8 @@ cd ui/desktop && pnpm test   # test UI
 ```
 
 ## Structure
-```
+
+```text
 crates/       # Rust workspace members — see root Cargo.toml (`members = ["crates/*"]`)
 ui/desktop/   # Electron app
 ui/text/      # deprecated ACP TUI (see ui/text/README.md)
@@ -88,14 +94,16 @@ ui/text/      # deprecated ACP TUI (see ui/text/README.md)
 Some workspace crates, including those that make up the GDK, are published to crates.io and expose public APIs. The authoritative list of GDK crates is the `release = true`, `version_group = "gdk"` package set in `release-plz.toml`, which drives the GDK release; run `python3 crates/goose-sdk/scripts/gdk-release.py crates` to print it. Other crates, such as `goose` and `goose-cli`, do not provide stable public APIs; their `pub` items are internal implementation details and may change without notice.
 
 ## Development Loop
+
 ```bash
 # 1. source bin/activate-hermit
 # 2. Make changes
 # 3. cargo fmt
 ```
 
-### Run these only if the user has asked you to build/test your changes:
-```
+### Run these only if the user has asked you to build/test your changes
+
+```text
 # 1. cargo build
 # 2. cargo test -p <crate>
 # 3. cargo clippy --all-targets -- -D warnings
@@ -132,6 +140,7 @@ Some workspace crates, including those that make up the GDK, are published to cr
 - Never: Overwrite a live binary in place (e.g. `cp`/`fs.copyFileSync` onto an existing executable) - unlink or atomic-rename the destination first, otherwise macOS SIGKILLs running processes with "Code Signature Invalid"
 
 ## Entry Points
+
 - CLI: crates/goose-cli/src/main.rs
 - UI: ui/desktop/src/main.ts
 - Agent: crates/goose/src/agents/agent.rs

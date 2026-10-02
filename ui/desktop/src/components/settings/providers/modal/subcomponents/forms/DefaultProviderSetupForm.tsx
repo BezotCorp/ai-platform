@@ -5,8 +5,20 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../../../..
 import type { ConfigKey, ProviderDetails } from '../../../../../../types/providers';
 import { configLabels, configPlaceholders } from '../../../../../../utils/configUtils';
 import { defineMessages, useIntl } from '../../../../../../i18n';
+import type { MessageValue, NoMessageValues } from 'react-intl';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly "loadingConfig": NoMessageValues;
+  readonly "noConfigParameters": NoMessageValues;
+  readonly "apiKeyPlaceholder": NoMessageValues;
+  readonly "apiHostPlaceholder": NoMessageValues;
+  readonly "modelsPlaceholder": NoMessageValues;
+  readonly "apiKeyLabel": NoMessageValues;
+  readonly "apiHostLabel": NoMessageValues;
+  readonly "modelsLabel": NoMessageValues;
+  readonly "showOptions": { readonly "count": MessageValue };
+  readonly "hideOptions": { readonly "count": MessageValue };
+}>({
   loadingConfig: {
     id: 'defaultProviderSetupForm.loadingConfig',
     defaultMessage: 'Loading configuration values...',

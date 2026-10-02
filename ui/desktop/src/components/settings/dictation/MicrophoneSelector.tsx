@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import type { JSX } from 'react';
 import { ChevronDown, Mic } from 'lucide-react';
 import { Button } from '../../ui/button';
 import {
@@ -9,8 +10,20 @@ import {
   DropdownMenuTrigger,
 } from '../../ui/dropdown-menu';
 import { defineMessages, useIntl } from '../../../i18n';
+import type { MessageValue, NoMessageValues } from 'react-intl';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly microphone: NoMessageValues;
+  readonly grantAccessDescription: NoMessageValues;
+  readonly grantAccess: NoMessageValues;
+  readonly chooseDescription: NoMessageValues;
+  readonly systemDefault: NoMessageValues;
+  readonly selectedMicrophone: NoMessageValues;
+  readonly microphoneLabel: { readonly index: MessageValue };
+  readonly stop: NoMessageValues;
+  readonly test: NoMessageValues;
+  readonly speakToTest: { readonly seconds: MessageValue };
+}>({
   microphone: {
     id: 'microphoneSelector.microphone',
     defaultMessage: 'Microphone',
@@ -63,24 +76,26 @@ const TEST_DURATION_MS = 5000;
 export const MicrophoneSelector = ({
   selectedDeviceId,
   onDeviceChange,
-}: MicrophoneSelectorProps) => {
-  const intl = useIntl();
+}: MicrophoneSelectorProps): JSX.Element => {
+  const intl: ReturnType<typeof useIntl> = useIntl();
   const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
-  const [hasPermission, setHasPermission] = useState(false);
-  const [isTesting, setIsTesting] = useState(false);
-  const [vuLevel, setVuLevel] = useState(0);
+  const [hasPermission, setHasPermission] = useState<boolean>(false);
+  const [isTesting, setIsTesting] = useState<boolean>(false);
+  const [vuLevel, setVuLevel] = useState<number>(0);
 
   const testStreamRef = useRef<MediaStream | null>(null);
   const testCtxRef = useRef<AudioContext | null>(null);
   const rafRef = useRef<number>(0);
   const testTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const testGenerationRef = useRef(0);
+  const testGenerationRef = useRef<number>(0);
 
-  const enumerate = useCallback(async () => {
+  const enumerate = useCallback(async (): Promise<void> => {
     try {
-      const all = await navigator.mediaDevices.enumerateDevices();
-      const inputs = all.filter((d) => d.kind === 'audioinput');
-      setHasPermission(inputs.some((d) => d.label !== ''));
+      const all: MediaDeviceInfo[] = await navigator.mediaDevices.enumerateDevices();
+      const inputs: MediaDeviceInfo[] = all.filter(
+        (device: MediaDeviceInfo): boolean => device.kind === 'audioinput'
+      );
+      setHasPermission(inputs.some((device: MediaDeviceInfo): boolean => device.label !== ''));
       setDevices(inputs);
     } catch (e) {
       console.error('Failed to enumerate devices:', e);
@@ -88,38 +103,40 @@ export const MicrophoneSelector = ({
   }, []);
 
   useEffect(() => {
-    enumerate();
+    queueMicrotask((): void => {
+      void enumerate();
+    });
     navigator.mediaDevices.addEventListener('devicechange', enumerate);
     return () => navigator.mediaDevices.removeEventListener('devicechange', enumerate);
   }, [enumerate]);
 
-  const requestPermission = async () => {
+  const requestPermission = async (): Promise<void> => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      stream.getTracks().forEach((t) => t.stop());
+      const stream: MediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream.getTracks().forEach((track: MediaStreamTrack): void => track.stop());
       await enumerate();
     } catch (e) {
       console.error('Microphone permission denied:', e);
     }
   };
 
-  const stopTest = useCallback(() => {
+  const stopTest = useCallback((): void => {
     testGenerationRef.current += 1;
     if (rafRef.current) cancelAnimationFrame(rafRef.current);
     rafRef.current = 0;
     if (testTimerRef.current) clearTimeout(testTimerRef.current);
     testTimerRef.current = null;
-    testCtxRef.current?.close();
+    void testCtxRef.current?.close();
     testCtxRef.current = null;
-    testStreamRef.current?.getTracks().forEach((t) => t.stop());
+    testStreamRef.current?.getTracks().forEach((track: MediaStreamTrack): void => track.stop());
     testStreamRef.current = null;
     setIsTesting(false);
     setVuLevel(0);
   }, []);
 
-  const startTest = async () => {
+  const startTest = async (): Promise<void> => {
     stopTest();
-    const generation = testGenerationRef.current;
+    const generation: number = testGenerationRef.current;
     setIsTesting(true);
 
     try {
@@ -132,38 +149,38 @@ export const MicrophoneSelector = ({
         constraints.deviceId = { exact: selectedDeviceId };
       }
 
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: constraints });
+      const stream: MediaStream = await navigator.mediaDevices.getUserMedia({ audio: constraints });
       if (testGenerationRef.current !== generation) {
-        stream.getTracks().forEach((track) => track.stop());
+        stream.getTracks().forEach((track: MediaStreamTrack): void => track.stop());
         return;
       }
       testStreamRef.current = stream;
 
-      const ctx = new AudioContext();
+      const ctx: AudioContext = new AudioContext();
       testCtxRef.current = ctx;
-      const source = ctx.createMediaStreamSource(stream);
-      const analyser = ctx.createAnalyser();
+      const source: MediaStreamAudioSourceNode = ctx.createMediaStreamSource(stream);
+      const analyser: AnalyserNode = ctx.createAnalyser();
       analyser.fftSize = 256;
       source.connect(analyser);
 
       const dataArray = new Uint8Array(analyser.frequencyBinCount);
 
-      const poll = () => {
+      const poll = (): void => {
         if (testGenerationRef.current !== generation) return;
 
         analyser.getByteTimeDomainData(dataArray);
-        let sum = 0;
-        for (let i = 0; i < dataArray.length; i++) {
-          const v = (dataArray[i] - 128) / 128;
+        let sum: number = 0;
+        for (let i: number = 0; i < dataArray.length; i += 1) {
+          const v: number = (dataArray[i] - 128) / 128;
           sum += v * v;
         }
-        const rms = Math.sqrt(sum / dataArray.length);
+        const rms: number = Math.sqrt(sum / dataArray.length);
         setVuLevel(Math.min(1, rms * 5));
         rafRef.current = requestAnimationFrame(poll);
       };
 
       rafRef.current = requestAnimationFrame(poll);
-      testTimerRef.current = setTimeout(() => {
+      testTimerRef.current = setTimeout((): void => {
         if (testGenerationRef.current === generation) stopTest();
       }, TEST_DURATION_MS);
     } catch (e) {
@@ -184,7 +201,9 @@ export const MicrophoneSelector = ({
 
   const selectedLabel = (): string => {
     if (!selectedDeviceId) return intl.formatMessage(i18n.systemDefault);
-    const device = devices.find((d) => d.deviceId === selectedDeviceId);
+    const device: MediaDeviceInfo | undefined = devices.find(
+      (mediaDevice: MediaDeviceInfo): boolean => mediaDevice.deviceId === selectedDeviceId
+    );
     if (device) return device.label || intl.formatMessage(i18n.selectedMicrophone);
     return intl.formatMessage(i18n.systemDefault);
   };
@@ -198,7 +217,13 @@ export const MicrophoneSelector = ({
             {intl.formatMessage(i18n.grantAccessDescription)}
           </p>
         </div>
-        <Button variant="outline" size="sm" onClick={requestPermission}>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={(): void => {
+            void requestPermission();
+          }}
+        >
           {intl.formatMessage(i18n.grantAccess)}
         </Button>
       </div>
@@ -223,14 +248,16 @@ export const MicrophoneSelector = ({
             <DropdownMenuContent align="end" className="w-max min-w-[250px] max-w-[350px]">
               <DropdownMenuRadioGroup
                 value={selectedDeviceId ?? 'system_default'}
-                onValueChange={(v) => onDeviceChange(v === 'system_default' ? null : v)}
+                onValueChange={(value: string): void =>
+                  onDeviceChange(value === 'system_default' ? null : value)
+                }
               >
                 <DropdownMenuRadioItem value="system_default">
                   {intl.formatMessage(i18n.systemDefault)}
                 </DropdownMenuRadioItem>
-                {devices.map((device, i) => (
+                {devices.map((device: MediaDeviceInfo, index: number) => (
                   <DropdownMenuRadioItem key={device.deviceId} value={device.deviceId}>
-                    <span className="truncate">{getDeviceLabel(device, i)}</span>
+                    <span className="truncate">{getDeviceLabel(device, index)}</span>
                   </DropdownMenuRadioItem>
                 ))}
               </DropdownMenuRadioGroup>
@@ -239,7 +266,14 @@ export const MicrophoneSelector = ({
           <Button
             variant="outline"
             size="sm"
-            onClick={isTesting ? stopTest : startTest}
+            onClick={(): void => {
+              if (isTesting) {
+                stopTest();
+                return;
+              }
+
+              void startTest();
+            }}
             className="shrink-0"
           >
             <Mic className="w-4 h-4 mr-1" />

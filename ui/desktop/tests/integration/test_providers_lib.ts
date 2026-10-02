@@ -1,3 +1,5 @@
+import { fileURLToPath } from "node:url";
+const moduleDir = path.dirname(fileURLToPath(import.meta.url));
 /**
  * Shared library for provider smoke tests.
  *
@@ -187,7 +189,7 @@ function stripQuotes(s: string): string {
 
 function loadDotenv(): void {
   // Resolve .env from the repository root (two levels up from ui/desktop).
-  const repoRoot = path.resolve(__dirname, '..', '..', '..', '..');
+  const repoRoot = path.resolve(moduleDir, '..', '..', '..', '..');
   const envPath = path.join(repoRoot, '.env');
   if (!fs.existsSync(envPath)) return;
   const lines = fs.readFileSync(envPath, 'utf-8').split('\n');

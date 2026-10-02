@@ -21,11 +21,11 @@ import {
   type AppInfo,
   type RequestHandlerExtra,
   type SandboxConfig,
+  type McpUiHostContext,
 } from '@mcp-ui/client';
 import type {
   McpUiDisplayMode,
   McpUiHostCapabilities,
-  McpUiHostContext,
   McpUiResourceCsp,
   McpUiResourcePermissions,
   McpUiSizeChangedNotification,
@@ -61,8 +61,18 @@ import {
   pipPanelStyle,
   usePipWindow,
 } from './PipWindow';
+import type { NoMessageValues } from 'react-intl';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly "appFallbackTitle": NoMessageValues;
+  readonly "pictureInPicture": NoMessageValues;
+  readonly "exitFullscreenTitle": NoMessageValues;
+  readonly "exitFullscreen": NoMessageValues;
+  readonly "fullscreen": NoMessageValues;
+  readonly "invalidUrl": NoMessageValues;
+  readonly "failedToLoadResource": NoMessageValues;
+  readonly "failedToInitSandbox": NoMessageValues;
+}>({
   appFallbackTitle: {
     id: 'mcpAppRenderer.appFallbackTitle',
     defaultMessage: 'App',
@@ -263,7 +273,7 @@ function GooseAppFrame({
 
   useEffect(() => {
     const container = containerRef.current;
-    if (!container) return;
+    if (!container) return undefined;
 
     setConnected(false);
     setInitialized(false);
@@ -372,7 +382,11 @@ function GooseAppFrame({
       if (bridgeRef.current === bridge) {
         bridgeRef.current = null;
       }
-      bridge.close();
+      void bridge.close().catch((error) => {
+        onErrorRef.current?.(
+          error instanceof Error ? error : new Error(String(error))
+        );
+      });
       iframe.remove();
     };
   }, [sandbox.permissions, sandbox.url.href]);
@@ -506,6 +520,8 @@ function appReducer(state: AppState, action: AppAction): AppState {
     case 'ERROR':
       return { status: 'error', message: action.message, html, meta };
   }
+
+  return state;
 }
 
 export default function McpAppRenderer({
@@ -557,11 +573,12 @@ export default function McpAppRenderer({
   useEffect(() => {
     if (!sessionId || !toolName || toolDefRef.current) {
       if (toolDefRef.current) setMcpTool(toolDefRef.current);
-      return;
+      return undefined;
     }
 
     let cancelled = false;
-    (async () => {
+
+    void (async () => {
       const tools = await getCachedTools(sessionId, extensionName || undefined);
       if (cancelled || !tools) return;
 
@@ -576,7 +593,9 @@ export default function McpAppRenderer({
         toolDefRef.current = tool;
         setMcpTool(tool);
       }
-    })();
+    })().catch((error) => {
+      console.error('[McpAppRenderer] Failed to load tool definition:', error);
+    });
 
     return () => {
       cancelled = true;
@@ -630,13 +649,13 @@ export default function McpAppRenderer({
   // finished loading yet, causing a transient 500). Cached HTML skips retries since
   // the app can render immediately with the cached version.
   useEffect(() => {
-    if (!sessionId) return;
+    if (!sessionId) return undefined;
 
     // On StrictMode remount, replay the cached result instead of re-fetching.
     if (fetchedDataRef.current) {
       const { html: cachedResult, meta: cachedMeta } = fetchedDataRef.current;
       dispatch({ type: 'RESOURCE_LOADED', html: cachedResult, meta: cachedMeta });
-      return;
+      return undefined;
     }
 
     const MAX_RETRIES = 5;
@@ -708,7 +727,15 @@ export default function McpAppRenderer({
       }
     };
 
-    fetchResourceData();
+    void fetchResourceData().catch((error) => {
+      console.error('[McpAppRenderer] Unexpected resource fetch failure:', error);
+      if (!cancelled) {
+        dispatch({
+          type: 'RESOURCE_FAILED',
+          message: errorMessage(error, intl.formatMessage(i18n.failedToLoadResource)),
+        });
+      }
+    });
 
     return () => {
       cancelled = true;
@@ -720,22 +747,43 @@ export default function McpAppRenderer({
   // (which would destroy iframe state and cause a visible flicker).
   const pendingCsp = state.status === 'loading_sandbox' ? state.meta.csp : null;
   useEffect(() => {
-    if (state.status !== 'loading_sandbox') return;
+    if (state.status !== 'loading_sandbox') return undefined;
 
     if (sandboxUrlRef.current) {
       const { url, csp } = sandboxUrlRef.current;
       dispatch({ type: 'SANDBOX_READY', sandboxUrl: url, sandboxCsp: csp });
-      return;
+      return undefined;
     }
 
-    fetchMcpAppProxyUrl(pendingCsp).then((url) => {
-      if (url) {
-        sandboxUrlRef.current = { url, csp: pendingCsp };
-        dispatch({ type: 'SANDBOX_READY', sandboxUrl: url, sandboxCsp: pendingCsp });
-      } else {
-        dispatch({ type: 'SANDBOX_FAILED', message: intl.formatMessage(i18n.failedToInitSandbox) });
-      }
-    });
+    let cancelled = false;
+
+    void fetchMcpAppProxyUrl(pendingCsp)
+      .then((url) => {
+        if (cancelled) return;
+
+        if (url) {
+          sandboxUrlRef.current = { url, csp: pendingCsp };
+          dispatch({ type: 'SANDBOX_READY', sandboxUrl: url, sandboxCsp: pendingCsp });
+        } else {
+          dispatch({
+            type: 'SANDBOX_FAILED',
+            message: intl.formatMessage(i18n.failedToInitSandbox),
+          });
+        }
+      })
+      .catch((error) => {
+        if (cancelled) return;
+
+        console.error('[McpAppRenderer] Failed to initialize sandbox:', error);
+        dispatch({
+          type: 'SANDBOX_FAILED',
+          message: errorMessage(error, intl.formatMessage(i18n.failedToInitSandbox)),
+        });
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, [state.status, pendingCsp, intl]);
 
   const handleOpenLink = useCallback(
@@ -819,7 +867,7 @@ export default function McpAppRenderer({
     const wasInline = wasInlineRef.current;
     wasInlineRef.current = isInline;
     // Only suppress when transitioning *back* to inline, not on initial mount.
-    if (!isInline || wasInline) return;
+    if (!isInline || wasInline) return undefined;
     inlineTransitionRef.current = true;
     const timer = setTimeout(() => {
       inlineTransitionRef.current = false;
@@ -841,7 +889,7 @@ export default function McpAppRenderer({
   useEffect(() => {
     const container = containerRef.current;
     const content = contentRef.current;
-    if (!container || !content) return;
+    if (!container || !content) return undefined;
 
     const observer = new ResizeObserver((entries) => {
       for (const entry of entries) {

@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, type RefObject } from 'react';
+import { useEffect, useState, useRef, type RefObject, ReactElement } from 'react';
 import { IpcRendererEvent } from 'electron';
 import { HashRouter, Routes, Route, useNavigate, useLocation, useSearchParams } from 'react-router';
 import { ErrorUI } from './components/ErrorBoundary';
@@ -21,11 +21,6 @@ import { ChatType } from './types/chat';
 import Hub from './components/Hub';
 import { UserInput } from './types/message';
 
-interface PairRouteState {
-  resumeSessionId?: string;
-  initialMessage?: UserInput;
-  noAutoSubmit?: boolean;
-}
 import SettingsView, { SettingsViewOptions } from './components/settings/SettingsView';
 import SessionsView from './components/sessions/SessionsView';
 import SchedulesView from './components/schedule/SchedulesView';
@@ -54,13 +49,92 @@ import { getInitialWorkingDir } from './utils/workingDir';
 import { usePageViewTracking } from './hooks/useAnalytics';
 import { trackErrorWithContext } from './utils/analytics';
 import { AppEvents } from './constants/events';
-import { registerPlatformEventHandlers } from './utils/platform_events';
+import { registerPlatformEventHandlers } from './utils/platformEvents';
 import { reconnectAcpAfterSystemResume } from './acp/acpConnection';
 import { useLiveVoice, type LiveVoiceController } from './liveVoice/useLiveVoice';
+import { PairRouteState } from './pairRouteState';
 
 function PageViewTracker() {
   usePageViewTracking();
   return null;
+}
+
+function runNavigation(navigation: void | Promise<void>): void {
+  void Promise.resolve(navigation).catch((error) => {
+    console.error('Navigation failed:', errorMessage(error));
+  });
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+function isUserInput(value: unknown): value is UserInput {
+  if (!isRecord(value) || typeof value.msg !== 'string' || !Array.isArray(value.images)) {
+    return false;
+  }
+
+  return value.images.every(
+    (image) =>
+      isRecord(image) &&
+      typeof image.data === 'string' &&
+      typeof image.mimeType === 'string'
+  );
+}
+
+function activeSessionDetailFromEvent(event: Event): {
+  sessionId: string;
+  initialMessage?: UserInput;
+  noAutoSubmit?: boolean;
+} | null {
+  if (!(event instanceof CustomEvent)) {
+    return null;
+  }
+
+  const detail: unknown = event.detail;
+  if (!isRecord(detail) || typeof detail.sessionId !== 'string') {
+    return null;
+  }
+
+  const initialMessage =
+    detail.initialMessage === undefined
+      ? undefined
+      : isUserInput(detail.initialMessage)
+        ? detail.initialMessage
+        : null;
+
+  if (initialMessage === null) {
+    return null;
+  }
+
+  const noAutoSubmit =
+    detail.noAutoSubmit === undefined
+      ? undefined
+      : typeof detail.noAutoSubmit === 'boolean'
+        ? detail.noAutoSubmit
+        : null;
+
+  if (noAutoSubmit === null) {
+    return null;
+  }
+
+  return {
+    sessionId: detail.sessionId,
+    ...(initialMessage !== undefined ? { initialMessage } : {}),
+    ...(noAutoSubmit !== undefined ? { noAutoSubmit } : {}),
+  };
+}
+
+function sessionIdFromEvent(event: Event): string | null {
+  if (!(event instanceof CustomEvent)) {
+    return null;
+  }
+
+  const detail: unknown = event.detail;
+
+  return isRecord(detail) && typeof detail.sessionId === 'string'
+    ? detail.sessionId
+    : null;
 }
 
 // Route Components
@@ -106,8 +180,18 @@ export const PairRouteWrapper = ({
   const navigate = useNavigate();
 
   const resumeSessionId = searchParams.get('resumeSessionId') ?? undefined;
-  const recipeDeeplinkFromConfig = window.appConfig?.get('recipeDeeplink') as string | undefined;
-  const recipeIdFromConfig = window.appConfig?.get('recipeId') as string | undefined;
+  const recipeDeeplinkConfigValue = window.appConfig?.get('recipeDeeplink');
+  const recipeIdConfigValue = window.appConfig?.get('recipeId');
+
+  const recipeDeeplinkFromConfig =
+    typeof recipeDeeplinkConfigValue === 'string'
+      ? recipeDeeplinkConfigValue
+      : undefined;
+
+  const recipeIdFromConfig =
+    typeof recipeIdConfigValue === 'string'
+      ? recipeIdConfigValue
+      : undefined;
   const initialMessage = routeState.initialMessage;
   const noAutoSubmit = routeState.noAutoSubmit;
 
@@ -120,7 +204,7 @@ export const PairRouteWrapper = ({
     ) {
       isCreatingSessionRef.current = true;
 
-      (async () => {
+      void (async () => {
         try {
           const newSession = await createSession(getInitialWorkingDir(), {
             recipeDeeplink: recipeDeeplinkFromConfig,
@@ -145,12 +229,12 @@ export const PairRouteWrapper = ({
           });
         } catch (error) {
           if (isRecipeDeclined(error) || isRecipeParamsCancelled(error)) {
-            navigate('/');
+            runNavigation(navigate('/'));
             return;
           }
           if (isRecipeParameterScopesUnsupported(error)) {
             toast.error(error.message);
-            navigate('/');
+            runNavigation(navigate('/'));
             return;
           }
           console.error('Failed to create session:', error);
@@ -210,9 +294,9 @@ const SettingsRoute = () => {
 
   const closeSettings = () => {
     if (location.key === 'default') {
-      navigate('/');
+      runNavigation(navigate('/'));
     } else {
-      navigate(-1);
+      runNavigation(navigate(-1));
     }
   };
 
@@ -225,7 +309,7 @@ const SessionsRoute = () => {
 
 const SchedulesRoute = () => {
   const navigate = useNavigate();
-  return <SchedulesView onClose={() => navigate('/')} />;
+  return <SchedulesView onClose={() => runNavigation(navigate('/'))} />;
 };
 
 const RecipesRoute = () => {
@@ -236,40 +320,40 @@ const SkillsRoute = () => {
   return <SkillsView />;
 };
 
-const PermissionRoute = () => {
+const PermissionRoute = (): ReactElement => {
   const location = useLocation();
   const navigate = useNavigate();
-  const parentView = location.state?.parentView as View;
-  const parentViewOptions = location.state?.parentViewOptions as ViewOptions;
+
+  const parentView: View | undefined = location.state?.parentView;
+  const parentViewOptions: ViewOptions | undefined = location.state?.parentViewOptions;
 
   return (
     <PermissionSettingsView
-      onClose={() => {
-        // Navigate back to parent view with options
+      onClose={(): void => {
         switch (parentView) {
           case 'chat':
-            navigate('/');
+            runNavigation(navigate('/'));
             break;
           case 'pair':
-            navigate('/pair');
+            runNavigation(navigate('/pair'));
             break;
           case 'settings':
-            navigate('/settings', { state: parentViewOptions });
+            runNavigation(navigate('/settings', { state: parentViewOptions }));
             break;
           case 'sessions':
-            navigate('/sessions');
+            runNavigation(navigate('/sessions'));
             break;
           case 'schedules':
-            navigate('/schedules');
+            runNavigation(navigate('/schedules'));
             break;
           case 'recipes':
-            navigate('/recipes');
+            runNavigation(navigate('/recipes'));
             break;
           case 'skills':
-            navigate('/skills');
+            runNavigation(navigate('/skills'));
             break;
           default:
-            navigate('/');
+            runNavigation(navigate('/'));
         }
       }}
     />
@@ -282,9 +366,9 @@ const ConfigureProvidersRoute = () => {
 
   const closeProviderSettings = () => {
     if (location.key === 'default') {
-      navigate('/settings', { replace: true, state: { section: 'models' } });
+      runNavigation(navigate('/settings', { replace: true, state: { section: 'models' } }));
     } else {
-      navigate(-1);
+      runNavigation(navigate(-1));
     }
   };
 
@@ -307,20 +391,20 @@ const ExtensionsRoute = () => {
 
   return (
     <ExtensionsView
-      onClose={() => navigate(-1)}
+      onClose={() => runNavigation(navigate(-1))}
       setView={(view, options) => {
         switch (view) {
           case 'chat':
-            navigate('/');
+            runNavigation(navigate('/'));
             break;
           case 'pair':
-            navigate('/pair', { state: options });
+            runNavigation(navigate('/pair', { state: options }));
             break;
           case 'settings':
-            navigate('/settings', { state: options });
+            runNavigation(navigate('/settings', { state: options }));
             break;
           default:
-            navigate('/');
+            runNavigation(navigate('/'));
         }
       }}
       viewOptions={viewOptions}
@@ -355,9 +439,9 @@ export function AppInner() {
   // `ChatSessionsContainer` and keep their text in local state. Its unsent input lives
   // here so it outlives that unmount, and in a ref rather than state because nothing
   // above the outlet has to render on a keystroke.
-  const hubDraftRef = useRef('');
+  const hubDraftRef: RefObject<string> = useRef<string>('');
 
-  const MAX_ACTIVE_SESSIONS = 10;
+  const MAX_ACTIVE_SESSIONS: number = 10;
 
   const [activeSessions, setActiveSessions] = useState<
     Array<{ sessionId: string; initialMessage?: UserInput; noAutoSubmit?: boolean }>
@@ -365,13 +449,13 @@ export function AppInner() {
 
   useEffect(() => {
     const handleAddActiveSession = (event: Event) => {
-      const { sessionId, initialMessage, noAutoSubmit } = (
-        event as CustomEvent<{
-          sessionId: string;
-          initialMessage?: UserInput;
-          noAutoSubmit?: boolean;
-        }>
-      ).detail;
+      const detail = activeSessionDetailFromEvent(event);
+      if (!detail) {
+        console.error('Ignoring invalid active-session event payload');
+        return;
+      }
+
+      const { sessionId, initialMessage, noAutoSubmit } = detail;
 
       setActiveSessions((prev) => {
         const existingIndex = prev.findIndex((s) => s.sessionId === sessionId);
@@ -393,7 +477,11 @@ export function AppInner() {
     };
 
     const handleClearInitialMessage = (event: Event) => {
-      const { sessionId } = (event as CustomEvent<{ sessionId: string }>).detail;
+      const sessionId = sessionIdFromEvent(event);
+      if (!sessionId) {
+        console.error('Ignoring invalid clear-initial-message event payload');
+        return;
+      }
 
       setActiveSessions((prev) => {
         return prev.map((session) => {
@@ -406,7 +494,11 @@ export function AppInner() {
     };
 
     const handleSessionDeleted = (event: Event) => {
-      const { sessionId } = (event as CustomEvent<{ sessionId: string }>).detail;
+      const sessionId = sessionIdFromEvent(event);
+      if (!sessionId) {
+        console.error('Ignoring invalid session-deleted event payload');
+        return;
+      }
 
       setActiveSessions((prev) => {
         return prev.filter((session) => session.sessionId !== sessionId);
@@ -476,8 +568,10 @@ export function AppInner() {
   useEffect(() => {
     const preventDefaults = (e: globalThis.DragEvent) => {
       // Only prevent default if we're not over a designated drop zone
-      const target = e.target as HTMLElement;
-      const isOverDropZone = target.closest('[data-drop-zone="true"]') !== null;
+      const target = e.target;
+      const isOverDropZone =
+        target instanceof Element &&
+        target.closest('[data-drop-zone="true"]') !== null;
 
       if (!isOverDropZone) {
         e.preventDefault();
@@ -493,8 +587,10 @@ export function AppInner() {
 
     const handleDrop = (e: globalThis.DragEvent) => {
       // Only prevent default if we're not over a designated drop zone
-      const target = e.target as HTMLElement;
-      const isOverDropZone = target.closest('[data-drop-zone="true"]') !== null;
+      const target = e.target;
+      const isOverDropZone =
+        target instanceof Element &&
+        target.closest('[data-drop-zone="true"]') !== null;
 
       if (!isOverDropZone) {
         e.preventDefault();
@@ -518,9 +614,11 @@ export function AppInner() {
 
   useEffect(() => {
     const handleFatalError = (_event: IpcRendererEvent, ...args: unknown[]) => {
-      const errorMessage = args[0] as string;
-      console.error('Encountered a fatal error:', errorMessage);
-      setFatalError(errorMessage);
+      const fatalErrorMessage =
+        typeof args[0] === 'string' ? args[0] : errorMessage(args[0], 'Unknown fatal error');
+
+      console.error('Encountered a fatal error:', fatalErrorMessage);
+      setFatalError(fatalErrorMessage);
     };
     window.electron.on('fatal-error', handleFatalError);
     return () => {
@@ -529,14 +627,44 @@ export function AppInner() {
   }, []);
 
   useEffect(() => {
+    const isView = (value: unknown): value is View => {
+      if (typeof value !== 'string') return false;
+
+      switch (value) {
+        case 'chat':
+        case 'pair':
+        case 'settings':
+        case 'extensions':
+        case 'moreModels':
+        case 'configureProviders':
+        case 'configPage':
+        case 'ConfigureProviders':
+        case 'settingsV2':
+        case 'sessions':
+        case 'schedules':
+        case 'loading':
+        case 'recipes':
+        case 'skills':
+        case 'permission':
+          return true;
+        default:
+          return false;
+      }
+    };
+
     const handleSetView = (_event: IpcRendererEvent, ...args: unknown[]) => {
-      const newView = args[0] as View;
-      const section = args[1] as string | undefined;
+      const newView = args[0];
+      if (!isView(newView)) {
+        console.error('Ignoring invalid set-view payload:', newView);
+        return;
+      }
+
+      const section = typeof args[1] === 'string' ? args[1] : undefined;
 
       if (section && newView === 'settings') {
-        navigate(`/settings?section=${section}`);
+        runNavigation(navigate(`/settings?section=${section}`));
       } else {
-        navigate(`/${newView}`);
+        runNavigation(navigate(`/${newView}`));
       }
     };
 
@@ -546,7 +674,7 @@ export function AppInner() {
 
   useEffect(() => {
     const handleNewChat = (_event: IpcRendererEvent, ..._args: unknown[]) => {
-      navigate('/');
+      runNavigation(navigate('/'));
     };
 
     window.electron.on('new-chat', handleNewChat);
@@ -555,7 +683,10 @@ export function AppInner() {
 
   useEffect(() => {
     const handleFocusInput = (_event: IpcRendererEvent, ..._args: unknown[]) => {
-      const inputField = document.querySelector('input[type="text"], textarea') as HTMLInputElement;
+      const inputField =
+        document.querySelector<HTMLInputElement | HTMLTextAreaElement>(
+          'input[type="text"], textarea'
+        );
       if (inputField) {
         inputField.focus();
       }
@@ -570,22 +701,35 @@ export function AppInner() {
   const isProcessingRef = useRef(false);
 
   useEffect(() => {
-    const handleSetInitialMessage = async (_event: IpcRendererEvent, ...args: unknown[]) => {
-      const initialMessage = args[0] as string;
-      const options = (args[1] as { noAutoSubmit?: boolean } | undefined) || {};
+    const handleSetInitialMessage = (_event: IpcRendererEvent, ...args: unknown[]) => {
+      const initialMessage = args[0];
+      if (typeof initialMessage !== 'string' || !initialMessage || isProcessingRef.current) {
+        return;
+      }
 
-      if (initialMessage && !isProcessingRef.current) {
-        isProcessingRef.current = true;
+      const rawOptions = args[1];
+      const noAutoSubmit =
+        typeof rawOptions === 'object' &&
+        rawOptions !== null &&
+        'noAutoSubmit' in rawOptions &&
+        typeof rawOptions.noAutoSubmit === 'boolean'
+          ? rawOptions.noAutoSubmit
+          : undefined;
+
+      isProcessingRef.current = true;
+
+      runNavigation(
         navigate('/pair', {
           state: {
             initialMessage: { msg: initialMessage, images: [] },
-            noAutoSubmit: options.noAutoSubmit,
+            noAutoSubmit,
           },
-        });
-        setTimeout(() => {
-          isProcessingRef.current = false;
-        }, 1000);
-      }
+        })
+      );
+
+      setTimeout(() => {
+        isProcessingRef.current = false;
+      }, 1000);
     };
     window.electron.on('set-initial-message', handleSetInitialMessage);
     return () => {

@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 
-const crypto = require('node:crypto');
-const fs = require('node:fs');
-const path = require('node:path');
-const { macUpdateRequirements } = require('./mac-update-requirements');
+import * as crypto from 'node:crypto';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
+import { macUpdateRequirements } from './mac-update-requirements.js';
 
 function usage() {
   console.error(

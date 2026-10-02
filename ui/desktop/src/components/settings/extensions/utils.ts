@@ -72,7 +72,7 @@ export function extensionToFormData(extension: FixedExtensionEntry): ExtensionFo
     envVars.push(
       ...Object.entries(extension.envs).map(([key, value]) => ({
         key,
-        value: value as string,
+        value: value,
         isEdited: true, // We want to submit legacy values as secrets to migrate forward
       }))
     );
@@ -95,7 +95,7 @@ export function extensionToFormData(extension: FixedExtensionEntry): ExtensionFo
     headers.push(
       ...Object.entries(extension.headers).map(([key, value]) => ({
         key,
-        value: value as string,
+        value: value,
         isEdited: false, // Mark as not edited initially
       }))
     );

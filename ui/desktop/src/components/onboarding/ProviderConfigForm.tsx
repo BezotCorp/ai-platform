@@ -13,10 +13,22 @@ import { Button } from '../ui/button';
 import { ChevronRight, LogIn } from 'lucide-react';
 import { defineMessages, useIntl } from '../../i18n';
 import { errorMessage } from '../../utils/conversionUtils';
+import type { MessageValue, NoMessageValues } from 'react-intl';
 
 type OnConfigured = (name: string) => void | Promise<void>;
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly "browserWindowOpen": NoMessageValues;
+  readonly "deviceCodeFlowHint": NoMessageValues;
+  readonly "signingIn": NoMessageValues;
+  readonly "signInWith": { readonly "providerName": MessageValue };
+  readonly "noApiKey": NoMessageValues;
+  readonly "configuring": NoMessageValues;
+  readonly "continue": NoMessageValues;
+  readonly "deviceCodeVisit": NoMessageValues;
+  readonly "deviceCodeAndEnter": NoMessageValues;
+  readonly "deviceCodeCopy": NoMessageValues;
+}>({
   browserWindowOpen: {
     id: 'providerConfigForm.browserWindowOpen',
     defaultMessage: 'A browser window will open for you to complete the login.',

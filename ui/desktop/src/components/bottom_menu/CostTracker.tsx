@@ -1,16 +1,33 @@
 import { useState, useEffect } from 'react';
+import type { JSX } from 'react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/Tooltip';
-import { fetchCanonicalModelInfo, type CanonicalModelInfo } from '../../utils/canonical';
+import { fetchCanonicalModelInfo, type CanonicalModelInfo } from '../../utils/canonicalModelInfo';
 import { defineMessages, useIntl } from '../../i18n';
+import type { MessageValue } from 'react-intl';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly pricingUnavailable: { readonly model: MessageValue };
+  readonly costUnavailable: {
+    readonly inputTokens: MessageValue;
+    readonly model: MessageValue;
+    readonly outputTokens: MessageValue;
+  };
+  readonly totalSessionCost: { readonly cost: MessageValue };
+  readonly inputOutputTooltip: {
+    readonly inputCost: MessageValue;
+    readonly inputTokens: MessageValue;
+    readonly outputCost: MessageValue;
+    readonly outputTokens: MessageValue;
+  };
+}>({
   pricingUnavailable: {
     id: 'costTracker.pricingUnavailable',
     defaultMessage: 'Pricing data unavailable for {model}',
   },
   costUnavailable: {
     id: 'costTracker.costUnavailable',
-    defaultMessage: 'Cost data not available for {model} ({inputTokens} input, {outputTokens} output tokens)',
+    defaultMessage:
+      'Cost data not available for {model} ({inputTokens} input, {outputTokens} output tokens)',
   },
   totalSessionCost: {
     id: 'costTracker.totalSessionCost',
@@ -18,7 +35,8 @@ const i18n = defineMessages({
   },
   inputOutputTooltip: {
     id: 'costTracker.inputOutputTooltip',
-    defaultMessage: 'Input: {inputTokens} tokens ({inputCost}) | Output: {outputTokens} tokens ({outputCost})',
+    defaultMessage:
+      'Input: {inputTokens} tokens ({inputCost}) | Output: {outputTokens} tokens ({outputCost})',
   },
 });
 
@@ -36,24 +54,24 @@ export function CostTracker({
   accumulatedCost,
   model: currentModel,
   provider: currentProvider,
-}: CostTrackerProps) {
-  const intl = useIntl();
+}: CostTrackerProps): JSX.Element | null {
+  const intl: ReturnType<typeof useIntl> = useIntl();
   const [costInfo, setCostInfo] = useState<CanonicalModelInfo | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [showPricing, setShowPricing] = useState(true);
-  const [pricingFailed, setPricingFailed] = useState(false);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [showPricing, setShowPricing] = useState<boolean>(true);
+  const [pricingFailed, setPricingFailed] = useState<boolean>(false);
 
   // Check if pricing is enabled
   useEffect(() => {
-    const loadPricingSetting = async () => {
-      const enabled = await window.electron.getSetting('showPricing');
+    const loadPricingSetting = async (): Promise<void> => {
+      const enabled: boolean = await window.electron.getSetting('showPricing');
       setShowPricing(enabled);
     };
 
-    loadPricingSetting();
+    void loadPricingSetting();
 
-    const handlePricingChange = () => {
-      loadPricingSetting();
+    const handlePricingChange = (): void => {
+      void loadPricingSetting();
     };
 
     window.addEventListener('showPricingChanged', handlePricingChange);
@@ -61,7 +79,7 @@ export function CostTracker({
   }, []);
 
   useEffect(() => {
-    const loadCostInfo = async () => {
+    const loadCostInfo = async (): Promise<void> => {
       if (!currentModel || !currentProvider) {
         setIsLoading(false);
         return;
@@ -69,7 +87,10 @@ export function CostTracker({
 
       setIsLoading(true);
       try {
-        const costData = await fetchCanonicalModelInfo(currentProvider, currentModel);
+        const costData: CanonicalModelInfo | null = await fetchCanonicalModelInfo(
+          currentProvider,
+          currentModel
+        );
         if (costData) {
           setCostInfo(costData);
           setPricingFailed(false);
@@ -85,7 +106,7 @@ export function CostTracker({
       }
     };
 
-    loadCostInfo();
+    void loadCostInfo();
   }, [currentModel, currentProvider]);
 
   // Return null early if pricing is disabled
@@ -113,14 +134,13 @@ export function CostTracker({
     );
   }
 
-  const currency = costInfo?.currency || '$';
+  const currency: string = costInfo?.currency || '$';
 
   if (
     accumulatedCost == null &&
-    (!costInfo ||
-      (costInfo.inputTokenCost === undefined && costInfo.outputTokenCost === undefined))
+    (!costInfo || (costInfo.inputTokenCost === undefined && costInfo.outputTokenCost === undefined))
   ) {
-    const freeProviders = ['ollama', 'local', 'localhost'];
+    const freeProviders: string[] = ['ollama', 'local', 'localhost'];
     if (freeProviders.includes(currentProvider.toLowerCase())) {
       return (
         <div className="flex items-center justify-center h-full text-text-primary/70 transition-colors cursor-default translate-y-[1px]">
@@ -132,7 +152,7 @@ export function CostTracker({
     }
 
     // Otherwise show as unavailable
-    const getUnavailableTooltip = () => {
+    const getUnavailableTooltip = (): string => {
       if (pricingFailed) {
         return intl.formatMessage(i18n.pricingUnavailable, { model: currentModel });
       }
@@ -158,26 +178,31 @@ export function CostTracker({
     );
   }
 
-  const totalCost = calculateCost();
+  const totalCost: number = calculateCost();
 
   // Build tooltip content
   const getTooltipContent = (): string => {
     if (pricingFailed) {
-      return intl.formatMessage(i18n.pricingUnavailable, { model: `${currentProvider}/${currentModel}` });
+      return intl.formatMessage(i18n.pricingUnavailable, {
+        model: `${currentProvider}/${currentModel}`,
+      });
     }
 
     if (accumulatedCost != null) {
-      return intl.formatMessage(i18n.totalSessionCost, { cost: `${currency}${totalCost.toFixed(4)}` })
-        + `\n` + intl.formatMessage(i18n.inputOutputTooltip, {
-          inputTokens: inputTokens.toLocaleString(),
-          inputCost: `${currency}${((inputTokens * (costInfo?.inputTokenCost || 0)) / 1_000_000).toFixed(6)}`,
-          outputTokens: outputTokens.toLocaleString(),
-          outputCost: `${currency}${((outputTokens * (costInfo?.outputTokenCost || 0)) / 1_000_000).toFixed(6)}`,
-        });
+      const totalCostText: string = intl.formatMessage(i18n.totalSessionCost, {
+        cost: `${currency}${totalCost.toFixed(4)}`,
+      });
+      const tokenCostText: string = intl.formatMessage(i18n.inputOutputTooltip, {
+        inputTokens: inputTokens.toLocaleString(),
+        inputCost: `${currency}${((inputTokens * (costInfo?.inputTokenCost || 0)) / 1_000_000).toFixed(6)}`,
+        outputTokens: outputTokens.toLocaleString(),
+        outputCost: `${currency}${((outputTokens * (costInfo?.outputTokenCost || 0)) / 1_000_000).toFixed(6)}`,
+      });
+      return `${totalCostText}\n${tokenCostText}`;
     }
 
-    const inputCostStr = `${currency}${((inputTokens * (costInfo?.inputTokenCost || 0)) / 1_000_000).toFixed(6)}`;
-    const outputCostStr = `${currency}${((outputTokens * (costInfo?.outputTokenCost || 0)) / 1_000_000).toFixed(6)}`;
+    const inputCostStr: string = `${currency}${((inputTokens * (costInfo?.inputTokenCost || 0)) / 1_000_000).toFixed(6)}`;
+    const outputCostStr: string = `${currency}${((outputTokens * (costInfo?.outputTokenCost || 0)) / 1_000_000).toFixed(6)}`;
     return intl.formatMessage(i18n.inputOutputTooltip, {
       inputTokens: inputTokens.toLocaleString(),
       inputCost: inputCostStr,

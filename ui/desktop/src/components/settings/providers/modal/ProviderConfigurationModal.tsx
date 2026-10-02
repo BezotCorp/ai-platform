@@ -29,8 +29,36 @@ import { useProviderDeviceCode } from '../../../../hooks/useProviderDeviceCode';
 import AcpReadinessPanel from '../AcpReadinessPanel';
 import { defineMessages, useIntl } from '../../../../i18n';
 import HuggingFaceSignInPrompt from '../../auth/HuggingFaceSignInPrompt';
+import type { MessageTag, MessageValue, NoMessageValues } from 'react-intl';
 
-const i18n = defineMessages({
+const i18n = defineMessages<{
+  readonly "deleteConfigHeader": { readonly "providerName": MessageValue };
+  readonly "configureHeader": { readonly "providerName": MessageValue };
+  readonly "cannotDeleteActive": NoMessageValues;
+  readonly "deleteConfirmation": NoMessageValues;
+  readonly "oauthSignInDescription": { readonly "providerName": MessageValue };
+  readonly "addApiKeyDescription": NoMessageValues;
+  readonly "oauthLoginFailed": { readonly "error": MessageValue };
+  readonly "parameterRequired": { readonly "paramName": MessageValue };
+  readonly "errorTitle": NoMessageValues;
+  readonly "errorCheckingConfig": NoMessageValues;
+  readonly "checkConfigAgain": NoMessageValues;
+  readonly "goBack": NoMessageValues;
+  readonly "signingIn": NoMessageValues;
+  readonly "signInWith": { readonly "providerName": MessageValue };
+  readonly "browserWindowHint": NoMessageValues;
+  readonly "deviceCodeFlowHint": NoMessageValues;
+  readonly "externalSetupIntro": NoMessageValues;
+  readonly "chooseModel": NoMessageValues;
+  readonly "seeDocumentation": { readonly "link": MessageTag };
+  readonly "cancel": NoMessageValues;
+  readonly "removeConfiguration": NoMessageValues;
+  readonly "close": NoMessageValues;
+  readonly "huggingFaceOAuthDescription": NoMessageValues;
+  readonly "deviceCodeVisit": NoMessageValues;
+  readonly "deviceCodeAndEnter": NoMessageValues;
+  readonly "deviceCodeCopy": NoMessageValues;
+}>({
   deleteConfigHeader: {
     id: 'providerConfigurationModal.deleteConfigHeader',
     defaultMessage: 'Delete configuration for {providerName}',
