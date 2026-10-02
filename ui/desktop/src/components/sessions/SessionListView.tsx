@@ -23,7 +23,7 @@ import { ScrollArea } from '../ui/scroll-area';
 import { formatMessageTimestamp } from '../../utils/timeUtils';
 import { SearchView } from '../conversation/SearchView';
 import { MainPanelLayout } from '../Layout/MainPanelLayout';
-import { groupSessionsByDate, sessionActivityAt, type DateGroup } from '../../utils/dateGroup';
+import { groupSessionsByDate, type DateGroup } from '../../utils/dateGroup';
 import { errorMessage } from '../../utils/conversionUtils';
 import { Skeleton } from '../ui/skeleton';
 import { toast } from 'react-toastify';
@@ -608,7 +608,12 @@ const SessionListView: React.FC<SessionListViewProps> = React.memo(({ onSelectSe
     // Update state immediately for optimistic UI
     setSessions((prevSessions) =>
       prevSessions.map((s) =>
-        s.id === sessionId ? { ...s, name: newDescription, user_set_name: true } : s
+        s.id === sessionId
+          ? s.with({
+              name: newDescription,
+              userSetName: true,
+            })
+          : s
       )
     );
     window.dispatchEvent(
@@ -836,7 +841,7 @@ const SessionListView: React.FC<SessionListViewProps> = React.memo(({ onSelectSe
           <div className="flex-1 mt-2">
             <div className="flex items-center text-text-secondary text-xs">
               <Calendar className="w-3 h-3 mr-1 flex-shrink-0" />
-              <span>{formatMessageTimestamp(Date.parse(sessionActivityAt(session)) / 1000)}</span>
+              <span>{formatMessageTimestamp(session.activityAt.getTime() / 1000)}</span>
             </div>
             <div className="flex items-center text-text-secondary text-xs">
               <Folder className="w-3 h-3 mr-1 flex-shrink-0" />

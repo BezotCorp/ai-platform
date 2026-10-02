@@ -10,7 +10,7 @@ import type { GooseExtension, SessionExportFormatKey } from '@aaif/goose-acp-cli
 import { getAcpClient } from './acpConnection';
 import { Session } from '../types/session';
 import type { GooseSessionInfoMeta } from './gooseSessionInfoMeta';
-import type { SessionListItem } from './sessionListItem';
+import { SessionListItem } from './sessionListItem';
 import type { SessionListPage } from './sessionListPage';
 import type { LoadSessionMeta } from './loadSessionMeta';
 import type { AcpLoadSessionResult } from './acpLoadSessionResult';
@@ -72,7 +72,8 @@ export function sessionInfoToSession(s: SessionInfo, loadMeta: LoadSessionMeta =
 
 function sessionInfoToListItem(s: SessionInfo): SessionListItem {
   const meta = sessionInfoMeta(s);
-  return {
+
+  return new SessionListItem({
     id: String(s.sessionId),
     name: s.title ?? '',
     workingDir: s.cwd,
@@ -87,7 +88,7 @@ function sessionInfoToListItem(s: SessionInfo): SessionListItem {
     userSetName: meta.userSetName,
     hasRecipe: meta.hasRecipe,
     sessionType: meta.sessionType,
-  };
+  });
 }
 
 const SESSION_LIST_TYPES = ['user', 'scheduled'] as const;

@@ -5,7 +5,7 @@ import { getSessionDisplayName } from '../sessions';
 import { AppEvents } from '../constants/events';
 import type { Session } from '../types/session';
 import { acpGetSessionListItem, acpListRecentSessions } from '../acp/sessions';
-import type { SessionListItem } from '../acp/sessionListItem';
+import { SessionListItem } from '../acp/sessionListItem';
 import { groupSessionsByProject } from '../utils/projectGroup';
 
 const MAX_RECENT_SESSIONS = 25;
@@ -38,7 +38,7 @@ function mergeWithEmptyLocals(
 }
 
 export function sessionToListItem(s: Session): SessionListItem {
-  return {
+  return new SessionListItem({
     id: s.id,
     name: getSessionDisplayName(s),
     workingDir: s.working_dir,
@@ -52,7 +52,8 @@ export function sessionToListItem(s: Session): SessionListItem {
     modelId: s.model_config?.model_name ?? undefined,
     userSetName: s.user_set_name ?? undefined,
     hasRecipe: !!s.recipe,
-  };
+    sessionType: s.session_type,
+  });
 }
 
 export function useNavigationSessions() {
@@ -206,7 +207,10 @@ export function useNavigationSessions() {
       setRecentSessions((prev) =>
         prev.map((session) =>
           session.id === sessionId
-            ? { ...session, name: newName, ...(userInitiated && { user_set_name: true }) }
+            ? session.with({
+                name: newName,
+                ...(userInitiated ? { userSetName: true } : {}),
+              })
             : session
         )
       );

@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { getSessionDisplayName } from '../sessions';
 import { prependUnique } from '../hooks/useNavigationSessions';
-import type { SessionListItem } from '../acp/sessionListItem';
+import { SessionListItem } from '../acp/sessionListItem';
+import type { SessionListItemData } from '../acp/sessionListItemData';
 import { Session } from '../types/session';
 import type { SessionData } from '../types/sessionData';
 import type { Recipe } from '../recipe';
@@ -20,8 +21,8 @@ function makeSession(overrides: Partial<SessionData> = {}): Session {
   });
 }
 
-function makeListItem(overrides: Partial<SessionListItem> = {}): SessionListItem {
-  return {
+function makeListItem(overrides: Partial<SessionListItemData> = {}): SessionListItem {
+  return new SessionListItem({
     id: 'sess-1',
     name: 'untitled',
     workingDir: '/tmp',
@@ -29,7 +30,7 @@ function makeListItem(overrides: Partial<SessionListItem> = {}): SessionListItem
     messageCount: 0,
     createdAt: new Date().toISOString(),
     ...overrides,
-  };
+  });
 }
 
 describe('getSessionDisplayName (fix for #8865)', () => {

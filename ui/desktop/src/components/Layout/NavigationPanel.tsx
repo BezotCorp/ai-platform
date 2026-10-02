@@ -16,19 +16,16 @@ import { InlineEditText } from '../common/InlineEditText';
 import { SessionIndicators } from '../SessionIndicators';
 import { acpRenameSession } from '../../acp/sessions';
 import type { SessionListItem } from '../../acp/sessionListItem';
+import type { AppDate } from '../../utils/appDate';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/Tooltip';
 import { formatMessageTimestamp } from '../../utils/timeUtils';
 import { cn } from '../../utils';
 import type { ProjectGroup } from '../../utils/projectGroup';
 import { defineMessages, useIntl } from '../../i18n';
 import type { NoMessageValues } from 'react-intl';
-
-type StreamState = 'idle' | 'loading' | 'streaming' | 'error';
-
-interface SessionStatus {
-  streamState: StreamState;
-  hasUnreadActivity: boolean;
-}
+import { NavRowProps } from './navRowProps';
+import { SessionRowProps } from './sessionRowProps';
+import { SessionStatus } from './sessionStatus';
 
 const i18n = defineMessages<{
   readonly "chats": NoMessageValues;
@@ -113,12 +110,6 @@ const navItemClass = (active: boolean) =>
       : 'text-text-primary hover:bg-background-tertiary/60'
   );
 
-interface NavRowProps {
-  item: NavItem;
-  active: boolean;
-  onClick: () => void;
-}
-
 const NavRow: React.FC<NavRowProps> = ({ item, active, onClick }) => {
   const intl = useIntl();
   const Icon = item.icon;
@@ -133,20 +124,9 @@ const NavRow: React.FC<NavRowProps> = ({ item, active, onClick }) => {
   );
 };
 
-interface SessionRowProps {
-  session: SessionListItem;
-  active: boolean;
-  isLiveVoiceActive: boolean;
-  status: SessionStatus | undefined;
-  onClick: () => void;
-  onRenamed: () => void;
-}
-
-const formatTimestamp = (value?: string): string | null => {
+const formatTimestamp = (value?: AppDate): string | null => {
   if (!value) return null;
-  const parsed = Date.parse(value);
-  if (Number.isNaN(parsed)) return null;
-  return formatMessageTimestamp(parsed / 1000);
+  return formatMessageTimestamp(value.getTime() / 1000);
 };
 
 const MetaRow: React.FC<{ label: string; value: string }> = ({ label, value }) => (

@@ -7,10 +7,6 @@ export interface DateGroup {
   date: AppDate;
 }
 
-export function sessionActivityAt(session: SessionListItem): string {
-  return session.lastMessageAt ?? session.updatedAt;
-}
-
 export function groupSessionsByDate(sessions: SessionListItem[]): DateGroup[] {
   const today: AppDate = AppDate.now().startOfDay();
   const yesterday: AppDate = today.addDays(-1);
@@ -18,8 +14,7 @@ export function groupSessionsByDate(sessions: SessionListItem[]): DateGroup[] {
   const groups: Record<string, DateGroup> = {};
 
   sessions.forEach((session: SessionListItem): void => {
-    const sessionDate: AppDate = AppDate.fromString(sessionActivityAt(session));
-    const sessionDateStart: AppDate = sessionDate.startOfDay();
+    const sessionDateStart: AppDate = session.activityAt.startOfDay();
 
     let label: string;
     let groupKey: string;

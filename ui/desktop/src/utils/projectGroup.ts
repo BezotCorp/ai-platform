@@ -1,15 +1,11 @@
 import type { SessionListItem } from '../acp/sessionListItem';
-import { AppDate } from './appDate';
+import type { AppDate } from './appDate';
 
 export interface ProjectGroup {
   path: string;
   label: string;
   sessions: SessionListItem[];
-  lastActivityAt: string;
-}
-
-function getSessionActivityTime(session: SessionListItem): string {
-  return session.lastMessageAt ?? session.updatedAt;
+  lastActivityAt: AppDate;
 }
 
 const UNKNOWN_PROJECT_LABEL = 'Unknown';
@@ -55,14 +51,13 @@ export function groupSessionsByProject(sessions: SessionListItem[]): ProjectGrou
   const baseGroups = Array.from(groups.entries()).map(([path, projectSessions]) => {
     const sortedSessions = [...projectSessions].sort(
       (a: SessionListItem, b: SessionListItem): number =>
-        AppDate.fromString(getSessionActivityTime(b)).getTime() -
-        AppDate.fromString(getSessionActivityTime(a)).getTime()
+        b.activityAt.getTime() - a.activityAt.getTime()
     );
     return {
       path,
       label: getProjectLabel(path),
       sessions: sortedSessions,
-      lastActivityAt: sortedSessions.length > 0 ? getSessionActivityTime(sortedSessions[0]) : '',
+      lastActivityAt: sortedSessions[0].activityAt,
     };
   });
 
@@ -80,9 +75,7 @@ export function groupSessionsByProject(sessions: SessionListItem[]): ProjectGrou
           : group.label,
     }))
     .sort(
-      (a, b): number =>
-        AppDate.fromString(b.lastActivityAt).getTime() -
-        AppDate.fromString(a.lastActivityAt).getTime()
+      (a, b): number => b.lastActivityAt.getTime() - a.lastActivityAt.getTime()
     );
 }
 

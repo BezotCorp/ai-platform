@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { getProjectLabel, groupSessionsByProject } from '../utils/projectGroup';
-import type { SessionListItem } from '../acp/sessionListItem';
+import { SessionListItem } from '../acp/sessionListItem';
+import type { SessionListItemData } from '../acp/sessionListItemData';
 
-function makeSession(overrides: Partial<SessionListItem> = {}): SessionListItem {
-  return {
+function makeSession(overrides: Partial<SessionListItemData> = {}): SessionListItem {
+  return new SessionListItem({
     id: 'session-1',
     name: 'Session',
     messageCount: 1,
@@ -11,7 +12,7 @@ function makeSession(overrides: Partial<SessionListItem> = {}): SessionListItem 
     updatedAt: '2026-01-01T00:00:00.000Z',
     workingDir: '/tmp/goose',
     ...overrides,
-  };
+  });
 }
 
 describe('groupSessionsByProject', () => {
