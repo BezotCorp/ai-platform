@@ -1,5 +1,5 @@
 import type { ExtensionConfig } from '../../../types/extensions';
-import { toastService } from '../../../toast_service';
+import { toastService } from '../../../toastService';
 import { DEFAULT_EXTENSION_TIMEOUT } from './utils';
 
 /**

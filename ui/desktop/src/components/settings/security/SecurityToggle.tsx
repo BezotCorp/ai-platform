@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Switch } from '../../ui/switch';
 import { useConfig } from '../../ConfigContext';
-import { trackSettingToggled } from '../../../utils/analytics';
+import { trackSettingToggled } from '../../../utils/analyticsEvent';
 import { defineMessages, useIntl } from '../../../i18n';
 import type { NoMessageValues } from 'react-intl';
 

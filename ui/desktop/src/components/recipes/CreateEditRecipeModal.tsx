@@ -9,7 +9,7 @@ import { Button } from '../ui/button';
 
 import { RecipeFormFields } from './shared/RecipeFormFields';
 import { RecipeFormData } from './shared/recipeFormSchema';
-import { toastSuccess, toastError } from '../../toast_service';
+import { toastSuccess, toastError } from '../../toastService';
 import { saveRecipe } from '../../recipe/recipe_management';
 import { errorMessage } from '../../utils/conversionUtils';
 import { defineMessages, useIntl } from '../../i18n';

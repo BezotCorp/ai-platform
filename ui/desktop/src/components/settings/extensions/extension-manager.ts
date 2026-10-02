@@ -1,12 +1,12 @@
 import type { ExtensionConfig } from '../../../types/extensions';
-import { toastService } from '../../../toast_service';
+import { toastService } from '../../../toastService';
 import {
   trackExtensionAdded,
   trackExtensionEnabled,
   trackExtensionDisabled,
   trackExtensionDeleted,
   getErrorType,
-} from '../../../utils/analytics';
+} from '../../../utils/analyticsEvent';
 
 function isBuiltinExtension(config: ExtensionConfig): boolean {
   return config.type === 'builtin';

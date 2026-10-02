@@ -4,7 +4,7 @@ import { View } from '../../../utils/navigationUtils';
 import ModelSettingsButtons from './subcomponents/ModelSettingsButtons';
 import { acpGetProviderDetails, acpReadDefaults } from '../../../acp/providers';
 import { modelAndProviderMessages, useModelAndProvider } from '../../ModelAndProviderContext';
-import { toastError } from '../../../toast_service';
+import { toastError } from '../../../toastService';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../ui/card';
 import ResetProviderSection from '../reset_provider/ResetProviderSection';

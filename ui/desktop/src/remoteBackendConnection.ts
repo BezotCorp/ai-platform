@@ -1,4 +1,4 @@
-import type { RemoteBackendStep } from './remote_backend_step';
+import type { RemoteBackendStep } from './remoteBackendStep';
 
 export interface RemoteBackendConnection {
   ok: boolean;

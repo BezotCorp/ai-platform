@@ -1,16 +1,16 @@
-import Electron, { contextBridge, ipcRenderer, webUtils } from 'electron';
-import { Recipe } from './recipe';
+import { contextBridge, ipcRenderer, webUtils, type IpcRendererEvent } from 'electron';
+import type { Recipe } from './recipe';
 import type { GooseApp } from './types/apps';
 import { defaultSettings, type Settings } from './utils/settings';
 import type { OpenExternalUrlResult } from './utils/openExternalUrlResult';
-import { AppConfigAPI } from './app_config_api';
-import { ElectronAPI } from './electronApi';
-import { CreateChatWindowOptions } from './createChatWindowsOptions';
-import { NotificationData } from './notificationData';
-import { MessageBoxOptions } from './messageBoxOptions';
-import { SaveDialogOptions } from './saveDialogOptions';
-import { UpdaterEvent } from './updaterEvent';
-import { SettingKey } from './utils/settingKey';
+import type { AppConfigAPI } from './appConfigApi';
+import type { ElectronAPI } from './electronApi';
+import type { CreateChatWindowOptions } from './createChatWindowsOptions';
+import type { NotificationData } from './notificationData';
+import type { MessageBoxOptions } from './messageBoxOptions';
+import type { SaveDialogOptions } from './saveDialogOptions';
+import type { UpdaterEvent } from './updaterEvent';
+import type { SettingKey } from './utils/settingKey';
 
 // Mapping from settings keys to their old localStorage keys for lazy migration
 const localStorageKeyMap: Partial<Record<SettingKey, string>> = {
@@ -147,7 +147,7 @@ const electronAPI: ElectronAPI = {
   getIsFullScreen: () => ipcRenderer.invoke('get-is-fullscreen'),
   onMouseBackButtonClicked: (callback: () => void) => {
     // Wrapper that ignores the event parameter.
-    const wrappedCallback = (_event: Electron.IpcRendererEvent) => callback();
+    const wrappedCallback = (_event: IpcRendererEvent) => callback();
     ipcRenderer.on('mouse-back-button-clicked', wrappedCallback);
     return wrappedCallback;
   },
@@ -156,13 +156,13 @@ const electronAPI: ElectronAPI = {
   },
   on: (
     channel: string,
-    callback: (event: Electron.IpcRendererEvent, ...args: unknown[]) => void
+    callback: (event: IpcRendererEvent, ...args: unknown[]) => void
   ) => {
     ipcRenderer.on(channel, callback);
   },
   off: (
     channel: string,
-    callback: (event: Electron.IpcRendererEvent, ...args: unknown[]) => void
+    callback: (event: IpcRendererEvent, ...args: unknown[]) => void
   ) => {
     ipcRenderer.off(channel, callback);
   },

@@ -4,7 +4,7 @@ import { Button } from '../../ui/button';
 import { SubRecipeFormData } from './recipeFormSchema';
 import SubRecipeModal from './SubRecipeModal';
 import CreateSubRecipeInline from './CreateSubRecipeInline';
-import { toastError } from '../../../toast_service';
+import { toastError } from '../../../toastService';
 import { defineMessages, useIntl } from '../../../i18n';
 import type { MessageValue, NoMessageValues } from 'react-intl';
 

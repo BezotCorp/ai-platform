@@ -65,10 +65,16 @@ export const configLabels: Record<string, string> = {
   GITHUB_COPILOT_TOKEN_URL: 'Custom GitHub Copilot Token URL',
 };
 
-export const configPlaceholders: Record<string, string> = {
+// UI placeholder text shown in empty configuration fields.
+// These values are examples only and are never used as actual configuration values.
+export const configFieldPlaceholders = {
   GITHUB_COPILOT_HOST: 'my-enterprise.ghe.com',
   GITHUB_COPILOT_CLIENT_ID: 'Iv1.xxxxxxxxxxxxxxxx',
   GITHUB_COPILOT_TOKEN_URL: 'https://my-enterprise.ghe.com/api/copilot_internal/v2/token',
+} as const satisfies Readonly<Record<string, string>>;
+
+export const getConfigFieldPlaceholder = (key: string): string | undefined => {
+  return configFieldPlaceholders[key as keyof typeof configFieldPlaceholders];
 };
 
 export const providerPrefixes: Record<string, string[]> = {

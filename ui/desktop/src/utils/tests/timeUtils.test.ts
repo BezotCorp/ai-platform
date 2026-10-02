@@ -1,3 +1,4 @@
+import { AppDate } from '../appDate';
 import { describe, it, expect } from 'vitest';
 import { formatClockDisplay, formatMessageTimestamp } from '../timeUtils';
 
@@ -5,28 +6,28 @@ describe('timeUtils', () => {
   describe('formatClockDisplay', () => {
     it('formats 12-hour locale with AM/PM meridiem (en-US)', () => {
       // 8:49 PM
-      const eveningDate = new Date(2026, 8, 1, 20, 49, 0);
+      const eveningDate: AppDate = AppDate.fromDate(new Date(2026, 8, 1, 20, 49, 0));
       const eveningResult = formatClockDisplay(eveningDate, 'en-US');
       expect(eveningResult.time).toBe('8:49');
       expect(eveningResult.meridiem).toBe('PM');
       expect(eveningResult.hour).toBe(20);
 
       // 8:49 AM
-      const morningDate = new Date(2026, 8, 1, 8, 49, 0);
+      const morningDate: AppDate = AppDate.fromDate(new Date(2026, 8, 1, 8, 49, 0));
       const morningResult = formatClockDisplay(morningDate, 'en-US');
       expect(morningResult.time).toBe('8:49');
       expect(morningResult.meridiem).toBe('AM');
       expect(morningResult.hour).toBe(8);
 
       // Midnight (12:00 AM)
-      const midnight = new Date(2026, 8, 1, 0, 0, 0);
+      const midnight: AppDate = AppDate.fromDate(new Date(2026, 8, 1, 0, 0, 0));
       const midnightResult = formatClockDisplay(midnight, 'en-US');
       expect(midnightResult.time).toBe('12:00');
       expect(midnightResult.meridiem).toBe('AM');
       expect(midnightResult.hour).toBe(0);
 
       // Noon (12:00 PM)
-      const noon = new Date(2026, 8, 1, 12, 0, 0);
+      const noon: AppDate = AppDate.fromDate(new Date(2026, 8, 1, 12, 0, 0));
       const noonResult = formatClockDisplay(noon, 'en-US');
       expect(noonResult.time).toBe('12:00');
       expect(noonResult.meridiem).toBe('PM');
@@ -34,13 +35,13 @@ describe('timeUtils', () => {
     });
 
     it('formats 24-hour locale without meridiem (en-GB)', () => {
-      const eveningDate = new Date(2026, 8, 1, 20, 49, 0);
+      const eveningDate: AppDate = AppDate.fromDate(new Date(2026, 8, 1, 20, 49, 0));
       const result = formatClockDisplay(eveningDate, 'en-GB');
       expect(result.time).toBe('20:49');
       expect(result.meridiem).toBe('');
       expect(result.hour).toBe(20);
 
-      const midnight = new Date(2026, 8, 1, 0, 5, 0);
+      const midnight: AppDate = AppDate.fromDate(new Date(2026, 8, 1, 0, 5, 0));
       const midnightResult = formatClockDisplay(midnight, 'en-GB');
       expect(midnightResult.time).toBe('0:05');
       expect(midnightResult.meridiem).toBe('');
@@ -48,7 +49,7 @@ describe('timeUtils', () => {
     });
 
     it('formats 24-hour European locales without meridiem (de-DE, sv-SE, fr-FR)', () => {
-      const eveningDate = new Date(2026, 8, 1, 20, 49, 0);
+      const eveningDate: AppDate = AppDate.fromDate(new Date(2026, 8, 1, 20, 49, 0));
 
       const deResult = formatClockDisplay(eveningDate, 'de-DE');
       expect(deResult.time).toBe('20:49');
@@ -73,7 +74,7 @@ describe('timeUtils', () => {
     });
 
     it('handles unexpected/invalid locale gracefully using fallback', () => {
-      const eveningDate = new Date(2026, 8, 1, 20, 49, 0);
+      const eveningDate: AppDate = AppDate.fromDate(new Date(2026, 8, 1, 20, 49, 0));
       const result = formatClockDisplay(eveningDate, 'invalid-locale-!!!');
       expect(result.time).toBe('8:49');
       expect(result.meridiem).toBe('PM');

@@ -1,4 +1,4 @@
-import { toastService } from '../../../toast_service';
+import { toastService } from '../../../toastService';
 import type { ExtensionConfig } from '../../../types/extensions';
 import { addSessionExtension, removeSessionExtension } from '../../../acp/session-extensions';
 import { errorMessage } from '../../../utils/conversionUtils';

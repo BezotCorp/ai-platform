@@ -26,8 +26,9 @@ import {
   type NextChatExtensionDraft,
 } from '../utils/nextChatExtensions';
 import { formatAcpError } from '../acp/errors';
-import { toastError } from '../toast_service';
-import { formatClockDisplay } from '../utils/timeUtils';
+import { toastError } from '../toastService';
+import { formatClockDisplay, type ClockDisplay } from '../utils/timeUtils';
+import { AppDate } from '../utils/appDate';
 import { acpGetLiveVoiceAvailability } from '../acp/liveVoice';
 import type { LiveVoiceAvailabilityResponseUnstable } from '@aaif/goose-acp-client';
 import { subscribeToAcpRecovery } from '../acp/acpConnection';
@@ -44,11 +45,16 @@ const i18n = defineMessages<{
   goodEvening: { id: 'hub.goodEvening', defaultMessage: 'Good evening' },
 });
 
-function useClock() {
-  const [now, setNow] = useState(() => new Date());
-  useEffect(() => {
-    const interval = setInterval(() => setNow(new Date()), 30_000);
-    return () => clearInterval(interval);
+function useClock(): ClockDisplay {
+  const [now, setNow] = useState<AppDate>(() => AppDate.now());
+
+  useEffect((): (() => void) => {
+    const interval: ReturnType<typeof setInterval> = setInterval(
+      (): void => setNow(AppDate.now()),
+      30_000
+    );
+
+    return (): void => clearInterval(interval);
   }, []);
 
   return formatClockDisplay(now);

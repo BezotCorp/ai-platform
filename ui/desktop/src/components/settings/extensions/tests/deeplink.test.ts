@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { addExtensionFromDeepLink } from '../deeplink';
-import { toastService } from '../../../../toast_service';
+import { toastService } from '../../../../toastService';
 
 vi.mock('../../../../toasts', () => ({
   toastService: {

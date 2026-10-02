@@ -19,13 +19,13 @@ import { TrashIcon } from '../icons/TrashIcon';
 import { Plus, RefreshCw, Pause, Play, Edit, Square, Eye, CircleDotDashed } from 'lucide-react';
 import { NewSchedulePayload, ScheduleModal } from './ScheduleModal';
 import ScheduleDetailView from './ScheduleDetailView';
-import { toastError, toastSuccess } from '../../toast_service';
+import { toastError, toastSuccess } from '../../toastService';
 import cronstrue from 'cronstrue';
 import { formatToLocalDateWithTimezone } from '../../utils/date';
 import { errorMessage } from '../../utils/conversionUtils';
 import { MainPanelLayout } from '../Layout/MainPanelLayout';
 import { ViewOptions } from '../../utils/navigationUtils';
-import { trackScheduleCreated, trackScheduleDeleted, getErrorType } from '../../utils/analytics';
+import { trackScheduleCreated, trackScheduleDeleted, getErrorType } from '../../utils/analyticsEvent';
 import { defineMessages, useIntl } from '../../i18n';
 import type { MessageValue, NoMessageValues } from 'react-intl';
 

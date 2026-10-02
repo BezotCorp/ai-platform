@@ -5,7 +5,7 @@ import { getDictationConfig, DictationProviderStatusEntry } from '../../../acp/d
 import { useConfig } from '../../ConfigContext';
 import { Input } from '../../ui/input';
 import { Button } from '../../ui/button';
-import { trackSettingToggled } from '../../../utils/analytics';
+import { trackSettingToggled } from '../../../utils/analyticsEvent';
 import { LocalModelManager } from './LocalModelManager';
 import { MicrophoneSelector } from './MicrophoneSelector';
 import { DICTATION_ALLOWED_PROVIDERS } from '../../../updates';

@@ -14,7 +14,7 @@ import { addExtensionFromDeepLink } from './settings/extensions/deeplink';
 import type { ExtensionConfig } from '../types/extensions';
 import { View, ViewOptions } from '../utils/navigationUtils';
 import { useConfig } from './ConfigContext';
-import { toastService } from '../toast_service';
+import { toastService } from '../toastService';
 import { errorMessage } from '../utils/conversionUtils';
 import { defineMessages, useIntl } from '../i18n';
 import type { MessageValue, NoMessageValues } from 'react-intl';

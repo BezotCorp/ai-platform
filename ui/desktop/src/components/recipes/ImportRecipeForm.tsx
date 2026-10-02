@@ -5,7 +5,7 @@ import { Download } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Recipe, parseDeeplink, parseRecipeFromFile } from '../../recipe';
-import { toastSuccess, toastError } from '../../toast_service';
+import { toastSuccess, toastError } from '../../toastService';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { getRecipeJsonSchema } from '../../recipe/validation';
 import { saveRecipe } from '../../recipe/recipe_management';

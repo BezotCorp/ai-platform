@@ -1,26 +1,23 @@
 import { currentLocale } from '../i18n';
+import { AppDate } from './appDate';
 
 export function formatMessageTimestamp(timestamp?: number): string {
-  const date = timestamp ? new Date(timestamp * 1000) : new Date();
-  const now = new Date();
+  const date: AppDate = timestamp
+    ? AppDate.fromTimestampSeconds(timestamp)
+    : AppDate.now();
 
-  // Format time using locale's default hour cycle
-  const timeStr = date.toLocaleTimeString(currentLocale, {
+  const now: AppDate = AppDate.now();
+
+  const timeStr: string = date.toLocaleTimeString(currentLocale, {
     hour: 'numeric',
     minute: '2-digit',
   });
 
-  // Check if the message is from today
-  if (
-    date.getDate() === now.getDate() &&
-    date.getMonth() === now.getMonth() &&
-    date.getFullYear() === now.getFullYear()
-  ) {
+  if (date.isSameDay(now)) {
     return timeStr;
   }
 
-  // If not today, format as localized date + time
-  const dateStr = date.toLocaleDateString(currentLocale, {
+  const dateStr: string = date.toLocaleDateString(currentLocale, {
     month: '2-digit',
     day: '2-digit',
     year: 'numeric',
@@ -36,34 +33,36 @@ export interface ClockDisplay {
 }
 
 export function formatClockDisplay(
-  date: Date = new Date(),
+  date: AppDate = AppDate.now(),
   locale: string = currentLocale
 ): ClockDisplay {
-  const hour = date.getHours();
+  const hour: number = date.getHours();
 
   try {
-    const formatter = new Intl.DateTimeFormat(locale, {
+    const parts: Intl.DateTimeFormatPart[] = date.formatToParts(locale, {
       hour: 'numeric',
       minute: '2-digit',
     });
 
-    const parts = formatter.formatToParts(date);
-    const dayPeriodPart = parts.find((p) => p.type === 'dayPeriod');
-    const meridiem = dayPeriodPart ? dayPeriodPart.value : '';
+    const dayPeriodPart: Intl.DateTimeFormatPart | undefined = parts.find(
+      (part: Intl.DateTimeFormatPart): boolean => part.type === 'dayPeriod'
+    );
 
-    const time = parts
-      .filter((p) => p.type !== 'dayPeriod')
-      .map((p) => p.value)
+    const meridiem: string = dayPeriodPart?.value ?? '';
+
+    const time: string = parts
+      .filter((part: Intl.DateTimeFormatPart): boolean => part.type !== 'dayPeriod')
+      .map((part: Intl.DateTimeFormatPart): string => part.value)
       .join('')
       .trim();
 
     return { time, meridiem, hour };
   } catch {
-    const minutes = date.getMinutes();
-    const meridiem = hour >= 12 ? 'PM' : 'AM';
-    const displayHour = ((hour + 11) % 12) + 1;
-    const time = `${displayHour}:${String(minutes).padStart(2, '0')}`;
+    const minutes: number = date.getMinutes();
+    const meridiem: string = hour >= 12 ? 'PM' : 'AM';
+    const displayHour: number = ((hour + 11) % 12) + 1;
+    const time: string = `${displayHour}:${String(minutes).padStart(2, '0')}`;
+
     return { time, meridiem, hour };
   }
 }
-

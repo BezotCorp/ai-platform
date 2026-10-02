@@ -45,7 +45,7 @@ import { ensureWinShims } from './utils/winShims';
 import { addRecentDir, loadRecentDirs } from './utils/recentDirs';
 import { formatAppName, errorMessage, formatErrorForLogging } from './utils/conversionUtils';
 import { isRetiredGooseChatApp } from './utils/retiredApps';
-import { defaultSettings, getKeyboardShortcuts, Settings } from './utils/settings';
+import { defaultSettings, getKeyboardShortcuts, type Settings } from './utils/settings';
 import * as crypto from 'crypto';
 import * as yaml from 'yaml';
 import windowStateKeeper from 'electron-window-state';
@@ -71,16 +71,16 @@ import {
   isAuthorizedFileAccessRequest,
   readSelectedRecipe,
 } from './desktopFileAccess';
-import { BundledConfig } from './bundleConfig';
-import { RecipeDeeplinkData } from './recipeDeepLinkData';
-import { AppWithOpenFilesEvent } from './app_with_open_diles_event';
-import { BackendCertificateTrustRegistration } from './backend_certificate_trust_registration';
-import { BackendCertificateTrust } from './backend_certificate_trust';
-import { WebContentsWithLegacyNavigationEvents } from './webContentsWithLegacyNavigationEvents';
-import { ExternalBackend } from './externalBackend';
-import { CreateChatOptions } from './createChatOptions';
-import { GooseServeLease } from './gooseServerLease';
-import { SettingKey } from './utils/settingKey';
+import type { BundledConfig } from './bundleConfig';
+import type { RecipeDeeplinkData } from './recipeDeepLinkData';
+import type { AppWithOpenFilesEvent } from './appWithOpenFilesEvent';
+import type { BackendCertificateTrustRegistration } from './backendCertificateTrustRegistration';
+import type { BackendCertificateTrust } from './backendCertificateTrust';
+import type { WebContentsWithLegacyNavigationEvents } from './webContentsWithLegacyNavigationEvents';
+import type { ExternalBackend } from './externalBackend';
+import type { CreateChatOptions } from './createChatOptions';
+import type { GooseServeLease } from './gooseServerLease';
+import type { SettingKey } from './utils/settingKey';
 
 const moduleDir = path.dirname(fileURLToPath(import.meta.url));
 

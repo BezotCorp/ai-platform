@@ -14,15 +14,13 @@ export const defaultLogger: Logger = {
 };
 
 import type { FindGooseBinaryOptions } from './findGooseBinaryOptions';
-import { GooseServeResult } from './gooseServeResult';
-import { Logger } from './logger';
-import { LocalServeUrls } from './localServeUrls';
-import { StartGooseServeOptions } from './startGooseServerOptions';
-import { LocalServeScheme } from './localServeScheme';
-import { GooseServeExitSignal } from './gooseServeExitSignal';
-
-type ReadinessFetchInit = Parameters<typeof globalThis.fetch>[1];
-type ReadinessFetch = (input: string, init?: ReadinessFetchInit) => Promise<Response>;
+import type { GooseServeResult } from './gooseServeResult';
+import type { Logger } from './logger';
+import type { LocalServeUrls } from './localServeUrls';
+import type { StartGooseServeOptions } from './startGooseServerOptions';
+import type { LocalServeScheme } from './localServeScheme';
+import type { GooseServeExitSignal } from './gooseServeExitSignal';
+import type { ReadinessFetch } from './readinessFetch';
 
 const existingFile = (candidate: string): boolean => {
   try {

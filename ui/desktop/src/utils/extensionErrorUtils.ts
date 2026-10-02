@@ -3,7 +3,7 @@
  */
 
 import { ExtensionLoadingStatus } from '../components/GroupedExtensionLoadingToast';
-import { toastService } from '../toast_service';
+import { toastService } from '../toastService';
 import type { ExtensionLoadResult } from '../types/extensions';
 
 export const MAX_ERROR_MESSAGE_LENGTH = 70;

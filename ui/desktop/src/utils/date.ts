@@ -1,14 +1,12 @@
+import { AppDate } from './appDate';
+
 export const formatToLocalDateWithTimezone = (dateString?: string | null): string => {
   if (!dateString) {
     return 'N/A';
   }
+
   try {
-    const date = new Date(dateString);
-    if (isNaN(date.getTime())) {
-      return 'Invalid Date';
-    }
-    // Format: Jan 1, 2023, 10:00:00 AM PST (example)
-    return date.toLocaleString(undefined, {
+    return AppDate.fromString(dateString).toLocaleString(undefined, {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -17,8 +15,8 @@ export const formatToLocalDateWithTimezone = (dateString?: string | null): strin
       second: '2-digit',
       timeZoneName: 'short',
     });
-  } catch (e) {
-    console.error('Error formatting date with timezone:', e);
+  } catch (error) {
+    console.error('Error formatting date with timezone:', error);
     return 'Invalid Date';
   }
 };

@@ -6,7 +6,7 @@ import { useConfig } from './ConfigContext';
 import {
   trackTelemetryPreference,
   setTelemetryEnabled as setAnalyticsTelemetryEnabled,
-} from '../utils/analytics';
+} from '../utils/analyticsEvent';
 import PrivacyInfoModal from './onboarding/PrivacyInfoModal';
 import { defineMessages, useIntl } from '../i18n';
 import type { NoMessageValues } from 'react-intl';

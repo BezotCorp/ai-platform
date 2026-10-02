@@ -20,9 +20,9 @@ import ThemeSelector from '../../GooseSidebar/ThemeSelector';
 import BlockLogoBlack from './icons/block-lockup_black.png';
 import BlockLogoWhite from './icons/block-lockup_white.png';
 import TelemetrySettings from './TelemetrySettings';
-import { trackSettingToggled } from '../../../utils/analytics';
+import { trackSettingToggled } from '../../../utils/analyticsEvent';
 import type { MessageValue, NoMessageValues } from 'react-intl';
-import { LanguageSetting } from '../../../utils/language_setting';
+import { LanguageSetting } from '../../../utils/languageSetting';
 
 const i18n = defineMessages<{
   readonly appearanceTitle: NoMessageValues;

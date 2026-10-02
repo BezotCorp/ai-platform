@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../..
 import { Button } from '../../ui/button';
 import { Switch } from '../../ui/switch';
 import { ShortcutRecorder } from './ShortcutRecorder';
-import { trackSettingToggled } from '../../../utils/analytics';
+import { trackSettingToggled } from '../../../utils/analyticsEvent';
 import { defineMessages, useIntl } from '../../../i18n';
 import type { MessageValue, NoMessageValues } from 'react-intl';
 import { KeyboardShortcuts } from '../../../utils/keyboardShortcuts';

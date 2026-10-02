@@ -1,16 +1,16 @@
-import { CreateChatWindowOptions } from './createChatWindowsOptions';
-import { MessageBoxOptions } from './messageBoxOptions';
-import { MessageBoxResponse } from './messageBoxResponse';
-import { NotificationData } from './notificationData';
-import { SaveDialogOptions } from './saveDialogOptions';
+import type { CreateChatWindowOptions } from './createChatWindowsOptions';
+import type { MessageBoxOptions } from './messageBoxOptions';
+import type { MessageBoxResponse } from './messageBoxResponse';
+import type { NotificationData } from './notificationData';
+import type { SaveDialogOptions } from './saveDialogOptions';
 import type { SaveDialogResponse } from './saveDialogResponse';
 import type { Settings } from './utils/settings';
 import type { Recipe } from './recipe';
 import type { GooseApp } from './types/apps';
 import type { UpdaterEvent } from './updaterEvent';
 import type { FileResponse } from './fileResponse';
-import { OpenExternalUrlResult } from './utils/openExternalUrlResult';
-import { SettingKey } from './utils/settingKey';
+import type { OpenExternalUrlResult } from './utils/openExternalUrlResult';
+import type { SettingKey } from './utils/settingKey';
 
 // Define the API types in a single place
 export type ElectronAPI = {

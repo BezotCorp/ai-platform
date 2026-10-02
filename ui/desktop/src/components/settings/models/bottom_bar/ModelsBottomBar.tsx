@@ -19,7 +19,7 @@ import { ScrollArea } from '../../../ui/scroll-area';
 import { defineMessages, useIntl } from '../../../../i18n';
 import type { Message } from '../../../../types/message';
 import { addToRecentModels } from '../../../../utils/recentModels';
-import { trackModelChanged } from '../../../../utils/analytics';
+import { trackModelChanged } from '../../../../utils/analyticsEvent';
 import type { MessageValue, NoMessageValues } from 'react-intl';
 import { RecentModel } from '../../../../utils/RecentModel';
 

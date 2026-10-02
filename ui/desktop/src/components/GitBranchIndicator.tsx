@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { GitBranch, Check, Search } from 'lucide-react';
-import { toastError } from '../toast_service';
+import { toastError } from '../toastService';
 import { cn } from '../utils';
 import { defineMessages, useIntl } from '../i18n';
 import {

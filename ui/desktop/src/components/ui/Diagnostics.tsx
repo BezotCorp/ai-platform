@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { AlertTriangle, Bug, Download } from 'lucide-react';
 import { Button } from './button';
-import { toastError } from '../../toast_service';
+import { toastError } from '../../toastService';
 import { defineMessages, useIntl } from '../../i18n';
 import { getDiagnosticsReport } from '../../acp/diagnostics';
 import type { NoMessageValues } from 'react-intl';

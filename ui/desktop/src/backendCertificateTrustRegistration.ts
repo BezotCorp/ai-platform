@@ -1,4 +1,4 @@
-import { BackendCertificateTrust } from './backend_certificate_trust';
+import type { BackendCertificateTrust } from './backendCertificateTrust';
 
 export interface BackendCertificateTrustRegistration {
   trust: BackendCertificateTrust;

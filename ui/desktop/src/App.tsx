@@ -1,5 +1,5 @@
-import { useEffect, useState, useRef, type RefObject, ReactElement } from 'react';
-import { IpcRendererEvent } from 'electron';
+import { useEffect, useState, useRef, type ReactElement, type RefObject } from 'react';
+import type { IpcRendererEvent } from 'electron';
 import { HashRouter, Routes, Route, useNavigate, useLocation, useSearchParams } from 'react-router';
 import { ErrorUI } from './components/ErrorBoundary';
 import { ExtensionInstallModal } from './components/ExtensionInstallModal';
@@ -17,11 +17,11 @@ import OnboardingGuard from './components/onboarding/OnboardingGuard';
 import { createSession } from './sessions';
 import { acpListSessions, acpDeleteSession } from './acp/sessions';
 
-import { ChatType } from './types/chat';
+import type { ChatType } from './types/chat';
 import Hub from './components/Hub';
-import { UserInput } from './types/message';
+import type { UserInput } from './types/message';
 
-import SettingsView, { SettingsViewOptions } from './components/settings/SettingsView';
+import SettingsView, { type SettingsViewOptions } from './components/settings/SettingsView';
 import SessionsView from './components/sessions/SessionsView';
 import SchedulesView from './components/schedule/SchedulesView';
 import ProviderSettings from './components/settings/providers/ProviderSettingsPage';
@@ -36,23 +36,23 @@ import { ThemeProvider } from './contexts/ThemeContext';
 import { FeaturesProvider } from './contexts/FeaturesContext';
 import PermissionSettingsView from './components/settings/permission/PermissionSetting';
 
-import ExtensionsView, { ExtensionsViewOptions } from './components/extensions/ExtensionsView';
+import ExtensionsView, { type ExtensionsViewOptions } from './components/extensions/ExtensionsView';
 import RecipesView from './components/recipes/RecipesView';
 import SkillsView from './components/skills/SkillsView';
 import AppsView from './components/apps/AppsView';
 import StandaloneAppView from './components/apps/StandaloneAppView';
-import { View, ViewOptions } from './utils/navigationUtils';
+import type { View, ViewOptions } from './utils/navigationUtils';
 
 import { useNavigation } from './hooks/useNavigation';
 import { errorMessage } from './utils/conversionUtils';
 import { getInitialWorkingDir } from './utils/workingDir';
 import { usePageViewTracking } from './hooks/useAnalytics';
-import { trackErrorWithContext } from './utils/analytics';
+import { trackErrorWithContext } from './utils/analyticsEvent';
 import { AppEvents } from './constants/events';
 import { registerPlatformEventHandlers } from './utils/platformEvents';
 import { reconnectAcpAfterSystemResume } from './acp/acpConnection';
 import { useLiveVoice, type LiveVoiceController } from './liveVoice/useLiveVoice';
-import { PairRouteState } from './pairRouteState';
+import type { PairRouteState } from './pairRouteState';
 
 function PageViewTracker() {
   usePageViewTracking();

@@ -2,7 +2,7 @@ import React from 'react';
 import { Button } from './ui/button';
 import { AlertTriangle } from 'lucide-react';
 import { errorMessage, formatErrorForLogging } from '../utils/conversionUtils';
-import { trackErrorWithContext, trackEvent, getErrorType } from '../utils/analytics';
+import { trackErrorWithContext, trackEvent, getErrorType } from '../utils/analyticsEvent';
 import { defineMessages, useIntl } from '../i18n';
 import type { MessageValue, NoMessageValues } from 'react-intl';
 

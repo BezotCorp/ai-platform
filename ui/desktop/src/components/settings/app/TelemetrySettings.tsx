@@ -5,11 +5,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../..
 import { useConfig } from '../../ConfigContext';
 import { TELEMETRY_UI_ENABLED } from '../../../updates';
 import PrivacyInfoModal from '../../onboarding/PrivacyInfoModal';
-import { toastService } from '../../../toast_service';
+import { toastService } from '../../../toastService';
 import {
   setTelemetryEnabled as setAnalyticsTelemetryEnabled,
   trackTelemetryPreference,
-} from '../../../utils/analytics';
+} from '../../../utils/analyticsEvent';
 import { defineMessages, useIntl } from '../../../i18n';
 import type { NoMessageValues } from 'react-intl';
 

@@ -1,9 +1,10 @@
 import type { SessionListItem } from '../acp/sessions';
+import { AppDate } from './appDate';
 
 export interface DateGroup {
   label: string;
   sessions: SessionListItem[];
-  date: Date;
+  date: AppDate;
 }
 
 export function sessionActivityAt(session: SessionListItem): string {
@@ -11,34 +12,26 @@ export function sessionActivityAt(session: SessionListItem): string {
 }
 
 export function groupSessionsByDate(sessions: SessionListItem[]): DateGroup[] {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  const today: AppDate = AppDate.now().startOfDay();
+  const yesterday: AppDate = today.addDays(-1);
 
-  const yesterday = new Date(today);
-  yesterday.setDate(yesterday.getDate() - 1);
+  const groups: Record<string, DateGroup> = {};
 
-  const groups: { [key: string]: DateGroup } = {};
-
-  sessions.forEach((session) => {
-    const sessionDate = new Date(sessionActivityAt(session));
-    const sessionDateStart = new Date(sessionDate);
-    sessionDateStart.setHours(0, 0, 0, 0);
+  sessions.forEach((session: SessionListItem): void => {
+    const sessionDate: AppDate = AppDate.fromString(sessionActivityAt(session));
+    const sessionDateStart: AppDate = sessionDate.startOfDay();
 
     let label: string;
     let groupKey: string;
 
-    if (sessionDateStart.getTime() === today.getTime()) {
+    if (sessionDateStart.isSameDay(today)) {
       label = 'Today';
       groupKey = 'today';
-    } else if (sessionDateStart.getTime() === yesterday.getTime()) {
+    } else if (sessionDateStart.isSameDay(yesterday)) {
       label = 'Yesterday';
       groupKey = 'yesterday';
     } else {
-      // Format as "Monday, January 1" or "January 1" if it's not this year
-      const currentYear = today.getFullYear();
-      const sessionYear = sessionDateStart.getFullYear();
-
-      if (sessionYear === currentYear) {
+      if (sessionDateStart.getYear() === today.getYear()) {
         label = sessionDateStart.toLocaleDateString('en-US', {
           weekday: 'long',
           month: 'long',
@@ -51,7 +44,8 @@ export function groupSessionsByDate(sessions: SessionListItem[]): DateGroup[] {
           year: 'numeric',
         });
       }
-      groupKey = sessionDateStart.toISOString().split('T')[0];
+
+      groupKey = sessionDateStart.toLocalDateKey();
     }
 
     if (!groups[groupKey]) {
@@ -65,6 +59,7 @@ export function groupSessionsByDate(sessions: SessionListItem[]): DateGroup[] {
     groups[groupKey].sessions.push(session);
   });
 
-  // Convert to array and sort by date (newest first)
-  return Object.values(groups).sort((a, b) => b.date.getTime() - a.date.getTime());
+  return Object.values(groups).sort(
+    (a: DateGroup, b: DateGroup): number => b.date.getTime() - a.date.getTime()
+  );
 }

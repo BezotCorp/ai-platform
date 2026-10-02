@@ -1,5 +1,5 @@
 import cronstrue from 'cronstrue';
-import { ParsedCron } from './parsed_cron';
+import { ParsedCron } from './parsedCron';
 import { CronParts } from './cronParts';
 
 export const quarterMonthsByStartMonth: Record<string, string> = {

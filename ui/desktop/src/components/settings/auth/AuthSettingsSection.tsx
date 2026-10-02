@@ -8,6 +8,7 @@ import {
   type ProviderSecretDto,
 } from '../../../acp/providers';
 import { errorMessage } from '../../../utils/conversionUtils';
+import { AppDate } from '../../../utils/appDate';
 import { useModelAndProvider } from '../../ModelAndProviderContext';
 import { Button } from '../../ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../ui/card';
@@ -131,7 +132,7 @@ function expiryLabel(secret: ProviderSecretDto, intl: ReturnType<typeof useIntl>
     return null;
   }
   return intl.formatMessage(i18n.expiresAt, {
-    date: intl.formatDate(new Date(secret.expiresAt), {
+    date: intl.formatDate(AppDate.fromString(secret.expiresAt).toDate(), {
       dateStyle: 'medium',
       timeStyle: 'short',
     }),

@@ -28,7 +28,7 @@ import Model, {
 } from '../modelInterface';
 import { getPredefinedModelsFromEnv, shouldShowPredefinedModels } from '../predefinedModelsUtils';
 import type { ProviderDetails, ProviderType, ThinkingEffort } from '../../../../types/providers';
-import { trackModelChanged } from '../../../../utils/analytics';
+import { trackModelChanged } from '../../../../utils/analyticsEvent';
 import { addToRecentModels } from '../../../../utils/recentModels';
 import type { NoMessageValues } from 'react-intl';
 

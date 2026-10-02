@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { defineMessages, useIntl } from '../i18n';
 import { AppEvents } from '../constants/events';
-import { toastError } from '../toast_service';
+import { toastError } from '../toastService';
 import { ChatState } from '../types/chatState';
 
 import type { TokenState } from '../types/chat';

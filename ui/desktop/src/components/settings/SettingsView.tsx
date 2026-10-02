@@ -24,7 +24,7 @@ import KeyboardShortcutsSection from './keyboard/KeyboardShortcutsSection';
 import AuthSettingsSection from './auth/AuthSettingsSection';
 import LocalInferenceSection from './localInference/LocalInferenceSection';
 import { CONFIGURATION_ENABLED } from '../../updates';
-import { trackSettingsTabViewed } from '../../utils/analytics';
+import { trackSettingsTabViewed } from '../../utils/analyticsEvent';
 import { useFeatures } from '../../contexts/FeaturesContext';
 import { defineMessages, useIntl } from '../../i18n';
 import BackButton from '../ui/BackButton';

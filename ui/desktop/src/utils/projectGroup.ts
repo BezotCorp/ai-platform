@@ -1,4 +1,5 @@
 import type { SessionListItem } from '../acp/sessions';
+import { AppDate } from './appDate';
 
 export interface ProjectGroup {
   path: string;
@@ -53,9 +54,9 @@ export function groupSessionsByProject(sessions: SessionListItem[]): ProjectGrou
 
   const baseGroups = Array.from(groups.entries()).map(([path, projectSessions]) => {
     const sortedSessions = [...projectSessions].sort(
-      (a, b) =>
-        new Date(getSessionActivityTime(b)).getTime() -
-        new Date(getSessionActivityTime(a)).getTime()
+      (a: SessionListItem, b: SessionListItem): number =>
+        AppDate.fromString(getSessionActivityTime(b)).getTime() -
+        AppDate.fromString(getSessionActivityTime(a)).getTime()
     );
     return {
       path,
@@ -82,7 +83,9 @@ export function groupSessionsByProject(sessions: SessionListItem[]): ProjectGrou
           : group.label,
     }))
     .sort(
-      (a, b) => new Date(b.lastActivityAt).getTime() - new Date(a.lastActivityAt).getTime()
+      (a, b): number =>
+        AppDate.fromString(b.lastActivityAt).getTime() -
+        AppDate.fromString(a.lastActivityAt).getTime()
     );
 }
 

@@ -3,7 +3,10 @@ import { Input } from '../../../../../ui/input';
 import { acpReadProviderConfig } from '../../../../../../acp/providers';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../../../../../ui/collapsible';
 import type { ConfigKey, ProviderDetails } from '../../../../../../types/providers';
-import { configLabels, configPlaceholders } from '../../../../../../utils/configUtils';
+import {
+  configLabels,
+  getConfigFieldPlaceholder,
+} from '../../../../../../utils/configUtils';
 import { defineMessages, useIntl } from '../../../../../../i18n';
 import type { MessageValue, NoMessageValues } from 'react-intl';
 
@@ -165,7 +168,10 @@ export default function DefaultProviderSetupForm({
       return parameter.default;
     }
 
-    if (configPlaceholders[parameter.name]) return configPlaceholders[parameter.name];
+    const fieldPlaceholder: string | undefined = getConfigFieldPlaceholder(parameter.name);
+    if (fieldPlaceholder !== undefined) {
+      return fieldPlaceholder;
+    }
     const name = parameter.name.toLowerCase();
     if (name.includes('api_key')) return intl.formatMessage(i18n.apiKeyPlaceholder);
     if (name.includes('api_url') || name.includes('host'))

@@ -4,7 +4,7 @@ import { Button } from '../../ui/button';
 import { SubRecipeFormData } from './recipeFormSchema';
 import { useEscapeKey } from '../../../hooks/useEscapeKey';
 import KeyValueEditor from './KeyValueEditor';
-import { toastError } from '../../../toast_service';
+import { toastError } from '../../../toastService';
 import { defineMessages, useIntl } from '../../../i18n';
 import type { NoMessageValues } from 'react-intl';
 

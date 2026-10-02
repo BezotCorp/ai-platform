@@ -28,7 +28,7 @@ import { Card } from '../ui/card';
 import { Button } from '../ui/button';
 import { Skeleton } from '../ui/skeleton';
 import { MainPanelLayout } from '../Layout/MainPanelLayout';
-import { toastSuccess, toastError } from '../../toast_service';
+import { toastSuccess, toastError } from '../../toastService';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { createSession } from '../../sessions';
 import { isRecipeDeclined, isRecipeParamsCancelled } from '../../acp/errors';
@@ -50,7 +50,7 @@ import {
   trackRecipeScheduled,
   trackRecipeSlashCommandSet,
   getErrorType,
-} from '../../utils/analytics';
+} from '../../utils/analyticsEvent';
 import {
   DropdownMenu,
   DropdownMenuContent,

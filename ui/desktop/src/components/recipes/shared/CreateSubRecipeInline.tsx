@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react';
 import { useForm } from '@tanstack/react-form';
 import { X, Save, Loader2 } from 'lucide-react';
 import { Button } from '../../ui/button';
-import { toastSuccess, toastError } from '../../../toast_service';
+import { toastSuccess, toastError } from '../../../toastService';
 import { saveRecipe } from '../../../recipe/recipe_management';
 import { Recipe } from '../../../recipe';
 import { SubRecipeFormData } from './recipeFormSchema';

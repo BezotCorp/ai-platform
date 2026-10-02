@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
-import { toastError, toastSuccess } from '../toast_service';
+import { toastError, toastSuccess } from '../toastService';
 import Model, { getProviderMetadata } from './settings/models/modelInterface';
 import type { ProviderMetadata } from '../types/providers';
 import { acpChatSessionActions, acpChatSessionStore } from '../acp/chatSessionStore';

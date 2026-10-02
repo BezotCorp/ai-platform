@@ -1,8 +1,7 @@
+import { acpGetCanonicalModelInfo, type CanonicalModelInfoDto } from '../acp/providers';
 /**
  * Utilities for fetching canonical model information from the backend
  */
-
-import { acpGetCanonicalModelInfo, type CanonicalModelInfoDto } from '../acp/providers';
 
 export type CanonicalModelInfo = CanonicalModelInfoDto;
 

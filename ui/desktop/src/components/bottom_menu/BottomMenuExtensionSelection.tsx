@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useConfig, type FixedExtensionEntry } from '../ConfigContext';
-import { toastService } from '../../toast_service';
+import { toastService } from '../../toastService';
 import { formatExtensionName } from '../settings/extensions/subcomponents/ExtensionList';
 import {
   getSessionExtensions as getAcpSessionExtensions,

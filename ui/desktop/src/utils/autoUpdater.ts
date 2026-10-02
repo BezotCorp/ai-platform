@@ -9,6 +9,7 @@ import {
   MenuItemConstructorOptions,
   Notification,
 } from 'electron';
+import type { UpdaterEvent } from '../updaterEvent';
 import * as path from 'path';
 import * as fs from 'fs/promises';
 import log from './logger';
@@ -22,7 +23,7 @@ import {
   trackUpdateDownloadProgress,
   trackUpdateDownloadCompleted,
   trackUpdateInstallInitiated,
-} from './analytics';
+} from './analyticsEvent';
 
 let updateAvailable = false;
 let trayRef: Tray | null = null;

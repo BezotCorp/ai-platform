@@ -7,7 +7,7 @@ import {
   type DownloadProgress,
   type LocalModelResponse,
 } from '../../acp/local-inference';
-import { trackOnboardingSetupFailed } from '../../utils/analytics';
+import { trackOnboardingSetupFailed } from '../../utils/analyticsEvent';
 import { defineMessages, useIntl } from '../../i18n';
 import { errorMessage as formatErrorMessage } from '../../utils/conversionUtils';
 import { HuggingFaceModelSearch } from '../settings/localInference/HuggingFaceModelSearch';

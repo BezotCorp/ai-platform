@@ -8,6 +8,7 @@ import {
 } from '../acp/recipe';
 import { stripEmptyExtensions } from '.';
 import type { Recipe, RecipeManifest } from '.';
+import { AppDate } from '../utils/appDate';
 
 export const saveRecipe = async (
   recipe: Recipe,
@@ -52,15 +53,12 @@ export const recipeToYaml = async (recipe: Recipe): Promise<string> => {
   return await acpRecipeToYaml(recipe);
 };
 
-const parseLastModified = (val: string | Date): Date => {
-  return val instanceof Date ? val : new Date(val);
-};
-
 export const convertToLocaleDateString = (lastModified: string): string => {
-  if (lastModified) {
-    return parseLastModified(lastModified).toLocaleDateString();
+  if (!lastModified) {
+    return '';
   }
-  return '';
+
+  return AppDate.fromString(lastModified).toLocaleDateString();
 };
 
 export const getStorageDirectory = (isGlobal: boolean): string => {

@@ -9,7 +9,7 @@ vi.mock('../../toasts', () => ({
   },
 }));
 
-import { toastService } from '../../toast_service';
+import { toastService } from '../../toastService';
 
 describe('showExtensionLoadResults', () => {
   beforeEach(() => {

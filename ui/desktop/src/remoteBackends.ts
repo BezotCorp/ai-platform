@@ -10,7 +10,7 @@ import { Hop } from './hop';
 import { Probe } from './probe';
 import { RemoteBackendParams } from './remoteBackendParams';
 import { RemoteBackendConnection } from './remoteBackendConnection';
-import { RemoteBackendStep } from './remote_backend_step';
+import { RemoteBackendStep } from './remoteBackendStep';
 import { HopRequest } from './hotRequest';
 
 const RETRY_BUDGET_MS = 15000;

@@ -1,6 +1,6 @@
-import { FindGooseBinaryOptions } from './findGooseBinaryOptions';
-import { Logger } from './logger';
-import { ReadinessFetch } from './readinessFetch';
+import type { FindGooseBinaryOptions } from './findGooseBinaryOptions';
+import type { Logger } from './logger';
+import type { ReadinessFetch } from './readinessFetch';
 
 export interface StartGooseServeOptions extends FindGooseBinaryOptions {
   dir?: string;

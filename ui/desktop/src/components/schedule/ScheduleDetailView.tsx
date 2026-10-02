@@ -15,11 +15,11 @@ import {
   acpInspectRunningJob,
 } from '../../acp/schedules';
 import { ScheduleModal, NewSchedulePayload } from './ScheduleModal';
-import { toastError, toastSuccess } from '../../toast_service';
+import { toastError, toastSuccess } from '../../toastService';
 import { Loader2, Pause, Play, Edit, Square, Eye } from 'lucide-react';
 import cronstrue from 'cronstrue';
 import { formatToLocalDateWithTimezone } from '../../utils/date';
-import { trackScheduleRunNow, getErrorType } from '../../utils/analytics';
+import { trackScheduleRunNow, getErrorType } from '../../utils/analyticsEvent';
 import { errorMessage } from '../../utils/conversionUtils';
 import { defineMessages, useIntl } from '../../i18n';
 import { useNavigation } from '../../hooks/useNavigation';
