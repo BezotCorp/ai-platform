@@ -1,0 +1,98 @@
+name: CI - Main & Release
+
+# This workflow handles:
+# 1. Running release-please on pushes to main
+# 2. Running tests on pushes to main
+# 3. Packaging a .vsix and uploading it to the GitHub Release when release-please creates one
+
+permissions:
+  contents: write # Needed for release job & release-please
+  pull-requests: write # Needed for release-please job
+
+on:
+  push:
+    branches: [ main ]
+  # Removed pull_request trigger - handled by pr-checks.yml
+  workflow_dispatch: # Keep for manual testing
+
+jobs:
+  # This job runs ONLY on pushes to the main branch
+  release-please:
+    name: Release Please
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    outputs:
+      release_created: ${{ steps.release.outputs.release_created }}
+      tag_name: ${{ steps.release.outputs.tag_name }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
+        with:
+          fetch-depth: 0 # Fetch all history for release-please
+      
+      - name: Run Release Please
+        uses: googleapis/release-please-action@16a9c90856f42705d54a6fda1823352bdc62cf38  # v4.4.0
+        id: release
+        with:
+          config-file: release-please-config.json
+          token: ${{ secrets.RELEASE_PLEASE_PAT }}
+          
+      # The following steps only run if a release was created
+      - name: Setup Bun
+        if: steps.release.outputs.release_created
+        uses: oven-sh/setup-bun@3d267786b128fe76c2f16a390aa2448b815359f3  # v2.1.2
+        with:
+          bun-version: latest
+
+      - name: Setup Node.js (for vsce)
+        if: steps.release.outputs.release_created
+        uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238  # v6.2.0
+        with:
+          node-version: '20'
+
+      - name: Install Dependencies
+        if: steps.release.outputs.release_created
+        run: bun install --frozen-lockfile
+
+      - name: Build Extension
+        if: steps.release.outputs.release_created
+        run: bun run build
+
+      - name: Package Extension
+        if: steps.release.outputs.release_created
+        run: bunx @vscode/vsce package --no-dependencies
+
+      - name: Upload Release Assets
+        if: steps.release.outputs.release_created
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release upload "${{ steps.release.outputs.tag_name }}" *.vsix
+
+  # This job runs ONLY on pushes to the main branch
+  test-on-main:
+    name: Lint and Test (Main)
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@3d267786b128fe76c2f16a390aa2448b815359f3  # v2.1.2
+        with:
+          bun-version: latest
+
+      - name: Install Dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Lint & Format Check
+        run: bun run ci
+
+      - name: Run Tests
+        run: bun test
+
+      - name: Build
+        run: bun run build

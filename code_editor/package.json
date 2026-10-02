@@ -1,0 +1,138 @@
+{
+  "name": "vscode-goose",
+  "displayName": "VS Code Goose",
+  "description": "codename Goose for VSCode",
+  "version": "0.2.3",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/block/vscode-goose"
+  },
+  "license": "Apache-2.0",
+  "icon": "resources/goose-icon.png",
+  "publisher": "block",
+  "engines": {
+    "vscode": "^1.95.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "goose",
+          "title": "Goose",
+          "icon": "resources/goose-icon-dark.svg"
+        }
+      ]
+    },
+    "views": {
+      "goose": [
+        {
+          "type": "webview",
+          "id": "goose.chatView",
+          "name": ""
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Goose",
+      "properties": {
+        "goose.binaryPath": {
+          "type": "string",
+          "default": "",
+          "description": "Path to the goose binary. Leave empty for auto-detection."
+        },
+        "goose.logLevel": {
+          "type": "string",
+          "enum": [
+            "error",
+            "warn",
+            "info",
+            "debug"
+          ],
+          "default": "info",
+          "description": "Logging level for the Goose extension."
+        }
+      }
+    },
+    "commands": [
+      {
+        "command": "goose.showLogs",
+        "title": "Goose: Show Logs"
+      },
+      {
+        "command": "goose.restart",
+        "title": "Goose: Restart"
+      },
+      {
+        "command": "goose.sendSelectionToChat",
+        "title": "Send to Goose"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "goose.sendSelectionToChat",
+        "key": "ctrl+shift+g",
+        "mac": "cmd+shift+g",
+        "when": "editorTextFocus"
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "goose.sendSelectionToChat",
+          "when": "editorTextFocus",
+          "group": "navigation"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "build": "bun build ./src/extension/extension.ts --outdir=./dist --target=node --format=cjs --external=vscode --sourcemap=linked && bun build ./src/webview/index.tsx --outdir=./dist/webview --entry-naming=main.[ext] --minify && tailwindcss -i ./src/webview/styles.css -o ./dist/webview/styles.css --minify",
+    "build:extension": "bun build ./src/extension/extension.ts --outdir=./dist --target=node --format=cjs --external=vscode --sourcemap=linked",
+    "build:webview": "bun build ./src/webview/index.tsx --outdir=./dist/webview --entry-naming=main.[ext] --minify",
+    "build:webview:css": "tailwindcss -i ./src/webview/styles.css -o ./dist/webview/styles.css --minify",
+    "dev": "bun build ./src/extension/extension.ts --outdir=./dist --target=node --format=cjs --external=vscode --sourcemap=linked --watch",
+    "test": "bun test",
+    "test:watch": "bun test --watch",
+    "lint": "bunx --bun biome lint",
+    "lint:fix": "bunx --bun biome lint --write",
+    "format": "bunx --bun biome format --write",
+    "check": "bunx --bun biome check",
+    "check:fix": "bunx --bun biome check --write",
+    "ci": "bunx --bun biome ci",
+    "package": "bun run build && vsce package --no-dependencies",
+    "clean": "rm -rf dist",
+    "prepare": "husky"
+  },
+  "dependencies": {
+    "fp-ts": "^2.16.0",
+    "react-markdown": "^10.1.0",
+    "react-syntax-highlighter": "^15.6.1",
+    "remark-gfm": "^4.0.1",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.3.10",
+    "@commitlint/cli": "^19.6.0",
+    "@commitlint/config-conventional": "^19.6.0",
+    "@tailwindcss/cli": "^4.1.0",
+    "@types/node": "^20.17.0",
+    "@types/react": "^19.1.0",
+    "@types/react-dom": "^19.1.0",
+    "@types/react-syntax-highlighter": "^15.5.13",
+    "@types/vscode": "^1.95.0",
+    "@vscode/vsce": "^3.2.0",
+    "autoprefixer": "^10.4.16",
+    "husky": "^9.1.0",
+    "postcss": "^8.4.32",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "typescript": "^5.8.0"
+  }
+}
