@@ -1,4 +1,4 @@
-import type { SessionListItem } from '../acp/sessions';
+import type { SessionListItem } from '../acp/sessionListItem';
 import { AppDate } from './appDate';
 
 export interface DateGroup {

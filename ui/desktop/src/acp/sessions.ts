@@ -8,58 +8,15 @@ import {
 } from '@agentclientprotocol/sdk';
 import type { GooseExtension, SessionExportFormatKey } from '@aaif/goose-acp-client';
 import { getAcpClient } from './acpConnection';
-import type { ExtensionLoadResult } from '../types/extensions';
 import type { Session } from '../types/session';
-import type { Recipe } from '../recipe';
-
-interface GooseSessionInfoMeta {
-  messageCount?: number;
-  createdAt?: string;
-  lastMessageAt?: string;
-  archivedAt?: string;
-  projectId?: string;
-  providerId?: string;
-  modelId?: string;
-  sessionType?: Session['session_type'];
-  userSetName?: boolean;
-  hasRecipe?: boolean;
-  lastMessageSnippet?: string;
-}
-
-export interface SessionListItem {
-  id: string;
-  name: string;
-  workingDir: string;
-  updatedAt: string;
-  messageCount: number;
-  lastMessageAt?: string;
-  createdAt: string;
-  archivedAt?: string;
-  projectId?: string;
-  providerId?: string;
-  modelId?: string;
-  userSetName?: boolean;
-  hasRecipe?: boolean;
-  sessionType?: Session['session_type'];
-}
-
-export interface SessionListPage {
-  sessions: SessionListItem[];
-  nextCursor: string | null;
-}
-
-export interface LoadSessionMeta {
-  recipe?: Recipe | null;
-  userRecipeValues?: Record<string, string> | null;
-  extensionResults?: ExtensionLoadResult[] | null;
-  workingDir?: string;
-}
-
-export interface AcpLoadSessionResult {
-  sessionInfo: SessionInfo;
-  response: LoadSessionResponse;
-  meta: LoadSessionMeta;
-}
+import type { GooseSessionInfoMeta } from './gooseSessionInfoMeta';
+import type { SessionListItem } from './sessionListItem';
+import type { SessionListPage } from './sessionListPage';
+import type { LoadSessionMeta } from './loadSessionMeta';
+import type { AcpLoadSessionResult } from './acpLoadSessionResult';
+import type { SessionListFilter } from './sessionListFilter';
+import type { AcpNewSessionResult } from './acpNewSessionResult';
+import type { AcpRecipeOptions } from './acpRecipeOptions';
 
 const inFlightSessionLoads = new Map<string, Promise<AcpLoadSessionResult>>();
 
@@ -131,11 +88,6 @@ function sessionInfoToListItem(s: SessionInfo): SessionListItem {
     hasRecipe: meta.hasRecipe,
     sessionType: meta.sessionType,
   };
-}
-
-export interface SessionListFilter {
-  keyword?: string;
-  includeAcp: boolean;
 }
 
 const SESSION_LIST_TYPES = ['user', 'scheduled'] as const;
@@ -221,18 +173,6 @@ async function loadAcpSession(sessionId: string): Promise<AcpLoadSessionResult> 
     response,
     meta: parseLoadMeta(response),
   };
-}
-
-export interface AcpNewSessionResult {
-  sessionId: string;
-  sessionInfo: SessionInfo;
-  meta: LoadSessionMeta;
-}
-
-export interface AcpRecipeOptions {
-  recipeId?: string;
-  recipeDeeplink?: string;
-  recipeParameterScopeId?: string;
 }
 
 /**

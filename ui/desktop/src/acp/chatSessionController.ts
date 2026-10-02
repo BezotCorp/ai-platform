@@ -30,8 +30,8 @@ import {
   acpTruncateSessionConversation,
   isAcpSessionLoadInFlight,
   sessionInfoToSession,
-  type AcpRecipeOptions,
 } from './sessions';
+import { AcpRecipeOptions } from './acpRecipeOptions';
 
 export interface AcpLoadSessionOptions {
   onSessionLoaded?: () => void;

@@ -4,11 +4,8 @@ import { useChatContext } from '../contexts/ChatContext';
 import { getSessionDisplayName } from '../sessions';
 import { AppEvents } from '../constants/events';
 import type { Session } from '../types/session';
-import {
-  acpGetSessionListItem,
-  acpListRecentSessions,
-  type SessionListItem,
-} from '../acp/sessions';
+import { acpGetSessionListItem, acpListRecentSessions } from '../acp/sessions';
+import type { SessionListItem } from '../acp/sessionListItem';
 import { groupSessionsByProject } from '../utils/projectGroup';
 
 const MAX_RECENT_SESSIONS = 25;

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { getSessionDisplayName } from '../sessions';
 import { prependUnique } from '../hooks/useNavigationSessions';
-import type { SessionListItem } from '../acp/sessions';
+import type { SessionListItem } from '../acp/sessionListItem';
 import type { Session } from '../types/session';
 
 // Helper to build a minimal Session object for testing.

@@ -34,15 +34,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '../ui/dropdown-menu';
-import {
-  acpDeleteSession,
-  acpExportSession,
-  acpForkSession,
-  acpImportSession,
-  acpListSessions,
-  acpRenameSession,
-  type SessionListItem,
-} from '../../acp/sessions';
+import { acpDeleteSession, acpExportSession, acpForkSession, acpImportSession, acpListSessions, acpRenameSession } from '../../acp/sessions';
+import type { SessionListItem } from '../../acp/sessionListItem';
 import type { SessionExportFormatKey } from '@aaif/goose-acp-client';
 import { acpChatSessionActions } from '../../acp/chatSessionStore';
 import { cancelAcpPermissionRequestsForSession } from '../../acp/permissionRequests';

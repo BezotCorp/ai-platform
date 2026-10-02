@@ -1,38 +1,14 @@
 import type { Recipe } from '../recipe';
 import type { Message } from './message';
+import type { ExtensionData } from './extensionData';
+import type { GooseMode } from './gooseMode';
+import type { ModelConfig } from './modelConfig';
+import type { SessionType } from './sessionType';
+import type { Usage } from './usage';
 
-export type ExtensionData = Record<string, unknown>;
-
-export type GooseMode = 'auto' | 'approve' | 'smart_approve' | 'chat';
-
-export type ModelConfig = {
-  context_limit?: number | null;
-  max_tokens?: number | null;
-  model_name: string;
-  reasoning?: boolean | null;
-  request_params?: Record<string, unknown> | null;
-  temperature?: number | null;
-  toolshim: boolean;
-  toolshim_model?: string | null;
-};
-
-export type Usage = {
-  cache_read_input_tokens?: number | null;
-  cache_write_input_tokens?: number | null;
-  input_tokens?: number | null;
-  output_tokens?: number | null;
-  total_tokens?: number | null;
-};
-
-export type SessionType =
-  | 'user'
-  | 'scheduled'
-  | 'sub_agent'
-  | 'hidden'
-  | 'terminal'
-  | 'gateway'
-  | 'acp';
-
+/**
+ * Complete application representation of a Goose session.
+ */
 export type Session = {
   accumulated_cost?: number | null;
   accumulated_usage?: Usage;

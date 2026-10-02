@@ -1,4 +1,4 @@
-import type { SessionListItem } from '../acp/sessions';
+import type { SessionListItem } from '../acp/sessionListItem';
 import { AppDate } from './appDate';
 
 export interface ProjectGroup {
@@ -62,10 +62,7 @@ export function groupSessionsByProject(sessions: SessionListItem[]): ProjectGrou
       path,
       label: getProjectLabel(path),
       sessions: sortedSessions,
-      lastActivityAt:
-        sortedSessions.length > 0
-          ? getSessionActivityTime(sortedSessions[0])
-          : '',
+      lastActivityAt: sortedSessions.length > 0 ? getSessionActivityTime(sortedSessions[0]) : '',
     };
   });
 

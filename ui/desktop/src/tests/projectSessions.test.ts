@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { getProjectLabel, groupSessionsByProject } from '../utils/projectGroup';
-import type { SessionListItem } from '../acp/sessions';
+import type { SessionListItem } from '../acp/sessionListItem';
 
 function makeSession(overrides: Partial<SessionListItem> = {}): SessionListItem {
   return {
