@@ -5,7 +5,7 @@
 import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
-import type { ActionRequired } from '../../types/message';
+import type { ActionRequired } from '../../types/actionRequired';
 import { IntlTestWrapper } from '../../i18n/test-utils';
 import ElicitationRequest from '../ElicitationRequest';
 

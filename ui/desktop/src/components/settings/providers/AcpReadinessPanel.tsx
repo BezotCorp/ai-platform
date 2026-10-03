@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { CheckCircle2, CircleAlert, LoaderCircle, RefreshCw } from 'lucide-react';
 import { acpEnableProvider, acpRefreshProviderDetails } from '../../../acp/providers';
 import { defineMessages, useIntl } from '../../../i18n';
-import type { ProviderDetails } from '../../../types/updateCustomProviderRequest';
+import type { ProviderDetails } from '../../../types/providerDetails';
 import { errorMessage } from '../../../utils/conversionUtils';
 import { Button } from '../../ui/button';
 import type { NoMessageValues } from 'react-intl';

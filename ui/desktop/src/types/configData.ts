@@ -1,3 +1,3 @@
-import type { ConfigValue } from '.';
+import type { ConfigValue } from './configValue';
 
 export type ConfigData = Record<string, ConfigValue>;

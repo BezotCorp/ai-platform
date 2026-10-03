@@ -1,7 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { X, Clock, Send, GripVertical, Zap, Sparkles, ChevronDown, ChevronUp } from 'lucide-react';
 import { Button } from './ui/button';
-import { ImageData } from '../types/message';
+import type { ImageData } from '../types/imageData';
 import { getTextDirection } from '../utils/textDirection';
 import { defineMessages, useIntl } from '../i18n';
 import type { MessageValue, NoMessageValues } from 'react-intl';

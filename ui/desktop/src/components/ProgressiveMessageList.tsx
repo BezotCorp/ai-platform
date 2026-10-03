@@ -11,12 +11,10 @@ import {
   CreditsExhaustedNotification,
   getCreditsExhaustedNotification,
 } from './context_management/CreditsExhaustedNotification';
-import type {
-  ImageData,
-  Message,
-  NotificationEvent,
-  SystemNotificationContent,
-} from '../types/message';
+import type { Message } from '../types/message';
+import type { ImageData } from '../types/imageData';
+import type { NotificationEvent } from '../types/notificationEvent';
+import type { SystemNotificationContent } from '../types/systemNotificationContent';
 import LoadingGoose from './LoadingGoose';
 import { getModelDisplayName } from './settings/models/predefinedModelsUtils';
 import { deriveMessageRowContexts, type MessageRowContext } from './messageRowContext';

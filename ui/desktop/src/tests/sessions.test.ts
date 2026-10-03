@@ -8,7 +8,7 @@ import { AppEvents } from '../constants/events';
 
 import type { Recipe } from '../recipe';
 import { createSession, getSessionDisplayName, startNewSession } from '../sessions';
-import type { ExtensionConfig } from '../types/extensions';
+import type { ExtensionConfig } from '../types/extensionConfig';
 import { Session } from '../types/session';
 import type { SessionData } from '../types/sessionData';
 import type { ConfiguredExtensionEntry } from '../types/configuredExtensionEntry';

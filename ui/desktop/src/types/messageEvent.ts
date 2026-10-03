@@ -1,4 +1,8 @@
-import type { Conversation, JsonObject, Message, MessageUsage, TokenState } from '.';
+import type { Conversation } from './conversation';
+import type { JsonObject } from './jsonObject';
+import type { Message } from './message';
+import type { MessageUsage } from './messageUsage';
+import type { TokenState } from './tokenState';
 
 export type MessageEvent =
   | {

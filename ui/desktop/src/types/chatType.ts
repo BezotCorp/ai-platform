@@ -1,5 +1,5 @@
 import { Recipe } from '../recipe';
-import type { Message } from '.';
+import type { Message } from './message';
 
 export interface ChatType {
   sessionId: string;

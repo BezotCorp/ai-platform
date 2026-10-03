@@ -5,7 +5,7 @@
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
-import type { MessageUsage } from '../../types/message';
+import type { MessageUsage } from '../../types/messageUsage';
 import { IntlTestWrapper } from '../../i18n/test-utils';
 import MessageUsageStats from '../MessageUsageStats';
 

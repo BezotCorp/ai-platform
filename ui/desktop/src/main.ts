@@ -60,7 +60,7 @@ import {
 import { UPDATES_ENABLED } from './updates';
 import './utils/gitBranchIpc';
 import './utils/recipeHash';
-import type { GooseApp } from './types/mcpAppResource';
+import type { GooseApp } from './types/gooseApp';
 import installExtension, { REACT_DEVELOPER_TOOLS } from 'electron-devtools-installer';
 import { WEB_PROTOCOLS } from './utils/urlSecurity';
 import { openExternalUrl } from './utils/openExternalUrl';

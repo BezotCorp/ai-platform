@@ -9,11 +9,9 @@ import type {
   ProviderTemplateDto,
 } from '@aaif/goose-acp-client';
 import { methods } from '@agentclientprotocol/sdk';
-import type {
-  ProviderDetails,
-  ThinkingEffort,
-  UpdateCustomProviderRequest,
-} from '../types/updateCustomProviderRequest';
+import type { UpdateCustomProviderRequest } from '../types/updateCustomProviderRequest';
+import type { ProviderDetails } from '../types/providerDetails';
+import type { ThinkingEffort } from '../types/thinkingEffort';
 import { getAcpClient } from './acpConnection';
 
 export type { CanonicalModelInfoDto, ProviderSecretDto };

@@ -1,3 +1,3 @@
-import type { MessageContent } from '.';
+import type { MessageContent } from './messageContent';
 
 export type ImageMessageContent = Extract<MessageContent, { type: 'image' }>;

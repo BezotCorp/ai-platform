@@ -1,4 +1,5 @@
-import type { Message, ToolRequest } from '.';
+import type { Message } from './message';
+import type { ToolRequest } from './toolRequest';
 
 export type ToolRequestMessageContent = ToolRequest & { type: 'toolRequest' };
 

@@ -1,4 +1,5 @@
-import type { ActionRequiredData, Message } from '.';
+import type { ActionRequiredData } from './actionRequiredData';
+import type { Message } from './message';
 
 export type ActionRequired = {
   data: ActionRequiredData;

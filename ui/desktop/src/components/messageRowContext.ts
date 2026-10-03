@@ -1,4 +1,6 @@
-import type { Message, ToolConfirmationData, ToolResponseMessageContent } from '../types/message';
+import type { Message } from '../types/message';
+import type { ToolConfirmationData } from '../types/toolConfirmationData';
+import type { ToolResponseMessageContent } from '../types/toolResponseMessageContent';
 import {
   getAnyToolConfirmationData,
   getPendingToolConfirmationIds,

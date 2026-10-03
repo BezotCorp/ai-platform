@@ -3,7 +3,8 @@ import CardContainer from './CardContainer';
 import CardHeader from './CardHeader';
 import CardBody from './CardBody';
 import DefaultCardButtons from './buttons/DefaultCardButtons';
-import type { ProviderDetails, ProviderMetadata } from '../../../../types/updateCustomProviderRequest';
+import type { ProviderDetails } from '../../../../types/providerDetails';
+import type { ProviderMetadata } from '../../../../types/providerMetadata';
 import { defineMessages, useIntl } from '../../../../i18n';
 import type { MessageValue, NoMessageValues } from 'react-intl';
 

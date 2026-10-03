@@ -1,4 +1,5 @@
-import type { InferenceMetadata, MessageUsage } from '.';
+import type { InferenceMetadata } from './inferenceMetadata';
+import type { MessageUsage } from './messageUsage';
 
 export type MessageMetadata = {
   agentVisible: boolean;

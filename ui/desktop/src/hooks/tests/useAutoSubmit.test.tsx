@@ -8,7 +8,7 @@ import { MemoryRouter } from 'react-router';
 import type { PropsWithChildren } from 'react';
 import { useAutoSubmit } from '../useAutoSubmit';
 import { ChatState } from '../../types/chatState';
-import type { UserInput } from '../../types/message';
+import type { UserInput } from '../../types/userInput';
 import { Session } from '../../types/session';
 import type { SessionData } from '../../types/sessionData';
 

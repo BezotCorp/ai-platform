@@ -5,7 +5,8 @@ import { ChatState } from '../types/chatState';
 import type { Session } from '../types/session';
 import { showExtensionLoadResults } from '../utils/extensionErrorUtils';
 import { createUserMessage } from '../types/message';
-import type { ImageData, Message } from '../types/message';
+import type { Message } from '../types/message';
+import type { ImageData } from '../types/imageData';
 import { getPendingToolConfirmationIds } from '../types/toolConfirmationData';
 import {
   acpChatSessionActions,

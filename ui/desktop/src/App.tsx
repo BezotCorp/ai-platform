@@ -18,7 +18,7 @@ import { createSession } from './sessions';
 import { acpListSessions, acpDeleteSession } from './acp/sessions';
 import type { ChatType } from './types/chatType';
 import Hub from './components/Hub';
-import type { UserInput } from './types/message';
+import type { UserInput } from './types/userInput';
 import SettingsView, { type SettingsViewOptions } from './components/settings/SettingsView';
 import SessionsView from './components/sessions/SessionsView';
 import SchedulesView from './components/schedule/SchedulesView';

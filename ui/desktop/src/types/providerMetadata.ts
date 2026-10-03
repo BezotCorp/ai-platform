@@ -1,4 +1,5 @@
-import type { ConfigKey, ModelInfo } from '.';
+import type { ConfigKey } from './configKey';
+import type { ModelInfo } from './modelInfo';
 
 export type ProviderMetadata = {
   config_keys: ConfigKey[];

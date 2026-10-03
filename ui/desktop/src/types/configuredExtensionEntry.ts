@@ -1,4 +1,4 @@
-import type { ExtensionConfig } from '.';
+import type { ExtensionConfig } from './extensionConfig';
 
 export type ConfiguredExtensionEntry = ExtensionConfig & {
   enabled: boolean;

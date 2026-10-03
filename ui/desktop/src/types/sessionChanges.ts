@@ -1,5 +1,5 @@
 import type { AppDate } from '../utils/appDate';
-import type { SessionData } from '.';
+import type { SessionData } from './sessionData';
 
 /**
  * Changes that can be applied to an application `Session`.

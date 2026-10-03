@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { Message, MessageContent } from '../../types/message';
+import type { Message } from '../../types/message';
+import type { MessageContent } from '../../types/messageContent';
 import { deriveMessageRowContexts } from '../messageRowContext';
 
 const visibleMetadata: Message['metadata'] = { agentVisible: true, userVisible: true };

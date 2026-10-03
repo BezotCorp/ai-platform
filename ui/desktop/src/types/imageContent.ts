@@ -1,4 +1,5 @@
-import type { Annotations, JsonObject } from '.';
+import type { Annotations } from './annotation';
+import type { JsonObject } from './jsonObject';
 
 export type ImageContent = {
   _meta?: JsonObject;

@@ -7,7 +7,7 @@ import AgentLoopSettings from './AgentLoopSettings';
 import AppSettingsSection from './app/AppSettingsSection';
 import ConfigSettings from './config/ConfigSettings';
 import PromptsSettingsSection from './PromptsSettingsSection';
-import type { ExtensionConfig } from '../../types/extensions';
+import type { ExtensionConfig } from '../../types/extensionConfig';
 import {
   Bot,
   Share2,

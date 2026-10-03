@@ -1,4 +1,5 @@
-import type { JsonObject, Role } from '.';
+import type { JsonObject } from './jsonObject';
+import type { Role } from './role';
 
 export type ContentAnnotations =
   | {

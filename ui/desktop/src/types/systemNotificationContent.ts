@@ -1,4 +1,4 @@
-import type { SystemNotificationType } from '.';
+import type { SystemNotificationType } from './systemNotificationType';
 
 export type SystemNotificationContent = {
   data?: unknown;

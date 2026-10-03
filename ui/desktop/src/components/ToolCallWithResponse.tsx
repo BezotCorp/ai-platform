@@ -5,17 +5,15 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Button } from './ui/button';
 import { ToolCallArguments } from './ToolCallArguments';
 import MarkdownContent from './MarkdownContent';
-import {
-  ToolRequestMessageContent,
-  ToolResponseMessageContent,
-  NotificationEvent,
-  ToolConfirmationData,
-} from '../types/message';
+import type { ToolRequestMessageContent } from '../types/toolRequestMessageContent';
+import type { ToolResponseMessageContent } from '../types/toolResponseMessageContent';
+import type { NotificationEvent } from '../types/notificationEvent';
+import type { ToolConfirmationData } from '../types/toolConfirmationData';
 import { cn, snakeToTitleCase } from '../utils';
 import { ChevronRight, ExternalLink } from 'lucide-react';
 import { TooltipWrapper } from './settings/providers/subcomponents/buttons/TooltipWrapper';
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
-import type { ContentBlock } from '../types/message';
+import type { ContentBlock } from '../types/contentBlock';
 
 import McpAppRenderer from './McpApps/McpAppRenderer';
 import ToolApprovalButtons from './ToolApprovalButtons';

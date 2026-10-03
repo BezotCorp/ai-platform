@@ -1,4 +1,7 @@
-import type { ImageData, MessageContent, MessageMetadata, Role } from '.';
+import type { ImageData } from './imageData';
+import type { MessageContent } from './messageContent';
+import type { MessageMetadata } from './messageMetadata';
+import type { Role } from './role';
 
 export type Message = {
   content: MessageContent[];

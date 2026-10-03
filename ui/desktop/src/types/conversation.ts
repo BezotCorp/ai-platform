@@ -1,3 +1,3 @@
-import type { Message } from '.';
+import type { Message } from './message';
 
 export type Conversation = Message[];

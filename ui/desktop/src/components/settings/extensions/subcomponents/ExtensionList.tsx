@@ -1,6 +1,6 @@
 import ExtensionItem from './ExtensionItem';
 import builtInExtensionsData from '../../../../built-in-extensions.json';
-import type { ExtensionConfig } from '../../../../types/extensions';
+import type { ExtensionConfig } from '../../../../types/extensionConfig';
 
 import { combineCmdAndArgs } from '../utils';
 import { defineMessages, useIntl } from '../../../../i18n';

@@ -1,6 +1,6 @@
 import { contextBridge, ipcRenderer, webUtils, type IpcRendererEvent } from 'electron';
 import type { Recipe } from './recipe';
-import type { GooseApp } from './types/mcpAppResource';
+import type { GooseApp } from './types/gooseApp';
 import { defaultSettings, type Settings } from './utils/settings';
 import type { OpenExternalUrlResult } from './utils/openExternalUrlResult';
 import type { AppConfigAPI } from './appConfigApi';

@@ -1,9 +1,7 @@
 import type { ToolCallUpdate } from '@agentclientprotocol/sdk';
-import type {
-  LiveOutputNotificationChunk,
-  LiveOutputNotificationParams,
-  NotificationEvent,
-} from '../../types/message';
+import type { LiveOutputNotificationChunk } from '../../types/liveOutputNotificationChunk';
+import type { LiveOutputNotificationParams } from '../../types/liveOutputNotificationParams';
+import type { NotificationEvent } from '../../types/notificationEvent';
 import type { AcpChatStateChange } from './shared';
 import { isRecord } from './shared';
 

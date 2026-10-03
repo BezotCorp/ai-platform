@@ -7,7 +7,7 @@ import {
   acpListSettingsProviderDetails,
   acpListSetupProviderDetails,
 } from '../../../acp/providers';
-import type { ProviderDetails } from '../../../types/updateCustomProviderRequest';
+import type { ProviderDetails } from '../../../types/providerDetails';
 import { createNavigationHandler } from '../../../utils/navigationUtils';
 import { defineMessages, useIntl } from '../../../i18n';
 import type { NoMessageValues } from 'react-intl';

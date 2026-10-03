@@ -1,5 +1,5 @@
 import { ConfigureSettingsButton, RocketButton } from './CardButtons';
-import type { ProviderDetails } from '../../../../../types/updateCustomProviderRequest';
+import type { ProviderDetails } from '../../../../../types/providerDetails';
 import { defineMessages, useIntl } from '../../../../../i18n';
 import type { MessageValue, NoMessageValues } from 'react-intl';
 

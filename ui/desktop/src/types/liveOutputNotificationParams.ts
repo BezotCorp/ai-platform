@@ -1,4 +1,4 @@
-import type { LiveOutputNotificationChunk } from '.';
+import type { LiveOutputNotificationChunk } from './liveOutputNotificationChunk';
 
 export type LiveOutputNotificationParams = {
   sequence: number;

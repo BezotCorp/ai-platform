@@ -1,4 +1,5 @@
-import type { ProviderMetadata, ProviderType } from '.';
+import type { ProviderMetadata } from './providerMetadata';
+import type { ProviderType } from './providerType';
 
 export type ProviderDetails = {
   is_configured: boolean;

@@ -22,7 +22,7 @@ import {
 } from '../../../../acp/providers';
 import { useModelAndProvider } from '../../../ModelAndProviderContext';
 import { AlertTriangle, LogIn } from 'lucide-react';
-import type { ProviderDetails } from '../../../../types/updateCustomProviderRequest';
+import type { ProviderDetails } from '../../../../types/providerDetails';
 import { Button } from '../../../../components/ui/button';
 import { errorMessage } from '../../../../utils/conversionUtils';
 import { useProviderDeviceCode } from '../../../../hooks/useProviderDeviceCode';

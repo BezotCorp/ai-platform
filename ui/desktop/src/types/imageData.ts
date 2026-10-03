@@ -1,4 +1,5 @@
-import type { ImageMessageContent, Message } from '.';
+import type { ImageMessageContent } from './imageMessageContent';
+import type { Message } from './message';
 
 export interface ImageData {
   data: string;

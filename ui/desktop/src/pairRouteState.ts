@@ -1,4 +1,4 @@
-import type { UserInput } from './types/message';
+import type { UserInput } from './types/userInput';
 
 export interface PairRouteState {
   resumeSessionId?: string;

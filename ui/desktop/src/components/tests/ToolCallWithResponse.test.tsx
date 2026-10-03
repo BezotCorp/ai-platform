@@ -6,12 +6,10 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { IntlTestWrapper } from '../../i18n/test-utils';
-import type {
-  Message,
-  NotificationEvent,
-  ToolRequestMessageContent,
-  ToolResponseMessageContent,
-} from '../../types/message';
+import type { Message } from '../../types/message';
+import type { NotificationEvent } from '../../types/notificationEvent';
+import type { ToolRequestMessageContent } from '../../types/toolRequestMessageContent';
+import type { ToolResponseMessageContent } from '../../types/toolResponseMessageContent';
 import { getAnyToolConfirmationData } from '../../types/toolConfirmationData';
 import { resolveAcpPermissionRequest } from '../../acp/permissionRequests';
 import ToolCallWithResponse from '../ToolCallWithResponse';

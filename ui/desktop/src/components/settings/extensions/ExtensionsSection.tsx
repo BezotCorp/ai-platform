@@ -15,7 +15,7 @@ import {
 } from './utils';
 
 import { activateExtensionDefault, deleteExtension, toggleExtensionDefault } from './index';
-import type { ExtensionConfig } from '../../../types/extensions';
+import type { ExtensionConfig } from '../../../types/extensionConfig';
 import type { NoMessageValues } from 'react-intl';
 import type { ConfiguredExtensionEntry } from '../../../types/configuredExtensionEntry';
 

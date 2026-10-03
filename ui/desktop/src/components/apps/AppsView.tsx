@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { MainPanelLayout } from '../Layout/MainPanelLayout';
 import { Button } from '../ui/button';
 import { AlertTriangle, Download, Play, Trash2, Upload } from 'lucide-react';
-import type { GooseApp } from '../../types/mcpAppResource';
+import type { GooseApp } from '../../types/gooseApp';
 import { deleteMcpApp, exportMcpApp, importMcpApp, listMcpApps } from '../../acp/mcp-apps';
 import { useChatContext } from '../../contexts/ChatContext';
 import { formatAppName } from '../../utils/conversionUtils';

@@ -6,7 +6,8 @@ import { cn } from '../../../utils';
 import { Save, RotateCcw, FileText, Settings } from 'lucide-react';
 import { toastSuccess, toastError } from '../../../toastService';
 import { getUiNames, providerPrefixes } from '../../../utils/configUtils';
-import type { ConfigData, ConfigValue } from '../../../types/configData';
+import type { ConfigData } from '../../../types/configData';
+import type { ConfigValue } from '../../../types/configValue';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../ui/card';
 import {
   Dialog,

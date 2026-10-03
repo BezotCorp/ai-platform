@@ -3,7 +3,7 @@ import { Zap } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/Tooltip';
 import { defineMessages, useIntl } from '../i18n';
 import { cn } from '../utils';
-import type { MessageUsage } from '../types/message';
+import type { MessageUsage } from '../types/messageUsage';
 import {
   formatCost,
   formatDuration,

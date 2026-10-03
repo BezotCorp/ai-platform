@@ -2,7 +2,8 @@ import type {
   ContentBlock as AcpContentBlock,
   SessionNotification,
 } from '@agentclientprotocol/sdk';
-import type { ContentBlock, Message } from '../../types/message';
+import type { Message } from '../../types/message';
+import type { ContentBlock } from '../../types/contentBlock';
 import {
   type AcpChatStateChange,
   type AdapterState,

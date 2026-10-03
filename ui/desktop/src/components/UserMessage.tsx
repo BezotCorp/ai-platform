@@ -1,7 +1,8 @@
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import ImagePreview from './ImagePreview';
 import MarkdownContent from './MarkdownContent';
-import type { ImageData, Message } from '../types/message';
+import type { Message } from '../types/message';
+import type { ImageData } from '../types/imageData';
 import { imageDataFromMessage } from '../types/imageData';
 import { getTextAndImageContent } from '../types/messageContent';
 import MessageCopyLink from './MessageCopyLink';

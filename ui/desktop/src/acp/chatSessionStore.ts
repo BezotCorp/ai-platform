@@ -1,9 +1,10 @@
 import { useSyncExternalStore } from 'react';
 import type { GooseSessionNotificationUnstable } from '@aaif/goose-acp-client';
 import type { SessionNotification } from '@agentclientprotocol/sdk';
-import type { TokenState } from '../types/chatType';
+import type { TokenState } from '../types/tokenState';
 import { ChatState } from '../types/chatState';
-import type { Message, NotificationEvent } from '../types/message';
+import type { Message } from '../types/message';
+import type { NotificationEvent } from '../types/notificationEvent';
 import type { Session } from '../types/session';
 import {
   createAcpSessionNotificationAdapter,

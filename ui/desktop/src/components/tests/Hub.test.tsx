@@ -11,7 +11,7 @@ import { AppEvents } from '../../constants/events';
 import { IntlTestWrapper } from '../../i18n/test-utils';
 import type { LiveVoiceController } from '../../liveVoice/useLiveVoice';
 import { createSession } from '../../sessions';
-import type { UserInput } from '../../types/message';
+import type { UserInput } from '../../types/userInput';
 import { Session as AppSession } from '../../types/session';
 import Hub from '../Hub';
 

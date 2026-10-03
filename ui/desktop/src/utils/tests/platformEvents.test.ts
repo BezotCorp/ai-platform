@@ -4,7 +4,7 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { listMcpApps } from '../../acp/mcp-apps';
-import type { GooseApp } from '../../types/mcpAppResource';
+import type { GooseApp } from '../../types/gooseApp';
 import { registerPlatformEventHandlers } from '../platformEvents';
 
 vi.mock('../../acp/mcp-apps', () => ({

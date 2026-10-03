@@ -1,4 +1,4 @@
-import type { GooseApp } from '../types/mcpAppResource';
+import type { GooseApp } from '../types/gooseApp';
 import { listMcpApps } from '../acp/mcp-apps';
 import type { PlatformEventData } from './platformEventData';
 import type { AppsEventData } from './appsEventData';

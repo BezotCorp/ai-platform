@@ -27,7 +27,9 @@ import Model, {
   getProviderMetadata,
 } from '../modelInterface';
 import { getPredefinedModelsFromEnv, shouldShowPredefinedModels } from '../predefinedModelsUtils';
-import type { ProviderDetails, ProviderType, ThinkingEffort } from '../../../../types/updateCustomProviderRequest';
+import type { ProviderDetails } from '../../../../types/providerDetails';
+import type { ProviderType } from '../../../../types/providerType';
+import type { ThinkingEffort } from '../../../../types/thinkingEffort';
 import { trackModelChanged } from '../../../../utils/analyticsEvent';
 import { addToRecentModels } from '../../../../utils/recentModels';
 import type { NoMessageValues } from 'react-intl';

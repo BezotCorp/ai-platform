@@ -11,7 +11,7 @@ import {
   acpSaveProviderConfig,
 } from '../../../../../acp/providers';
 import { IntlTestWrapper } from '../../../../../i18n/test-utils';
-import type { ProviderDetails } from '../../../../../types/updateCustomProviderRequest';
+import type { ProviderDetails } from '../../../../../types/providerDetails';
 import ProviderConfigurationModal from '../ProviderConfigurationModal';
 
 vi.mock('../../../../ModelAndProviderContext', () => ({

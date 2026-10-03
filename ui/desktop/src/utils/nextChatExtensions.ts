@@ -1,4 +1,4 @@
-import type { ExtensionConfig } from '../types/extensions';
+import type { ExtensionConfig } from '../types/extensionConfig';
 import { configuredExtensionEntryToConfig } from './configuredExtensionEntryToConfig';
 import type { ConfiguredExtensionEntry } from '../types/configuredExtensionEntry';
 

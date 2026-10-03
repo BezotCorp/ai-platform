@@ -1,4 +1,4 @@
-import type { Role } from '.';
+import type { Role } from './role';
 
 export type Annotations = {
   audience?: Role[];

@@ -1,4 +1,4 @@
-import type { ActionRequired } from '../types/message';
+import type { ActionRequired } from '../types/actionRequired';
 import { defineMessages, useIntl } from '../i18n';
 import { snakeToTitleCase } from '../utils';
 import ToolApprovalButtons from './ToolApprovalButtons';

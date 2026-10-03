@@ -1,4 +1,4 @@
-import type { ExtensionConfig } from '../../../types/extensions';
+import type { ExtensionConfig } from '../../../types/extensionConfig';
 
 import bundledExtensionsData from './bundled-extensions.json';
 import deprecatedBundledExtensionsData from './deprecated-bundled-extensions.json';

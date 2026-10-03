@@ -1,4 +1,4 @@
-import type { JsonObject } from '.';
+import type { JsonObject } from './jsonObject';
 
 export type ContentIcon = {
   mimeType?: string;

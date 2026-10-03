@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router';
 import BaseChat from './BaseChat';
 import { ChatType } from '../types/chatType';
-import { UserInput } from '../types/message';
+import type { UserInput } from '../types/userInput';
 import { subscribeToAcpRecovery } from '../acp/acpConnection';
 import { acpChatSessionController } from '../acp/chatSessionController';
 import type { LiveVoiceController } from '../liveVoice/useLiveVoice';

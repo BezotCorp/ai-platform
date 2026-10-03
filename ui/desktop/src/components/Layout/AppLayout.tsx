@@ -11,7 +11,7 @@ import { NavigationProvider, useNavigationContext } from './NavigationContext';
 import { Navigation } from './NavigationPanel';
 import { Z_INDEX } from './constants';
 import { cn } from '../../utils';
-import { UserInput } from '../../types/message';
+import type { UserInput } from '../../types/userInput';
 import type { LiveVoiceController } from '../../liveVoice/useLiveVoice';
 import type { NoMessageValues } from 'react-intl';
 

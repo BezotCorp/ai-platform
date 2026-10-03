@@ -11,7 +11,7 @@ import {
 import { Button } from './ui/button';
 import { extractExtensionName } from './settings/extensions/utils';
 import { addExtensionFromDeepLink } from './settings/extensions/deeplink';
-import type { ExtensionConfig } from '../types/extensions';
+import type { ExtensionConfig } from '../types/extensionConfig';
 import { View, ViewOptions } from '../utils/navigationUtils';
 import { useConfig } from './ConfigContext';
 import { toastService } from '../toastService';

@@ -1,5 +1,5 @@
 
-import type { ExtensionConfig } from '../../../types/extensions';
+import type { ExtensionConfig } from '../../../types/extensionConfig';
 import type { ConfiguredExtensionEntry } from '../../../types/configuredExtensionEntry';
 
 // Default extension timeout in seconds

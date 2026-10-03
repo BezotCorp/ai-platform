@@ -1,6 +1,6 @@
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import type { ToolListItem } from '@aaif/goose-acp-client';
-import type { GooseApp } from '../types/mcpAppResource';
+import type { GooseApp } from '../types/gooseApp';
 import { getAcpClient } from './acpConnection';
 import { normalizeAcpError } from './errors';
 

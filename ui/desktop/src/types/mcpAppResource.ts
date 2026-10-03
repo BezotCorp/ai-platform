@@ -1,4 +1,4 @@
-import type { ResourceMetadata } from '.';
+import type { ResourceMetadata } from './resourceMetadata';
 
 export type McpAppResource = {
   _meta?: ResourceMetadata | null;

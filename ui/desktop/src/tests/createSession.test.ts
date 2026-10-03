@@ -4,7 +4,7 @@
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createSession } from '../sessions';
-import type { ExtensionConfig } from '../types/extensions';
+import type { ExtensionConfig } from '../types/extensionConfig';
 import { Session } from '../types/session';
 
 import type { GooseExtension, GooseExtensionEntry } from '@aaif/goose-acp-client';

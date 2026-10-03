@@ -1,4 +1,6 @@
-import type { ActionRequired, Message, ToolConfirmationRequestContent } from '.';
+import type { ActionRequired } from './actionRequired';
+import type { Message } from './message';
+import type { ToolConfirmationRequestContent } from './toolConfirmationRequestContent';
 import { getToolResponses } from '.';
 
 export interface ToolConfirmationData {

@@ -4,11 +4,14 @@ import { AppEvents } from '../constants/events';
 import { toastError } from '../toastService';
 import { ChatState } from '../types/chatState';
 
-import type { TokenState } from '../types/chatType';
+import type { TokenState } from '../types/tokenState';
 import type { Session } from '../types/session';
 
 import { createUserMessage } from '../types/message';
-import type { ImageData, Message, NotificationEvent, UserInput } from '../types/message';
+import type { Message } from '../types/message';
+import type { ImageData } from '../types/imageData';
+import type { NotificationEvent } from '../types/notificationEvent';
+import type { UserInput } from '../types/userInput';
 import { errorMessage } from '../utils/conversionUtils';
 import type { UseChatSessionParams, UseChatSessionResult } from './useChatSessionTypes';
 import { resolveAcpElicitationRequest } from '../acp/elicitationRequests';

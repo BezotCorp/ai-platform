@@ -11,7 +11,7 @@ import { pruneDeprecatedBundledExtensions, syncBundledExtensions } from './setti
 import { nameToKey } from './settings/extensions/utils';
 import type { ConfiguredExtensionEntry } from '../types/configuredExtensionEntry';
 import type { ExtensionConfig } from '../types/extensionConfig';
-import type { ProviderDetails } from '../types/updateCustomProviderRequest';
+import type { ProviderDetails } from '../types/providerDetails';
 
 export type { ExtensionConfig } from '../types/extensionConfig';
 

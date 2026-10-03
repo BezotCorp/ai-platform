@@ -1,4 +1,5 @@
-import type { Message, ToolResponse } from '.';
+import type { Message } from './message';
+import type { ToolResponse } from './toolResponse';
 
 export type ToolResponseMessageContent = ToolResponse & { type: 'toolResponse' };
 

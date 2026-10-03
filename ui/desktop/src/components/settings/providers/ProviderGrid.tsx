@@ -3,7 +3,8 @@ import { ProviderCard } from './subcomponents/ProviderCard';
 import CardContainer from './subcomponents/CardContainer';
 import ProviderConfigurationModal from './modal/ProviderConfigurationModal';
 import type { CustomProviderConfigDto } from '@aaif/goose-acp-client';
-import type { ProviderDetails, UpdateCustomProviderRequest } from '../../../types/updateCustomProviderRequest';
+import type { UpdateCustomProviderRequest } from '../../../types/updateCustomProviderRequest';
+import type { ProviderDetails } from '../../../types/providerDetails';
 import {
   acpCreateCustomProviderFromRequest,
   acpGetCustomProvider,

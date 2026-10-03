@@ -1,6 +1,6 @@
 import type { NavigateFunction } from 'react-router';
 import type { Recipe } from '../recipe';
-import type { UserInput } from '../types/message';
+import type { UserInput } from '../types/userInput';
 
 export type View =
   | 'chat'

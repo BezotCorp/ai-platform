@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import type { ActionRequired } from '../types/message';
+import type { ActionRequired } from '../types/actionRequired';
 import { defineMessages, useIntl } from '../i18n';
 import { Button } from './ui/button';
 import JsonSchemaForm from './ui/JsonSchemaForm';

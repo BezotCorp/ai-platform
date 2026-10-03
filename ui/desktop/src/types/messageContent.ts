@@ -1,14 +1,12 @@
-import type {
-  ActionRequired,
-  ImageContent,
-  RedactedThinkingContent,
-  SystemNotificationContent,
-  TextContent,
-  ThinkingContent,
-  ToolConfirmationRequest,
-  ToolRequest,
-  ToolResponse,
-} from '.';
+import type { ActionRequired } from './actionRequired';
+import type { ImageContent } from './imageContent';
+import type { RedactedThinkingContent } from './redactedThinkingContent';
+import type { SystemNotificationContent } from './systemNotificationContent';
+import type { TextContent } from './textContent';
+import type { ThinkingContent } from './thinkingContent';
+import type { ToolConfirmationRequest } from './toolConfirmationRequest';
+import type { ToolRequest } from './toolRequest';
+import type { ToolResponse } from './toolResponse';
 
 export type MessageContent =
   | (TextContent & { type: 'text' })

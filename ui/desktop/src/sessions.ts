@@ -1,6 +1,6 @@
 import type { Session } from './types/session';
 import { configuredExtensionEntryToConfig } from './utils/configuredExtensionEntryToConfig';
-import type { ExtensionConfig } from './types/extensions';
+import type { ExtensionConfig } from './types/extensionConfig';
 import type { GooseExtension } from '@aaif/goose-acp-client';
 import type { setViewType } from './hooks/useNavigation';
 

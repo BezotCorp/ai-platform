@@ -1,4 +1,5 @@
-import type { ContentIcon, JsonObject } from '.';
+import type { ContentIcon } from './contentIcon';
+import type { JsonObject } from './jsonObject';
 
 export type RawResource = {
   _meta?: JsonObject;

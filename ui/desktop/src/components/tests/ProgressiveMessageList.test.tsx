@@ -5,7 +5,9 @@
 import { StrictMode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, render, screen } from '@testing-library/react';
-import type { ImageData, Message, MessageContent } from '../../types/message';
+import type { Message } from '../../types/message';
+import type { ImageData } from '../../types/imageData';
+import type { MessageContent } from '../../types/messageContent';
 import { IntlTestWrapper } from '../../i18n/test-utils';
 import ProgressiveMessageList from '../ProgressiveMessageList';
 

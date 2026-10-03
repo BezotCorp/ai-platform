@@ -5,7 +5,7 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { IntlTestWrapper } from '../../i18n/test-utils';
-import type { ActionRequired } from '../../types/message';
+import type { ActionRequired } from '../../types/actionRequired';
 import ToolCallConfirmation from '../ToolCallConfirmation';
 
 vi.mock('../ToolApprovalButtons', () => ({
