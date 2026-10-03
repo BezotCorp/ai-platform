@@ -1,5 +1,5 @@
 import { dialog, shell, type BrowserWindow, type MessageBoxOptions } from 'electron';
-import { getExternalLinkLabels } from './externalLinkTranslations';
+import { getExternalLinkLabels } from './externalLinkLabels';
 import { OpenExternalUrlResult } from './openExternalUrlResult';
 import { BLOCKED_PROTOCOLS, SAFE_PROTOCOLS } from './urlSecurity';
 
@@ -14,9 +14,7 @@ export const openExternalUrl = async (
   } catch {
     return 'blocked';
   }
-
   if (BLOCKED_PROTOCOLS.includes(protocol)) return 'blocked';
-
   if (!SAFE_PROTOCOLS.includes(protocol)) {
     const labels = getExternalLinkLabels(locale);
     const options: MessageBoxOptions = {
@@ -33,7 +31,6 @@ export const openExternalUrl = async (
       : await dialog.showMessageBox(options);
     if (result.response !== 1) return 'cancelled';
   }
-
   await shell.openExternal(url);
   return 'opened';
 };

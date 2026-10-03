@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useConfig, type FixedExtensionEntry } from '../ConfigContext';
+import { useConfig } from '../ConfigContext';
+import type { ConfiguredExtensionEntry } from '../../types/configuredExtensionEntry';
+import type { ExtensionMenuEntry } from './extensionMenuEntry';
 import { toastService } from '../../toastService';
 import { formatExtensionName } from '../settings/extensions/subcomponents/ExtensionList';
-import {
-  getSessionExtensions as getAcpSessionExtensions,
-  type SessionExtension,
-} from '../../acp/session-extensions';
+import { getSessionExtensions as getAcpSessionExtensions } from '../../acp/session-extensions';
+import type { SessionExtension } from '../../acp/sessionExtension';
 import { addToAgent, removeFromAgent } from '../settings/extensions/agent-api';
 import { defineMessages, useIntl } from '../../i18n';
 import { AppEvents } from '../../constants/events';
@@ -77,9 +77,9 @@ type GetSessionExtensionsSignal = { aborted: boolean };
 const EXTENSION_SORT_DELAY_MS = 800;
 
 function mergeSessionExtensions(
-  configuredExtensions: FixedExtensionEntry[],
+  configuredExtensions: ConfiguredExtensionEntry[],
   sessionExtensions: SessionExtension[]
-): FixedExtensionEntry[] | null {
+): ExtensionMenuEntry[] | null {
   const sessionExtensionsByKey = new Map<string, SessionExtension>();
   for (const extension of sessionExtensions) {
     if (sessionExtensionsByKey.has(extension.extensionKey)) {
@@ -89,7 +89,7 @@ function mergeSessionExtensions(
   }
 
   const configuredExtensionKeys = new Set<string>();
-  const mergedExtensions: FixedExtensionEntry[] = [];
+  const mergedExtensions: ExtensionMenuEntry[] = [];
   for (const extension of configuredExtensions) {
     if (extension.configKey === undefined || configuredExtensionKeys.has(extension.configKey)) {
       return null;
@@ -235,7 +235,7 @@ function DraftExtensionsMenu({
   }, [draft, isTransitioning]);
 
   const handleToggle = useCallback(
-    (extensionConfig: FixedExtensionEntry) => {
+    (extensionConfig: ConfiguredExtensionEntry) => {
       if (!beginToggle(extensionConfig.name)) {
         return;
       }
@@ -363,7 +363,7 @@ function SessionExtensionsMenu({ sessionId }: { sessionId: string }) {
   }, [sessionId, loadSessionExtensions]);
 
   const handleToggle = useCallback(
-    async (extensionConfig: FixedExtensionEntry) => {
+    async (extensionConfig: ExtensionMenuEntry) => {
       if (!beginToggle(extensionConfig.name)) {
         return;
       }

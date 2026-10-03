@@ -1,12 +1,13 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { ScrollArea } from '../../ui/scroll-area';
 import BackButton from '../../ui/BackButton';
-import { FixedExtensionEntry, useConfig } from '../../ConfigContext';
+import { useConfig } from '../../ConfigContext';
 import { ChevronRight } from 'lucide-react';
 import PermissionModal from './PermissionModal';
 import { Button } from '../../ui/button';
 import { defineMessages, useIntl } from '../../../i18n';
 import type { NoMessageValues } from 'react-intl';
+import type { ConfiguredExtensionEntry } from '../../../types/configuredExtensionEntry';
 
 const i18n = defineMessages<{
   readonly "permissionRules": NoMessageValues;
@@ -67,7 +68,7 @@ function RulesSection({ title, rules }: { title: string; rules: React.ReactNode 
 export default function PermissionSettingsView({ onClose }: { onClose: () => void }) {
   const intl = useIntl();
   const { getExtensions } = useConfig();
-  const [extensions, setExtensions] = useState<FixedExtensionEntry[]>([]);
+  const [extensions, setExtensions] = useState<ConfiguredExtensionEntry[]>([]);
 
   const fetchExtensions = useCallback(async () => {
     const extensionsList = await getExtensions(true); // Force refresh

@@ -14,7 +14,8 @@ import {
   combineCmdAndArgs,
   DEFAULT_EXTENSION_TIMEOUT,
 } from '../utils';
-import type { FixedExtensionEntry } from '../../../ConfigContext';
+import type { ConfiguredExtensionEntry } from '../../../../types/configuredExtensionEntry';
+
 
 describe('Extension Utils', () => {
   beforeEach(() => {
@@ -54,7 +55,7 @@ describe('Extension Utils', () => {
 
   describe('extensionToFormData', () => {
     it('should convert stdio extension to form data', () => {
-      const extension: FixedExtensionEntry = {
+      const extension: ConfiguredExtensionEntry = {
         type: 'stdio',
         name: 'test-extension',
         description: 'Test description',
@@ -84,7 +85,7 @@ describe('Extension Utils', () => {
     });
 
     it('should convert streamable_http extension to form data', () => {
-      const extension: FixedExtensionEntry = {
+      const extension: ConfiguredExtensionEntry = {
         type: 'streamable_http',
         name: 'http-extension',
         description: 'HTTP description',
@@ -116,7 +117,7 @@ describe('Extension Utils', () => {
     });
 
     it('should preserve streamable_http OAuth client fields and socket through a form round-trip', () => {
-      const extension: FixedExtensionEntry = {
+      const extension: ConfiguredExtensionEntry = {
         type: 'streamable_http',
         name: 'oauth-extension',
         description: 'OAuth description',
@@ -142,7 +143,7 @@ describe('Extension Utils', () => {
     });
 
     it('should handle legacy envs field', () => {
-      const extension: FixedExtensionEntry = {
+      const extension: ConfiguredExtensionEntry = {
         type: 'stdio',
         name: 'legacy-extension',
         description: 'legacy',
@@ -166,7 +167,7 @@ describe('Extension Utils', () => {
     });
 
     it('should handle builtin extension', () => {
-      const extension: FixedExtensionEntry = {
+      const extension: ConfiguredExtensionEntry = {
         type: 'builtin',
         name: 'developer',
         description: 'developer',
@@ -189,7 +190,7 @@ describe('Extension Utils', () => {
     });
 
     it('should preserve available tools metadata', () => {
-      const extension: FixedExtensionEntry = {
+      const extension: ConfiguredExtensionEntry = {
         type: 'builtin',
         name: 'developer',
         description: 'developer',
@@ -203,7 +204,7 @@ describe('Extension Utils', () => {
     });
 
     it('should omit empty available tools metadata', () => {
-      const extension: FixedExtensionEntry = {
+      const extension: ConfiguredExtensionEntry = {
         type: 'builtin',
         name: 'developer',
         description: 'developer',
@@ -217,7 +218,7 @@ describe('Extension Utils', () => {
     });
 
     it('should not escape @ in command args', () => {
-      const extension: FixedExtensionEntry = {
+      const extension: ConfiguredExtensionEntry = {
         type: 'stdio',
         name: 'context7',
         description: 'Context7 MCP',
@@ -231,7 +232,7 @@ describe('Extension Utils', () => {
     });
 
     it('should quote args with spaces', () => {
-      const extension: FixedExtensionEntry = {
+      const extension: ConfiguredExtensionEntry = {
         type: 'stdio',
         name: 'java-app',
         description: 'Java app',
@@ -247,7 +248,7 @@ describe('Extension Utils', () => {
     });
 
     it('should roundtrip command with @ through form data', () => {
-      const extension: FixedExtensionEntry = {
+      const extension: ConfiguredExtensionEntry = {
         type: 'stdio',
         name: 'context7',
         description: 'Context7 MCP',
@@ -263,7 +264,7 @@ describe('Extension Utils', () => {
     });
 
     it('should roundtrip command with spaces through form data', () => {
-      const extension: FixedExtensionEntry = {
+      const extension: ConfiguredExtensionEntry = {
         type: 'stdio',
         name: 'java-app',
         description: 'Java app',
@@ -279,7 +280,7 @@ describe('Extension Utils', () => {
     });
 
     it('should roundtrip args with double quotes and spaces through form data', () => {
-      const extension: FixedExtensionEntry = {
+      const extension: ConfiguredExtensionEntry = {
         type: 'stdio',
         name: 'test',
         description: 'test',
@@ -306,7 +307,7 @@ describe('Extension Utils', () => {
     });
 
     it('does not synthesize a blocked npx flag through the extension form', () => {
-      const extension: FixedExtensionEntry = {
+      const extension: ConfiguredExtensionEntry = {
         type: 'stdio',
         name: 'quoted-flag',
         description: 'quoted flag regression',

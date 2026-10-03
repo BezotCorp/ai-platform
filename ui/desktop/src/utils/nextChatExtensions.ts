@@ -1,12 +1,14 @@
 import type { ExtensionConfig } from '../types/extensions';
-import type { FixedExtensionEntry } from '../components/ConfigContext';
+import { configuredExtensionEntryToConfig } from './configuredExtensionEntryToConfig';
+import type { ConfiguredExtensionEntry } from '../types/configuredExtensionEntry';
+
 
 export type NextChatExtensionDraft = {
   selectedNames: Set<string>;
 };
 
 export function createNextChatExtensionDraft(
-  allExtensions: FixedExtensionEntry[] = []
+  allExtensions: ConfiguredExtensionEntry[] = []
 ): NextChatExtensionDraft {
   return {
     selectedNames: new Set(
@@ -16,19 +18,16 @@ export function createNextChatExtensionDraft(
 }
 
 export function selectNextChatExtensions(
-  allExtensions: FixedExtensionEntry[],
+  allExtensions: ConfiguredExtensionEntry[],
   draft: NextChatExtensionDraft
 ): ExtensionConfig[] {
   return allExtensions
     .filter((extension) => draft.selectedNames.has(extension.name))
-    .map((extension) => {
-      const { enabled: _enabled, ...config } = extension;
-      return config;
-    });
+    .map(configuredExtensionEntryToConfig);
 }
 
 export function isNextChatExtensionSelected(
-  extension: FixedExtensionEntry,
+  extension: ConfiguredExtensionEntry,
   draft: NextChatExtensionDraft
 ): boolean {
   return draft.selectedNames.has(extension.name);
@@ -36,15 +35,13 @@ export function isNextChatExtensionSelected(
 
 export function toggleNextChatExtension(
   draft: NextChatExtensionDraft,
-  extension: FixedExtensionEntry
+  extension: ConfiguredExtensionEntry
 ): NextChatExtensionDraft {
   const selectedNames = new Set(draft.selectedNames);
-
   if (selectedNames.has(extension.name)) {
     selectedNames.delete(extension.name);
   } else {
     selectedNames.add(extension.name);
   }
-
   return { selectedNames };
 }

@@ -1,5 +1,6 @@
-import type { FixedExtensionEntry } from '../../ConfigContext';
+
 import type { ExtensionConfig } from '../../../types/extensions';
+import type { ConfiguredExtensionEntry } from '../../../types/configuredExtensionEntry';
 
 // Default extension timeout in seconds
 // TODO: keep in sync with rust better
@@ -60,7 +61,7 @@ export function getDefaultFormData(): ExtensionFormData {
   };
 }
 
-export function extensionToFormData(extension: FixedExtensionEntry): ExtensionFormData {
+export function extensionToFormData(extension: ConfiguredExtensionEntry): ExtensionFormData {
   // Type guard: Check if 'envs' property exists for this variant
   const hasEnvs = extension.type === 'streamable_http' || extension.type === 'stdio';
 

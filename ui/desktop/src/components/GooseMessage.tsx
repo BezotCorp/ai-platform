@@ -5,15 +5,12 @@ import { formatMessageTimestamp } from '../utils/timeUtils';
 import MarkdownContent from './MarkdownContent';
 import ThinkingContent from './ThinkingContent';
 import ToolCallWithResponse from './ToolCallWithResponse';
-import {
-  getTextAndImageContent,
-  getThinkingContent,
-  getToolRequests,
-  getToolConfirmationContent,
-  getElicitationContent,
-  type Message,
-  type NotificationEvent,
-} from '../types/message';
+import { getElicitationContent } from '../types/actionRequired';
+import { getTextAndImageContent } from '../types/messageContent';
+import { getThinkingContent } from '../types/thinkingContent';
+import { getToolConfirmationContent } from '../types/toolConfirmationData';
+import { getToolRequests } from '../types/toolRequestMessageContent';
+import type { Message, NotificationEvent } from '../types/message';
 import ToolCallConfirmation from './ToolCallConfirmation';
 import ElicitationRequest from './ElicitationRequest';
 import MessageCopyLink from './MessageCopyLink';

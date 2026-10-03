@@ -1,4 +1,4 @@
-import type { GooseApp } from '../types/apps';
+import type { GooseApp } from '../types/mcpAppResource';
 import { listMcpApps } from '../acp/mcp-apps';
 import type { PlatformEventData } from './platformEventData';
 import type { AppsEventData } from './appsEventData';
@@ -6,18 +6,14 @@ import type { PlatformEventHandler } from './platformEventHandler';
 
 async function handleAppsEvent(eventType: string, eventData: PlatformEventData): Promise<void> {
   const { app_name, sessionId } = eventData as AppsEventData;
-
   if (!sessionId) {
     console.warn('No sessionId in apps platform event, skipping');
     return;
   }
-
   const apps = await listMcpApps(sessionId);
-
   const targetApp = apps.find(
     (app: GooseApp) => app.name === app_name && app.mcpServers?.includes(eventData.extension)
   );
-
   switch (eventType) {
     case 'app_created':
       if (targetApp) {
@@ -26,7 +22,6 @@ async function handleAppsEvent(eventType: string, eventData: PlatformEventData):
         });
       }
       break;
-
     case 'app_updated':
       if (targetApp) {
         await window.electron.refreshApp(targetApp).catch((err) => {
@@ -34,7 +29,6 @@ async function handleAppsEvent(eventType: string, eventData: PlatformEventData):
         });
       }
       break;
-
     case 'app_deleted':
       if (app_name) {
         await window.electron.closeApp(app_name).catch((err) => {
@@ -42,7 +36,6 @@ async function handleAppsEvent(eventType: string, eventData: PlatformEventData):
         });
       }
       break;
-
     default:
       console.warn(`Unknown apps event type: ${eventType}`);
   }
@@ -69,7 +62,6 @@ export function registerPlatformEventHandlers(): () => void {
   const handler = (event: Event) => {
     const customEvent = event as CustomEvent;
     const { extension, event_type, ...data } = customEvent.detail;
-
     const extensionHandler = EXTENSION_HANDLERS[extension];
     if (extensionHandler) {
       extensionHandler(event_type, { ...data, extension }).catch((err) => {
@@ -77,7 +69,6 @@ export function registerPlatformEventHandlers(): () => void {
       });
     }
   };
-
   window.addEventListener('platform-event', handler);
   return () => window.removeEventListener('platform-event', handler);
 }

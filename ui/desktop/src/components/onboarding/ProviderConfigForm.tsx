@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { acpAuthenticateProvider } from '../../acp/providers';
 import { useProviderDeviceCode } from '../../hooks/useProviderDeviceCode';
-import type { ProviderDetails } from '../../types/providers';
+import type { ProviderDetails } from '../../types/updateCustomProviderRequest';
 import DefaultProviderSetupForm, {
   ConfigInput,
 } from '../settings/providers/modal/subcomponents/forms/DefaultProviderSetupForm';

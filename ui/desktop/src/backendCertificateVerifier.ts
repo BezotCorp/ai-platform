@@ -17,7 +17,6 @@ export function installBackendCertificateVerifiers(
         callback(-3);
         return;
       }
-
       const match = trustVerifier.verify(request.hostname, request.certificate.fingerprint);
       callback(match ? 0 : -2);
     });

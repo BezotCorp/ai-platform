@@ -1,13 +1,13 @@
 import { useMemo, useState } from 'react';
 import { Puzzle } from 'lucide-react';
-import type { FixedExtensionEntry } from '../ConfigContext';
+import type { ExtensionMenuEntry } from './extensionMenuEntry';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '../ui/dropdown-menu';
 import { Input } from '../ui/input';
 import { Switch } from '../ui/switch';
 import { formatExtensionName } from '../settings/extensions/subcomponents/ExtensionList';
 
 interface ExtensionMenuProps {
-  extensions: FixedExtensionEntry[];
+  extensions: ExtensionMenuEntry[];
   title: string;
   searchPlaceholder: string;
   description: string;
@@ -17,7 +17,7 @@ interface ExtensionMenuProps {
   isTransitioning: boolean;
   isSortPending: boolean;
   togglingExtensionName: string | null;
-  onToggle: (extension: FixedExtensionEntry) => void;
+  onToggle: (extension: ExtensionMenuEntry) => void;
   onClose?: () => void;
 }
 

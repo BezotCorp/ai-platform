@@ -4,9 +4,10 @@ import {
   selectNextChatExtensions,
   toggleNextChatExtension,
 } from '../nextChatExtensions';
-import type { FixedExtensionEntry } from '../../components/ConfigContext';
+import type { ConfiguredExtensionEntry } from '../../types/configuredExtensionEntry';
 
-const extension = (name: string, enabled: boolean): FixedExtensionEntry => ({
+
+const extension = (name: string, enabled: boolean): ConfiguredExtensionEntry => ({
   name,
   enabled,
   type: 'builtin',

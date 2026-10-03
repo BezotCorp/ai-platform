@@ -11,17 +11,14 @@ export async function configureProxy(
   const httpsProxy = environment.HTTPS_PROXY || environment.https_proxy;
   const httpProxy = environment.HTTP_PROXY || environment.http_proxy;
   const proxyUrl = httpsProxy || httpProxy;
-
   if (!proxyUrl) {
     return;
   }
-
   console.log('[Main] Configuring proxy');
   const proxyConfig = {
     proxyRules: proxyUrl,
     proxyBypassRules: environment.NO_PROXY || environment.no_proxy || '',
   };
-
   await Promise.all([defaultSession.setProxy(proxyConfig), rendererSession.setProxy(proxyConfig)]);
   console.log('[Main] Proxy configured successfully');
 }

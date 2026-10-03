@@ -1,13 +1,8 @@
-import type { ExtensionConfig, ExtensionEntry } from '../types/extensions';
+import type { ConfiguredExtensionEntry } from '../types/configuredExtensionEntry';
+import type { ExtensionConfig } from '../types/extensionConfig';
+import type { ConfiguredExtensionsResponse } from './configuredExtensionsResponse';
 import type { GooseExtension, GooseExtensionEntry } from '@aaif/goose-acp-client';
 import { getAcpClient } from './acpConnection';
-
-export type ConfiguredExtensionEntry = ExtensionEntry & { configKey?: string };
-
-export interface ConfiguredExtensionsResponse {
-  extensions: ConfiguredExtensionEntry[];
-  warnings: string[];
-}
 
 export function gooseExtensionName(extension: GooseExtension): string {
   return extension.type === 'mcp' ? extension.server.name : extension.name;
@@ -67,7 +62,7 @@ export function gooseExtensionToExtensionConfig(extension: GooseExtension): Exte
   }
 }
 
-function gooseExtensionEntryToExtensionEntry(
+function gooseExtensionEntryToConfiguredExtensionEntry(
   entry: GooseExtensionEntry
 ): ConfiguredExtensionEntry | null {
   const config = gooseExtensionToExtensionConfig(entry.extension);
@@ -88,7 +83,7 @@ export async function getConfiguredExtensions(): Promise<ConfiguredExtensionsRes
   const response = await client.goose.configExtensionsListUnstable({});
   return {
     extensions: response.extensions
-      .map(gooseExtensionEntryToExtensionEntry)
+      .map(gooseExtensionEntryToConfiguredExtensionEntry)
       .filter((entry): entry is ConfiguredExtensionEntry => entry !== null),
     warnings: response.warnings ?? [],
   };

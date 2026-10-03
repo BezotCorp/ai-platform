@@ -6,7 +6,8 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, type RenderOptions, screen, fireEvent, waitFor } from '@testing-library/react';
 import ExtensionItem from '../ExtensionItem';
 import { IntlTestWrapper } from '../../../../../i18n/test-utils';
-import type { FixedExtensionEntry } from '../../../../ConfigContext';
+import type { ConfiguredExtensionEntry } from '../../../../../types/configuredExtensionEntry';
+
 
 vi.mock('../ExtensionList', () => ({
   getSubtitle: () => ({ description: '', command: '' }),
@@ -16,8 +17,8 @@ vi.mock('../ExtensionList', () => ({
 const renderWithIntl = (ui: React.ReactElement, options?: RenderOptions) =>
   render(ui, { wrapper: IntlTestWrapper, ...options });
 
-const makeExtension = (enabled: boolean): FixedExtensionEntry =>
-  ({ name: 'developer', type: 'builtin', enabled }) as unknown as FixedExtensionEntry;
+const makeExtension = (enabled: boolean): ConfiguredExtensionEntry =>
+  ({ name: 'developer', type: 'builtin', enabled }) as unknown as ConfiguredExtensionEntry;
 
 describe('ExtensionItem', () => {
   it('reflects the toggle as OFF immediately when disabling, before the async toggle resolves', async () => {

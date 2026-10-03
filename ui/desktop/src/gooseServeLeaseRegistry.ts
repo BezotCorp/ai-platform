@@ -8,9 +8,7 @@ export const GOOSE_SERVE_EXITED_USER_MESSAGE =
 
 export class GooseServeLeaseRegistry {
   private leasesByWindowId = new Map<number, GooseServeLease>();
-
   constructor(private readonly logger: Logger) {}
-
   create(result: GooseServeResult, secretKey: string): GooseServeLease {
     const lease: GooseServeLease = {
       acpUrl: result.acpUrl,
@@ -22,7 +20,6 @@ export class GooseServeLeaseRegistry {
       exitCode: null,
       exitSignal: null,
     };
-
     const markExited = ({
       code,
       signal,
@@ -40,7 +37,6 @@ export class GooseServeLeaseRegistry {
       if (signal !== undefined) {
         lease.exitSignal = signal;
       }
-
       if (logUnexpected && firstExit && !lease.cleanedUp) {
         this.logger.error('Goose ACP server exited unexpectedly', {
           code: lease.exitCode,
@@ -49,16 +45,13 @@ export class GooseServeLeaseRegistry {
         });
       }
     };
-
     result.process.once('exit', (code, signal) => {
       markExited({ code, signal, logUnexpected: true });
     });
-
     if (result.hasExited()) {
       const exitDetails = result.getExitDetails();
       markExited({ code: exitDetails.code, signal: exitDetails.signal, logUnexpected: false });
     }
-
     return lease;
   }
 
@@ -113,7 +106,6 @@ export class GooseServeLeaseRegistry {
   async releaseWindow(windowId: number) {
     const lease = this.leasesByWindowId.get(windowId);
     this.leasesByWindowId.delete(windowId);
-
     if (!lease) {
       return;
     }
@@ -128,7 +120,6 @@ export class GooseServeLeaseRegistry {
     if (lease.cleanedUp) {
       return;
     }
-
     lease.cleanedUp = true;
     for (const windowId of lease.windowIds) {
       this.leasesByWindowId.delete(windowId);

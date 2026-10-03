@@ -9,20 +9,16 @@ import log from './logger';
  */
 export async function ensureWinShims(): Promise<void> {
   if (process.platform !== 'win32') return;
-
   const srcDir = path.join(process.resourcesPath, 'bin'); // existing dir
   const tgtDir = path.join(
     process.env.LOCALAPPDATA ?? path.join(os.homedir(), 'AppData', 'Local'),
     'Goose',
     'bin'
   );
-
   try {
     await fs.promises.mkdir(tgtDir, { recursive: true });
-
     // Copy command-line tools only; the goose binary is never shimmed
     const shims = ['uvx.exe', 'uv.exe', 'npx.cmd'];
-
     await Promise.all(
       shims.map(async (shim) => {
         const src = path.join(srcDir, shim);
@@ -37,7 +33,6 @@ export async function ensureWinShims(): Promise<void> {
         }
       })
     );
-
     // Prepend to PATH **for this process & all children only**.
     // This does NOT modify the user's permanent system PATH.
     const currentPath = process.env.PATH ?? '';
@@ -48,7 +43,6 @@ export async function ensureWinShims(): Promise<void> {
       // If it's already in PATH, make sure it's at the beginning
       const pathParts = currentPath.split(path.delimiter);
       const binDirIndex = pathParts.findIndex((p) => p.toLowerCase() === tgtDir.toLowerCase());
-
       if (binDirIndex > 0) {
         // Remove it from its current position and add to beginning
         pathParts.splice(binDirIndex, 1);

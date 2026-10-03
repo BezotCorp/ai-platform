@@ -16,11 +16,9 @@ import TelemetryConsentPrompt from './components/TelemetryConsentPrompt';
 import OnboardingGuard from './components/onboarding/OnboardingGuard';
 import { createSession } from './sessions';
 import { acpListSessions, acpDeleteSession } from './acp/sessions';
-
-import type { ChatType } from './types/chat';
+import type { ChatType } from './types/chatType';
 import Hub from './components/Hub';
 import type { UserInput } from './types/message';
-
 import SettingsView, { type SettingsViewOptions } from './components/settings/SettingsView';
 import SessionsView from './components/sessions/SessionsView';
 import SchedulesView from './components/schedule/SchedulesView';
@@ -28,21 +26,18 @@ import ProviderSettings from './components/settings/providers/ProviderSettingsPa
 import { AppLayout } from './components/Layout/AppLayout';
 import { ChatProvider, DEFAULT_CHAT_TITLE } from './contexts/ChatContext';
 import LauncherView from './components/LauncherView';
-
 import 'react-toastify/dist/ReactToastify.css';
 import { useConfig } from './components/ConfigContext';
 import { ModelAndProviderProvider } from './components/ModelAndProviderContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { FeaturesProvider } from './contexts/FeaturesContext';
 import PermissionSettingsView from './components/settings/permission/PermissionSetting';
-
 import ExtensionsView, { type ExtensionsViewOptions } from './components/extensions/ExtensionsView';
 import RecipesView from './components/recipes/RecipesView';
 import SkillsView from './components/skills/SkillsView';
 import AppsView from './components/apps/AppsView';
 import StandaloneAppView from './components/apps/StandaloneAppView';
 import type { View, ViewOptions } from './utils/navigationUtils';
-
 import { useNavigation } from './hooks/useNavigation';
 import { errorMessage } from './utils/conversionUtils';
 import { getInitialWorkingDir } from './utils/workingDir';
@@ -90,12 +85,10 @@ function activeSessionDetailFromEvent(event: Event): {
   if (!(event instanceof CustomEvent)) {
     return null;
   }
-
   const detail: unknown = event.detail;
   if (!isRecord(detail) || typeof detail.sessionId !== 'string') {
     return null;
   }
-
   const initialMessage =
     detail.initialMessage === undefined
       ? undefined
@@ -106,18 +99,15 @@ function activeSessionDetailFromEvent(event: Event): {
   if (initialMessage === null) {
     return null;
   }
-
   const noAutoSubmit =
     detail.noAutoSubmit === undefined
       ? undefined
       : typeof detail.noAutoSubmit === 'boolean'
         ? detail.noAutoSubmit
         : null;
-
   if (noAutoSubmit === null) {
     return null;
   }
-
   return {
     sessionId: detail.sessionId,
     ...(initialMessage !== undefined ? { initialMessage } : {}),
@@ -129,9 +119,7 @@ function sessionIdFromEvent(event: Event): string | null {
   if (!(event instanceof CustomEvent)) {
     return null;
   }
-
   const detail: unknown = event.detail;
-
   return isRecord(detail) && typeof detail.sessionId === 'string'
     ? detail.sessionId
     : null;
@@ -178,23 +166,19 @@ export const PairRouteWrapper = ({
   const [searchParams, setSearchParams] = useSearchParams();
   const isCreatingSessionRef = useRef(false);
   const navigate = useNavigate();
-
   const resumeSessionId = searchParams.get('resumeSessionId') ?? undefined;
   const recipeDeeplinkConfigValue = window.appConfig?.get('recipeDeeplink');
   const recipeIdConfigValue = window.appConfig?.get('recipeId');
-
   const recipeDeeplinkFromConfig =
     typeof recipeDeeplinkConfigValue === 'string'
       ? recipeDeeplinkConfigValue
       : undefined;
-
   const recipeIdFromConfig =
     typeof recipeIdConfigValue === 'string'
       ? recipeIdConfigValue
       : undefined;
   const initialMessage = routeState.initialMessage;
   const noAutoSubmit = routeState.noAutoSubmit;
-
   // Create session if we have an initialMessage, recipeDeeplink, or recipeId but no sessionId
   useEffect(() => {
     if (
@@ -203,7 +187,6 @@ export const PairRouteWrapper = ({
       !isCreatingSessionRef.current
     ) {
       isCreatingSessionRef.current = true;
-
       void (async () => {
         try {
           const newSession = await createSession(getInitialWorkingDir(), {
@@ -212,7 +195,6 @@ export const PairRouteWrapper = ({
             allExtensions: extensionsList,
           });
           const sessionInitialMessage = resolveSessionInitialMessage(newSession, initialMessage);
-
           window.dispatchEvent(
             new CustomEvent(AppEvents.ADD_ACTIVE_SESSION, {
               detail: {
@@ -222,7 +204,6 @@ export const PairRouteWrapper = ({
               },
             })
           );
-
           setSearchParams((prev) => {
             prev.set('resumeSessionId', newSession.id);
             return prev;
@@ -257,7 +238,6 @@ export const PairRouteWrapper = ({
     setSearchParams,
     extensionsList,
   ]);
-
   // Add resumed session to active sessions if not already there
   useEffect(() => {
     if (resumeSessionId && !activeSessions.some((s) => s.sessionId === resumeSessionId)) {
@@ -272,7 +252,6 @@ export const PairRouteWrapper = ({
       );
     }
   }, [resumeSessionId, activeSessions, initialMessage, noAutoSubmit]);
-
   return null;
 };
 
@@ -281,17 +260,14 @@ const SettingsRoute = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const setView = useNavigation();
-
   // Get viewOptions from location.state, history.state, or URL search params
   const viewOptions =
     (location.state as SettingsViewOptions) || (window.history.state as SettingsViewOptions) || {};
-
   // If section is provided via URL search params, add it to viewOptions
   const sectionFromUrl = searchParams.get('section');
   if (sectionFromUrl) {
     viewOptions.section = sectionFromUrl;
   }
-
   const closeSettings = () => {
     if (location.key === 'default') {
       runNavigation(navigate('/'));
@@ -299,7 +275,6 @@ const SettingsRoute = () => {
       runNavigation(navigate(-1));
     }
   };
-
   return <SettingsView onClose={closeSettings} setView={setView} viewOptions={viewOptions} />;
 };
 
@@ -323,10 +298,8 @@ const SkillsRoute = () => {
 const PermissionRoute = (): ReactElement => {
   const location = useLocation();
   const navigate = useNavigate();
-
   const parentView: View | undefined = location.state?.parentView;
   const parentViewOptions: ViewOptions | undefined = location.state?.parentViewOptions;
-
   return (
     <PermissionSettingsView
       onClose={(): void => {
@@ -363,7 +336,6 @@ const PermissionRoute = (): ReactElement => {
 const ConfigureProvidersRoute = () => {
   const location = useLocation();
   const navigate = useNavigate();
-
   const closeProviderSettings = () => {
     if (location.key === 'default') {
       runNavigation(navigate('/settings', { replace: true, state: { section: 'models' } }));
@@ -371,7 +343,6 @@ const ConfigureProvidersRoute = () => {
       runNavigation(navigate(-1));
     }
   };
-
   return (
     <div className="w-screen h-screen bg-background-primary">
       <ProviderSettings onClose={closeProviderSettings} isOnboarding={false} />
@@ -382,13 +353,11 @@ const ConfigureProvidersRoute = () => {
 const ExtensionsRoute = () => {
   const navigate = useNavigate();
   const location = useLocation();
-
   // Get viewOptions from location.state or history.state (for deep link extensions)
   const viewOptions =
     (location.state as ExtensionsViewOptions) ||
     (window.history.state as ExtensionsViewOptions) ||
     {};
-
   return (
     <ExtensionsView
       onClose={() => runNavigation(navigate(-1))}
@@ -414,39 +383,32 @@ const ExtensionsRoute = () => {
 
 export function AppInner() {
   const [fatalError, setFatalError] = useState<string | null>(null);
-
   const navigate = useNavigate();
   const location = useLocation();
   const setView = useNavigation();
   const liveVoice = useLiveVoice();
   const { activeSessionId: activeLiveVoiceSessionId, stop: stopLiveVoice } = liveVoice;
-
   useEffect(() => {
     const hasLiveVoiceEntryPoint = location.pathname === '/' || location.pathname === '/pair';
     if (!hasLiveVoiceEntryPoint && activeLiveVoiceSessionId) {
       void stopLiveVoice();
     }
   }, [activeLiveVoiceSessionId, location.pathname, stopLiveVoice]);
-
   const [chat, setChat] = useState<ChatType>({
     sessionId: '',
     name: DEFAULT_CHAT_TITLE,
     messages: [],
     recipe: null,
   });
-
   // New Chat is the only chat that unmounts on navigation; the rest stay mounted in
   // `ChatSessionsContainer` and keep their text in local state. Its unsent input lives
   // here so it outlives that unmount, and in a ref rather than state because nothing
   // above the outlet has to render on a keystroke.
   const hubDraftRef: RefObject<string> = useRef<string>('');
-
   const MAX_ACTIVE_SESSIONS: number = 10;
-
   const [activeSessions, setActiveSessions] = useState<
     Array<{ sessionId: string; initialMessage?: UserInput; noAutoSubmit?: boolean }>
   >([]);
-
   useEffect(() => {
     const handleAddActiveSession = (event: Event) => {
       const detail = activeSessionDetailFromEvent(event);
@@ -454,18 +416,14 @@ export function AppInner() {
         console.error('Ignoring invalid active-session event payload');
         return;
       }
-
       const { sessionId, initialMessage, noAutoSubmit } = detail;
-
       setActiveSessions((prev) => {
         const existingIndex = prev.findIndex((s) => s.sessionId === sessionId);
-
         if (existingIndex !== -1) {
           // Session exists - move to end of LRU list (most recently used)
           const existing = prev[existingIndex];
           return [...prev.slice(0, existingIndex), ...prev.slice(existingIndex + 1), existing];
         }
-
         // New session - add to end with LRU eviction if needed
         const newSession = { sessionId, initialMessage, noAutoSubmit };
         const updated = [...prev, newSession];
@@ -475,14 +433,12 @@ export function AppInner() {
         return updated;
       });
     };
-
     const handleClearInitialMessage = (event: Event) => {
       const sessionId = sessionIdFromEvent(event);
       if (!sessionId) {
         console.error('Ignoring invalid clear-initial-message event payload');
         return;
       }
-
       setActiveSessions((prev) => {
         return prev.map((session) => {
           if (session.sessionId === sessionId) {
@@ -492,19 +448,16 @@ export function AppInner() {
         });
       });
     };
-
     const handleSessionDeleted = (event: Event) => {
       const sessionId = sessionIdFromEvent(event);
       if (!sessionId) {
         console.error('Ignoring invalid session-deleted event payload');
         return;
       }
-
       setActiveSessions((prev) => {
         return prev.filter((session) => session.sessionId !== sessionId);
       });
     };
-
     window.addEventListener(AppEvents.ADD_ACTIVE_SESSION, handleAddActiveSession);
     window.addEventListener(AppEvents.CLEAR_INITIAL_MESSAGE, handleClearInitialMessage);
     window.addEventListener(AppEvents.SESSION_DELETED, handleSessionDeleted);
@@ -514,9 +467,7 @@ export function AppInner() {
       window.removeEventListener(AppEvents.SESSION_DELETED, handleSessionDeleted);
     };
   }, []);
-
   const { addExtension } = useConfig();
-
   useEffect(() => {
     try {
       window.electron.reactReady();
@@ -525,13 +476,11 @@ export function AppInner() {
       setFatalError(`React ready notification failed: ${errorMessage(error, 'Unknown error')}`);
     }
   }, []);
-
   useEffect(() => {
     const handleSystemResume = () => reconnectAcpAfterSystemResume();
     window.electron.on('system-resume', handleSystemResume);
     return () => window.electron.off('system-resume', handleSystemResume);
   }, []);
-
   useEffect(() => {
     acpListSessions()
       .then(({ sessions }) => {
@@ -544,7 +493,6 @@ export function AppInner() {
       })
       .catch(() => {});
   }, []);
-
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       const isMac = window.electron.platform === 'darwin';
@@ -562,7 +510,6 @@ export function AppInner() {
       window.removeEventListener('keydown', handleKeyDown);
     };
   }, []);
-
   // Prevent default drag and drop behavior globally to avoid opening files in new windows
   // but allow our React components to handle drops in designated areas
   useEffect(() => {
@@ -572,38 +519,32 @@ export function AppInner() {
       const isOverDropZone =
         target instanceof Element &&
         target.closest('[data-drop-zone="true"]') !== null;
-
       if (!isOverDropZone) {
         e.preventDefault();
         e.stopPropagation();
       }
     };
-
     const handleDragOver = (e: globalThis.DragEvent) => {
       // Always prevent default for dragover to allow dropping
       e.preventDefault();
       e.stopPropagation();
     };
-
     const handleDrop = (e: globalThis.DragEvent) => {
       // Only prevent default if we're not over a designated drop zone
       const target = e.target;
       const isOverDropZone =
         target instanceof Element &&
         target.closest('[data-drop-zone="true"]') !== null;
-
       if (!isOverDropZone) {
         e.preventDefault();
         e.stopPropagation();
       }
     };
-
     // Add event listeners to document to catch drag events
     document.addEventListener('dragenter', preventDefaults, false);
     document.addEventListener('dragleave', preventDefaults, false);
     document.addEventListener('dragover', handleDragOver, false);
     document.addEventListener('drop', handleDrop, false);
-
     return () => {
       document.removeEventListener('dragenter', preventDefaults, false);
       document.removeEventListener('dragleave', preventDefaults, false);
@@ -611,12 +552,10 @@ export function AppInner() {
       document.removeEventListener('drop', handleDrop, false);
     };
   }, []);
-
   useEffect(() => {
     const handleFatalError = (_event: IpcRendererEvent, ...args: unknown[]) => {
       const fatalErrorMessage =
         typeof args[0] === 'string' ? args[0] : errorMessage(args[0], 'Unknown fatal error');
-
       console.error('Encountered a fatal error:', fatalErrorMessage);
       setFatalError(fatalErrorMessage);
     };
@@ -625,11 +564,9 @@ export function AppInner() {
       window.electron.off('fatal-error', handleFatalError);
     };
   }, []);
-
   useEffect(() => {
     const isView = (value: unknown): value is View => {
       if (typeof value !== 'string') return false;
-
       switch (value) {
         case 'chat':
         case 'pair':
@@ -651,36 +588,29 @@ export function AppInner() {
           return false;
       }
     };
-
     const handleSetView = (_event: IpcRendererEvent, ...args: unknown[]) => {
       const newView = args[0];
       if (!isView(newView)) {
         console.error('Ignoring invalid set-view payload:', newView);
         return;
       }
-
       const section = typeof args[1] === 'string' ? args[1] : undefined;
-
       if (section && newView === 'settings') {
         runNavigation(navigate(`/settings?section=${section}`));
       } else {
         runNavigation(navigate(`/${newView}`));
       }
     };
-
     window.electron.on('set-view', handleSetView);
     return () => window.electron.off('set-view', handleSetView);
   }, [navigate]);
-
   useEffect(() => {
     const handleNewChat = (_event: IpcRendererEvent, ..._args: unknown[]) => {
       runNavigation(navigate('/'));
     };
-
     window.electron.on('new-chat', handleNewChat);
     return () => window.electron.off('new-chat', handleNewChat);
   }, [navigate]);
-
   useEffect(() => {
     const handleFocusInput = (_event: IpcRendererEvent, ..._args: unknown[]) => {
       const inputField =
@@ -696,17 +626,14 @@ export function AppInner() {
       window.electron.off('focus-input', handleFocusInput);
     };
   }, []);
-
   // Handle initial message from launcher
   const isProcessingRef = useRef(false);
-
   useEffect(() => {
     const handleSetInitialMessage = (_event: IpcRendererEvent, ...args: unknown[]) => {
       const initialMessage = args[0];
       if (typeof initialMessage !== 'string' || !initialMessage || isProcessingRef.current) {
         return;
       }
-
       const rawOptions = args[1];
       const noAutoSubmit =
         typeof rawOptions === 'object' &&
@@ -715,9 +642,7 @@ export function AppInner() {
         typeof rawOptions.noAutoSubmit === 'boolean'
           ? rawOptions.noAutoSubmit
           : undefined;
-
       isProcessingRef.current = true;
-
       runNavigation(
         navigate('/pair', {
           state: {
@@ -726,7 +651,6 @@ export function AppInner() {
           },
         })
       );
-
       setTimeout(() => {
         isProcessingRef.current = false;
       }, 1000);
@@ -736,16 +660,13 @@ export function AppInner() {
       window.electron.off('set-initial-message', handleSetInitialMessage);
     };
   }, [navigate]);
-
   // Register platform event handlers for app lifecycle management
   useEffect(() => {
     return registerPlatformEventHandlers();
   }, []);
-
   if (fatalError) {
     return <ErrorUI error={errorMessage(fatalError)} />;
   }
-
   return (
     <>
       <PageViewTracker />

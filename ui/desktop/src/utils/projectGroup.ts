@@ -15,7 +15,6 @@ export function normalizeProjectPath(workingDir: string): string {
   if (!normalized) {
     return '';
   }
-
   const withoutTrailingSeparators = normalized.replace(/[\\/]+$/, '');
   return withoutTrailingSeparators || normalized;
 }
@@ -25,19 +24,16 @@ export function getProjectLabel(workingDir: string): string {
   if (!normalized) {
     return UNKNOWN_PROJECT_LABEL;
   }
-
   const withoutTrailingSeparators = normalizeProjectPath(workingDir);
   if (!withoutTrailingSeparators) {
     return normalized;
   }
-
   const parts = withoutTrailingSeparators.split(/[\\/]+/);
   return parts[parts.length - 1] || normalized;
 }
 
 export function groupSessionsByProject(sessions: SessionListItem[]): ProjectGroup[] {
   const groups = new Map<string, SessionListItem[]>();
-
   for (const session of sessions) {
     const path = normalizeProjectPath(session.workingDir);
     const existing = groups.get(path);
@@ -47,7 +43,6 @@ export function groupSessionsByProject(sessions: SessionListItem[]): ProjectGrou
       groups.set(path, [session]);
     }
   }
-
   const baseGroups = Array.from(groups.entries()).map(([path, projectSessions]) => {
     const sortedSessions = [...projectSessions].sort(
       (a: SessionListItem, b: SessionListItem): number =>
@@ -60,12 +55,10 @@ export function groupSessionsByProject(sessions: SessionListItem[]): ProjectGrou
       lastActivityAt: sortedSessions[0].activityAt,
     };
   });
-
   const labelCounts = baseGroups.reduce((counts, group) => {
     counts.set(group.label, (counts.get(group.label) ?? 0) + 1);
     return counts;
   }, new Map<string, number>());
-
   return baseGroups
     .map((group) => ({
       ...group,
@@ -74,9 +67,7 @@ export function groupSessionsByProject(sessions: SessionListItem[]): ProjectGrou
           ? getDisambiguatedProjectLabel(group.path)
           : group.label,
     }))
-    .sort(
-      (a, b): number => b.lastActivityAt.getTime() - a.lastActivityAt.getTime()
-    );
+    .sort((a, b): number => b.lastActivityAt.getTime() - a.lastActivityAt.getTime());
 }
 
 function getDisambiguatedProjectLabel(workingDir: string): string {
@@ -88,6 +79,5 @@ function getDisambiguatedProjectLabel(workingDir: string): string {
   if (parts.length >= 2) {
     return `${parts[parts.length - 2]}/${parts[parts.length - 1]}`;
   }
-
   return getProjectLabel(workingDir);
 }

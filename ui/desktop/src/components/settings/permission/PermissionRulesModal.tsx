@@ -1,11 +1,12 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../ui/dialog';
-import { FixedExtensionEntry, useConfig } from '../../ConfigContext';
+import { useConfig } from '../../ConfigContext';
 import { ChevronRight } from 'lucide-react';
 import PermissionModal from './PermissionModal';
 import { Button } from '../../ui/button';
 import { defineMessages, useIntl } from '../../../i18n';
 import type { NoMessageValues } from 'react-intl';
+import type { ConfiguredExtensionEntry } from '../../../types/configuredExtensionEntry';
 
 const i18n = defineMessages<{
   readonly "title": NoMessageValues;
@@ -70,7 +71,7 @@ interface PermissionRulesModalProps {
 export default function PermissionRulesModal({ isOpen, onClose }: PermissionRulesModalProps) {
   const intl = useIntl();
   const { getExtensions } = useConfig();
-  const [extensions, setExtensions] = useState<FixedExtensionEntry[]>([]);
+  const [extensions, setExtensions] = useState<ConfiguredExtensionEntry[]>([]);
 
   const fetchExtensions = useCallback(async () => {
     const extensionsList = await getExtensions(true); // Force refresh

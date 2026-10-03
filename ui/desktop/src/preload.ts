@@ -1,6 +1,6 @@
 import { contextBridge, ipcRenderer, webUtils, type IpcRendererEvent } from 'electron';
 import type { Recipe } from './recipe';
-import type { GooseApp } from './types/apps';
+import type { GooseApp } from './types/mcpAppResource';
 import { defaultSettings, type Settings } from './utils/settings';
 import type { OpenExternalUrlResult } from './utils/openExternalUrlResult';
 import type { AppConfigAPI } from './appConfigApi';
@@ -27,23 +27,17 @@ type LocalStorageParserMap = {
 
 const localStorageParsers: LocalStorageParserMap = {
   theme: (rawValue) => (rawValue === 'dark' || rawValue === 'light' ? rawValue : null),
-
   useSystemTheme: (rawValue) => rawValue === 'true',
-
   responseStyle: (rawValue) => rawValue,
-
   showPricing: (rawValue) => rawValue === 'true',
-
   seenAnnouncementIds: (rawValue) => {
     const parsed: unknown = JSON.parse(rawValue);
-
     if (
       !Array.isArray(parsed) ||
       !parsed.every((value): value is string => typeof value === 'string')
     ) {
       return null;
     }
-
     return parsed;
   },
 };
@@ -53,11 +47,9 @@ function parseLocalStorageValue<K extends SettingKey>(
   rawValue: string
 ): Settings[K] | null {
   const parser = localStorageParsers[key];
-
   if (!parser) {
     return null;
   }
-
   try {
     return parser(rawValue);
   } catch {
@@ -90,7 +82,6 @@ const electronAPI: ElectronAPI = {
   openInChrome: (url: string) => ipcRenderer.send('open-in-chrome', url),
   reloadApp: () => ipcRenderer.send('reload-app'),
   checkForOllama: () => ipcRenderer.invoke('check-ollama'),
-
   selectFileOrDirectory: (defaultPath?: string) =>
     ipcRenderer.invoke('select-file-or-directory', defaultPath),
   selectImportSessionFile: () => ipcRenderer.invoke('select-import-session-file'),
@@ -154,16 +145,10 @@ const electronAPI: ElectronAPI = {
   offMouseBackButtonClicked: (callback: () => void) => {
     ipcRenderer.removeListener('mouse-back-button-clicked', callback);
   },
-  on: (
-    channel: string,
-    callback: (event: IpcRendererEvent, ...args: unknown[]) => void
-  ) => {
+  on: (channel: string, callback: (event: IpcRendererEvent, ...args: unknown[]) => void) => {
     ipcRenderer.on(channel, callback);
   },
-  off: (
-    channel: string,
-    callback: (event: IpcRendererEvent, ...args: unknown[]) => void
-  ) => {
+  off: (channel: string, callback: (event: IpcRendererEvent, ...args: unknown[]) => void) => {
     ipcRenderer.off(channel, callback);
   },
   emit: (channel: string, ...args: unknown[]) => {
@@ -237,11 +222,9 @@ const appConfigAPI: AppConfigAPI = {
   get: (key: string) => (key === 'GOOSE_LOCALE' ? getAppLocale() : config[key]),
   getAll: () => ({ ...config, GOOSE_LOCALE: getAppLocale() }),
 };
-
 // Expose the APIs
 contextBridge.exposeInMainWorld('electron', electronAPI);
 contextBridge.exposeInMainWorld('appConfig', appConfigAPI);
-
 // Type declaration for TypeScript
 declare global {
   interface Window {

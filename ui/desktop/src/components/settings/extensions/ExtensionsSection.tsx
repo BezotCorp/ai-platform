@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback, useMemo } from 'react';
 import { Button } from '../../ui/button';
 import { Plus } from 'lucide-react';
 import { GPSIcon } from '../../ui/icons';
-import { useConfig, FixedExtensionEntry } from '../../ConfigContext';
+import { useConfig } from '../../ConfigContext';
 import { defineMessages, useIntl } from '../../../i18n';
 import ExtensionList from './subcomponents/ExtensionList';
 import ExtensionModal from './modal/ExtensionModal';
@@ -17,6 +17,7 @@ import {
 import { activateExtensionDefault, deleteExtension, toggleExtensionDefault } from './index';
 import type { ExtensionConfig } from '../../../types/extensions';
 import type { NoMessageValues } from 'react-intl';
+import type { ConfiguredExtensionEntry } from '../../../types/configuredExtensionEntry';
 
 const i18n = defineMessages<{
   readonly "addCustomExtension": NoMessageValues;
@@ -52,7 +53,7 @@ interface ExtensionSectionProps {
   showEnvVars?: boolean;
   hideButtons?: boolean;
   disableConfiguration?: boolean;
-  customToggle?: (extension: FixedExtensionEntry) => Promise<boolean | void>;
+  customToggle?: (extension: ConfiguredExtensionEntry) => Promise<boolean | void>;
   selectedExtensions?: string[]; // Add controlled state
   onModalClose?: (extensionName: string) => void;
   searchTerm?: string;
@@ -71,7 +72,7 @@ export default function ExtensionsSection({
   const intl = useIntl();
   const { getExtensions, addExtension, removeExtension, setExtensionEnabled, extensionsList } =
     useConfig();
-  const [selectedExtension, setSelectedExtension] = useState<FixedExtensionEntry | null>(null);
+  const [selectedExtension, setSelectedExtension] = useState<ConfiguredExtensionEntry | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [deepLinkConfigStateVar, setDeepLinkConfigStateVar] = useState<
@@ -115,7 +116,7 @@ export default function ExtensionsSection({
     await getExtensions(true); // Force refresh - this will update the context
   }, [getExtensions]);
 
-  const handleExtensionToggle = async (extensionConfig: FixedExtensionEntry) => {
+  const handleExtensionToggle = async (extensionConfig: ConfiguredExtensionEntry) => {
     if (customToggle) {
       await customToggle(extensionConfig);
       return true;
@@ -134,7 +135,7 @@ export default function ExtensionsSection({
     return true;
   };
 
-  const handleConfigureClick = (extension: FixedExtensionEntry) => {
+  const handleConfigureClick = (extension: ConfiguredExtensionEntry) => {
     setSelectedExtension(extension);
     setIsModalOpen(true);
   };
@@ -278,7 +279,7 @@ export default function ExtensionsSection({
             initialData={extensionToFormData({
               ...deepLinkConfig,
               enabled: true,
-            } as FixedExtensionEntry)}
+            } as ConfiguredExtensionEntry)}
             onClose={handleModalClose}
             onSubmit={handleAddExtension}
             submitLabel={intl.formatMessage(i18n.addExtension)}

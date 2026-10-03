@@ -1,25 +1,20 @@
-import {
-  getToolRequests,
-  getTextAndImageContent,
-  getToolResponses,
-  type Message,
-} from '../types/message';
+import type { Message } from '../types/message';
+import { getTextAndImageContent } from '../types/messageContent';
+import { getToolRequests } from '../types/toolRequestMessageContent';
+import { getToolResponses } from '../types/toolResponseMessageContent';
 
 export function identifyConsecutiveToolCalls(messages: Message[]): number[][] {
   const chains: number[][] = [];
   let currentChain: number[] = [];
-
   for (let i = 0; i < messages.length; i++) {
     const message = messages[i];
     const toolRequests = getToolRequests(message);
     const toolResponses = getToolResponses(message);
     const { textContent } = getTextAndImageContent(message);
     const hasText = textContent.trim().length > 0;
-
     if (toolResponses.length > 0 && toolRequests.length === 0) {
       continue;
     }
-
     if (toolRequests.length > 0) {
       if (hasText) {
         if (currentChain.length > 0) {
@@ -43,11 +38,9 @@ export function identifyConsecutiveToolCalls(messages: Message[]): number[][] {
       currentChain = [];
     }
   }
-
   if (currentChain.length > 1) {
     chains.push(currentChain);
   }
-
   return chains;
 }
 

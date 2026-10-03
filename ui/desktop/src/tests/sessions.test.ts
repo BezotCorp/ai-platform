@@ -5,12 +5,13 @@
 import type { GooseExtension, GooseExtensionEntry } from '@aaif/goose-acp-client';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AppEvents } from '../constants/events';
-import type { FixedExtensionEntry } from '../components/ConfigContext';
+
 import type { Recipe } from '../recipe';
 import { createSession, getSessionDisplayName, startNewSession } from '../sessions';
 import type { ExtensionConfig } from '../types/extensions';
 import { Session } from '../types/session';
 import type { SessionData } from '../types/sessionData';
+import type { ConfiguredExtensionEntry } from '../types/configuredExtensionEntry';
 
 const mocks = vi.hoisted(() => ({
   createAcpSession: vi.fn(),
@@ -99,7 +100,7 @@ function extensionConfig(name: string): ExtensionConfig {
   };
 }
 
-function configuredExtension(name: string, enabled: boolean): FixedExtensionEntry {
+function configuredExtension(name: string, enabled: boolean): ConfiguredExtensionEntry {
   return {
     ...extensionConfig(name),
     enabled,

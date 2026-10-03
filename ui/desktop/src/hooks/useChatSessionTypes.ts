@@ -1,5 +1,5 @@
 import type { ChatState } from '../types/chatState';
-import type { TokenState } from '../types/chat';
+import type { TokenState } from '../types/chatType';
 import type { ImageData, Message, NotificationEvent, UserInput } from '../types/message';
 import type { Session } from '../types/session';
 

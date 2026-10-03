@@ -1,7 +1,6 @@
 /**
  * Shared constants and utilities for extension error handling
  */
-
 import { ExtensionLoadingStatus } from '../components/GroupedExtensionLoadingToast';
 import { toastService } from '../toastService';
 import type { ExtensionLoadResult } from '../types/extensions';

@@ -6,12 +6,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createSession } from '../sessions';
 import type { ExtensionConfig } from '../types/extensions';
 import { Session } from '../types/session';
-import type { FixedExtensionEntry } from '../components/ConfigContext';
+
 import type { GooseExtension, GooseExtensionEntry } from '@aaif/goose-acp-client';
 import { getConfiguredGooseExtensions } from '../acp/extensions';
 import { acpChatSessionController } from '../acp/chatSessionController';
 import { beginConfiguredRecipeParameterScope } from '../acp/recipeParamRequests';
 import { getAcpFeatureCapabilities } from '../acp/capabilities';
+import type { ConfiguredExtensionEntry } from '../types/configuredExtensionEntry';
 
 vi.mock('../acp/extensions', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../acp/extensions')>();
@@ -72,7 +73,7 @@ const extensionConfig = (name: string): ExtensionConfig => ({
   description: `${name} extension`,
 });
 
-const configuredExtension = (name: string, enabled: boolean): FixedExtensionEntry => ({
+const configuredExtension = (name: string, enabled: boolean): ConfiguredExtensionEntry => ({
   ...extensionConfig(name),
   enabled,
 });

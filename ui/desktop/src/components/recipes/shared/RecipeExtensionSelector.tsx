@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import type { RecipeExtension } from '../../../recipe';
-import { useConfig, type FixedExtensionEntry } from '../../ConfigContext';
+import { useConfig } from '../../ConfigContext';
 import { Input } from '../../ui/input';
 import { Switch } from '../../ui/switch';
 import { formatExtensionName } from '../../settings/extensions/subcomponents/ExtensionList';
 import { defineMessages, useIntl } from '../../../i18n';
 import type { NoMessageValues } from 'react-intl';
+import type { ConfiguredExtensionEntry } from '../../../types/configuredExtensionEntry';
 
 const i18n = defineMessages<{
   readonly "label": NoMessageValues;
@@ -53,7 +54,7 @@ function availableToolsProps(availableTools?: string[] | null) {
 }
 
 function toRecipeExtension(
-  extension: FixedExtensionEntry | DisplayRecipeExtension
+  extension: ConfiguredExtensionEntry | DisplayRecipeExtension
 ): DisplayRecipeExtension | null {
   const enabled = 'enabled' in extension ? extension.enabled : undefined;
 

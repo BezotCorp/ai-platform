@@ -1,8 +1,9 @@
 import type { ExtensionConfig } from '../../../types/extensions';
-import { FixedExtensionEntry } from '../../ConfigContext';
+
 import bundledExtensionsData from './bundled-extensions.json';
 import deprecatedBundledExtensionsData from './deprecated-bundled-extensions.json';
 import { nameToKey } from './utils';
+import type { ConfiguredExtensionEntry } from '../../../types/configuredExtensionEntry';
 
 // Type definition for built-in extensions from JSON
 type BundledExtension = {
@@ -29,16 +30,16 @@ export function getDeprecatedBundledExtensions(): DeprecatedBundledExtension[] {
   return deprecatedBundledExtensionsData;
 }
 
-function isBundledExtension(extension: FixedExtensionEntry): boolean {
+function isBundledExtension(extension: ConfiguredExtensionEntry): boolean {
   return 'bundled' in extension && extension.bundled === true;
 }
 
 export async function pruneDeprecatedBundledExtensions(
-  existingExtensions: FixedExtensionEntry[],
+  existingExtensions: ConfiguredExtensionEntry[],
   removeExtensionFn: (id: string) => Promise<void>
-): Promise<FixedExtensionEntry[]> {
+): Promise<ConfiguredExtensionEntry[]> {
   const deprecatedExtensionIds = new Set(getDeprecatedBundledExtensions().map((ext) => ext.id));
-  const remainingExtensions: FixedExtensionEntry[] = [];
+  const remainingExtensions: ConfiguredExtensionEntry[] = [];
 
   for (const existingExt of existingExtensions) {
     if (!isBundledExtension(existingExt)) {
@@ -67,7 +68,7 @@ export async function pruneDeprecatedBundledExtensions(
  * @returns Promise that resolves when sync is complete
  */
 export async function syncBundledExtensions(
-  existingExtensions: FixedExtensionEntry[],
+  existingExtensions: ConfiguredExtensionEntry[],
   addExtensionFn: (name: string, config: ExtensionConfig, enabled: boolean) => Promise<void>
 ): Promise<void> {
   try {

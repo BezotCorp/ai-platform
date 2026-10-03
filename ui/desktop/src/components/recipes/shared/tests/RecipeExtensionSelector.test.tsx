@@ -8,10 +8,11 @@ import userEvent from '@testing-library/user-event';
 
 import { RecipeExtensionSelector } from '../RecipeExtensionSelector';
 import { IntlTestWrapper } from '../../../../i18n/test-utils';
-import type { FixedExtensionEntry } from '../../../ConfigContext';
+import type { ConfiguredExtensionEntry } from '../../../../types/configuredExtensionEntry';
+
 
 const configContextMock = vi.hoisted(() => ({
-  extensionsList: [] as FixedExtensionEntry[],
+  extensionsList: [] as ConfiguredExtensionEntry[],
 }));
 
 vi.mock('../../../ConfigContext', () => ({

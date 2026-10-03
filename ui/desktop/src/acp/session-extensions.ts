@@ -1,8 +1,8 @@
-import type { ExtensionConfig } from '../types/extensions';
+import type { ExtensionConfig } from '../types/extensionConfig';
+import type { SessionExtension } from './sessionExtension';
+export type { SessionExtension } from './sessionExtension';
 import { getAcpClient } from './acpConnection';
 import { extensionConfigToGooseExtension, gooseExtensionToExtensionConfig } from './extensions';
-
-export type SessionExtension = ExtensionConfig & { extensionKey: string };
 
 export async function getSessionExtensions(sessionId: string): Promise<SessionExtension[]> {
   const client = await getAcpClient();

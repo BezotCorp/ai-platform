@@ -1,13 +1,11 @@
+import type { Message, ToolConfirmationData, ToolResponseMessageContent } from '../types/message';
 import {
   getAnyToolConfirmationData,
   getPendingToolConfirmationIds,
   getToolConfirmationContent,
-  getToolRequests,
-  getToolResponses,
-  type Message,
-  type ToolConfirmationData,
-  type ToolResponseMessageContent,
-} from '../types/message';
+} from '../types/toolConfirmationData';
+import { getToolRequests } from '../types/toolRequestMessageContent';
+import { getToolResponses } from '../types/toolResponseMessageContent';
 import { identifyConsecutiveToolCalls } from '../utils/toolCallChaining';
 
 export interface ToolRenderState {

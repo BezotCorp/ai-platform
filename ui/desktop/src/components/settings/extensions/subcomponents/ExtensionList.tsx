@@ -1,10 +1,11 @@
 import ExtensionItem from './ExtensionItem';
 import builtInExtensionsData from '../../../../built-in-extensions.json';
 import type { ExtensionConfig } from '../../../../types/extensions';
-import { FixedExtensionEntry } from '../../../ConfigContext';
+
 import { combineCmdAndArgs } from '../utils';
 import { defineMessages, useIntl } from '../../../../i18n';
 import type { MessageValue, NoMessageValues } from 'react-intl';
+import type { ConfiguredExtensionEntry } from '../../../../types/configuredExtensionEntry';
 
 const i18n = defineMessages<{
   readonly "defaultExtensions": { readonly "count": MessageValue };
@@ -31,9 +32,9 @@ const i18n = defineMessages<{
 });
 
 interface ExtensionListProps {
-  extensions: FixedExtensionEntry[];
-  onToggle: (extension: FixedExtensionEntry) => Promise<boolean | void> | void;
-  onConfigure?: (extension: FixedExtensionEntry) => void;
+  extensions: ConfiguredExtensionEntry[];
+  onToggle: (extension: ConfiguredExtensionEntry) => Promise<boolean | void> | void;
+  onConfigure?: (extension: ConfiguredExtensionEntry) => void;
   isStatic?: boolean;
   disableConfiguration?: boolean;
   searchTerm?: string;
@@ -47,7 +48,7 @@ export default function ExtensionList({
   disableConfiguration: _disableConfiguration,
   searchTerm = '',
 }: ExtensionListProps) {
-  const matchesSearch = (extension: FixedExtensionEntry): boolean => {
+  const matchesSearch = (extension: ConfiguredExtensionEntry): boolean => {
     if (!searchTerm) return true;
 
     const searchLower = searchTerm.toLowerCase();
@@ -136,7 +137,7 @@ export function formatExtensionName(name: string): string {
     .join(' ');
 }
 
-export function getFriendlyTitle(extension: FixedExtensionEntry): string {
+export function getFriendlyTitle(extension: ConfiguredExtensionEntry): string {
   const name =
     ((extension.type === 'builtin' || extension.type === 'platform') && extension.display_name) ||
     extension.name;

@@ -69,7 +69,6 @@ function inRanges(code: number, ranges: readonly Range[]): boolean {
  */
 export function getTextDirection(text: string): TextDirection | null {
   if (!text) return null;
-
   let rtlCount = 0;
   let ltrCount = 0;
   for (let i = 0; i < text.length; i++) {
@@ -80,7 +79,6 @@ export function getTextDirection(text: string): TextDirection | null {
       ltrCount++;
     }
   }
-
   if (rtlCount === 0 && ltrCount === 0) return null;
   return rtlCount > ltrCount ? 'rtl' : 'ltr';
 }

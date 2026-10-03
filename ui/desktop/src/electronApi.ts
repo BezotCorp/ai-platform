@@ -6,7 +6,7 @@ import type { SaveDialogOptions } from './saveDialogOptions';
 import type { SaveDialogResponse } from './saveDialogResponse';
 import type { Settings } from './utils/settings';
 import type { Recipe } from './recipe';
-import type { GooseApp } from './types/apps';
+import type { GooseApp } from './types/mcpAppResource';
 import type { UpdaterEvent } from './updaterEvent';
 import type { FileResponse } from './fileResponse';
 import type { OpenExternalUrlResult } from './utils/openExternalUrlResult';

@@ -3,7 +3,7 @@ import {
   acpCreateCustomProviderFromRequest,
   acpListSetupProviderDetails,
 } from '../../acp/providers';
-import type { ProviderDetails, UpdateCustomProviderRequest } from '../../types/providers';
+import type { ProviderDetails, UpdateCustomProviderRequest } from '../../types/updateCustomProviderRequest';
 import { Select } from '../ui/Select';
 import ProviderConfigForm from './ProviderConfigForm';
 import LocalModelPicker from './LocalModelPicker';

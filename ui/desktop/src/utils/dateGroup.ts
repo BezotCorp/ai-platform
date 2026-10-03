@@ -10,15 +10,11 @@ export interface DateGroup {
 export function groupSessionsByDate(sessions: SessionListItem[]): DateGroup[] {
   const today: AppDate = AppDate.now().startOfDay();
   const yesterday: AppDate = today.addDays(-1);
-
   const groups: Record<string, DateGroup> = {};
-
   sessions.forEach((session: SessionListItem): void => {
     const sessionDateStart: AppDate = session.activityAt.startOfDay();
-
     let label: string;
     let groupKey: string;
-
     if (sessionDateStart.isSameDay(today)) {
       label = 'Today';
       groupKey = 'today';
@@ -39,10 +35,8 @@ export function groupSessionsByDate(sessions: SessionListItem[]): DateGroup[] {
           year: 'numeric',
         });
       }
-
       groupKey = sessionDateStart.toLocalDateKey();
     }
-
     if (!groups[groupKey]) {
       groups[groupKey] = {
         label,
@@ -50,7 +44,6 @@ export function groupSessionsByDate(sessions: SessionListItem[]): DateGroup[] {
         date: sessionDateStart,
       };
     }
-
     groups[groupKey].sessions.push(session);
   });
 

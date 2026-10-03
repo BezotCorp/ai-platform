@@ -1,4 +1,4 @@
-import type { GooseApp } from '../types/apps';
+import type { GooseApp } from '../types/mcpAppResource';
 
 export function isRetiredGooseChatApp(app: GooseApp) {
   return (

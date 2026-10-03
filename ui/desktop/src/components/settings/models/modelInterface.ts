@@ -1,6 +1,6 @@
 import { listLocalModels } from '../../../acp/local-inference';
 import { acpGetProviderDetails, acpListProviderModels } from '../../../acp/providers';
-import type { ProviderDetails, ThinkingEffort } from '../../../types/providers';
+import type { ProviderDetails, ThinkingEffort } from '../../../types/updateCustomProviderRequest';
 import { errorMessage as getErrorMessage } from '../../../utils/conversionUtils';
 
 export default interface Model {
@@ -41,15 +41,12 @@ export async function fetchModelsForProviders(
       }
 
       const providerModels = await acpListProviderModels(p.name);
-      const models = providerModels.map(
-        (m) =>
-          ({
-            name: m.id,
-            provider: p.name,
-            context_limit: m.contextLimit ?? undefined,
-            reasoning: m.reasoning ?? undefined,
-          })
-      );
+      const models = providerModels.map((m) => ({
+        name: m.id,
+        provider: p.name,
+        context_limit: m.contextLimit ?? undefined,
+        reasoning: m.reasoning ?? undefined,
+      }));
       return { provider: p, models, error: null, warning: null };
     } catch (e: unknown) {
       // For custom providers, fall back to the configured model list

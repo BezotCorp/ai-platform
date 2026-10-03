@@ -9,24 +9,18 @@ import {
 } from '../acp/extensions';
 import { pruneDeprecatedBundledExtensions, syncBundledExtensions } from './settings/extensions';
 import { nameToKey } from './settings/extensions/utils';
-import type { ExtensionConfig } from '../types/extensions';
-import type { ProviderDetails } from '../types/providers';
+import type { ConfiguredExtensionEntry } from '../types/configuredExtensionEntry';
+import type { ExtensionConfig } from '../types/extensionConfig';
+import type { ProviderDetails } from '../types/updateCustomProviderRequest';
 
-export type { ExtensionConfig } from '../types/extensions';
-
-// Define a local version that matches the structure of the imported one
-export type FixedExtensionEntry = ExtensionConfig & {
-  enabled: boolean;
-  configKey?: string;
-  extensionKey?: string;
-};
+export type { ExtensionConfig } from '../types/extensionConfig';
 
 type ConfigMap = Record<string, unknown>;
 
 interface ConfigContextType {
   config: ConfigMap;
   providersList: ProviderDetails[];
-  extensionsList: FixedExtensionEntry[];
+  extensionsList: ConfiguredExtensionEntry[];
   extensionWarnings: string[];
   upsert: (key: string, value: unknown, is_secret: boolean) => Promise<void>;
   read: (key: string, is_secret: boolean, options?: { throwOnError?: boolean }) => Promise<unknown>;
@@ -35,7 +29,7 @@ interface ConfigContextType {
   setExtensionEnabled: (configKey: string, enabled: boolean) => Promise<void>;
   removeExtension: (name: string) => Promise<void>;
   getProviders: (b: boolean) => Promise<ProviderDetails[]>;
-  getExtensions: (b: boolean) => Promise<FixedExtensionEntry[]>;
+  getExtensions: (b: boolean) => Promise<ConfiguredExtensionEntry[]>;
 }
 
 interface ConfigProviderProps {
@@ -47,7 +41,7 @@ const ConfigContext = createContext<ConfigContextType | undefined>(undefined);
 export const ConfigProvider: React.FC<ConfigProviderProps> = ({ children }) => {
   const [config, setConfig] = useState<ConfigMap>({});
   const [providersList, setProvidersList] = useState<ProviderDetails[]>([]);
-  const [extensionsList, setExtensionsList] = useState<FixedExtensionEntry[]>([]);
+  const [extensionsList, setExtensionsList] = useState<ConfiguredExtensionEntry[]>([]);
   const [extensionWarnings, setExtensionWarnings] = useState<string[]>([]);
 
   // Ref to access providersList in getProviders without recreating the callback
@@ -118,7 +112,7 @@ export const ConfigProvider: React.FC<ConfigProviderProps> = ({ children }) => {
   );
 
   const getExtensions = useCallback(
-    async (forceRefresh = false): Promise<FixedExtensionEntry[]> => {
+    async (forceRefresh = false): Promise<ConfiguredExtensionEntry[]> => {
       if (forceRefresh || extensionsList.length === 0) {
         return await refreshExtensions();
       }

@@ -16,7 +16,6 @@ export interface Settings {
   externalGoosed: ExternalBackendConfig;
   globalShortcut?: string | null;
   keyboardShortcuts: KeyboardShortcuts;
-
   // UI preferences (migrated from localStorage)
   theme: 'dark' | 'light' | 'aura';
   useSystemTheme: boolean;
@@ -56,7 +55,6 @@ export const defaultSettings: Settings = {
     url: '',
     secret: '',
   },
-
   // UI preferences
   theme: 'light',
   useSystemTheme: true,
@@ -72,7 +70,6 @@ export function getKeyboardShortcuts(settings: Settings): KeyboardShortcuts {
   if (!settings.keyboardShortcuts && settings.globalShortcut !== undefined) {
     const focusShortcut = settings.globalShortcut;
     let launcherShortcut: string | null = null;
-
     if (focusShortcut) {
       if (focusShortcut.includes('Shift')) {
         launcherShortcut = focusShortcut;
@@ -80,7 +77,6 @@ export function getKeyboardShortcuts(settings: Settings): KeyboardShortcuts {
         launcherShortcut = focusShortcut.replace(/\+([Gg])$/, '+Shift+$1');
       }
     }
-
     return {
       ...defaultKeyboardShortcuts,
       focusWindow: focusShortcut,

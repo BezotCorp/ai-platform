@@ -17,16 +17,34 @@ import type { AcpLoadSessionResult } from './acpLoadSessionResult';
 import type { SessionListFilter } from './sessionListFilter';
 import type { AcpNewSessionResult } from './acpNewSessionResult';
 import type { AcpRecipeOptions } from './acpRecipeOptions';
+import type { SessionType } from '../types/sessionType';
 
 const inFlightSessionLoads = new Map<string, Promise<AcpLoadSessionResult>>();
 
 function parseSessionResponseMeta(rawMeta: unknown): LoadSessionMeta {
-  const meta = (rawMeta ?? {}) as LoadSessionMeta;
+  if (rawMeta === undefined || rawMeta === null) {
+    return {};
+  }
+
+  if (!isRecord(rawMeta)) {
+    throw new Error('Invalid load session metadata: expected object');
+  }
+
+  const workingDir = rawMeta.workingDir;
+
+  if (workingDir !== undefined && typeof workingDir !== 'string') {
+    throw new Error(
+      "Invalid load session metadata 'workingDir': expected string"
+    );
+  }
+
   return {
-    recipe: meta.recipe,
-    userRecipeValues: meta.userRecipeValues,
-    extensionResults: meta.extensionResults,
-    workingDir: typeof meta.workingDir === 'string' ? meta.workingDir : undefined,
+    recipe: rawMeta.recipe as LoadSessionMeta['recipe'],
+    userRecipeValues:
+      rawMeta.userRecipeValues as LoadSessionMeta['userRecipeValues'],
+    extensionResults:
+      rawMeta.extensionResults as LoadSessionMeta['extensionResults'],
+    workingDir,
   };
 }
 
@@ -34,60 +52,197 @@ export function parseLoadMeta(response: LoadSessionResponse): LoadSessionMeta {
   return parseSessionResponseMeta(response._meta);
 }
 
-function sessionInfoMeta(s: SessionInfo): GooseSessionInfoMeta {
-  return (s._meta ?? {});
+const SESSION_TYPES: readonly SessionType[] = [
+  'user',
+  'scheduled',
+  'sub_agent',
+  'hidden',
+  'terminal',
+  'gateway',
+  'acp',
+];
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-export function sessionInfoToSession(s: SessionInfo, loadMeta: LoadSessionMeta = {}): Session {
+function optionalString(
+  record: Record<string, unknown>,
+  key: string
+): string | undefined {
+  const value = record[key];
+
+  if (value === undefined) {
+    return undefined;
+  }
+
+  if (typeof value !== 'string') {
+    throw new Error(`Invalid session metadata '${key}': expected string`);
+  }
+
+  return value;
+}
+
+function optionalBoolean(
+  record: Record<string, unknown>,
+  key: string
+): boolean | undefined {
+  const value = record[key];
+
+  if (value === undefined) {
+    return undefined;
+  }
+
+  if (typeof value !== 'boolean') {
+    throw new Error(`Invalid session metadata '${key}': expected boolean`);
+  }
+
+  return value;
+}
+
+function optionalMessageCount(
+  record: Record<string, unknown>
+): number | undefined {
+  const value = record.messageCount;
+
+  if (value === undefined) {
+    return undefined;
+  }
+
+  if (
+    typeof value !== 'number' ||
+    !Number.isInteger(value) ||
+    value < 0
+  ) {
+    throw new Error(
+      "Invalid session metadata 'messageCount': expected non-negative integer"
+    );
+  }
+
+  return value;
+}
+
+function optionalSessionType(
+  record: Record<string, unknown>
+): SessionType | undefined {
+  const value = record.sessionType;
+
+  if (value === undefined) {
+    return undefined;
+  }
+
+  if (
+    typeof value !== 'string' ||
+    !SESSION_TYPES.some((sessionType) => sessionType === value)
+  ) {
+    throw new Error(
+      `Invalid session metadata 'sessionType': ${String(value)}`
+    );
+  }
+
+  return value as SessionType;
+}
+
+function sessionInfoMeta(s: SessionInfo): GooseSessionInfoMeta {
+  if (s._meta === undefined || s._meta === null) {
+    return {};
+  }
+
+  if (!isRecord(s._meta)) {
+    throw new Error('Invalid session metadata: expected object');
+  }
+
+  return {
+    messageCount: optionalMessageCount(s._meta),
+    createdAt: optionalString(s._meta, 'createdAt'),
+    lastMessageAt: optionalString(s._meta, 'lastMessageAt'),
+    archivedAt: optionalString(s._meta, 'archivedAt'),
+    projectId: optionalString(s._meta, 'projectId'),
+    providerId: optionalString(s._meta, 'providerId'),
+    modelId: optionalString(s._meta, 'modelId'),
+    sessionType: optionalSessionType(s._meta),
+    userSetName: optionalBoolean(s._meta, 'userSetName'),
+    hasRecipe: optionalBoolean(s._meta, 'hasRecipe'),
+    lastMessageSnippet: optionalString(s._meta, 'lastMessageSnippet'),
+  };
+}
+
+function normalizeSessionInfo(s: SessionInfo) {
   const meta = sessionInfoMeta(s);
   const createdAt = meta.createdAt ?? s.updatedAt ?? '';
   const updatedAt = s.updatedAt ?? createdAt;
-  const modelConfig: Session['model_config'] = meta.modelId
+
+  return {
+    id: String(s.sessionId),
+    name: s.title ?? '',
+    workingDir: s.cwd,
+    createdAt,
+    updatedAt,
+    lastMessageAt: meta.lastMessageAt,
+    archivedAt: meta.archivedAt,
+    messageCount: meta.messageCount ?? 0,
+    projectId: meta.projectId,
+    providerId: meta.providerId,
+    modelId: meta.modelId,
+    sessionType: meta.sessionType,
+    userSetName: meta.userSetName,
+    hasRecipe: meta.hasRecipe,
+    lastMessageSnippet: meta.lastMessageSnippet,
+  };
+}
+
+export function sessionInfoToSession(
+  s: SessionInfo,
+  loadMeta: LoadSessionMeta = {}
+): Session {
+  const normalized = normalizeSessionInfo(s);
+
+  const modelConfig: Session['model_config'] = normalized.modelId
     ? {
-        model_name: meta.modelId,
+        model_name: normalized.modelId,
         toolshim: false,
       }
     : null;
 
   return new Session({
-    id: String(s.sessionId),
-    name: s.title ?? '',
-    working_dir: loadMeta.workingDir ?? s.cwd,
-    created_at: createdAt,
-    updated_at: updatedAt,
-    last_message_at: meta.lastMessageAt,
-    message_count: meta.messageCount ?? 0,
+    id: normalized.id,
+    name: normalized.name,
+    working_dir: loadMeta.workingDir ?? normalized.workingDir,
+    created_at: normalized.createdAt,
+    updated_at: normalized.updatedAt,
+    last_message_at: normalized.lastMessageAt,
+    message_count: normalized.messageCount,
     extension_data: {},
-    archived_at: meta.archivedAt,
-    project_id: meta.projectId,
-    provider_name: meta.providerId,
+    archived_at: normalized.archivedAt,
+    project_id: normalized.projectId,
+    provider_name: normalized.providerId,
     model_config: modelConfig,
-    session_type: meta.sessionType,
+    session_type: normalized.sessionType,
     recipe: loadMeta.recipe,
     user_recipe_values: loadMeta.userRecipeValues,
-    user_set_name: meta.userSetName,
-    last_message_snippet: meta.lastMessageSnippet,
+    user_set_name: normalized.userSetName,
+    last_message_snippet: normalized.lastMessageSnippet,
   });
 }
 
 function sessionInfoToListItem(s: SessionInfo): SessionListItem {
-  const meta = sessionInfoMeta(s);
+  const normalized = normalizeSessionInfo(s);
 
   return new SessionListItem({
-    id: String(s.sessionId),
-    name: s.title ?? '',
-    workingDir: s.cwd,
-    updatedAt: s.updatedAt ?? '',
-    messageCount: meta.messageCount ?? 0,
-    lastMessageAt: meta.lastMessageAt,
-    createdAt: meta.createdAt ?? s.updatedAt ?? '',
-    archivedAt: meta.archivedAt,
-    projectId: meta.projectId,
-    providerId: meta.providerId,
-    modelId: meta.modelId,
-    userSetName: meta.userSetName,
-    hasRecipe: meta.hasRecipe,
-    sessionType: meta.sessionType,
+    id: normalized.id,
+    name: normalized.name,
+    workingDir: normalized.workingDir,
+    updatedAt: normalized.updatedAt,
+    messageCount: normalized.messageCount,
+    lastMessageAt: normalized.lastMessageAt,
+    createdAt: normalized.createdAt,
+    archivedAt: normalized.archivedAt,
+    projectId: normalized.projectId,
+    providerId: normalized.providerId,
+    modelId: normalized.modelId,
+    userSetName: normalized.userSetName,
+    hasRecipe: normalized.hasRecipe,
+    sessionType: normalized.sessionType,
   });
 }
 

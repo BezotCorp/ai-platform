@@ -1,8 +1,9 @@
 import type { Session } from './types/session';
+import { configuredExtensionEntryToConfig } from './utils/configuredExtensionEntryToConfig';
 import type { ExtensionConfig } from './types/extensions';
 import type { GooseExtension } from '@aaif/goose-acp-client';
 import type { setViewType } from './hooks/useNavigation';
-import type { FixedExtensionEntry } from './components/ConfigContext';
+
 import { AppEvents } from './constants/events';
 import { acpChatSessionController } from './acp/chatSessionController';
 import { getConfiguredGooseExtensions, gooseExtensionName } from './acp/extensions';
@@ -14,6 +15,7 @@ import { scanRecipe, type Recipe } from './recipe';
 import { listSavedRecipes } from './recipe/recipe_management';
 import { requestRecipeConsent } from './recipe/consent';
 import { CreateSessionOptions } from './createSessionOptions';
+import type { ConfiguredExtensionEntry } from './types/configuredExtensionEntry';
 
 export function getSessionDisplayName(session: Session): string {
   if (session.user_set_name) {
@@ -38,10 +40,7 @@ function selectedExtensionConfigs(options?: CreateSessionOptions): ExtensionConf
   if (options?.allExtensions) {
     const enabled = options.allExtensions
       .filter((extension) => extension.enabled)
-      .map((extension) => {
-        const { enabled: _enabled, ...config } = extension;
-        return config;
-      });
+      .map(configuredExtensionEntryToConfig);
     // An empty configured list is also what this looks like before the config
     // finishes loading, so it stays "not specified" rather than becoming an
     // explicit empty selection. Only `extensionConfigs` can express that.
@@ -139,7 +138,7 @@ export async function startNewSession(
   options?: {
     recipeDeeplink?: string;
     recipeId?: string;
-    allExtensions?: FixedExtensionEntry[];
+    allExtensions?: ConfiguredExtensionEntry[];
   }
 ): Promise<Session> {
   const session = await createSession(workingDir, options);

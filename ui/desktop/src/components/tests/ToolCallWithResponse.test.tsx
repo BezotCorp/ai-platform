@@ -12,7 +12,7 @@ import type {
   ToolRequestMessageContent,
   ToolResponseMessageContent,
 } from '../../types/message';
-import { getAnyToolConfirmationData } from '../../types/message';
+import { getAnyToolConfirmationData } from '../../types/toolConfirmationData';
 import { resolveAcpPermissionRequest } from '../../acp/permissionRequests';
 import ToolCallWithResponse from '../ToolCallWithResponse';
 

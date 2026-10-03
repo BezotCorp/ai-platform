@@ -1,17 +1,23 @@
 import { ExternalBackendConfig } from './externalBackendConfig';
+import {
+  LOCALHOST_ADDRESS_IP,
+  LOCALHOST_ADDRESS_HOSTNAME,
+  GITHUB_API_ADDRESS,
+  GITHUB_ADDRESS,
+} from './adress_paths';
 
 const DEFAULT_CONNECT_SOURCES = [
   "'self'",
-  'http://127.0.0.1:*',
-  'https://127.0.0.1:*',
-  'ws://127.0.0.1:*',
-  'wss://127.0.0.1:*',
-  'http://localhost:*',
-  'https://localhost:*',
-  'ws://localhost:*',
-  'wss://localhost:*',
-  'https://api.github.com',
-  'https://github.com',
+  `http://${LOCALHOST_ADDRESS_IP}:*`,
+  `https://${LOCALHOST_ADDRESS_IP}:*`,
+  `ws://${LOCALHOST_ADDRESS_IP}:*`,
+  `wss://${LOCALHOST_ADDRESS_IP}:*`,
+  `http://${LOCALHOST_ADDRESS_HOSTNAME}:*`,
+  `https://${LOCALHOST_ADDRESS_HOSTNAME}:*`,
+  `ws://${LOCALHOST_ADDRESS_HOSTNAME}:*`,
+  `wss://${LOCALHOST_ADDRESS_HOSTNAME}:*`,
+  GITHUB_API_ADDRESS,
+  GITHUB_ADDRESS,
   'https://objects.githubusercontent.com',
 ];
 

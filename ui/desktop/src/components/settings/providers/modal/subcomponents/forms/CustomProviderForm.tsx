@@ -3,7 +3,7 @@ import { Input } from '../../../../../ui/input';
 import { Select } from '../../../../../ui/Select';
 import { Button } from '../../../../../ui/button';
 import { SecureStorageNotice } from '../SecureStorageNotice';
-import type { UpdateCustomProviderRequest } from '../../../../../../types/providers';
+import type { UpdateCustomProviderRequest } from '../../../../../../types/updateCustomProviderRequest';
 import type { ProviderTemplateDto } from '@aaif/goose-acp-client';
 import { Plus, X, Trash2, AlertTriangle, ExternalLink, Search, Settings } from 'lucide-react';
 import { cn } from '../../../../../../utils';

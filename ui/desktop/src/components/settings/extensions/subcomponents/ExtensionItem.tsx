@@ -2,11 +2,12 @@ import { useState, useEffect } from 'react';
 import kebabCase from 'lodash/kebabCase';
 import { Switch } from '../../../ui/switch';
 import { Gear } from '../../../icons';
-import { FixedExtensionEntry } from '../../../ConfigContext';
+
 import { getSubtitle, getFriendlyTitle } from './ExtensionList';
 import { Card, CardHeader, CardTitle, CardContent, CardAction } from '../../../ui/card';
 import { defineMessages, useIntl } from '../../../../i18n';
 import type { MessageValue } from 'react-intl';
+import type { ConfiguredExtensionEntry } from '../../../../types/configuredExtensionEntry';
 
 const i18n = defineMessages<{
   readonly "configureExtension": { readonly "name": MessageValue };
@@ -23,9 +24,9 @@ const i18n = defineMessages<{
 });
 
 interface ExtensionItemProps {
-  extension: FixedExtensionEntry;
-  onToggle: (extension: FixedExtensionEntry) => Promise<boolean | void> | void;
-  onConfigure?: (extension: FixedExtensionEntry) => void;
+  extension: ConfiguredExtensionEntry;
+  onToggle: (extension: ConfiguredExtensionEntry) => Promise<boolean | void> | void;
+  onConfigure?: (extension: ConfiguredExtensionEntry) => void;
   isStatic?: boolean; // to not allow users to edit configuration
 }
 
@@ -41,7 +42,7 @@ export default function ExtensionItem({
   // Track if we're in the process of toggling
   const [isToggling, setIsToggling] = useState(false);
 
-  const handleToggle = async (ext: FixedExtensionEntry) => {
+  const handleToggle = async (ext: ConfiguredExtensionEntry) => {
     // Prevent multiple toggles while one is in progress
     if (isToggling) return;
 

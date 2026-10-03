@@ -21,6 +21,7 @@ import type { StartGooseServeOptions } from './startGooseServerOptions';
 import type { LocalServeScheme } from './localServeScheme';
 import type { GooseServeExitSignal } from './gooseServeExitSignal';
 import type { ReadinessFetch } from './readinessFetch';
+import { LOCALHOST_ADDRESS_IP } from './utils/adress_paths';
 
 const existingFile = (candidate: string): boolean => {
   try {
@@ -37,17 +38,14 @@ export const findGooseBinaryPath = (options: FindGooseBinaryOptions = {}): strin
     if (isPackaged) {
       throw new Error('GOOSE_BINARY is only supported in development builds');
     }
-
     const resolvedPath = path.resolve(pathFromEnv);
     if (existingFile(resolvedPath)) {
       return resolvedPath;
     }
     throw new Error(`Invalid GOOSE_BINARY path: ${pathFromEnv} (pwd is ${process.cwd()})`);
   }
-
   const binaryName = process.platform === 'win32' ? 'goose.exe' : 'goose';
   const possiblePaths: string[] = [];
-
   if (isPackaged && resourcesPath) {
     possiblePaths.push(path.join(resourcesPath, 'bin', binaryName));
     possiblePaths.push(path.join(resourcesPath, binaryName));
@@ -58,13 +56,11 @@ export const findGooseBinaryPath = (options: FindGooseBinaryOptions = {}): strin
       path.join(process.cwd(), '..', '..', 'target', 'debug', binaryName)
     );
   }
-
   for (const candidate of possiblePaths) {
     if (existingFile(candidate)) {
       return candidate;
     }
   }
-
   throw new Error(
     `Goose binary not found in any of the possible paths: ${possiblePaths.join(', ')}`
   );
@@ -73,9 +69,8 @@ export const findGooseBinaryPath = (options: FindGooseBinaryOptions = {}): strin
 const findAvailablePort = (): Promise<number> => {
   return new Promise((resolve, reject) => {
     const server = createServer();
-
     server.on('error', reject);
-    server.listen(0, '127.0.0.1', () => {
+    server.listen(0, LOCALHOST_ADDRESS_IP, () => {
       const { port } = server.address() as { port: number };
       server.close(() => {
         resolve(port);
@@ -108,7 +103,6 @@ const TLS_FINGERPRINT_TIMEOUT_MS = 5000;
 const fetchStatus = async (statusUrl: string, readinessFetch: ReadinessFetch): Promise<boolean> => {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 1000);
-
   try {
     const response = await readinessFetch(statusUrl, { signal: controller.signal });
     return response.ok;
@@ -127,7 +121,6 @@ const waitForFingerprint = async (
   const timeoutPromise = new Promise<null>((resolve) => {
     timeout = setTimeout(() => resolve(null), timeoutMs);
   });
-
   try {
     return await Promise.race([fingerprintReady, timeoutPromise]);
   } finally {
@@ -163,7 +156,6 @@ const waitForGooseServeReady = async (
     timeoutMs: timeout,
     intervalMs: interval,
   });
-
   let attempt = 1;
   while (Date.now() < deadline) {
     if (shouldStopWaiting()) {
@@ -174,7 +166,6 @@ const waitForGooseServeReady = async (
       });
       return false;
     }
-
     if (errorLog.some(isFatalError)) {
       options.onEvent?.('healthcheck_fatal_error', {
         ...probeDetails,
@@ -183,7 +174,6 @@ const waitForGooseServeReady = async (
       });
       return false;
     }
-
     if (await fetchStatus(statusUrl, options.readinessFetch)) {
       options.onEvent?.('healthcheck_success', {
         ...probeDetails,
@@ -191,11 +181,9 @@ const waitForGooseServeReady = async (
       });
       return true;
     }
-
     await delay(interval);
     attempt += 1;
   }
-
   options.onEvent?.('healthcheck_timeout', { ...probeDetails, timeoutMs: timeout });
   return false;
 };
@@ -205,17 +193,14 @@ export const buildLocalServeUrls = (
   token: string,
   scheme: LocalServeScheme
 ): LocalServeUrls => {
-  const httpBaseUrl = `${scheme}://127.0.0.1:${port}`;
+  const httpBaseUrl = `${scheme}://${LOCALHOST_ADDRESS_IP}:${port}`;
   const websocketProtocol = scheme === 'https' ? 'wss:' : 'ws:';
-
   const acpUrl = new URL(`${httpBaseUrl}/acp`);
   acpUrl.protocol = websocketProtocol;
   acpUrl.searchParams.set('token', token);
-
   const redactedAcpUrl = new URL(`${httpBaseUrl}/acp`);
   redactedAcpUrl.protocol = websocketProtocol;
   redactedAcpUrl.searchParams.set('token', 'REDACTED');
-
   return {
     httpBaseUrl,
     statusUrl: `${httpBaseUrl}/status`,
@@ -298,7 +283,6 @@ export const startGooseServe = async ({
     startupTrace?.record('configuration_error', { message });
     throw new Error(withStartupDiagnosticsPath(message, startupDiagnosticsPath));
   }
-
   let goosePath: string;
   try {
     goosePath = findGooseBinaryPath({ isPackaged, resourcesPath });
@@ -307,7 +291,6 @@ export const startGooseServe = async ({
     startupTrace?.record('binary_resolve_error', { message });
     throw new Error(withStartupDiagnosticsPath(message, startupDiagnosticsPath), { cause: error });
   }
-
   const port = await findAvailablePort();
   const localServeScheme: LocalServeScheme = tls ? 'https' : 'http';
   const { httpBaseUrl, statusUrl, healthUrl, acpUrl, redactedAcpUrl } = buildLocalServeUrls(
@@ -323,11 +306,10 @@ export const startGooseServe = async ({
     'desktop',
     '--enable-scheduler',
     '--host',
-    '127.0.0.1',
+    LOCALHOST_ADDRESS_IP,
     '--port',
     String(port),
   ];
-
   logger.info(`Starting goose serve from: ${goosePath} on port ${port} in dir ${workingDir}`);
   if (startupTrace) {
     startupTrace.diagnostics.binaryPath = goosePath;
@@ -344,7 +326,6 @@ export const startGooseServe = async ({
       args,
     });
   }
-
   const spawnOptions = {
     env: buildGooseServeEnv(secretKey, goosePath, additionalEnv, loginShellPath),
     cwd: workingDir,
@@ -352,13 +333,11 @@ export const startGooseServe = async ({
     shell: false as const,
     stdio: ['ignore', 'pipe', 'pipe'] as ['ignore', 'pipe', 'pipe'],
   };
-
   const gooseProcess = spawn(goosePath, args, spawnOptions);
   if (startupTrace) {
     startupTrace.diagnostics.pid = gooseProcess.pid ?? null;
     startupTrace.record('spawn_success', { pid: gooseProcess.pid ?? null });
   }
-
   let exited = false;
   let spawnFailed = false;
   let exitCode: number | null = null;
@@ -371,7 +350,6 @@ export const startGooseServe = async ({
   const fingerprintReady = new Promise<string | null>((resolve) => {
     resolveFingerprintReady = resolve;
   });
-
   const resolveFingerprint = (fingerprint: string | null) => {
     if (fingerprintReadyResolved) {
       return;
@@ -379,7 +357,6 @@ export const startGooseServe = async ({
     fingerprintReadyResolved = true;
     resolveFingerprintReady(fingerprint);
   };
-
   const stopStdoutCollection = () => {
     if (stdoutCollectionStopped) {
       return;
@@ -388,7 +365,6 @@ export const startGooseServe = async ({
     gooseProcess.stdout?.off('data', onStdoutData);
     gooseProcess.stdout?.resume();
   };
-
   const recordCertFingerprint = (fingerprint: string) => {
     if (!fingerprint) {
       return;
@@ -399,7 +375,6 @@ export const startGooseServe = async ({
     resolveFingerprint(certFingerprint);
     stopStdoutCollection();
   };
-
   const onStdoutData = (data: Buffer) => {
     stdoutBuffer += data.toString();
     const lines = stdoutBuffer.split(/\r?\n/);
@@ -412,9 +387,7 @@ export const startGooseServe = async ({
       }
     }
   };
-
   gooseProcess.stdout?.on('data', onStdoutData);
-
   const onStderrData = (data: Buffer) => {
     const lines = data.toString().split('\n');
     appendErrorTail(errorLog, lines);
@@ -427,9 +400,7 @@ export const startGooseServe = async ({
       }
     }
   };
-
   gooseProcess.stderr?.on('data', onStderrData);
-
   gooseProcess.on('exit', (code, signal) => {
     exited = true;
     exitCode = code;
@@ -444,21 +415,18 @@ export const startGooseServe = async ({
     }
     resolveFingerprint(null);
   });
-
   gooseProcess.on('error', (error) => {
     spawnFailed = true;
     errorLog.push(error.message);
     logger.error(`Failed to start goose serve on port ${port} and dir ${workingDir}`, error);
     startupTrace?.record('spawn_error', { message: error.message, name: error.name });
   });
-
   const cleanup = async (): Promise<void> => {
     return new Promise<void>((resolve) => {
       if (exited || gooseProcess.killed) {
         resolve();
         return;
       }
-
       let resolved = false;
       const finish = () => {
         if (!resolved) {
@@ -466,9 +434,7 @@ export const startGooseServe = async ({
           resolve();
         }
       };
-
       gooseProcess.once('close', finish);
-
       logger.info('Terminating goose serve');
       try {
         if (process.platform === 'win32') {
@@ -481,7 +447,6 @@ export const startGooseServe = async ({
       } catch (error) {
         logger.error('Error while terminating goose serve process:', error);
       }
-
       setTimeout(() => {
         if (!exited && !gooseProcess.killed && process.platform !== 'win32') {
           gooseProcess.kill('SIGKILL');
@@ -490,19 +455,16 @@ export const startGooseServe = async ({
       }, 5000);
     });
   };
-
   const ready = await waitForGooseServeReady(statusUrl, errorLog, () => exited || spawnFailed, {
     healthUrl,
     readinessFetch,
     onEvent: startupTrace?.record,
   });
-
   const stopOutputCollection = () => {
     stopStdoutCollection();
     gooseProcess.stderr?.off('data', onStderrData);
     gooseProcess.stderr?.resume();
   };
-
   if (!ready) {
     stopOutputCollection();
     await cleanup();
@@ -517,7 +479,6 @@ export const startGooseServe = async ({
       )
     );
   }
-
   if (tls) {
     startupTrace?.record('fingerprint_wait_start', { timeoutMs: TLS_FINGERPRINT_TIMEOUT_MS });
     const fingerprint = await waitForFingerprint(fingerprintReady, TLS_FINGERPRINT_TIMEOUT_MS);
@@ -542,9 +503,7 @@ export const startGooseServe = async ({
       );
     }
   }
-
   stopOutputCollection();
-
   return {
     acpUrl,
     workingDir,

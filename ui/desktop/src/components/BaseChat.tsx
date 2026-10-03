@@ -12,7 +12,7 @@ import { Button } from './ui/button';
 import { ScrollArea, ScrollAreaHandle } from './ui/scroll-area';
 import { useFileDrop } from '../hooks/useFileDrop';
 import { ChatState } from '../types/chatState';
-import { ChatType } from '../types/chat';
+import { ChatType } from '../types/chatType';
 import { useIsMobile } from '../hooks/use-mobile';
 import { useNavigationContextSafe } from './Layout/NavigationContext';
 import { cn } from '../utils';
@@ -21,12 +21,8 @@ import { acpUpdateWorkingDir } from '../acp/sessions';
 import { useNavigation } from '../hooks/useNavigation';
 import { RecipeHeader } from './RecipeHeader';
 import RecipeActivities from './recipes/RecipeActivities';
-import {
-  getTextAndImageContent,
-  type ImageData,
-  type Message,
-  type UserInput,
-} from '../types/message';
+import type { ImageData, Message, UserInput } from '../types/message';
+import { getTextAndImageContent } from '../types/messageContent';
 import { substituteParameters } from '../utils/parameterSubstitution';
 import { useAutoSubmit } from '../hooks/useAutoSubmit';
 import { Goose } from './icons';

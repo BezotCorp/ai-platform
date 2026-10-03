@@ -4,12 +4,9 @@ import { AppEvents } from '../constants/events';
 import { ChatState } from '../types/chatState';
 import type { Session } from '../types/session';
 import { showExtensionLoadResults } from '../utils/extensionErrorUtils';
-import {
-  createUserMessage,
-  getPendingToolConfirmationIds,
-  type ImageData,
-  type Message,
-} from '../types/message';
+import { createUserMessage } from '../types/message';
+import type { ImageData, Message } from '../types/message';
+import { getPendingToolConfirmationIds } from '../types/toolConfirmationData';
 import {
   acpChatSessionActions,
   acpChatSessionStore,

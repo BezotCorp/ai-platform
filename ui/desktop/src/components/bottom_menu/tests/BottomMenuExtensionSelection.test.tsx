@@ -5,12 +5,13 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { IntlTestWrapper } from '../../../i18n/test-utils';
-import type { FixedExtensionEntry } from '../../ConfigContext';
+import type { ConfiguredExtensionEntry } from '../../../types/configuredExtensionEntry';
+import type { ExtensionMenuEntry } from '../extensionMenuEntry';
 import { BottomMenuExtensionSelection } from '../BottomMenuExtensionSelection';
 
 const mocks = vi.hoisted(() => ({
   addToAgent: vi.fn(),
-  configuredExtensions: [] as FixedExtensionEntry[],
+  configuredExtensions: [] as ConfiguredExtensionEntry[],
   getSessionExtensions: vi.fn(),
   removeFromAgent: vi.fn(),
 }));
@@ -34,9 +35,9 @@ vi.mock('../ExtensionMenu', () => ({
     hidden,
     onToggle,
   }: {
-    extensions: Array<FixedExtensionEntry & { extensionKey?: string }>;
+    extensions: ExtensionMenuEntry[];
     hidden: boolean;
-    onToggle: (extension: FixedExtensionEntry & { extensionKey?: string }) => void;
+    onToggle: (extension: ExtensionMenuEntry) => void;
   }) => (
     <div>
       <output data-testid="hidden">{String(hidden)}</output>
@@ -61,7 +62,7 @@ vi.mock('../ExtensionMenu', () => ({
   ),
 }));
 
-const configuredExtension = (name: string, configKey: string): FixedExtensionEntry => ({
+const configuredExtension = (name: string, configKey: string): ConfiguredExtensionEntry => ({
   type: 'builtin',
   name,
   description: `${name} configured extension`,

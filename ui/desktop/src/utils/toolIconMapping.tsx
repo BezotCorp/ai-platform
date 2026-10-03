@@ -32,13 +32,11 @@ export const getToolIcon = (toolName: string): React.ComponentType<ToolIconProps
       return FileEdit;
     case 'shell':
       return Terminal;
-
     // Memory Extension Tools
     case 'remember_memory':
       return Save;
     case 'retrieve_memories':
       return Brain;
-
     // Computer Controller Extension Tools
     case 'computer_control':
       return Monitor;
@@ -50,7 +48,6 @@ export const getToolIcon = (toolName: string): React.ComponentType<ToolIconProps
       return FileText;
     case 'xlsx_tool':
       return Numbers;
-
     // File Operations
     case 'search':
       return Search;
@@ -60,23 +57,19 @@ export const getToolIcon = (toolName: string): React.ComponentType<ToolIconProps
       return FilePlus;
     case 'update_file':
       return FileEdit;
-
     // Google Workspace Tools (if still supported)
     case 'sheets_tool':
       return Numbers;
     case 'docs_tool':
       return FileText;
-
     // Delegation Tools
     case 'delegate':
       return Delegate;
     case 'load':
       return Eye;
-
     // Special Tools
     case 'final_output':
       return Tool; // Could be a checkmark icon if we had one
-
     // Default fallback for unknown tools
     default:
       return Tool;

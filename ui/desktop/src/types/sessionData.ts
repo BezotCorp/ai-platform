@@ -1,10 +1,5 @@
 import type { Recipe } from '../recipe';
-import type { Message } from './message';
-import type { ExtensionData } from './extensionData';
-import type { GooseMode } from './gooseMode';
-import type { ModelConfig } from './modelConfig';
-import type { SessionType } from './sessionType';
-import type { Usage } from './usage';
+import type { ExtensionData, GooseMode, Message, ModelConfig, SessionType, Usage } from '.';
 
 /**
  * Serializable data used to construct and copy a `Session`.

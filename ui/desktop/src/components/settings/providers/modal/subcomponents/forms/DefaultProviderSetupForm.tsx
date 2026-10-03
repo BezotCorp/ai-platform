@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { Input } from '../../../../../ui/input';
 import { acpReadProviderConfig } from '../../../../../../acp/providers';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../../../../../ui/collapsible';
-import type { ConfigKey, ProviderDetails } from '../../../../../../types/providers';
+import type { ConfigKey, ProviderDetails } from '../../../../../../types/updateCustomProviderRequest';
 import {
   configLabels,
   getConfigFieldPlaceholder,

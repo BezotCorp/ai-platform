@@ -221,3 +221,44 @@ describe('ACP sessions', () => {
     });
   });
 });
+
+
+describe('ACP session metadata runtime validation', () => {
+  it('rejects malformed primitive session metadata at runtime', () => {
+    const malformed = sessionInfo({
+      _meta: {
+        createdAt: 123,
+      } as unknown as SessionInfo['_meta'],
+    });
+
+    expect(() => sessionInfoToSession(malformed)).toThrow(
+      "Invalid session metadata 'createdAt': expected string"
+    );
+  });
+
+  it('rejects an unsupported session type at runtime', () => {
+    const malformed = sessionInfo({
+      _meta: {
+        createdAt: '2026-01-01T00:00:00Z',
+        sessionType: 'future_session_type',
+      } as unknown as SessionInfo['_meta'],
+    });
+
+    expect(() => sessionInfoToSession(malformed)).toThrow(
+      "Invalid session metadata 'sessionType': future_session_type"
+    );
+  });
+
+  it('rejects a negative message count at runtime', () => {
+    const malformed = sessionInfo({
+      _meta: {
+        createdAt: '2026-01-01T00:00:00Z',
+        messageCount: -1,
+      },
+    });
+
+    expect(() => sessionInfoToSession(malformed)).toThrow(
+      "Invalid session metadata 'messageCount': expected non-negative integer"
+    );
+  });
+});

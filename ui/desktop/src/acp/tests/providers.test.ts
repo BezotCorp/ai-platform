@@ -5,6 +5,7 @@ import {
   acpEnableProvider,
   acpGetProviderDetails,
   acpListProviderDetails,
+  acpReadThinkingEffort,
   acpListSettingsProviderDetails,
   acpListSetupProviderDetails,
   acpRefreshProviderDetails,
@@ -392,3 +393,74 @@ function providerEntry(overrides: Record<string, unknown> = {}) {
     ...overrides,
   };
 }
+
+
+describe('ACP provider runtime validation', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('rejects an unsupported provider type at runtime', async () => {
+    const client = {
+      goose: {
+        providersListUnstable: vi.fn().mockResolvedValue({
+          entries: [
+            providerEntry({
+              providerType: 'UnknownProviderType',
+            }),
+          ],
+        }),
+      },
+    };
+
+    vi.mocked(getAcpClient).mockResolvedValue(
+      client as unknown as Awaited<ReturnType<typeof getAcpClient>>
+    );
+
+    await expect(acpListProviderDetails()).rejects.toThrow(
+      'Invalid provider type: UnknownProviderType'
+    );
+  });
+
+  it('returns a supported thinking effort value', async () => {
+    const client = {
+      goose: {
+        preferencesReadUnstable: vi.fn().mockResolvedValue({
+          values: [
+            {
+              key: 'gooseThinkingEffort',
+              value: 'high',
+            },
+          ],
+        }),
+      },
+    };
+
+    vi.mocked(getAcpClient).mockResolvedValue(
+      client as unknown as Awaited<ReturnType<typeof getAcpClient>>
+    );
+
+    await expect(acpReadThinkingEffort()).resolves.toBe('high');
+  });
+
+  it('returns null for an unsupported thinking effort value', async () => {
+    const client = {
+      goose: {
+        preferencesReadUnstable: vi.fn().mockResolvedValue({
+          values: [
+            {
+              key: 'gooseThinkingEffort',
+              value: 'turbo',
+            },
+          ],
+        }),
+      },
+    };
+
+    vi.mocked(getAcpClient).mockResolvedValue(
+      client as unknown as Awaited<ReturnType<typeof getAcpClient>>
+    );
+
+    await expect(acpReadThinkingEffort()).resolves.toBeNull();
+  });
+});

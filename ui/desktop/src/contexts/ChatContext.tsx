@@ -1,5 +1,5 @@
 import React, { createContext, useContext, ReactNode } from 'react';
-import { ChatType } from '../types/chat';
+import { ChatType } from '../types/chatType';
 import { Recipe } from '../recipe';
 
 // TODO(Douwe): We should not need this anymore

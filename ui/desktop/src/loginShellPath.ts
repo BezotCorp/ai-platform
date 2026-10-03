@@ -16,9 +16,7 @@ const resolveLoginShellPath = (logger?: Logger): Promise<string | null> => {
   if (process.platform !== 'darwin') {
     return Promise.resolve(null);
   }
-
   const shell = process.env.SHELL || 'bash';
-
   return new Promise((resolve) => {
     // detached: a new session keeps the interactive shell's job-control setup
     // from stealing the terminal foreground and suspending the app.
@@ -30,13 +28,11 @@ const resolveLoginShellPath = (logger?: Logger): Promise<string | null> => {
       detached: true,
       windowsHide: true,
     });
-
     const timer = setTimeout(() => {
       child.kill();
       resolve(null);
     }, RESOLVE_TIMEOUT_MS);
     timer.unref?.();
-
     let stdout = '';
     child.stdout?.on('data', (chunk: Buffer) => {
       stdout += chunk.toString('utf8');

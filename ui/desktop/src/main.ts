@@ -60,7 +60,7 @@ import {
 import { UPDATES_ENABLED } from './updates';
 import './utils/gitBranchIpc';
 import './utils/recipeHash';
-import type { GooseApp } from './types/apps';
+import type { GooseApp } from './types/mcpAppResource';
 import installExtension, { REACT_DEVELOPER_TOOLS } from 'electron-devtools-installer';
 import { WEB_PROTOCOLS } from './utils/urlSecurity';
 import { openExternalUrl } from './utils/openExternalUrl';
@@ -81,6 +81,7 @@ import type { ExternalBackend } from './externalBackend';
 import type { CreateChatOptions } from './createChatOptions';
 import type { GooseServeLease } from './gooseServerLease';
 import type { SettingKey } from './utils/settingKey';
+import { LOCALHOST_ADDRESS_HOSTNAME, LOCALHOST_ADDRESS_IP } from './utils/adress_paths';
 
 const moduleDir = path.dirname(fileURLToPath(import.meta.url));
 
@@ -962,7 +963,7 @@ const getExternalBackendUrlFromEnv = (): string | null => {
     return configuredUrl;
   }
 
-  return `http://127.0.0.1:${process.env.GOOSE_PORT || '3000'}`;
+  return `http://${LOCALHOST_ADDRESS_IP}:${process.env.GOOSE_PORT || '3000'}`;
 };
 
 const getExternalBackendFromEnv = (): ExternalBackend | null => {
@@ -1240,7 +1241,7 @@ const createChat = async (
       return undefined;
     }
   } else {
-    const localCertificateTrust = trustBackendCertificate('127.0.0.1', null);
+    const localCertificateTrust = trustBackendCertificate(`${LOCALHOST_ADDRESS_IP}`, null);
 
     const loginShellPath = await getLoginShellPath(log);
 
@@ -2548,7 +2549,7 @@ async function appMain() {
   registerGlobalShortcuts();
 
   session.defaultSession.webRequest.onBeforeSendHeaders((details, callback) => {
-    details.requestHeaders['Origin'] = 'http://localhost:5173';
+    details.requestHeaders['Origin'] = `http://${LOCALHOST_ADDRESS_HOSTNAME}:5173`;
     callback({ cancel: false, requestHeaders: details.requestHeaders });
   });
 

@@ -1,4 +1,5 @@
 import { app } from 'electron';
+import { GITHUB_API_ADDRESS } from './adress_paths';
 import { compareVersions } from 'compare-versions';
 import { z } from 'zod';
 import { spawn } from 'child_process';
@@ -7,38 +8,10 @@ import * as path from 'path';
 import * as os from 'os';
 import log from './logger';
 import { safeJsonParse, errorMessage } from './conversionUtils';
-
-interface GitHubRelease {
-  tag_name: string;
-  name: string;
-  published_at: string;
-  html_url: string;
-  assets: Array<{
-    name: string;
-    browser_download_url: string;
-    size: number;
-  }>;
-}
-
-interface UpdateCheckResult {
-  updateAvailable: boolean;
-  latestVersion?: string;
-  downloadUrl?: string;
-  releaseUrl?: string;
-  error?: string;
-}
-
-interface InstallTarget {
-  targetPath: string;
-  relaunchPath: string;
-  // Used to confirm the extracted payload really is an app before the backup is deleted.
-  executableRelativePath: string;
-}
-
-interface SwapCommand {
-  command: string;
-  args: string[];
-}
+import { InstallTarget } from './installTarget';
+import { SwapCommand } from './swapCommand';
+import { UpdateCheckResult } from './updateCheckResult';
+import { GitHubRelease } from './githubRelease';
 
 function runCommand(command: string, args: string[]): Promise<void> {
   return new Promise((resolve, reject) => {
@@ -458,7 +431,7 @@ export class GitHubUpdater {
   private readonly owner = process.env.GITHUB_OWNER || 'aaif-goose';
   private readonly repo = process.env.GITHUB_REPO || 'goose';
   private readonly bundleName = process.env.GOOSE_BUNDLE_NAME || 'Goose';
-  private readonly apiUrl = `https://api.github.com/repos/${this.owner}/${this.repo}/releases/latest`;
+  private readonly apiUrl = `${GITHUB_API_ADDRESS}/repos/${this.owner}/${this.repo}/releases/latest`;
 
   async checkForUpdates(): Promise<UpdateCheckResult> {
     const startTime = Date.now();
@@ -602,10 +575,7 @@ export class GitHubUpdater {
         message: errorMessage(error, 'Unknown error'),
         stack: error instanceof Error ? error.stack : 'No stack',
         name: error instanceof Error ? error.name : 'Unknown',
-        code:
-          error instanceof Error && 'code' in error
-            ? (error).code
-            : undefined,
+        code: error instanceof Error && 'code' in error ? error.code : undefined,
       });
       return {
         updateAvailable: false,

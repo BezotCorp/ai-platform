@@ -1,5 +1,5 @@
 import type { Recipe } from '../recipe';
-import type { ExtensionLoadResult } from '../types/extensions';
+import type { ExtensionLoadResult } from '../types/extensionLoadResult';
 
 /**
  * Application metadata recovered while loading an ACP session.

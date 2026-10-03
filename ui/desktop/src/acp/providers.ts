@@ -13,13 +13,38 @@ import type {
   ProviderDetails,
   ThinkingEffort,
   UpdateCustomProviderRequest,
-} from '../types/providers';
+} from '../types/updateCustomProviderRequest';
 import { getAcpClient } from './acpConnection';
 
 export type { CanonicalModelInfoDto, ProviderSecretDto };
 
 const INVENTORY_REFRESH_POLL_INTERVAL_MS = 100;
 const INVENTORY_REFRESH_TIMEOUT_MS = 30_000;
+
+const PROVIDER_TYPES: readonly ProviderDetails['provider_type'][] = [
+  'Preferred',
+  'Builtin',
+  'Declarative',
+  'Custom',
+];
+
+const THINKING_EFFORTS: readonly ThinkingEffort[] = ['off', 'low', 'medium', 'high', 'max'];
+
+function parseProviderType(value: unknown): ProviderDetails['provider_type'] {
+  if (typeof value === 'string' && PROVIDER_TYPES.some((providerType) => providerType === value)) {
+    return value as ProviderDetails['provider_type'];
+  }
+
+  throw new Error(`Invalid provider type: ${String(value)}`);
+}
+
+function parseThinkingEffort(value: unknown): ThinkingEffort | null {
+  if (typeof value === 'string' && THINKING_EFFORTS.some((effort) => effort === value)) {
+    return value as ThinkingEffort;
+  }
+
+  return null;
+}
 
 function throwIfAborted(signal?: globalThis.AbortSignal) {
   if (signal?.aborted) throw new DOMException('The operation was aborted', 'AbortError');
@@ -52,7 +77,7 @@ function providerEntryToDetails(entry: ProviderInventoryEntryDto): ProviderDetai
     visible_in_setup: entry.visibleInSetup,
     deprecated: entry.deprecated,
     replacement: entry.replacement ?? null,
-    provider_type: entry.providerType as ProviderDetails['provider_type'],
+    provider_type: parseProviderType(entry.providerType),
     uses_acp: entry.acp ?? false,
     metadata: {
       name: entry.providerId,
@@ -338,7 +363,7 @@ export async function acpReadThinkingEffort(): Promise<ThinkingEffort | null> {
   const client = await getAcpClient();
   const response = await client.goose.preferencesReadUnstable({ keys: ['gooseThinkingEffort'] });
   const value = response.values.find((v) => v.key === 'gooseThinkingEffort')?.value;
-  return typeof value === 'string' ? (value as ThinkingEffort) : null;
+  return parseThinkingEffort(value);
 }
 
 export async function acpSaveThinkingEffort(effort: ThinkingEffort): Promise<void> {

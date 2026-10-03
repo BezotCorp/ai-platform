@@ -3,7 +3,7 @@ import { constants as fsConstants } from 'node:fs';
 import type { Stats } from 'node:fs';
 import path from 'node:path';
 import type { FileAccessRequestProvenance } from './fileAccessRequestProvenance';
-import type { FileReadResult } from './fileReadResult';
+import type { FileResponse } from './fileResponse';
 import { WorkingDirectoryBinding } from './workingDirectoryBinding';
 
 export function isAppRendererUrl(rendererUrl: string, expectedUrl: URL): boolean {
@@ -42,11 +42,11 @@ function isMissingFile(error: unknown): boolean {
   );
 }
 
-function missingFile(filePath: string): FileReadResult {
+function missingFile(filePath: string): FileResponse {
   return { file: '', filePath, error: null, found: false };
 }
 
-function failedRead(filePath: string, message: string): FileReadResult {
+function failedRead(filePath: string, message: string): FileResponse {
   return { file: '', filePath, error: message, found: false };
 }
 
@@ -104,7 +104,7 @@ export class DesktopFileAccess {
     this.workingDirectories.delete(windowId);
   }
 
-  async readGoosehints(windowId: number): Promise<FileReadResult> {
+  async readGoosehints(windowId: number): Promise<FileResponse> {
     const binding = this.bindingForWindow(windowId);
     const filePath = path.join(binding.path, '.goosehints');
     if (binding.status === 'missing') {
@@ -232,7 +232,7 @@ export class DesktopFileAccess {
   }
 }
 
-export async function readSelectedRecipe(filePath: string): Promise<FileReadResult> {
+export async function readSelectedRecipe(filePath: string): Promise<FileResponse> {
   const extension = path.extname(filePath).toLowerCase();
   if (extension !== '.yaml' && extension !== '.yml') {
     return failedRead(filePath, 'The selected recipe must be a YAML file');

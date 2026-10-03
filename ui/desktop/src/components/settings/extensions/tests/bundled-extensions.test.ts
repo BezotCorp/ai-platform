@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { pruneDeprecatedBundledExtensions, syncBundledExtensions } from '../bundled-extensions';
-import type { FixedExtensionEntry } from '../../../ConfigContext';
+import type { ConfiguredExtensionEntry } from '../../../../types/configuredExtensionEntry';
+
 
 vi.mock('../bundled-extensions.json', () => ({
   default: [
@@ -44,7 +45,7 @@ describe('syncBundledExtensions', () => {
         bundled: true,
         timeout: 300,
       },
-    ] as FixedExtensionEntry[];
+    ] as ConfiguredExtensionEntry[];
 
     await syncBundledExtensions(existingExtensions, addExtensionFn);
 
@@ -67,7 +68,7 @@ describe('pruneDeprecatedBundledExtensions', () => {
         enabled: true,
         bundled: true,
       },
-    ] as FixedExtensionEntry[];
+    ] as ConfiguredExtensionEntry[];
 
     const remainingExtensions = await pruneDeprecatedBundledExtensions(
       existingExtensions,
@@ -88,7 +89,7 @@ describe('pruneDeprecatedBundledExtensions', () => {
         enabled: true,
         bundled: false,
       },
-    ] as FixedExtensionEntry[];
+    ] as ConfiguredExtensionEntry[];
 
     const remainingExtensions = await pruneDeprecatedBundledExtensions(
       existingExtensions,
@@ -113,7 +114,7 @@ describe('pruneDeprecatedBundledExtensions', () => {
         enabled: true,
         bundled: true,
       },
-    ] as FixedExtensionEntry[];
+    ] as ConfiguredExtensionEntry[];
 
     const remainingExtensions = await pruneDeprecatedBundledExtensions(
       existingExtensions,

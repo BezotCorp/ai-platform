@@ -4,7 +4,6 @@ export const formatToLocalDateWithTimezone = (dateString?: string | null): strin
   if (!dateString) {
     return 'N/A';
   }
-
   try {
     return AppDate.fromString(dateString).toLocaleString(undefined, {
       year: 'numeric',
