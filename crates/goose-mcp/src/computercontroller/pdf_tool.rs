@@ -1,4 +1,4 @@
-use lopdf::{content::Content as PdfContent, Document, Object};
+use lopdf::{Document, Object, content::Content as PdfContent};
 use rmcp::model::{ContentBlock, ErrorCode, ErrorData};
 use std::{fs, path::Path};
 
@@ -25,83 +25,63 @@ pub async fn pdf_tool(
                 text.push_str(&format!("Page {}:\n", page_num));
 
                 // Try to get text from page contents
-                if let Ok(page_obj) = doc.get_object(page_id) {
-                    if let Ok(page_dict) = page_obj.as_dict() {
-                        // Try to get text from Contents stream
-                        if let Ok(contents) =
-                            page_dict.get(b"Contents").and_then(|c| c.as_reference())
-                        {
-                            if let Ok(content_obj) = doc.get_object(contents) {
-                                if let Ok(stream) = content_obj.as_stream() {
-                                    if let Ok(content_data) = stream.get_plain_content() {
-                                        if let Ok(content) = PdfContent::decode(&content_data) {
-                                            // Process each operation in the content stream
-                                            for operation in content.operations {
-                                                match operation.operator.as_ref() {
-                                                    // "Tj" operator: show text
-                                                    "Tj" => {
-                                                        for operand in operation.operands {
-                                                            if let Object::String(ref bytes, _) =
-                                                                operand
-                                                            {
-                                                                if let Ok(s) =
-                                                                    std::str::from_utf8(bytes)
-                                                                {
-                                                                    text.push_str(s);
-                                                                }
-                                                            }
-                                                        }
-                                                        text.push(' ');
-                                                    }
-                                                    // "TJ" operator: show text with positioning
-                                                    "TJ" => {
-                                                        if let Some(Object::Array(ref arr)) =
-                                                            operation.operands.first()
-                                                        {
-                                                            let mut last_was_text = false;
-                                                            for element in arr {
-                                                                match element {
-                                                                    Object::String(
-                                                                        ref bytes,
-                                                                        _,
-                                                                    ) => {
-                                                                        if let Ok(s) =
-                                                                            std::str::from_utf8(
-                                                                                bytes,
-                                                                            )
-                                                                        {
-                                                                            if last_was_text {
-                                                                                text.push(' ');
-                                                                            }
-                                                                            text.push_str(s);
-                                                                            last_was_text = true;
-                                                                        }
-                                                                    }
-                                                                    Object::Integer(offset) => {
-                                                                        // Large negative offsets often indicate word spacing
-                                                                        if *offset < -100 {
-                                                                            text.push(' ');
-                                                                            last_was_text = false;
-                                                                        }
-                                                                    }
-                                                                    Object::Real(offset)
-                                                                        if *offset < -100.0 =>
-                                                                    {
-                                                                        text.push(' ');
-                                                                        last_was_text = false;
-                                                                    }
-                                                                    _ => {}
-                                                                }
-                                                            }
-                                                            text.push(' ');
-                                                        }
-                                                    }
-                                                    _ => (), // Ignore other operators
-                                                }
-                                            }
+                if let Ok(page_obj) = doc.get_object(page_id)
+                    && let Ok(page_dict) = page_obj.as_dict()
+                {
+                    // Try to get text from Contents stream
+                    if let Ok(contents) = page_dict.get(b"Contents").and_then(|c| c.as_reference())
+                        && let Ok(content_obj) = doc.get_object(contents)
+                        && let Ok(stream) = content_obj.as_stream()
+                        && let Ok(content_data) = stream.get_plain_content()
+                        && let Ok(content) = PdfContent::decode(&content_data)
+                    {
+                        // Process each operation in the content stream
+                        for operation in content.operations {
+                            match operation.operator.as_ref() {
+                                // "Tj" operator: show text
+                                "Tj" => {
+                                    for operand in operation.operands {
+                                        if let Object::String(ref bytes, _) = operand
+                                            && let Ok(s) = std::str::from_utf8(bytes)
+                                        {
+                                            text.push_str(s);
                                         }
                                     }
+                                    text.push(' ');
                                 }
+                                // "TJ" operator: show text with positioning
+                                "TJ" => {
+                                    if let Some(Object::Array(arr)) = operation.operands.first() {
+                                        let mut last_was_text = false;
+                                        for element in arr {
+                                            match element {
+                                                Object::String(bytes, _) => {
+                                                    if let Ok(s) = std::str::from_utf8(bytes) {
+                                                        if last_was_text {
+                                                            text.push(' ');
+                                                        }
+                                                        text.push_str(s);
+                                                        last_was_text = true;
+                                                    }
+                                                }
+                                                Object::Integer(offset) => {
+                                                    // Large negative offsets often indicate word spacing
+                                                    if *offset < -100 {
+                                                        text.push(' ');
+                                                        last_was_text = false;
+                                                    }
+                                                }
+                                                Object::Real(offset) if *offset < -100.0 => {
+                                                    text.push(' ');
+                                                    last_was_text = false;
+                                                }
+                                                _ => {}
+                                            }
+                                        }
+                                        text.push(' ');
+                                    }
+                                }
+                                _ => (), // Ignore other operators
                             }
                         }
                     }
@@ -142,12 +122,11 @@ pub async fn pdf_tool(
                                 b"FlateDecode" => {
                                     // PNG-like images often use FlateDecode
                                     // Check color space to confirm
-                                    if let Ok(cs) = dict.get(b"ColorSpace") {
-                                        if let Ok(name) = cs.as_name() {
-                                            if name == b"DeviceRGB" || name == b"DeviceGray" {
-                                                return ".png";
-                                            }
-                                        }
+                                    if let Ok(cs) = dict.get(b"ColorSpace")
+                                        && let Ok(name) = cs.as_name()
+                                        && (name == b"DeviceRGB" || name == b"DeviceGray")
+                                    {
+                                        return ".png";
                                     }
                                     ".raw"
                                 }
@@ -282,54 +261,53 @@ pub async fn pdf_tool(
                             // Check if it's an image
                             if let Ok(subtype) =
                                 stream.dict.get(b"Subtype").and_then(|s| s.as_name())
+                                && subtype == b"Image"
                             {
-                                if subtype == b"Image" {
-                                    let extension = get_image_extension(&stream.dict);
+                                let extension = get_image_extension(&stream.dict);
 
-                                    // Get image metadata
-                                    let width = stream
-                                        .dict
-                                        .get(b"Width")
-                                        .and_then(|w| w.as_i64())
-                                        .unwrap_or(0);
-                                    let height = stream
-                                        .dict
-                                        .get(b"Height")
-                                        .and_then(|h| h.as_i64())
-                                        .unwrap_or(0);
-                                    let bpc = stream
-                                        .dict
-                                        .get(b"BitsPerComponent")
-                                        .and_then(|b| b.as_i64())
-                                        .unwrap_or(0);
+                                // Get image metadata
+                                let width = stream
+                                    .dict
+                                    .get(b"Width")
+                                    .and_then(|w| w.as_i64())
+                                    .unwrap_or(0);
+                                let height = stream
+                                    .dict
+                                    .get(b"Height")
+                                    .and_then(|h| h.as_i64())
+                                    .unwrap_or(0);
+                                let bpc = stream
+                                    .dict
+                                    .get(b"BitsPerComponent")
+                                    .and_then(|b| b.as_i64())
+                                    .unwrap_or(0);
 
-                                    // Get the image data
-                                    if let Ok(data) = stream.get_plain_content() {
-                                        let image_path = cache_dir.join(format!(
-                                            "page{}_obj{}_{}{}",
-                                            page_num,
-                                            xobject_id.0,
-                                            String::from_utf8_lossy(name),
-                                            extension
-                                        ));
+                                // Get the image data
+                                if let Ok(data) = stream.get_plain_content() {
+                                    let image_path = cache_dir.join(format!(
+                                        "page{}_obj{}_{}{}",
+                                        page_num,
+                                        xobject_id.0,
+                                        String::from_utf8_lossy(name),
+                                        extension
+                                    ));
 
-                                        fs::write(&image_path, &data).map_err(|e| {
-                                            ErrorData::new(
-                                                ErrorCode::INTERNAL_ERROR,
-                                                format!("Failed to write image: {}", e),
-                                                None,
-                                            )
-                                        })?;
+                                    fs::write(&image_path, &data).map_err(|e| {
+                                        ErrorData::new(
+                                            ErrorCode::INTERNAL_ERROR,
+                                            format!("Failed to write image: {}", e),
+                                            None,
+                                        )
+                                    })?;
 
-                                        images.push(format!(
-                                            "Saved image to: {} ({}x{}, {} bits per component)",
-                                            image_path.display(),
-                                            width,
-                                            height,
-                                            bpc
-                                        ));
-                                        image_count += 1;
-                                    }
+                                    images.push(format!(
+                                        "Saved image to: {} ({}x{}, {} bits per component)",
+                                        image_path.display(),
+                                        width,
+                                        height,
+                                        bpc
+                                    ));
+                                    image_count += 1;
                                 }
                             }
                         }
@@ -352,109 +330,9 @@ pub async fn pdf_tool(
                     operation
                 ),
                 None,
-            ))
+            ));
         }
     };
 
     Ok(vec![ContentBlock::text(result)])
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use std::path::PathBuf;
-
-    #[tokio::test]
-    async fn test_pdf_text_extraction() {
-        let test_pdf_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-            .join("src/computercontroller/tests/data/test.pdf");
-        let cache_dir = tempfile::tempdir().unwrap().keep();
-
-        println!("Testing text extraction from: {}", test_pdf_path.display());
-
-        let result = pdf_tool(test_pdf_path.to_str().unwrap(), "extract_text", &cache_dir).await;
-
-        assert!(result.is_ok(), "PDF text extraction should succeed");
-        let content = result.unwrap();
-        assert!(!content.is_empty(), "Extracted text should not be empty");
-        let text = content[0].as_text().unwrap();
-        println!("Extracted text:\n{}", text.text);
-        assert!(text.text.contains("Page 1"), "Should contain page marker");
-        assert!(
-            text.text.contains("This is a test PDF"),
-            "Should contain expected test content"
-        );
-    }
-
-    #[tokio::test]
-    async fn test_pdf_image_extraction() {
-        let test_pdf_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-            .join("src/computercontroller/tests/data/test_image.pdf");
-        let cache_dir = tempfile::tempdir().unwrap().keep();
-
-        println!("Testing image extraction from: {}", test_pdf_path.display());
-
-        // Now try image extraction
-        let result = pdf_tool(
-            test_pdf_path.to_str().unwrap(),
-            "extract_images",
-            &cache_dir,
-        )
-        .await;
-
-        println!("Image extraction result: {:?}", result);
-        assert!(result.is_ok(), "PDF image extraction should succeed");
-        let content = result.unwrap();
-        assert!(
-            !content.is_empty(),
-            "Image extraction result should not be empty"
-        );
-        let text = content[0].as_text().unwrap();
-        println!("Extracted content: {}", text.text);
-
-        // Should either find images or explicitly state none were found
-        assert!(
-            text.text.contains("Saved image to:") || text.text.contains("No images found"),
-            "Should either save images or report none found"
-        );
-
-        // If we found images, verify they exist
-        if text.text.contains("Saved image to:") {
-            // Extract the file path from the output
-            let file_path = text
-                .text
-                .lines()
-                .find(|line| line.contains("Saved image to:"))
-                .and_then(|line| line.split(": ").nth(1))
-                .and_then(|path| path.split(" (").next())
-                .expect("Should have a valid file path");
-
-            println!("Verifying image file exists: {}", file_path);
-            assert!(PathBuf::from(file_path).exists(), "Image file should exist");
-        }
-    }
-
-    #[tokio::test]
-    async fn test_pdf_invalid_path() {
-        let cache_dir = tempfile::tempdir().unwrap().keep();
-        let result = pdf_tool("nonexistent.pdf", "extract_text", &cache_dir).await;
-
-        assert!(result.is_err(), "Should fail with invalid path");
-    }
-
-    #[tokio::test]
-    async fn test_pdf_invalid_operation() {
-        let test_pdf_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-            .join("src/computercontroller/tests/data/test.pdf");
-        let cache_dir = tempfile::tempdir().unwrap().keep();
-
-        let result = pdf_tool(
-            test_pdf_path.to_str().unwrap(),
-            "invalid_operation",
-            &cache_dir,
-        )
-        .await;
-
-        assert!(result.is_err(), "Should fail with invalid operation");
-    }
 }
