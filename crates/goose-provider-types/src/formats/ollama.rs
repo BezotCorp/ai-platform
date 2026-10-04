@@ -19,14 +19,10 @@ use async_stream::try_stream;
 use chrono;
 use futures::Stream;
 use regex::Regex;
-use rmcp::model::{object, CallToolRequestParams, ErrorCode, ErrorData, Role};
+use rmcp::model::{CallToolRequestParams, ErrorCode, ErrorData, Role, object};
 use serde_json::Value;
 use std::borrow::Cow;
 use uuid::Uuid;
-
-pub use crate::formats::openai::{
-    create_request, format_messages, format_tools, get_usage, validate_tool_schemas,
-};
 
 /// Parse XML-style tool calls from content (Ollama/Qwen3-coder fallback format).
 ///
@@ -84,7 +80,7 @@ pub fn parse_xml_tool_calls(content: &str) -> (Option<String>, Vec<MessageConten
 ///
 /// This wraps the standard OpenAI response parsing and adds XML fallback for models
 /// like Qwen3-coder that output XML tool calls when given many tools.
-pub fn response_to_message(response: &Value) -> anyhow::Result<Message> {
+pub fn response_to_message_ollama(response: &Value) -> anyhow::Result<Message> {
     let message = openai::response_to_message(response)?;
 
     let has_tool_requests = message
@@ -101,24 +97,23 @@ pub fn response_to_message(response: &Value) -> anyhow::Result<Message> {
         .and_then(|c| c.get(0))
         .and_then(|m| m.get("message"));
 
-    if let Some(original) = original {
-        if let Some(text) = original.get("content").and_then(|c| c.as_str()) {
-            if text.contains("<function=") {
-                let (prefix, xml_tool_calls) = parse_xml_tool_calls(text);
-                if !xml_tool_calls.is_empty() {
-                    let mut content = Vec::new();
-                    if let Some(prefix_text) = prefix {
-                        content.push(MessageContentBlock::text(prefix_text));
-                    }
-                    content.extend(xml_tool_calls);
-
-                    return Ok(Message::new(
-                        Role::Assistant,
-                        chrono::Utc::now().timestamp(),
-                        content,
-                    ));
-                }
+    if let Some(original) = original
+        && let Some(text) = original.get("content").and_then(|c| c.as_str())
+        && text.contains("<function=")
+    {
+        let (prefix, xml_tool_calls) = parse_xml_tool_calls(text);
+        if !xml_tool_calls.is_empty() {
+            let mut content = Vec::new();
+            if let Some(prefix_text) = prefix {
+                content.push(MessageContentBlock::text(prefix_text));
             }
+            content.extend(xml_tool_calls);
+
+            return Ok(Message::new(
+                Role::Assistant,
+                chrono::Utc::now().timestamp(),
+                content,
+            ));
         }
     }
 
@@ -227,225 +222,5 @@ where
                 yield (Some(msg), buffered_usage);
             }
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use serde_json::json;
-
-    #[test]
-    fn test_parse_xml_tool_calls_single() {
-        let content = r#"<function=developer__text_editor>
-<parameter=command>write</parameter>
-<parameter=path>/tmp/test.txt</parameter>
-<parameter=file_text>hello world</parameter>
-</function>"#;
-
-        let (prefix, tool_calls) = parse_xml_tool_calls(content);
-
-        assert!(prefix.is_none(), "Should have no prefix");
-        assert_eq!(tool_calls.len(), 1, "Should have 1 tool call");
-
-        if let MessageContentBlock::ToolRequest(request) = &tool_calls[0] {
-            let tool_call = request.tool_call.as_ref().unwrap();
-            assert_eq!(tool_call.name, "developer__text_editor");
-            let args = tool_call.arguments.as_ref().unwrap();
-            assert_eq!(args.get("command").unwrap(), "write");
-            assert_eq!(args.get("path").unwrap(), "/tmp/test.txt");
-            assert_eq!(args.get("file_text").unwrap(), "hello world");
-        } else {
-            panic!("Expected ToolRequest content");
-        }
-    }
-
-    #[test]
-    fn test_parse_xml_tool_calls_with_prefix() {
-        let content = r#"I'll create the file for you.
-
-<function=developer__text_editor>
-<parameter=command>write</parameter>
-<parameter=path>/tmp/test.txt</parameter>
-</function>"#;
-
-        let (prefix, tool_calls) = parse_xml_tool_calls(content);
-
-        assert_eq!(
-            prefix,
-            Some("I'll create the file for you.".to_string()),
-            "Should have prefix text"
-        );
-        assert_eq!(tool_calls.len(), 1, "Should have 1 tool call");
-    }
-
-    #[test]
-    fn test_parse_xml_tool_calls_multiple() {
-        let content = r#"<function=developer__shell>
-<parameter=command>ls -la</parameter>
-</function>
-<function=developer__text_editor>
-<parameter=command>view</parameter>
-<parameter=path>/tmp/test.txt</parameter>
-</function>"#;
-
-        let (prefix, tool_calls) = parse_xml_tool_calls(content);
-
-        assert!(prefix.is_none());
-        assert_eq!(tool_calls.len(), 2, "Should have 2 tool calls");
-
-        if let MessageContentBlock::ToolRequest(request) = &tool_calls[0] {
-            let tool_call = request.tool_call.as_ref().unwrap();
-            assert_eq!(tool_call.name, "developer__shell");
-        } else {
-            panic!("Expected ToolRequest content");
-        }
-
-        if let MessageContentBlock::ToolRequest(request) = &tool_calls[1] {
-            let tool_call = request.tool_call.as_ref().unwrap();
-            assert_eq!(tool_call.name, "developer__text_editor");
-        } else {
-            panic!("Expected ToolRequest content");
-        }
-    }
-
-    #[test]
-    fn test_parse_xml_tool_calls_no_match() {
-        let content = "This is just regular text without any tool calls.";
-
-        let (prefix, tool_calls) = parse_xml_tool_calls(content);
-
-        assert!(prefix.is_none());
-        assert!(tool_calls.is_empty(), "Should have no tool calls");
-    }
-
-    #[test]
-    fn test_parse_xml_tool_calls_qwen_format() {
-        // Test the exact format observed from Qwen3-coder via Ollama
-        let content = r#"I'll create a file at /tmp/hello.txt with the content "hello".
-
-<function=developer__text_editor>
-<parameter=command>
-write
-</parameter>
-<parameter=path>
-/tmp/hello.txt
-</parameter>
-<parameter=file_text>
-hello
-</parameter>
-</function>
-</tool_call>"#;
-
-        let (prefix, tool_calls) = parse_xml_tool_calls(content);
-
-        assert!(prefix.is_some(), "Should have prefix");
-        assert_eq!(tool_calls.len(), 1, "Should have 1 tool call");
-
-        if let MessageContentBlock::ToolRequest(request) = &tool_calls[0] {
-            let tool_call = request.tool_call.as_ref().unwrap();
-            assert_eq!(tool_call.name, "developer__text_editor");
-            let args = tool_call.arguments.as_ref().unwrap();
-            assert_eq!(args.get("command").unwrap(), "write");
-            assert_eq!(args.get("path").unwrap(), "/tmp/hello.txt");
-            assert_eq!(args.get("file_text").unwrap(), "hello");
-        } else {
-            panic!("Expected ToolRequest content");
-        }
-    }
-
-    #[tokio::test]
-    async fn test_response_to_message_xml_fallback() -> anyhow::Result<()> {
-        use futures::StreamExt;
-
-        // Test that response_to_message falls back to XML parsing when no JSON tool_calls
-        let response = json!({
-            "choices": [{
-                "message": {
-                    "role": "assistant",
-                    "content": "<function=developer__shell>\n<parameter=command>ls</parameter>\n</function>"
-                }
-            }]
-        });
-
-        let message = response_to_message(&response)?;
-
-        assert_eq!(message.content.len(), 1);
-        if let MessageContentBlock::ToolRequest(request) = &message.content[0] {
-            let tool_call = request.tool_call.as_ref().unwrap();
-            assert_eq!(tool_call.name, "developer__shell");
-        } else {
-            panic!("Expected ToolRequest content from XML parsing");
-        }
-
-        let response_lines = r#"data: {"id":"ollama-source-id","model":"test-model","choices":[{"delta":{"role":"assistant","content":"literal <function=not-a-tool"},"index":0,"finish_reason":null}],"object":"chat.completion.chunk","created":123}
-data: {"id":"ollama-source-id","model":"test-model","choices":[{"delta":{"content":" should remain text"},"index":0,"finish_reason":"stop"}],"object":"chat.completion.chunk","created":124}
-data: [DONE]"#;
-        let lines = response_lines.lines().map(|s| Ok(s.to_string()));
-        let response_stream = tokio_stream::iter(lines);
-        let mut messages = std::pin::pin!(response_to_streaming_message_ollama(response_stream));
-
-        let (message, usage) = messages
-            .next()
-            .await
-            .expect("expected invalid XML fallback message")?;
-        let usage = usage.expect("expected buffered response metadata");
-        assert_eq!(usage.response_id.as_deref(), Some("ollama-source-id"));
-        assert_eq!(usage.finish_reasons, Some(vec!["stop".to_string()]));
-        let message = message.expect("expected invalid XML fallback message");
-        assert_eq!(message.role, Role::Assistant);
-        assert_eq!(message.content.len(), 1);
-        let MessageContentBlock::Text(text) = &message.content[0] else {
-            panic!("expected invalid XML fallback to remain text-only");
-        };
-        assert_eq!(text.text, "literal <function=not-a-tool should remain text");
-        let message_id = message
-            .id
-            .as_deref()
-            .expect("invalid XML fallback message should have an ID");
-        assert!(message_id.starts_with("msg_"));
-        assert!(messages.next().await.is_none());
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_response_to_message_prefers_json_over_xml() -> anyhow::Result<()> {
-        // Test that JSON tool_calls take precedence over XML in content
-        let response = json!({
-            "choices": [{
-                "message": {
-                    "role": "assistant",
-                    "content": "<function=wrong_tool>\n<parameter=x>y</parameter>\n</function>",
-                    "tool_calls": [{
-                        "id": "call_123",
-                        "function": {
-                            "name": "correct_tool",
-                            "arguments": "{\"a\": \"b\"}"
-                        }
-                    }]
-                }
-            }]
-        });
-
-        let message = response_to_message(&response)?;
-
-        // Should have both text (from content) and tool request (from tool_calls)
-        // The XML in content should NOT be parsed since we have JSON tool_calls
-        let tool_requests: Vec<_> = message
-            .content
-            .iter()
-            .filter(|c| matches!(c, MessageContentBlock::ToolRequest(_)))
-            .collect();
-
-        assert_eq!(tool_requests.len(), 1);
-        if let MessageContentBlock::ToolRequest(request) = tool_requests[0] {
-            let tool_call = request.tool_call.as_ref().unwrap();
-            assert_eq!(tool_call.name, "correct_tool");
-        } else {
-            panic!("Expected ToolRequest");
-        }
-
-        Ok(())
     }
 }

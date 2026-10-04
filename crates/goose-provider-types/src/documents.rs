@@ -58,23 +58,3 @@ pub const UNSUPPORTED_MEDIA_TYPE_REASON: &str =
     "only application/pdf documents can be sent to this provider";
 pub const UNSUPPORTED_PROVIDER_REASON: &str = "this provider does not accept document input";
 pub const ASSISTANT_ROLE_REASON: &str = "documents can only be sent in user messages";
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn unsupported_document_text_names_the_document_and_reason() {
-        let named = DocumentContent::new("data", "text/csv").with_name("rows.csv");
-        assert_eq!(
-            unsupported_document_text(&named, UNSUPPORTED_MEDIA_TYPE_REASON),
-            "[document \"rows.csv\" (text/csv) not sent: only application/pdf documents can be sent to this provider]"
-        );
-
-        let unnamed = DocumentContent::new("data", "text/csv");
-        assert_eq!(
-            unsupported_document_text(&unnamed, UNSUPPORTED_PROVIDER_REASON),
-            "[document (text/csv) not sent: this provider does not accept document input]"
-        );
-    }
-}

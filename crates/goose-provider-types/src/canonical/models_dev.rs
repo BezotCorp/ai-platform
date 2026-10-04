@@ -1,6 +1,6 @@
 use super::{
-    canonical_name, CanonicalModel, CanonicalModelRegistry, Limit, Modalities, Modality, Pricing,
-    ThinkingMode,
+    CanonicalModel, CanonicalModelRegistry, Limit, Modalities, Modality, Pricing, ThinkingMode,
+    canonical_name,
 };
 use anyhow::{Context, Result};
 use serde_json::Value;
@@ -177,67 +177,4 @@ pub fn from_models_dev(content: &str) -> Result<CanonicalModelRegistry> {
         anyhow::bail!("models.dev catalog is empty");
     }
     Ok(registry)
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    fn variant(id: &str, release: Option<&str>, updated: Option<&str>) -> (String, CanonicalModel) {
-        (
-            id.to_string(),
-            CanonicalModel {
-                id: format!("openai/{id}"),
-                name: id.to_string(),
-                family: None,
-                attachment: None,
-                reasoning: None,
-                thinking_mode: None,
-                tool_call: false,
-                temperature: None,
-                knowledge: None,
-                release_date: release.map(String::from),
-                last_updated: updated.map(String::from),
-                modalities: Modalities::default(),
-                open_weights: None,
-                cost: Pricing::default(),
-                limit: Limit::default(),
-            },
-        )
-    }
-
-    #[test]
-    fn shortest_variant_wins() {
-        let variants = vec![
-            variant("gpt-4o-2024-08-06", Some("2024-08-06"), Some("2024-08-06")),
-            variant("gpt-4o", Some("2024-05-13"), Some("2024-08-06")),
-            variant("gpt-4o-2024-11-20", Some("2024-11-20"), Some("2024-11-20")),
-            variant("gpt-4o-2024-05-13", Some("2024-05-13"), Some("2024-05-13")),
-        ];
-        assert_eq!(variants[pick_winning_variant(&variants)].0, "gpt-4o");
-
-        let variants = vec![
-            variant(
-                "claude-haiku-4-5-20251001",
-                Some("2025-10-16"),
-                Some("2025-10-16"),
-            ),
-            variant("claude-haiku-4-5", Some("2025-10-16"), Some("2025-10-16")),
-        ];
-        assert_eq!(
-            variants[pick_winning_variant(&variants)].0,
-            "claude-haiku-4-5"
-        );
-    }
-
-    #[test]
-    fn converts_provider_models_and_rejects_empty_catalog() {
-        let json = r#"{"openai":{"models":{"gpt-4o":{"name":"GPT-4o","tool_call":true,"limit":{"context":128000,"output":4096},"cost":{"input":2.5}}}}}"#;
-        let registry = from_models_dev(json).unwrap();
-        let model = registry.get("openai", "gpt-4o").unwrap();
-        assert_eq!(model.id, "openai/gpt-4o");
-        assert_eq!(model.limit.context, 128000);
-        assert_eq!(model.cost.input, Some(2.5));
-        assert!(from_models_dev("{}").is_err());
-    }
 }

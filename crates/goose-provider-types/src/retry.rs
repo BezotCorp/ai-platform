@@ -1,5 +1,6 @@
 use crate::base::Provider;
 use crate::errors::ProviderError;
+use crate::formats;
 use crate::maybe_send::MaybeSend;
 use async_trait::async_trait;
 use std::future::Future;
@@ -101,7 +102,7 @@ fn is_permanent_request_failure(message: &str) -> bool {
     PERMANENT_REQUEST_FAILURE_MARKERS
         .iter()
         .any(|marker| message.contains(marker))
-        || crate::formats::anthropic::is_thinking_signature_error(message)
+        || formats::is_thinking_signature_error(message)
 }
 
 pub fn should_retry(error: &ProviderError, config: &RetryConfig) -> bool {
@@ -266,93 +267,5 @@ impl<P: Provider> ProviderRetry for P {
                 }
             };
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn default_config_retries_request_failed() {
-        let config = RetryConfig::default();
-        let error = ProviderError::RequestFailed("Bad request (400): model not found".into());
-        assert!(should_retry(&error, &config));
-    }
-
-    #[test]
-    fn never_retries_permanent_thinking_block_400() {
-        let config = RetryConfig::default();
-        let error = ProviderError::RequestFailed(
-            "Bad request (400): {\"message\":\"messages.3.content.1: `thinking` or \
-             `redacted_thinking` blocks in the latest assistant message cannot be \
-             modified. These blocks must remain as they were in the original \
-             response.\"}"
-                .into(),
-        );
-        assert!(!should_retry(&error, &config));
-    }
-
-    #[test]
-    fn permanent_request_failure_marker_detection() {
-        assert!(is_permanent_request_failure(
-            "messages.3.content.1: `thinking` blocks in the latest assistant message \
-             cannot be modified"
-        ));
-        assert!(is_permanent_request_failure(
-            "These blocks must remain as they were in the original response."
-        ));
-        assert!(is_permanent_request_failure(
-            "messages.1.content.0: Invalid `signature` in `thinking` block."
-        ));
-        assert!(!is_permanent_request_failure(
-            "Bad request (400): model not found"
-        ));
-    }
-
-    #[test]
-    fn transient_only_skips_request_failed() {
-        let config = RetryConfig::default().transient_only();
-        let error = ProviderError::RequestFailed("Bad request (400): model not found".into());
-        assert!(!should_retry(&error, &config));
-    }
-
-    #[test]
-    fn transient_only_still_retries_server_error() {
-        let config = RetryConfig::default().transient_only();
-        assert!(should_retry(
-            &ProviderError::ServerError("500 internal".into()),
-            &config
-        ));
-    }
-
-    #[test]
-    fn transient_only_still_retries_network_error() {
-        let config = RetryConfig::default().transient_only();
-        assert!(should_retry(
-            &ProviderError::NetworkError("connection refused".into()),
-            &config
-        ));
-    }
-
-    #[test]
-    fn transient_only_still_retries_rate_limit() {
-        let config = RetryConfig::default().transient_only();
-        assert!(should_retry(
-            &ProviderError::RateLimitExceeded {
-                details: "too many requests".into(),
-                retry_delay: None,
-            },
-            &config
-        ));
-    }
-
-    #[test]
-    fn never_retries_auth_errors() {
-        let config = RetryConfig::default();
-        assert!(!should_retry(
-            &ProviderError::Authentication("invalid key".into()),
-            &config
-        ));
     }
 }

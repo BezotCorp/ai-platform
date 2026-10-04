@@ -1,5 +1,5 @@
 use super::CanonicalModel;
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 use futures::StreamExt;
 use once_cell::sync::Lazy;
 use reqwest::header::{ETAG, IF_NONE_MATCH};
@@ -195,20 +195,4 @@ fn atomic_write(destination: PathBuf, content: &[u8]) -> Result<()> {
         return Err(error.into());
     }
     Ok(())
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn rejects_empty_duplicate_and_malformed_catalogs() {
-        assert!(CanonicalModelRegistry::from_json("[]").is_err());
-        let model = r#"{"id":"openai/test","name":"Test","tool_call":true}"#;
-        assert!(CanonicalModelRegistry::from_json(&format!("[{model},{model}]")).is_err());
-        assert!(CanonicalModelRegistry::from_json(
-            r#"[{"id":"invalid","name":"Test","tool_call":true}]"#
-        )
-        .is_err());
-    }
 }

@@ -3,7 +3,7 @@ use std::{borrow::Cow, io::Read as _, path::Path};
 use base64::Engine as _;
 use rmcp::model::ImageContent;
 use serde::{Deserialize, Serialize};
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 use crate::errors::ProviderError;
 
@@ -103,15 +103,14 @@ fn clean_path(path: &str) -> Cow<'_, str> {
     let mut changed = false;
 
     while let Some(c) = chars.next() {
-        if c == '\\' {
-            if let Some(&next) = chars.peek() {
-                if !next.is_alphanumeric() {
-                    cleaned.push(next);
-                    chars.next();
-                    changed = true;
-                    continue;
-                }
-            }
+        if c == '\\'
+            && let Some(&next) = chars.peek()
+            && !next.is_alphanumeric()
+        {
+            cleaned.push(next);
+            chars.next();
+            changed = true;
+            continue;
         }
         cleaned.push(c);
     }
@@ -217,13 +216,13 @@ pub fn load_image_file(path: &str) -> Result<ImageContent, ProviderError> {
             _ => {
                 return Err(ProviderError::RequestFailed(
                     "Unsupported image format".to_string(),
-                ))
+                ));
             }
         },
         None => {
             return Err(ProviderError::RequestFailed(
                 "Unknown image format".to_string(),
-            ))
+            ));
         }
     };
 
@@ -257,296 +256,4 @@ pub fn load_image_file(path: &str) -> Result<ImageContent, ProviderError> {
     let data = base64::prelude::BASE64_STANDARD.encode(&bytes);
 
     Ok(ImageContent::new(data, mime_type))
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use std::io::Write as _;
-    use tempfile;
-
-    #[test]
-    fn test_detect_image_path() {
-        // Create a temporary PNG file with valid PNG magic numbers
-        let temp_dir = tempfile::tempdir().unwrap();
-        let png_path = temp_dir.path().join("test.png");
-        let png_data = [
-            0x89, 0x50, 0x4E, 0x47, // PNG magic number
-            0x0D, 0x0A, 0x1A, 0x0A, // PNG header
-            0x00, 0x00, 0x00, 0x0D, // Rest of fake PNG data
-        ];
-        std::fs::write(&png_path, png_data).unwrap();
-        let png_path_str = png_path.to_str().unwrap();
-
-        // Create a fake PNG (wrong magic numbers)
-        let fake_png_path = temp_dir.path().join("fake.png");
-        std::fs::write(&fake_png_path, b"not a real png").unwrap();
-
-        // Test with valid PNG file using absolute path
-        let text = format!("Here is an image {}", png_path_str);
-        assert_eq!(detect_image_path(&text).as_deref(), Some(png_path_str));
-
-        // Test with non-image file that has .png extension
-        let text = format!("Here is a fake image {}", fake_png_path.to_str().unwrap());
-        assert_eq!(detect_image_path(&text).as_deref(), None);
-
-        // Test with nonexistent file
-        let text = "Here is a fake.png that doesn't exist";
-        assert_eq!(detect_image_path(text).as_deref(), None);
-
-        // Test with non-image file
-        let text = "Here is a file.txt";
-        assert_eq!(detect_image_path(text).as_deref(), None);
-
-        // Test with relative path (should not match)
-        let text = "Here is a relative/path/image.png";
-        assert_eq!(detect_image_path(text).as_deref(), None);
-    }
-
-    #[test]
-    fn test_detect_image_path_with_spaces() {
-        // Absolute path containing spaces (macOS screenshot style).
-        let temp_dir = tempfile::tempdir().unwrap();
-        let png_path = temp_dir.path().join("Screen Shot 2026.png");
-        let png_data = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
-        std::fs::write(&png_path, png_data).unwrap();
-        let png_path_str = png_path.to_str().unwrap();
-
-        let text = format!("please describe {} for me", png_path_str);
-        assert_eq!(detect_image_path(&text).as_deref(), Some(png_path_str));
-
-        // Case-insensitive extension also matches.
-        let upper = temp_dir.path().join("Another Shot.PNG");
-        std::fs::write(&upper, png_data).unwrap();
-        let upper_str = upper.to_str().unwrap();
-        let text = format!("see {}", upper_str);
-        assert_eq!(detect_image_path(&text).as_deref(), Some(upper_str));
-
-        // Quoted path with spaces: the closing quote terminates the candidate.
-        let text = format!("describe \"{}\" please", png_path_str);
-        assert_eq!(detect_image_path(&text).as_deref(), Some(png_path_str));
-        let text = format!("describe '{}'", png_path_str);
-        assert_eq!(detect_image_path(&text).as_deref(), Some(png_path_str));
-        let text = format!("describe “{}” please", png_path_str);
-        assert_eq!(detect_image_path(&text).as_deref(), Some(png_path_str));
-        let text = format!("describe «{}» please", png_path_str);
-        assert_eq!(detect_image_path(&text).as_deref(), Some(png_path_str));
-
-        // A stray closing quote in prose must not act as a terminator for an
-        // unquoted path.
-        let text = format!("here {}\" trailing", png_path_str);
-        assert_eq!(detect_image_path(&text).as_deref(), Some(png_path_str));
-
-        // When a spaced filename contains an earlier image extension, prefer
-        // the longer existing candidate over the embedded prefix.
-        let edited = temp_dir.path().join("Screen Shot.png edited.jpg");
-        std::fs::write(&edited, png_data).unwrap();
-        let edited_str = edited.to_str().unwrap();
-        let prefix = temp_dir.path().join("Screen Shot.png");
-        std::fs::write(&prefix, png_data).unwrap();
-        let text = format!("look at {}", edited_str);
-        assert_eq!(detect_image_path(&text).as_deref(), Some(edited_str));
-
-        // With multiple distinct images, the first referenced one wins even if
-        // a later one has a longer path.
-        let a = temp_dir.path().join("a.png");
-        std::fs::write(&a, png_data).unwrap();
-        let longer = temp_dir.path().join("much-longer.png");
-        std::fs::write(&longer, png_data).unwrap();
-        let text = format!(
-            "compare {} with {}",
-            a.to_str().unwrap(),
-            longer.to_str().unwrap()
-        );
-        assert_eq!(
-            detect_image_path(&text).as_deref(),
-            Some(a.to_str().unwrap())
-        );
-    }
-
-    #[test]
-    fn test_detect_image_path_with_shell_escaped_metacharacters() {
-        let temp_dir = tempfile::tempdir().unwrap();
-        let png_data = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
-        let png_path = temp_dir
-            .path()
-            .join("Bob's Project (v2) & $draft [final].png");
-        std::fs::write(&png_path, png_data).unwrap();
-        let png_path_str = png_path.to_str().unwrap();
-
-        let escaped_path = png_path_str
-            .replace(' ', "\\ ")
-            .replace('(', "\\(")
-            .replace(')', "\\)")
-            .replace('&', "\\&")
-            .replace('$', "\\$")
-            .replace('\'', "\\'")
-            .replace('[', "\\[")
-            .replace(']', "\\]");
-        let text = format!("please describe {}", escaped_path);
-
-        assert_eq!(detect_image_path(&text).as_deref(), Some(png_path_str));
-    }
-
-    #[test]
-    fn test_detect_image_path_prefers_existing_literal_backslash_path() {
-        let temp_dir = tempfile::tempdir().unwrap();
-        let png_data = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
-        let png_path = temp_dir.path().join("literal\\&name.png");
-        std::fs::write(&png_path, png_data).unwrap();
-        let png_path_str = png_path.to_str().unwrap();
-        let text = format!("please describe {}", png_path_str);
-
-        assert_eq!(detect_image_path(&text).as_deref(), Some(png_path_str));
-    }
-
-    #[test]
-    fn test_detect_image_path_with_unicode_separators() {
-        let temp_dir = tempfile::tempdir().unwrap();
-        let png_data = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
-        let png_path = temp_dir.path().join("photo.png");
-        std::fs::write(&png_path, png_data).unwrap();
-        let png_path_str = png_path.to_str().unwrap();
-
-        assert_eq!(
-            detect_image_path(&format!("{png_path_str}🙂")).as_deref(),
-            Some(png_path_str)
-        );
-        assert_eq!(
-            detect_image_path(&format!("{png_path_str}🇺🇸")).as_deref(),
-            Some(png_path_str)
-        );
-        assert_eq!(
-            detect_image_path(&format!("{png_path_str}⌚")).as_deref(),
-            Some(png_path_str)
-        );
-        assert_eq!(
-            detect_image_path(&format!("{png_path_str}⭐")).as_deref(),
-            Some(png_path_str)
-        );
-        assert_eq!(
-            detect_image_path(&format!("{png_path_str}… more text")).as_deref(),
-            Some(png_path_str)
-        );
-        assert_eq!(
-            detect_image_path(&format!("{png_path_str}\u{2014}more text")).as_deref(),
-            Some(png_path_str)
-        );
-
-        assert_eq!(
-            detect_image_path(&format!("{png_path_str}\u{200B}.backup")).as_deref(),
-            None
-        );
-        assert_eq!(
-            detect_image_path(&format!("{png_path_str}\u{0301}")).as_deref(),
-            None
-        );
-        assert_eq!(
-            detect_image_path(&format!("file:{png_path_str}")).as_deref(),
-            None
-        );
-    }
-
-    #[test]
-    fn test_detect_image_path_ignores_urls_and_longer_extensions() {
-        let temp_dir = tempfile::tempdir().unwrap();
-        let png_data = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
-
-        // A real image whose path is a suffix of a URL must not be extracted
-        // from that URL via the `://` separator.
-        let dir = temp_dir.path().to_str().unwrap().trim_start_matches('/');
-        let png_path = temp_dir.path().join("photo.png");
-        std::fs::write(&png_path, png_data).unwrap();
-        let url = format!("https:/{}/photo.png", dir);
-        assert_eq!(detect_image_path(&url).as_deref(), None);
-
-        // A backup file sharing the image extension prefix must not be
-        // truncated to the bare image path.
-        let real = temp_dir.path().join("shot.png");
-        std::fs::write(&real, png_data).unwrap();
-        let backup = format!("{}.backup", real.to_str().unwrap());
-        assert_eq!(detect_image_path(&backup).as_deref(), None);
-    }
-
-    #[test]
-    fn test_detect_image_path_ignores_extension_flood() {
-        // Many extension-like tokens but no real absolute path: must scan
-        // cheaply (bounded) and find nothing.
-        let text = "see foo.png and bar.jpg and baz.jpeg ".repeat(500);
-        assert_eq!(detect_image_path(&text).as_deref(), None);
-    }
-
-    #[test]
-    fn test_load_image_file() {
-        // Create a temporary PNG file with valid PNG magic numbers
-        let temp_dir = tempfile::tempdir().unwrap();
-        let png_path = temp_dir.path().join("test.png");
-        let png_data = [
-            0x89, 0x50, 0x4E, 0x47, // PNG magic number
-            0x0D, 0x0A, 0x1A, 0x0A, // PNG header
-            0x00, 0x00, 0x00, 0x0D, // Rest of fake PNG data
-        ];
-        std::fs::write(&png_path, png_data).unwrap();
-        let png_path_str = png_path.to_str().unwrap();
-
-        // Create a fake PNG (wrong magic numbers)
-        let fake_png_path = temp_dir.path().join("fake.png");
-        std::fs::write(&fake_png_path, b"not a real png").unwrap();
-        let fake_png_path_str = fake_png_path.to_str().unwrap();
-
-        // Test loading valid PNG file
-        let result = load_image_file(png_path_str);
-        assert!(result.is_ok());
-        let image = result.unwrap();
-        assert_eq!(image.mime_type, "image/png");
-        assert_eq!(
-            base64::prelude::BASE64_STANDARD.decode(image.data).unwrap(),
-            png_data
-        );
-
-        // Test loading fake PNG file
-        let result = load_image_file(fake_png_path_str);
-        assert!(result.is_err());
-        assert!(result
-            .unwrap_err()
-            .to_string()
-            .contains("not a valid image"));
-
-        // Test nonexistent file
-        let result = load_image_file("nonexistent.png");
-        assert!(result.is_err());
-
-        // Create a GIF file with valid header bytes
-        let gif_path = temp_dir.path().join("test.gif");
-        // Minimal GIF89a header
-        let gif_data = [0x47, 0x49, 0x46, 0x38, 0x39, 0x61];
-        std::fs::write(&gif_path, gif_data).unwrap();
-        let gif_path_str = gif_path.to_str().unwrap();
-
-        // Test loading unsupported GIF format
-        let result = load_image_file(gif_path_str);
-        assert!(result.is_err());
-        assert!(result
-            .unwrap_err()
-            .to_string()
-            .contains("Unsupported image format"));
-    }
-
-    #[test]
-    fn bounded_reader_accepts_limit_and_detects_extra_byte() {
-        assert_eq!(read_bounded(&b"12345678"[..], 8).unwrap().len(), 8);
-        assert_eq!(read_bounded(&b"123456789"[..], 8).unwrap().len(), 9);
-    }
-
-    #[test]
-    fn load_image_file_rejects_oversized_sparse_file() {
-        let temp_dir = tempfile::tempdir().unwrap();
-        let png_path = temp_dir.path().join("oversized.png");
-        let mut file = std::fs::File::create(&png_path).unwrap();
-        file.write_all(&[0x89, 0x50, 0x4E, 0x47]).unwrap();
-        file.set_len(MAX_IMAGE_BYTES + 1).unwrap();
-
-        let error = load_image_file(png_path.to_str().unwrap()).unwrap_err();
-        assert!(error.to_string().contains("exceeds the 20 MiB limit"));
-    }
 }

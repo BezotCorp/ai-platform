@@ -649,7 +649,7 @@ impl MessageContentBlock {
     }
 
     pub fn as_system_notification(&self) -> Option<&SystemNotificationContent> {
-        if let MessageContentBlock::SystemNotification(ref notification) = self {
+        if let MessageContentBlock::SystemNotification(notification) = self {
             Some(notification)
         } else {
             None
@@ -657,7 +657,7 @@ impl MessageContentBlock {
     }
 
     pub fn as_tool_request(&self) -> Option<&ToolRequest> {
-        if let MessageContentBlock::ToolRequest(ref tool_request) = self {
+        if let MessageContentBlock::ToolRequest(tool_request) = self {
             Some(tool_request)
         } else {
             None
@@ -665,7 +665,7 @@ impl MessageContentBlock {
     }
 
     pub fn as_tool_response(&self) -> Option<&ToolResponse> {
-        if let MessageContentBlock::ToolResponse(ref tool_response) = self {
+        if let MessageContentBlock::ToolResponse(tool_response) = self {
             Some(tool_response)
         } else {
             None
@@ -673,7 +673,7 @@ impl MessageContentBlock {
     }
 
     pub fn as_action_required(&self) -> Option<&ActionRequired> {
-        if let MessageContentBlock::ActionRequired(ref action_required) = self {
+        if let MessageContentBlock::ActionRequired(action_required) = self {
             Some(action_required)
         } else {
             None
@@ -681,16 +681,16 @@ impl MessageContentBlock {
     }
 
     pub fn as_tool_response_text(&self) -> Option<String> {
-        if let Some(tool_response) = self.as_tool_response() {
-            if let Ok(result) = &tool_response.tool_result {
-                let texts: Vec<String> = result
-                    .content
-                    .iter()
-                    .filter_map(|content| content.as_text().map(|t| t.text.to_string()))
-                    .collect();
-                if !texts.is_empty() {
-                    return Some(texts.join("\n"));
-                }
+        if let Some(tool_response) = self.as_tool_response()
+            && let Ok(result) = &tool_response.tool_result
+        {
+            let texts: Vec<String> = result
+                .content
+                .iter()
+                .filter_map(|content| content.as_text().map(|t| t.text.to_string()))
+                .collect();
+            if !texts.is_empty() {
+                return Some(texts.join("\n"));
             }
         }
         None
@@ -1910,14 +1910,18 @@ mod tests {
         let projected = message.user_visible_content();
 
         assert_eq!(projected.as_concat_text(), "shared text");
-        assert!(projected
-            .content
-            .iter()
-            .any(|content| matches!(content, MessageContentBlock::Thinking(_))));
-        assert!(!projected
-            .content
-            .iter()
-            .any(|content| matches!(content, MessageContentBlock::Image(_))));
+        assert!(
+            projected
+                .content
+                .iter()
+                .any(|content| matches!(content, MessageContentBlock::Thinking(_)))
+        );
+        assert!(
+            !projected
+                .content
+                .iter()
+                .any(|content| matches!(content, MessageContentBlock::Image(_)))
+        );
         let tool_response = projected
             .content
             .iter()
