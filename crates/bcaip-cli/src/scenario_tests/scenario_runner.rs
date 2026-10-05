@@ -1,23 +1,29 @@
+use crate::{
+    scenario_tests::{
+            message_generator::MessageGenerator,
+            mock_client::weather_client,
+        },
+};
 use dotenvy::dotenv;
-use goose::conversation::Conversation;
-
-use crate::scenario_tests::message_generator::MessageGenerator;
-use crate::scenario_tests::mock_client::weather_client;
-use crate::scenario_tests::provider_configs::{get_provider_configs, ProviderConfig};
-use crate::session::CliSession;
+use goose_provider_types::conversations::Conversation;
+use crate::scenario_tests::provider_configs::{ProviderConfig, get_provider_configs};
 use anyhow::Result;
+use crate::session::CliSession;
 use goose::agents::{Agent, AgentConfig, GoosePlatform};
+use goose_provider_types::goose_mode::GooseMode;
 use goose::config::permission::PermissionManager;
-use goose::config::GooseMode;
 use goose::providers::{create, testprovider::TestProvider};
-use goose::session::session_manager::SessionType;
-use goose::session::SessionManager;
+use goose::{
+    session::{
+            SessionManager,
+            SessionType,
+        },
+};
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use tempfile::TempDir;
 use tokio_util::sync::CancellationToken;
-
 pub const SCENARIO_TESTS_DIR: &str = "src/scenario_tests";
 
 #[derive(Debug, Clone)]
@@ -141,7 +147,6 @@ where
     F: Fn(&ScenarioResult) -> Result<()>,
 {
     use goose::config::ExtensionConfig;
-
     goose::agents::moim::SKIP.with(|f| f.set(true));
 
     if let Ok(path) = dotenv() {
@@ -170,7 +175,9 @@ where
                 let _ = std::fs::remove_file(&file_path);
                 return Err(anyhow::anyhow!(
                     "Test replay failed for '{}' ({}): {}. File deleted - re-run test to record fresh data.",
-                    test_name, factory_name, e
+                    test_name,
+                    factory_name,
+                    e
                 ));
             }
         }
@@ -243,7 +250,7 @@ where
         goose::model_config::model_config_from_user_config(&factory_name, config.model_name)?;
     agent
         .update_provider(
-            provider_arc as Arc<dyn goose::providers::base::Provider>,
+            provider_arc as Arc<dyn goose_provider_types::base::Provider>,
             scenario_model_config,
             &session.id,
         )
@@ -281,7 +288,9 @@ where
             let _ = std::fs::remove_file(&file_path);
             return Err(anyhow::anyhow!(
                 "Test replay failed for '{}' ({}) - missing recorded interaction: {}. File deleted - re-run test to record fresh data.",
-                test_name, factory_name, err_msg
+                test_name,
+                factory_name,
+                err_msg
             ));
         }
     }

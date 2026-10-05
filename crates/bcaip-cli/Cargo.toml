@@ -12,7 +12,7 @@ description.workspace = true
 workspace = true
 
 [[bin]]
-name = "goose"
+name = "bcaip"
 path = "src/main.rs"
 
 [[bin]]
@@ -30,7 +30,9 @@ agent-client-protocol = { workspace = true, optional = true }
 agent-client-protocol-schema = { workspace = true }
 goose-mcp = { path = "../goose-mcp", default-features = false, optional = true }
 goose-providers = { path = "../goose-providers", default-features = false }
-goose-roaming = { path = "../goose-roaming", optional = true }
+goose-sdk-types = { path = "../goose-sdk-types", default-features = false }
+goose-agent = { path = "../goose-agent", default-features = false }
+bcaip-roaming = { path = "../bcaip-roaming", optional = true }
 rmcp = { workspace = true }
 clap = { workspace = true }
 cliclack = { version = "0.5", default-features = false }
@@ -87,6 +89,9 @@ axum-server = { workspace = true, optional = true }
 clap_complete_nushell = { version = "4", default-features = false }
 qrcode = { version = "0.14.1", optional = true }
 fs2 = { workspace = true, optional = true }
+goose-download-manager = { path = "../goose-download-manager", optional = true }
+goose-local-inference = { path = "../goose-local-inference", default-features = false, optional = true }
+goose-provider-types = { path = "../goose-provider-types", default-features = false }
 
 [target.'cfg(target_os = "windows")'.dependencies]
 anstream = { version = "1", default-features = false, features = ["wincon"] }
@@ -100,6 +105,7 @@ winapi = { workspace = true, features = [
 
 [target."cfg(unix)".dependencies]
 libc = { version = "0.2.190", default-features = false, features = ["std"] }
+rustix = { version = "1.1.5", features = ["fs", "process", "termios", "event"] }
 
 [features]
 default = [
@@ -122,7 +128,7 @@ default = [
 ]
 online-model-meta = ["goose/online-model-meta"]
 roaming = [
-    "dep:goose-roaming",
+    "dep:bcaip-roaming",
     "dep:qrcode",
     "dep:fs2",
     "dep:agent-client-protocol",
@@ -130,7 +136,11 @@ roaming = [
 code-mode = ["goose/code-mode"]
 tree-sitter = ["goose/tree-sitter"]
 live-voice = ["goose/live-voice"]
-local-inference = ["goose/local-inference"]
+local-inference = [
+    "goose/local-inference",
+    "dep:goose-download-manager",
+    "dep:goose-local-inference",
+]
 aws-providers = ["goose/aws-providers"]
 cuda = ["goose/cuda", "local-inference"]
 vulkan = ["goose/vulkan", "local-inference"]

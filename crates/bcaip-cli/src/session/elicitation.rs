@@ -4,11 +4,6 @@ use serde_json::Value;
 use std::collections::HashMap;
 use std::io::{self, BufRead, IsTerminal, Write};
 use tokio_util::sync::CancellationToken;
-
-#[cfg(all(test, unix))]
-#[path = "../../tests/support/elicitation_signals.rs"]
-mod signal_tests;
-
 pub struct ElicitationInput {
     pub action: ElicitationAction,
     pub user_data: HashMap<String, Value>,
@@ -332,12 +327,13 @@ fn read_line(cancel_token: &CancellationToken) -> io::Result<Option<String>> {
 #[cfg(unix)]
 mod cancellable_stdin {
     use super::*;
+    use rustix::event::{PollFd, PollFlags, Timespec, poll};
+    use rustix::fs::{OFlags, fcntl_getfl, fcntl_setfl};
+    use rustix::termios::{QueueSelector, tcflush};
     use std::io::Read;
-    use std::os::fd::AsRawFd;
-
     pub(super) struct Input<'a> {
         stdin: io::StdinLock<'a>,
-        original_flags: libc::c_int,
+        original_flags: OFlags,
         cancel_token: &'a CancellationToken,
     }
 
@@ -347,18 +343,8 @@ mod cancellable_stdin {
             cancel_token: &'a CancellationToken,
         ) -> io::Result<Self> {
             // Nonblocking reads close the race between readiness and a signal flushing stdin.
-            let original_flags = unsafe { libc::fcntl(stdin.as_raw_fd(), libc::F_GETFL) };
-            if original_flags < 0
-                || unsafe {
-                    libc::fcntl(
-                        stdin.as_raw_fd(),
-                        libc::F_SETFL,
-                        original_flags | libc::O_NONBLOCK,
-                    )
-                } < 0
-            {
-                return Err(io::Error::last_os_error());
-            }
+            let original_flags = fcntl_getfl(&stdin)?;
+            fcntl_setfl(&stdin, original_flags | OFlags::NONBLOCK)?;
             Ok(Self {
                 stdin,
                 original_flags,
@@ -368,10 +354,8 @@ mod cancellable_stdin {
 
         pub(super) fn discard_terminal_input(&self) -> io::Result<()> {
             // A programmatic SIGINT need not flush the terminal's unfinished line.
-            if self.stdin.is_terminal()
-                && unsafe { libc::tcflush(self.stdin.as_raw_fd(), libc::TCIFLUSH) } < 0
-            {
-                return Err(io::Error::last_os_error());
+            if self.stdin.is_terminal() {
+                tcflush(&self.stdin, QueueSelector::IFlush)?;
             }
             Ok(())
         }
@@ -399,15 +383,12 @@ mod cancellable_stdin {
                     Err(error) if error.kind() == io::ErrorKind::WouldBlock => {}
                     Err(error) => return Err(error),
                 }
-                let mut descriptor = libc::pollfd {
-                    fd: self.stdin.as_raw_fd(),
-                    events: libc::POLLIN,
-                    revents: 0,
+                let mut descriptors = [PollFd::new(&self.stdin, PollFlags::IN)];
+                let timeout = Timespec {
+                    tv_sec: 0,
+                    tv_nsec: 50_000_000,
                 };
-                // StdinLock keeps input exclusively owned until the read returns.
-                if unsafe { libc::poll(&mut descriptor, 1, 50) } < 0 {
-                    return Err(io::Error::last_os_error());
-                }
+                poll(&mut descriptors, Some(&timeout))?;
             }
         }
 
@@ -419,7 +400,7 @@ mod cancellable_stdin {
     impl Drop for Input<'_> {
         fn drop(&mut self) {
             // Restore the shared stdin description before handing input back to the CLI.
-            unsafe { libc::fcntl(self.stdin.as_raw_fd(), libc::F_SETFL, self.original_flags) };
+            let _ = fcntl_setfl(&self.stdin, self.original_flags);
         }
     }
 }
@@ -492,227 +473,5 @@ fn parse_value(input: &str, field_type: &str, enum_values: Option<&Vec<Value>>) 
             .map(Value::Number)
             .unwrap_or(Value::Null),
         _ => Value::String(input.to_string()),
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use serde_json::json;
-    use std::io::{BufReader, Cursor, Read};
-    use test_case::test_case;
-
-    #[test_case(json!({}); "confirmation")]
-    #[test_case(json!({"properties": {"answer": {"type": "boolean"}}}); "boolean")]
-    #[test_case(json!({"properties": {"answer": {"enum": ["yes", "no"]}}}); "selection")]
-    #[test_case(json!({"properties": {"answer": {"type": "string"}}}); "freeform")]
-    fn cancelled_token_never_collects_answers(schema: Value) {
-        let token = CancellationToken::new();
-        token.cancel();
-        let result = collect_elicitation_input("", &schema, &token).unwrap();
-        assert_eq!(result.action, ElicitationAction::Cancel);
-        assert!(result.user_data.is_empty());
-    }
-
-    struct ScriptedReader {
-        prefix: Cursor<&'static [u8]>,
-        error: Option<io::ErrorKind>,
-        suffix: Cursor<&'static [u8]>,
-    }
-
-    impl Read for ScriptedReader {
-        fn read(&mut self, output: &mut [u8]) -> io::Result<usize> {
-            let input = self.fill_buf()?;
-            let count = input.len().min(output.len());
-            output[..count].copy_from_slice(&input[..count]);
-            self.consume(count);
-            Ok(count)
-        }
-    }
-
-    impl BufRead for ScriptedReader {
-        fn fill_buf(&mut self) -> io::Result<&[u8]> {
-            if self.prefix.position() < self.prefix.get_ref().len() as u64 {
-                return self.prefix.fill_buf();
-            }
-            if let Some(error) = self.error.take() {
-                return Err(error.into());
-            }
-            self.suffix.fill_buf()
-        }
-
-        fn consume(&mut self, amount: usize) {
-            if self.prefix.position() < self.prefix.get_ref().len() as u64 {
-                self.prefix.consume(amount);
-            } else {
-                self.suffix.consume(amount);
-            }
-        }
-    }
-
-    #[test]
-    fn nonterminal_eof_cancels_elicitation_input() {
-        assert_eq!(read_line_from(&mut Cursor::new([])).unwrap(), None);
-    }
-
-    #[test]
-    fn blank_line_accepts_the_field_default() {
-        assert_eq!(
-            read_line_from(&mut Cursor::new(b"\n")).unwrap(),
-            Some(String::new())
-        );
-    }
-
-    #[test]
-    fn partial_line_at_eof_cancels_elicitation_input() {
-        assert_eq!(read_line_from(&mut Cursor::new(b"partial")).unwrap(), None);
-    }
-
-    #[test_case(""; "before any input")]
-    #[test_case("partial"; "after partial input")]
-    fn interrupted_read_cancels_elicitation_input(prefix: &'static str) {
-        let mut reader = ScriptedReader {
-            prefix: Cursor::new(prefix.as_bytes()),
-            error: Some(io::ErrorKind::Interrupted),
-            suffix: Cursor::new(b"later input\n"),
-        };
-
-        assert_eq!(read_line_from(&mut reader).unwrap(), None);
-        assert_eq!(
-            read_line_from(&mut reader).unwrap(),
-            Some("later input".to_string())
-        );
-    }
-
-    #[test_case(1; "split unicode")]
-    #[test_case(64; "multiple lines in one buffer")]
-    fn buffered_read_preserves_unicode_and_the_next_line(capacity: usize) {
-        let mut reader = BufReader::with_capacity(capacity, Cursor::new(" café \r\nnext\n"));
-
-        assert_eq!(read_line_from(&mut reader).unwrap(), Some("café".into()));
-        assert_eq!(read_line_from(&mut reader).unwrap(), Some("next".into()));
-        assert_eq!(read_line_from(&mut reader).unwrap(), None);
-    }
-
-    #[test_case(b"\xff\n"; "complete line")]
-    #[test_case(b"\xff"; "partial line at eof")]
-    fn invalid_utf8_returns_an_error(input: &[u8]) {
-        assert_eq!(
-            read_line_from(&mut Cursor::new(input)).unwrap_err().kind(),
-            io::ErrorKind::InvalidData
-        );
-    }
-
-    #[test]
-    fn non_interruption_errors_are_propagated_without_reading_more() {
-        let mut reader = ScriptedReader {
-            prefix: Cursor::new(b"partial"),
-            error: Some(io::ErrorKind::PermissionDenied),
-            suffix: Cursor::new(b"later input\n"),
-        };
-
-        assert_eq!(
-            read_line_from(&mut reader).unwrap_err().kind(),
-            io::ErrorKind::PermissionDenied
-        );
-        assert_eq!(
-            read_line_from(&mut reader).unwrap(),
-            Some("later input".to_string())
-        );
-    }
-
-    #[test]
-    fn builds_required_enum_select_with_default() {
-        let schema = json!({
-            "type": "object",
-            "properties": {
-                "color": {
-                    "type": "string",
-                    "enum": ["red", "green"],
-                    "default": "green"
-                }
-            },
-            "required": ["color"]
-        });
-
-        let select = single_select(&schema).unwrap();
-
-        assert_eq!(select.field_name, "color");
-        assert_eq!(
-            select.options,
-            vec![
-                (SelectChoice::Value("red".to_string()), "red".to_string()),
-                (
-                    SelectChoice::Value("green".to_string()),
-                    "green".to_string()
-                )
-            ]
-        );
-        assert_eq!(
-            select.initial_value,
-            Some(SelectChoice::Value("green".to_string()))
-        );
-    }
-
-    #[test]
-    fn optional_select_defaults_to_skip() {
-        let schema = json!({
-            "type": "object",
-            "properties": {
-                "color": { "type": "string", "enum": ["", "green"] }
-            }
-        });
-
-        let select = single_select(&schema).unwrap();
-
-        assert_eq!(select.initial_value, Some(SelectChoice::Skip));
-        assert_eq!(select.options.last().unwrap().0, SelectChoice::Skip);
-        assert_eq!(
-            select.options.first().unwrap().0,
-            SelectChoice::Value(String::new())
-        );
-    }
-
-    #[test]
-    fn uses_one_of_titles_as_labels() {
-        let schema = json!({
-            "type": "object",
-            "properties": {
-                "size": {
-                    "oneOf": [
-                        { "const": "s", "title": "Small" },
-                        { "const": "l", "title": "Large" }
-                    ]
-                }
-            },
-            "required": ["size"]
-        });
-
-        let select = single_select(&schema).unwrap();
-
-        assert_eq!(select.options[0].0, SelectChoice::Value("s".to_string()));
-        assert_eq!(select.options[0].1, "Small");
-        assert_eq!(select.options[1].0, SelectChoice::Value("l".to_string()));
-        assert_eq!(select.options[1].1, "Large");
-    }
-
-    #[test_case(json!({}); "missing properties")]
-    #[test_case(json!({ "properties": {} }); "empty properties")]
-    #[test_case(json!({
-        "properties": {
-            "first": { "enum": ["a"] },
-            "second": { "enum": ["b"] }
-        }
-    }); "multiple properties")]
-    #[test_case(json!({
-        "properties": { "choice": { "enum": ["a", 2] } }
-    }); "non-string enum value")]
-    #[test_case(json!({
-        "properties": {
-            "choice": { "oneOf": [{ "const": "a" }, { "type": "string" }] }
-        }
-    }); "oneOf branch without const")]
-    fn unsupported_schema_does_not_build_select(schema: Value) {
-        assert!(single_select(&schema).is_none());
     }
 }

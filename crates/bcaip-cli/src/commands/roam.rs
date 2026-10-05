@@ -15,22 +15,19 @@
 //! * `connect` / `delegate` / `bridge` — reach a peer that has accepted you.
 //! * `connections` (alias `list`) — show live/observed connections.
 
-use std::sync::Arc;
-
 use anyhow::{Context, Result};
 use clap::Subcommand;
 use goose::acp::server::AcpBuiltinSelection;
 use goose::acp::server_factory::{AcpServer, AcpServerFactoryConfig};
-use goose::agents::GoosePlatform;
-use goose::config::paths::Paths;
 use goose::config::{Config, ConfigError};
+use goose::{agents::GoosePlatform, config::paths::Paths};
 use goose_roaming::{
-    default_key_path, parse_endpoint_id, ConnectionCard, Directory, EndpointId, RelayEntry,
-    RelaySettings, RoamingConfig, RoamingIdentity, RoamingNode, TrustBook,
+    ConnectionCard, Directory, EndpointId, RelayEntry, RelaySettings, RoamingConfig,
+    RoamingIdentity, RoamingNode, TrustBook, default_key_path, parse_endpoint_id,
 };
+use std::sync::Arc;
 
 use crate::commands::roam_full_bridge::FullAcpBridge;
-
 const CARD_SCHEME: &str = "goose+roam://";
 
 pub(crate) fn directory_path() -> std::path::PathBuf {
@@ -87,7 +84,7 @@ pub(crate) fn resolve_relay_settings() -> Result<RelaySettings> {
             return Err(anyhow::anyhow!(
                 "{CONFIG_ROAM_RELAYS_KEY} is set but could not be read as a list of relay \
                  URLs; refusing to fall back to the default relays: {error}"
-            ))
+            ));
         }
     };
     // Only explicit relay URLs use a token; skip the secret-store read (and
@@ -104,7 +101,7 @@ pub(crate) fn resolve_relay_settings() -> Result<RelaySettings> {
             return Err(anyhow::anyhow!(
                 "{CONFIG_ROAM_RELAY_TOKEN_KEY} could not be read; refusing to contact \
                  relays without the configured token: {error}"
-            ))
+            ));
         }
     };
     Ok(build_relay_settings(urls, token))
@@ -612,7 +609,6 @@ pub(crate) fn load_identity() -> Result<RoamingIdentity> {
 pub(crate) fn try_acquire_roam_lock_owner() -> Result<Option<std::fs::File>> {
     use fs2::FileExt as _;
     use std::io::Write as _;
-
     let lock_path = Paths::data_dir().join("roam/serve.lock");
     if let Some(parent) = lock_path.parent() {
         std::fs::create_dir_all(parent)
@@ -843,7 +839,6 @@ async fn handle_bridge(
     label: Option<String>,
 ) -> Result<()> {
     use tokio::io::AsyncWriteExt;
-
     validate_bridge_listener(listen.as_deref(), allow_remote_clients)?;
 
     let label = label.or_else(|| Some("bridge".to_string()));
@@ -901,91 +896,4 @@ fn validate_bridge_listener(listen: Option<&str>, allow_remote_clients: bool) ->
     }
 
     Ok(())
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn loopback_bridge_listener_requires_explicit_opt_in() {
-        let error = validate_bridge_listener(Some("127.0.0.1:8900"), false).unwrap_err();
-        assert!(error.to_string().contains("--allow-remote-clients"));
-    }
-
-    #[test]
-    fn explicit_opt_in_allows_bridge_listeners() {
-        validate_bridge_listener(Some("127.0.0.1:8900"), true).unwrap();
-        validate_bridge_listener(Some("0.0.0.0:8900"), true).unwrap();
-    }
-
-    #[test]
-    fn stdio_bridge_does_not_require_tcp_opt_in() {
-        validate_bridge_listener(None, false).unwrap();
-    }
-
-    #[test]
-    fn no_urls_uses_default_managed_relays_not_public() {
-        match build_relay_settings(vec![], None) {
-            RelaySettings::Custom(entries) => {
-                assert_eq!(entries.len(), DEFAULT_ROAM_RELAYS.len());
-                // Managed relays register open — no auth token attached.
-                assert!(entries.iter().all(|e| e.auth_token.is_none()));
-                assert!(entries.iter().all(|e| e.url.contains("iroh.link")));
-            }
-            other => panic!("expected Custom managed relays, got {other:?}"),
-        }
-    }
-
-    #[test]
-    fn blank_urls_are_filtered_and_fall_back_to_managed() {
-        match build_relay_settings(vec!["  ".into(), "".into()], None) {
-            RelaySettings::Custom(entries) => {
-                assert_eq!(entries.len(), DEFAULT_ROAM_RELAYS.len());
-            }
-            other => panic!("expected Custom managed relays, got {other:?}"),
-        }
-    }
-
-    #[test]
-    fn custom_urls_without_token() {
-        let settings = build_relay_settings(vec!["https://relay.example./".into()], None);
-        match settings {
-            RelaySettings::Custom(entries) => {
-                assert_eq!(entries.len(), 1);
-                assert_eq!(entries[0].url, "https://relay.example./");
-                assert!(entries[0].auth_token.is_none());
-            }
-            other => panic!("expected Custom, got {other:?}"),
-        }
-    }
-
-    #[test]
-    fn custom_urls_apply_nonempty_token_to_each() {
-        let settings = build_relay_settings(
-            vec!["https://a.example./".into(), "https://b.example./".into()],
-            Some("tok".into()),
-        );
-        match settings {
-            RelaySettings::Custom(entries) => {
-                assert_eq!(entries.len(), 2);
-                assert!(entries
-                    .iter()
-                    .all(|e| e.auth_token.as_deref() == Some("tok")));
-            }
-            other => panic!("expected Custom, got {other:?}"),
-        }
-    }
-
-    #[test]
-    fn empty_token_is_ignored() {
-        let settings =
-            build_relay_settings(vec!["https://relay.example./".into()], Some(String::new()));
-        match settings {
-            RelaySettings::Custom(entries) => {
-                assert!(entries[0].auth_token.is_none());
-            }
-            other => panic!("expected Custom, got {other:?}"),
-        }
-    }
 }

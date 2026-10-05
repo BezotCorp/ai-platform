@@ -10,21 +10,20 @@
 
 #![cfg(feature = "roaming")]
 
-use std::sync::Arc;
-
+use agent_client_protocol::schema::ProtocolVersion;
 use agent_client_protocol::schema::v1::{
     ContentBlock, ContentChunk, InitializeRequest, InitializeResponse, ListSessionsRequest,
     ListSessionsResponse, LoadSessionRequest, LoadSessionResponse, NewSessionRequest,
     NewSessionResponse, PromptRequest, PromptResponse, SessionId, SessionInfo, SessionNotification,
     SessionUpdate, StopReason,
 };
-use agent_client_protocol::schema::ProtocolVersion;
 use agent_client_protocol::{Agent as SacpAgent, Client, ConnectionTo};
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use futures::future::BoxFuture;
 use futures::io::{AsyncRead, AsyncWrite};
+use std::sync::Arc;
 
-use goose_cli::commands::roam_client;
+use bcaip_cli::commands::roam_client;
 use goose_roaming::{
     AcpStreamServer, Directory, EndpointId, RelaySettings, RoamingConfig, RoamingIdentity,
     RoamingNode, TrustBook,

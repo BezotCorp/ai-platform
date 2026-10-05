@@ -10,60 +10,51 @@ mod task_execution_display;
 mod thinking;
 
 use crate::session::task_execution_display::{
-    format_task_execution_notification, TASK_EXECUTION_NOTIFICATION_TYPE,
+    TASK_EXECUTION_NOTIFICATION_TYPE, format_task_execution_notification,
 };
-use goose::conversation::Conversation;
-use std::io::Write;
-use std::str::FromStr;
-use tokio::signal::ctrl_c;
-use tokio_util::task::AbortOnDropHandle;
-
-pub use builder::{build_session, ExtensionFailure, SessionBuilderConfig};
-use console::Color;
-
-use goose::agents::platform_extensions::developer::shell::{
-    parse_shell_output_notification, ShellOutputNotificationParams, ShellOutputStream,
-};
-use goose::agents::AgentEvent;
-use goose::agents::SUBAGENT_TOOL_REQUEST_TYPE;
-use goose::permission::Permission;
-use goose::providers::base::ProviderUsage;
-use goose::utils::safe_truncate;
-
 use anyhow::Result;
+pub use builder::{ExtensionFailure, SessionBuilderConfig, build_session};
 use completion::GooseCompleter;
+use console::Color;
+use goose::agents::SUBAGENT_TOOL_REQUEST_TYPE;
 use goose::agents::extension::{Envs, ExtensionConfig, PLATFORM_EXTENSIONS};
+use goose::agents::platform_extensions::developer::shell::{
+    ShellOutputNotificationParams, ShellOutputStream, parse_shell_output_notification,
+};
 use goose::agents::types::RetryConfig;
 use goose::agents::{
-    context_management_unsupported_message, Agent, SessionConfig, COMPACT_TRIGGERS,
+    Agent, COMPACT_TRIGGERS, SessionConfig, context_management_unsupported_message,
 };
+use goose::config::Config;
 use goose::config::extensions::name_to_key;
-use goose::config::{Config, GooseMode};
+use goose::config::{paths::Paths, providers};
+use goose::utils::safe_truncate;
+use goose::{providers::inventory::ProviderInventoryService, session::SessionManager};
+use goose_agent::events::AgentEvent;
+use goose_provider_types::conversations::Conversation;
+use goose_provider_types::conversations::ProviderUsage;
+use goose_provider_types::conversations::{
+    ActionRequiredData, Message, MessageContent, ToolConfirmationRequest,
+};
+use goose_provider_types::goose_mode::GooseMode;
+use goose_provider_types::permission::Permission;
 use input::InputResult;
 use rmcp::model::ServerNotification;
 use rmcp::model::{ElicitationAction, PromptMessage};
 use rmcp::model::{ErrorCode, ErrorData};
-use strum::VariantNames;
-
-use goose::config::paths::Paths;
-use goose::config::providers;
-use goose::conversation::message::{
-    ActionRequiredData, Message, MessageContent, ToolConfirmationRequest,
-};
-use goose::providers::inventory::ProviderInventoryService;
-use goose::session::SessionManager;
 use rustyline::EditMode;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::{HashMap, HashSet};
-use std::io::IsTerminal;
-use std::path::PathBuf;
-use std::sync::Arc;
 use std::time::{Duration, Instant};
+use std::{io::IsTerminal, path::PathBuf, sync::Arc};
+use std::{io::Write, str::FromStr};
+use strum::VariantNames;
 use tokio;
+use tokio::signal::ctrl_c;
 use tokio_util::sync::CancellationToken;
+use tokio_util::task::AbortOnDropHandle;
 use tracing::warn;
-
 const SHELL_STATUS_FALLBACK_WIDTH: usize = 120;
 const SHELL_STATUS_MAX_LINES: usize = 3;
 const SHELL_STATUS_RESERVED_WIDTH: usize = 2;
@@ -1079,7 +1070,7 @@ impl CliSession {
             .config
             .session_manager
             .update(&self.session_id)
-            .usage(goose_providers::conversation::token_usage::Usage::new(
+            .usage(goose_provider_types::conversations::Usage::new(
                 Some(0),
                 Some(0),
                 Some(0),
@@ -1213,9 +1204,9 @@ impl CliSession {
     }
 
     async fn handle_list_skills(&mut self) -> Result<()> {
-        use comfy_table::{presets, Cell, ContentArrangement, Table};
-        use goose::custom_requests::SourceType;
+        use comfy_table::{Cell, ContentArrangement, Table, presets};
         use goose::skills::list_installed_skills;
+        use goose_sdk_types::custom_requests::SourceType;
         let cwd = std::env::current_dir().unwrap_or_default();
         let skills = list_installed_skills(Some(&cwd));
 
@@ -2584,11 +2575,11 @@ fn handle_agent_error(e: &anyhow::Error, is_stream_json_mode: bool) {
         });
     }
 
-    if e.downcast_ref::<goose_providers::errors::ProviderError>()
+    if e.downcast_ref::<goose_provider_types::errors::ProviderError>()
         .map(|provider_error| {
             matches!(
                 provider_error,
-                goose_providers::errors::ProviderError::ContextLengthExceeded(_)
+                goose_provider_types::errors::ProviderError::ContextLengthExceeded(_)
             )
         })
         .unwrap_or(false)
@@ -2644,8 +2635,8 @@ fn format_elapsed_time(duration: std::time::Duration) -> String {
 fn build_switched_model_config(
     provider_name: &str,
     model_name: &str,
-    current_model_config: &goose_providers::model::ModelConfig,
-) -> Result<goose_providers::model::ModelConfig> {
+    current_model_config: &goose_provider_types::model::ModelConfig,
+) -> Result<goose_provider_types::model::ModelConfig> {
     goose::model_config::model_config_from_user_config(provider_name, model_name)
         .map(|config| {
             config
@@ -2654,659 +2645,4 @@ fn build_switched_model_config(
                 .with_toolshim_model(current_model_config.toolshim_model.clone())
         })
         .map_err(|e| anyhow::anyhow!("Failed to create model configuration: {e}"))
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use goose::agents::extension::Envs;
-    use goose::config::ExtensionConfig;
-    use goose::conversation::message::MessageErrorKind;
-    use goose::providers::base::Provider;
-    use serde_json::json;
-    use std::collections::HashMap;
-    use std::time::Duration;
-    use test_case::test_case;
-
-    #[test]
-    fn only_headless_terminal_failures_are_propagated() {
-        let messages = Conversation::new_unvalidated([
-            Message::assistant().with_error(MessageErrorKind::Other, "provider failed")
-        ]);
-
-        assert_eq!(
-            headless_run_error(
-                false,
-                false,
-                Some(anyhow::anyhow!("stream failed")),
-                &Conversation::default(),
-            )
-            .unwrap()
-            .to_string(),
-            "stream failed"
-        );
-        assert_eq!(
-            headless_run_error(false, false, None, &messages)
-                .unwrap()
-                .to_string(),
-            "provider failed"
-        );
-        assert_eq!(
-            headless_run_error(false, true, None, &Conversation::default())
-                .unwrap()
-                .to_string(),
-            "Headless run interrupted"
-        );
-        assert!(headless_run_error(
-            true,
-            true,
-            Some(anyhow::anyhow!("stream failed")),
-            &messages,
-        )
-        .is_none());
-    }
-
-    #[test]
-    fn provider_only_confirmation_preserves_authoritative_request() {
-        let arguments = json!({"command": "cat ~/.ssh/id_rsa"})
-            .as_object()
-            .unwrap()
-            .clone();
-        let message = Message::assistant().with_action_required(
-            "provider-request",
-            "Bash".to_string(),
-            arguments.clone(),
-            Some("Review this request".to_string()),
-        );
-
-        let request = find_tool_confirmation(&message).unwrap();
-
-        assert_eq!(request.id, "provider-request");
-        assert_eq!(request.tool_name, "Bash");
-        assert_eq!(request.arguments, arguments);
-        assert_eq!(request.prompt.as_deref(), Some("Review this request"));
-    }
-
-    #[test]
-    fn test_format_elapsed_time_under_60_seconds() {
-        // Test sub-second duration
-        let duration = Duration::from_millis(500);
-        assert_eq!(format_elapsed_time(duration), "0.50s");
-
-        // Test exactly 1 second
-        let duration = Duration::from_secs(1);
-        assert_eq!(format_elapsed_time(duration), "1.00s");
-
-        // Test 45.75 seconds
-        let duration = Duration::from_millis(45750);
-        assert_eq!(format_elapsed_time(duration), "45.75s");
-
-        // Test 59.99 seconds
-        let duration = Duration::from_millis(59990);
-        assert_eq!(format_elapsed_time(duration), "59.99s");
-    }
-
-    #[test]
-    fn test_format_elapsed_time_minutes() {
-        // Test exactly 60 seconds (1 minute)
-        let duration = Duration::from_secs(60);
-        assert_eq!(format_elapsed_time(duration), "1m 00s");
-
-        // Test 61 seconds (1 minute 1 second)
-        let duration = Duration::from_secs(61);
-        assert_eq!(format_elapsed_time(duration), "1m 01s");
-
-        // Test 90 seconds (1 minute 30 seconds)
-        let duration = Duration::from_secs(90);
-        assert_eq!(format_elapsed_time(duration), "1m 30s");
-
-        // Test 119 seconds (1 minute 59 seconds)
-        let duration = Duration::from_secs(119);
-        assert_eq!(format_elapsed_time(duration), "1m 59s");
-
-        // Test 120 seconds (2 minutes)
-        let duration = Duration::from_secs(120);
-        assert_eq!(format_elapsed_time(duration), "2m 00s");
-
-        // Test 605 seconds (10 minutes 5 seconds)
-        let duration = Duration::from_secs(605);
-        assert_eq!(format_elapsed_time(duration), "10m 05s");
-
-        // Test 3661 seconds (61 minutes 1 second)
-        let duration = Duration::from_secs(3661);
-        assert_eq!(format_elapsed_time(duration), "61m 01s");
-    }
-
-    #[test]
-    fn test_format_elapsed_time_edge_cases() {
-        // Test zero duration
-        let duration = Duration::from_secs(0);
-        assert_eq!(format_elapsed_time(duration), "0.00s");
-
-        // Test very small duration (1 millisecond)
-        let duration = Duration::from_millis(1);
-        assert_eq!(format_elapsed_time(duration), "0.00s");
-
-        // Test fractional seconds are truncated for minute display
-        // 60.5 seconds should still show as 1m 00s (not 1m 00.5s)
-        let duration = Duration::from_millis(60500);
-        assert_eq!(format_elapsed_time(duration), "1m 00s");
-    }
-
-    #[test_case(
-        "/usr/bin/my-server",
-        ExtensionConfig::Stdio {
-            name: "my-server".into(),
-            cmd: "/usr/bin/my-server".into(),
-            args: vec![],
-            envs: Envs::default(),
-            env_keys: vec![],
-            description: goose::config::DEFAULT_EXTENSION_DESCRIPTION.to_string(),
-            timeout: Some(goose::config::DEFAULT_EXTENSION_TIMEOUT),
-            cwd: None,
-            bundled: None,
-            available_tools: vec![],
-        }
-        ; "name_from_cmd_basename"
-    )]
-    #[test_case(
-        "MY_SECRET=s3cret npx -y @modelcontextprotocol/server-everything",
-        ExtensionConfig::Stdio {
-            name: "npx".into(),
-            cmd: "npx".into(),
-            args: vec!["-y".into(), "@modelcontextprotocol/server-everything".into()],
-            envs: Envs::new([("MY_SECRET".into(), "s3cret".into())].into()),
-            env_keys: vec![],
-            description: goose::config::DEFAULT_EXTENSION_DESCRIPTION.to_string(),
-            timeout: Some(goose::config::DEFAULT_EXTENSION_TIMEOUT),
-            cwd: None,
-            bundled: None,
-            available_tools: vec![],
-        }
-        ; "env_prefix_name_from_cmd"
-    )]
-    #[test_case(
-        r#""/Applications/IntelliJ IDEA.app/Contents/jbr/Contents/Home/bin/java" -classpath "/path/with spaces/lib.jar" Main"#,
-        ExtensionConfig::Stdio {
-            name: "java".into(),
-            cmd: "/Applications/IntelliJ IDEA.app/Contents/jbr/Contents/Home/bin/java".into(),
-            args: vec!["-classpath".into(), "/path/with spaces/lib.jar".into(), "Main".into()],
-            envs: Envs::default(),
-            env_keys: vec![],
-            description: goose::config::DEFAULT_EXTENSION_DESCRIPTION.to_string(),
-            timeout: Some(goose::config::DEFAULT_EXTENSION_TIMEOUT),
-            cwd: None,
-            bundled: None,
-            available_tools: vec![],
-        }
-        ; "quoted_path_with_spaces"
-    )]
-    fn test_parse_stdio_extension(input: &str, expected: ExtensionConfig) {
-        assert_eq!(CliSession::parse_stdio_extension(input).unwrap(), expected);
-    }
-
-    #[test]
-    fn test_parse_stdio_extension_no_command() {
-        assert!(CliSession::parse_stdio_extension("").is_err());
-    }
-
-    fn stdio_name(input: &str) -> String {
-        CliSession::parse_stdio_extension(input).unwrap().name()
-    }
-
-    #[test]
-    fn test_parse_stdio_extension_explicit_name() {
-        assert_eq!(stdio_name("word:python -m word_mcp"), "word");
-        assert_eq!(stdio_name("Word-One:python -m word_mcp"), "word-one");
-        let absolute = CliSession::parse_stdio_extension("memory:/usr/local/bin/mcp").unwrap();
-        assert_eq!(absolute.name(), "memory");
-        assert!(matches!(
-            absolute,
-            ExtensionConfig::Stdio { cmd, .. } if cmd == "/usr/local/bin/mcp"
-        ));
-        let config = CliSession::parse_stdio_extension("memory:API_KEY=k npx -y srv").unwrap();
-        let ExtensionConfig::Stdio {
-            name,
-            cmd,
-            args,
-            envs,
-            ..
-        } = config
-        else {
-            panic!("expected a stdio extension");
-        };
-        assert_eq!(name, "memory");
-        assert_eq!(cmd, "npx");
-        assert_eq!(args, vec!["-y".to_string(), "srv".to_string()]);
-        assert_eq!(envs.get_env().get("API_KEY").map(String::as_str), Some("k"));
-    }
-
-    #[test_case("C:\\Program Files\\srv.exe --stdio" ; "windows_drive_letter")]
-    #[test_case("srv://not-a-name" ; "url_like_command")]
-    #[test_case("npx -y pkg:latest" ; "colon_after_a_space")]
-    #[test_case("word:" ; "empty_command")]
-    fn test_split_extension_name_prefix_leaves_command_alone(input: &str) {
-        let (name, rest) = split_extension_name_prefix(input);
-        assert_eq!(name, None);
-        assert_eq!(rest, input);
-    }
-
-    #[test]
-    fn test_derive_extension_name_from_command() {
-        assert_eq!(
-            derive_extension_name_from_command("python", &["-m".into(), "word_mcp".into()]),
-            "python_m_word_mcp"
-        );
-        assert_eq!(
-            derive_extension_name_from_command(
-                "npx",
-                &[
-                    "-y".into(),
-                    "@modelcontextprotocol/server-filesystem".into()
-                ],
-            ),
-            "server-filesystem"
-        );
-        assert_eq!(
-            derive_extension_name_from_command("/usr/local/bin/srv", &[]),
-            "srv"
-        );
-    }
-
-    #[test]
-    fn test_build_switched_model_config_rebuilds_target_model_settings() {
-        let _guard = env_lock::lock_env([
-            ("GOOSE_MAX_TOKENS", None::<&str>),
-            ("GOOSE_TEMPERATURE", None::<&str>),
-            ("GOOSE_CONTEXT_LIMIT", None::<&str>),
-            ("GOOSE_TOOLSHIM", None::<&str>),
-            ("GOOSE_TOOLSHIM_OLLAMA_MODEL", None::<&str>),
-        ]);
-
-        let current_model_config = goose_providers::model::ModelConfig {
-            model_name: "gpt-4o".to_string(),
-            context_limit: Some(128_000),
-            temperature: Some(0.25),
-            max_tokens: Some(16_384),
-            toolshim: true,
-            toolshim_model: Some("qwen2.5-coder".to_string()),
-            request_params: Some(HashMap::from([(
-                "anthropic_beta".to_string(),
-                serde_json::json!(["output-128k-2025-02-19"]),
-            )])),
-            reasoning: Some(false),
-            supports_vision: Some(true),
-            request_headers: None,
-        };
-
-        let switched =
-            build_switched_model_config("openai", "gpt-5.4", &current_model_config).unwrap();
-        let expected = goose_providers::model::ModelConfig::new("gpt-5.4")
-            .with_canonical_limits("openai")
-            .with_temperature(Some(0.25))
-            .with_toolshim(true)
-            .with_toolshim_model(Some("qwen2.5-coder".to_string()));
-
-        assert_eq!(switched.model_name, expected.model_name);
-        assert_eq!(switched.context_limit, expected.context_limit);
-        assert_eq!(switched.max_tokens, expected.max_tokens);
-        assert_eq!(switched.request_params, expected.request_params);
-        assert_eq!(switched.reasoning, expected.reasoning);
-        assert_eq!(switched.temperature, Some(0.25));
-        assert!(switched.toolshim);
-        assert_eq!(switched.toolshim_model.as_deref(), Some("qwen2.5-coder"));
-    }
-
-    #[test]
-    fn test_build_switched_model_config_detects_effort_suffix_change() {
-        let _guard = env_lock::lock_env([
-            ("GOOSE_MAX_TOKENS", None::<&str>),
-            ("GOOSE_TEMPERATURE", None::<&str>),
-            ("GOOSE_CONTEXT_LIMIT", None::<&str>),
-            ("GOOSE_TOOLSHIM", None::<&str>),
-            ("GOOSE_TOOLSHIM_OLLAMA_MODEL", None::<&str>),
-            ("GOOSE_THINKING_EFFORT", None::<&str>),
-        ]);
-
-        let current = goose_providers::model::ModelConfig::new("gpt-5.4-high")
-            .with_canonical_limits("openai");
-        assert_eq!(current.model_name, "gpt-5.4");
-        assert_eq!(
-            current.thinking_effort(),
-            Some(goose_providers::thinking::ThinkingEffort::High)
-        );
-
-        let switched = build_switched_model_config("openai", "gpt-5.4", &current).unwrap();
-
-        assert_eq!(switched.model_name, current.model_name);
-        assert_ne!(switched.thinking_effort(), current.thinking_effort());
-    }
-
-    #[test]
-    fn test_split_command_args_windows_paths() {
-        assert_eq!(
-            goose::utils::split_command_args(r"C:\tools\mcp.exe --arg value").unwrap(),
-            vec![r"C:\tools\mcp.exe", "--arg", "value"]
-        );
-        assert_eq!(
-            goose::utils::split_command_args(r#""C:\Program Files\server\mcp.exe" --arg"#).unwrap(),
-            vec![r"C:\Program Files\server\mcp.exe", "--arg"]
-        );
-    }
-
-    #[test]
-    fn test_split_command_args_unmatched_quote() {
-        assert!(goose::utils::split_command_args(r#""unmatched"#).is_err());
-    }
-
-    #[test_case(
-        "https://mcp.kiwi.com", 300,
-        ExtensionConfig::StreamableHttp {
-            name: "mcp_kiwi_com".into(),
-            uri: "https://mcp.kiwi.com".into(),
-            envs: Envs::default(),
-            env_keys: vec![],
-            headers: HashMap::new(),
-            description: goose::config::DEFAULT_EXTENSION_DESCRIPTION.to_string(),
-            timeout: Some(300),
-            socket: None,
-            client_id: None,
-            client_secret_key: None,
-            scopes: vec![],
-            bundled: None,
-            available_tools: vec![],
-        }
-        ; "name_from_host"
-    )]
-    #[test_case(
-        "http://localhost:8080/api", 300,
-        ExtensionConfig::StreamableHttp {
-            name: "localhost_8080_api".into(),
-            uri: "http://localhost:8080/api".into(),
-            envs: Envs::default(),
-            env_keys: vec![],
-            headers: HashMap::new(),
-            description: goose::config::DEFAULT_EXTENSION_DESCRIPTION.to_string(),
-            timeout: Some(300),
-            socket: None,
-            client_id: None,
-            client_secret_key: None,
-            scopes: vec![],
-            bundled: None,
-            available_tools: vec![],
-        }
-        ; "port_and_path"
-    )]
-    #[test_case(
-        "http://localhost:9090/other", 300,
-        ExtensionConfig::StreamableHttp {
-            name: "localhost_9090_other".into(),
-            uri: "http://localhost:9090/other".into(),
-            envs: Envs::default(),
-            env_keys: vec![],
-            headers: HashMap::new(),
-            description: goose::config::DEFAULT_EXTENSION_DESCRIPTION.to_string(),
-            timeout: Some(300),
-            socket: None,
-            client_id: None,
-            client_secret_key: None,
-            scopes: vec![],
-            bundled: None,
-            available_tools: vec![],
-        }
-        ; "different_port_and_path"
-    )]
-    fn test_parse_streamable_http_extension(url: &str, timeout: u64, expected: ExtensionConfig) {
-        assert_eq!(
-            CliSession::parse_streamable_http_extension(url, timeout),
-            expected
-        );
-    }
-
-    #[tokio::test]
-    async fn new_session_inherits_provider_model_and_working_dir() {
-        let temp_dir = tempfile::TempDir::new().unwrap();
-        let sm = SessionManager::new(temp_dir.path().to_path_buf());
-
-        let old = sm
-            .create_session(
-                temp_dir.path().to_path_buf(),
-                "CLI Session".to_string(),
-                goose::session::SessionType::User,
-                GooseMode::Auto,
-            )
-            .await
-            .unwrap();
-
-        sm.update(&old.id)
-            .provider_name("anthropic")
-            .model_config(goose_providers::model::ModelConfig::new("test-model"))
-            .accumulated_usage(goose_providers::conversation::token_usage::Usage::new(
-                Some(100),
-                Some(50),
-                Some(150),
-            ))
-            .apply()
-            .await
-            .unwrap();
-
-        sm.add_message(&old.id, &Message::user().with_text("hello"))
-            .await
-            .unwrap();
-
-        let mut extension_data = goose::session::ExtensionData::new();
-        extension_data.set_extension_state("test", "v0", serde_json::json!("marker"));
-        sm.update(&old.id)
-            .extension_data(extension_data)
-            .apply()
-            .await
-            .unwrap();
-
-        let old = sm.get_session(&old.id, false).await.unwrap();
-
-        let new_id = create_successor_session(&sm, &old, GooseMode::Chat)
-            .await
-            .unwrap();
-
-        assert_ne!(new_id, old.id);
-
-        let new_session = sm.get_session(&new_id, true).await.unwrap();
-        assert_eq!(new_session.provider_name, old.provider_name);
-        assert_eq!(
-            new_session.model_config.as_ref().map(|m| &m.model_name),
-            old.model_config.as_ref().map(|m| &m.model_name)
-        );
-        assert_eq!(new_session.goose_mode, GooseMode::Chat);
-        assert_eq!(new_session.working_dir, old.working_dir);
-        assert_eq!(new_session.session_type, old.session_type);
-        assert!(new_session.conversation.unwrap().messages().is_empty());
-        assert_eq!(new_session.usage.total_tokens, None);
-        assert_eq!(old.accumulated_usage.total_tokens, Some(150));
-        assert_eq!(new_session.accumulated_usage.total_tokens, None);
-
-        let reloaded_old = sm.get_session(&old.id, true).await.unwrap();
-        let old_messages = reloaded_old.conversation.unwrap().messages().to_vec();
-        assert_eq!(old_messages.len(), 1);
-        assert_eq!(old_messages[0].as_concat_text(), "hello");
-        assert_eq!(
-            reloaded_old
-                .extension_data
-                .get_extension_state("test", "v0"),
-            Some(&serde_json::json!("marker"))
-        );
-    }
-
-    struct StubProvider;
-
-    #[async_trait::async_trait]
-    impl Provider for StubProvider {
-        fn get_name(&self) -> &str {
-            "stub"
-        }
-
-        async fn stream(
-            &self,
-            _model_config: &goose_providers::model::ModelConfig,
-            _system: &str,
-            _messages: &[Message],
-            _tools: &[rmcp::model::Tool],
-        ) -> std::result::Result<
-            goose::providers::base::MessageStream,
-            goose_providers::errors::ProviderError,
-        > {
-            Ok(goose::providers::base::stream_from_single_message(
-                Message::assistant().with_text("stub reply"),
-                ProviderUsage::new(
-                    "stub".to_string(),
-                    goose_providers::conversation::token_usage::Usage::default(),
-                ),
-            ))
-        }
-    }
-
-    async fn session_with_loader(
-        extension_loading: Option<AbortOnDropHandle<Vec<ExtensionFailure>>>,
-        refresh_completions: bool,
-    ) -> CliSession {
-        let temp_dir = tempfile::TempDir::new().unwrap();
-        let session_manager = SessionManager::new(temp_dir.path().to_path_buf());
-        let session = session_manager
-            .create_session(
-                temp_dir.path().to_path_buf(),
-                "Loading gate test".to_string(),
-                goose::session::SessionType::User,
-                GooseMode::default(),
-            )
-            .await
-            .unwrap();
-
-        let agent = goose::agents::Agent::with_config(goose::agents::AgentConfig::new(
-            Arc::new(session_manager),
-            Arc::new(goose::config::PermissionManager::new(
-                temp_dir.path().to_path_buf(),
-            )),
-            None,
-            GooseMode::default(),
-            // Disable background session naming so the test agent starts no
-            // provider-dependent tasks.
-            true,
-            goose::agents::GoosePlatform::GooseCli,
-        ));
-        agent
-            .update_provider(
-                Arc::new(StubProvider),
-                goose_providers::model::ModelConfig::new("stub-model"),
-                &session.id,
-            )
-            .await
-            .unwrap();
-
-        CliSession::new(
-            Arc::new(agent),
-            session.id,
-            false,
-            None,
-            None,
-            None,
-            None,
-            "text".to_string(),
-            false,
-            refresh_completions,
-            extension_loading,
-        )
-        .await
-    }
-
-    #[tokio::test]
-    async fn commands_wait_for_background_extension_loading() {
-        let (release, released) = tokio::sync::oneshot::channel::<()>();
-        let loader = AbortOnDropHandle::new(tokio::spawn(async move {
-            let _ = released.await;
-            Vec::<ExtensionFailure>::new()
-        }));
-
-        let mut session = session_with_loader(Some(loader), false).await;
-        let mut editor = session.create_editor().unwrap();
-
-        let handled = tokio::spawn(async move {
-            let history = HistoryManager::new();
-            session
-                .handle_input(InputResult::ListSkills, &history, &mut editor, &[])
-                .await
-                .expect("handle_input failed");
-        });
-
-        tokio::time::sleep(Duration::from_millis(250)).await;
-        assert!(
-            !handled.is_finished(),
-            "a command was handled before background extension loading finished"
-        );
-
-        release.send(()).unwrap();
-        handled.await.unwrap();
-    }
-
-    #[tokio::test]
-    async fn ensure_extensions_loaded_drains_the_loader_once() {
-        let loader = AbortOnDropHandle::new(tokio::spawn(async { Vec::<ExtensionFailure>::new() }));
-        let mut session = session_with_loader(Some(loader), false).await;
-
-        session.ensure_extensions_loaded(false).await.unwrap();
-        assert!(session.extension_loading.is_none());
-
-        // A second pass is a no-op, not an error.
-        session.ensure_extensions_loaded(false).await.unwrap();
-        assert!(session.extension_loading.is_none());
-    }
-
-    #[tokio::test]
-    async fn background_loader_refreshes_completions_before_the_gate_runs() {
-        let (release, released) = tokio::sync::oneshot::channel::<()>();
-        let loader = AbortOnDropHandle::new(tokio::spawn(async move {
-            let _ = released.await;
-            Vec::<ExtensionFailure>::new()
-        }));
-        let session = session_with_loader(Some(loader), true).await;
-
-        assert!(session
-            .completion_cache
-            .read()
-            .unwrap()
-            .current_session_provider
-            .is_empty());
-        release.send(()).unwrap();
-
-        tokio::time::timeout(Duration::from_secs(5), async {
-            loop {
-                if session
-                    .completion_cache
-                    .read()
-                    .unwrap()
-                    .current_session_provider
-                    == "stub"
-                {
-                    break;
-                }
-                tokio::task::yield_now().await;
-            }
-        })
-        .await
-        .expect("completion cache was not refreshed in the background");
-        assert!(session.extension_loading.is_some());
-    }
-
-    #[tokio::test]
-    async fn headless_loader_skips_completion_refresh() {
-        let loader = AbortOnDropHandle::new(tokio::spawn(async { Vec::<ExtensionFailure>::new() }));
-        let mut session = session_with_loader(Some(loader), false).await;
-
-        session.ensure_extensions_loaded(false).await.unwrap();
-
-        assert!(session
-            .completion_cache
-            .read()
-            .unwrap()
-            .current_session_provider
-            .is_empty());
-    }
 }

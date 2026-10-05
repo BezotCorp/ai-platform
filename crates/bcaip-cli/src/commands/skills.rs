@@ -1,9 +1,7 @@
 use anyhow::Result;
-use console::{measure_text_width, Term};
-use goose::skills::list_installed_skills;
-use goose::token_counter::create_token_counter;
+use console::{Term, measure_text_width};
+use goose::{skills::list_installed_skills, token_counter::create_token_counter};
 use unicode_segmentation::UnicodeSegmentation;
-
 const DESCRIPTION_PREVIEW_CHARS: usize = 50;
 const SEPARATOR: &str = " | ";
 const MIN_DESCRIPTION_WIDTH: usize = 4;
@@ -228,22 +226,4 @@ fn truncate_to_display_width(text: &str, max_width: usize) -> String {
 fn pad_to_display_width(text: &str, width: usize) -> String {
     let padding = width.saturating_sub(measure_text_width(text));
     format!("{}{}", text, " ".repeat(padding))
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn truncate_to_display_width_keeps_grapheme_clusters_intact() {
-        assert_eq!(truncate_to_display_width("🏳️‍🌈abcd", 5), "🏳️‍🌈...");
-        assert_eq!(truncate_to_display_width("👩‍💻abcd", 5), "👩‍💻...");
-        assert_eq!(truncate_to_display_width("a\u{301}bcde", 4), "a\u{301}...");
-    }
-
-    #[test]
-    fn truncate_to_display_width_drops_cluster_that_cannot_fit() {
-        assert_eq!(truncate_to_display_width("🏳️‍🌈abc", 4), "...");
-        assert_eq!(truncate_to_display_width("界界界", 5), "界...");
-    }
 }

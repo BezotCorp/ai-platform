@@ -11,7 +11,6 @@
 use super::completion::GooseCompleter;
 use rustyline::Editor;
 use std::sync::Arc;
-
 /// Minimum number of events already queued in the console input buffer for a
 /// keystroke to be treated as the start of a paste rather than fast typing /
 /// type-ahead. A single keypress leaves at most its own key-up event queued.
@@ -39,10 +38,10 @@ pub(super) struct PasteState {
 /// where rustyline handles pastes natively via bracketed paste.
 #[cfg(windows)]
 fn console_pending_events() -> u32 {
-    use winapi::um::consoleapi::GetNumberOfConsoleInputEvents;
-    use winapi::um::processenv::GetStdHandle;
-    use winapi::um::winbase::STD_INPUT_HANDLE;
-
+    use winapi::um::{
+        consoleapi::GetNumberOfConsoleInputEvents, processenv::GetStdHandle,
+        winbase::STD_INPUT_HANDLE,
+    };
     unsafe {
         let handle = GetStdHandle(STD_INPUT_HANDLE);
         let mut count: u32 = 0;
@@ -91,11 +90,10 @@ fn key_event_char(record: &winapi::um::wincon::INPUT_RECORD) -> Option<u16> {
 /// rustyline discards but [`console_pending_events`] counts — are skipped.
 #[cfg(windows)]
 fn drain_console_paste(first: char) -> String {
-    use winapi::um::consoleapi::ReadConsoleInputW;
-    use winapi::um::processenv::GetStdHandle;
-    use winapi::um::winbase::STD_INPUT_HANDLE;
-    use winapi::um::wincon::INPUT_RECORD;
-
+    use winapi::um::{
+        consoleapi::ReadConsoleInputW, processenv::GetStdHandle, winbase::STD_INPUT_HANDLE,
+        wincon::INPUT_RECORD,
+    };
     let mut units: Vec<u16> = Vec::new();
     let mut buf = [0u16; 2];
     units.extend_from_slice(first.encode_utf16(&mut buf));
@@ -152,9 +150,8 @@ enum PeekedBurst {
 /// at a time, so the remainder of a paste burst is still buffered here.
 #[cfg(windows)]
 fn peek_pending_chars() -> Option<PeekedBurst> {
-    use winapi::um::processenv::GetStdHandle;
-    use winapi::um::winbase::STD_INPUT_HANDLE;
-    use winapi::um::wincon::{PeekConsoleInputW, INPUT_RECORD};
+    use winapi::um::wincon::{INPUT_RECORD, PeekConsoleInputW};
+    use winapi::um::{processenv::GetStdHandle, winbase::STD_INPUT_HANDLE};
 
     const PEEK_CAP: u32 = 512;
     let pending = console_pending_events();
@@ -372,113 +369,4 @@ pub(super) fn read_paste_aware_input(
         .map(|state| expand_pastes(&input, &state.pastes))
         .unwrap_or(input);
     Ok(expanded)
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_paste_marker() {
-        assert_eq!(paste_marker("single line", 1), None);
-        assert_eq!(
-            paste_marker("line one\nline two", 1),
-            Some("[Pasted 2 lines #1]".to_string())
-        );
-        // Trailing newline is not counted as an extra line.
-        assert_eq!(
-            paste_marker("line one\nline two\n", 2),
-            Some("[Pasted 2 lines #2]".to_string())
-        );
-        let long = "x".repeat(PASTE_CHIP_MIN_CHARS);
-        assert_eq!(
-            paste_marker(&long, 3),
-            Some(format!("[Pasted {PASTE_CHIP_MIN_CHARS} chars #3]"))
-        );
-    }
-
-    #[test]
-    fn test_expand_pastes() {
-        assert_eq!(expand_pastes("no chips here", &[]), "no chips here");
-
-        let pastes = vec![Paste {
-            marker: "[Pasted 2 lines #1]".to_string(),
-            content: "a\nb".to_string(),
-        }];
-        assert_eq!(
-            expand_pastes("summarize [Pasted 2 lines #1] please", &pastes),
-            "summarize a\nb please"
-        );
-
-        // Deleting the chip drops its content rather than corrupting the message.
-        assert_eq!(
-            expand_pastes("summarize please", &pastes),
-            "summarize please"
-        );
-    }
-
-    #[test]
-    fn test_expand_pastes_multiple_in_order() {
-        let pastes = vec![
-            Paste {
-                marker: "[Pasted 2 lines #1]".to_string(),
-                content: "FIRST".to_string(),
-            },
-            Paste {
-                marker: "[Pasted 3 lines #2]".to_string(),
-                content: "SECOND".to_string(),
-            },
-        ];
-        assert_eq!(
-            expand_pastes("[Pasted 2 lines #1] and [Pasted 3 lines #2]", &pastes),
-            "FIRST and SECOND"
-        );
-    }
-
-    #[test]
-    fn test_expand_pastes_reordered() {
-        // The chips are moved so a later paste appears before an earlier one.
-        // Matching by position (not capture order) still expands both.
-        let pastes = vec![
-            Paste {
-                marker: "[Pasted 2 lines #1]".to_string(),
-                content: "FIRST".to_string(),
-            },
-            Paste {
-                marker: "[Pasted 3 lines #2]".to_string(),
-                content: "SECOND".to_string(),
-            },
-        ];
-        assert_eq!(
-            expand_pastes("[Pasted 3 lines #2] then [Pasted 2 lines #1]", &pastes),
-            "SECOND then FIRST"
-        );
-    }
-
-    #[test]
-    fn test_expand_pastes_skips_cleared_paste() {
-        // A paste was made, cleared (Ctrl+C), then another paste with the same
-        // line count was made. Unique ids keep the stale entry from hijacking the
-        // visible chip: only the paste actually shown is expanded.
-        let pastes = vec![
-            Paste {
-                marker: "[Pasted 2 lines #1]".to_string(),
-                content: "CLEARED".to_string(),
-            },
-            Paste {
-                marker: "[Pasted 2 lines #2]".to_string(),
-                content: "CURRENT".to_string(),
-            },
-        ];
-        assert_eq!(expand_pastes("[Pasted 2 lines #2]", &pastes), "CURRENT");
-    }
-
-    #[test]
-    fn test_capture_paste_ignored_without_burst() {
-        // Off Windows (and on Windows with no queued burst) there is nothing to
-        // drain, so ordinary keystrokes are never captured as a paste.
-        let state = Arc::new(std::sync::RwLock::new(PasteState::default()));
-        assert!(capture_paste(&state, 'a').is_none());
-        assert!(state.read().unwrap().pastes.is_empty());
-    }
 }

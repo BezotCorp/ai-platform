@@ -2,7 +2,7 @@
 
 use super::*;
 use std::fs::File;
-use std::future::{poll_fn, Future};
+use std::future::{Future, poll_fn};
 use std::io::Read;
 use std::os::fd::{AsRawFd, FromRawFd};
 use std::os::unix::process::CommandExt;
@@ -11,7 +11,6 @@ use std::task::Poll;
 use std::time::{Duration, Instant};
 use test_case::test_case;
 use tokio_util::sync::CancellationToken;
-
 const CHILD_MODE: &str = "GOOSE_ELICITATION_SIGNAL_TEST";
 
 struct ChildGuard(Child);

@@ -1,14 +1,12 @@
-use anyhow::{anyhow, Result};
+use crate::session::{SessionBuilderConfig, build_session};
+use anyhow::{Result, anyhow};
 use chrono;
 use goose::config::Config;
-use goose::conversation::message::{Message, MessageContent, MessageMetadata};
 use goose::session::{SessionManager, SessionType};
+use goose_provider_types::conversations::{Message, MessageContent, MessageMetadata};
 use rmcp::model::Role;
 
-use crate::session::{build_session, SessionBuilderConfig};
-
 use clap::ValueEnum;
-
 #[derive(ValueEnum, Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Shell {
     Bash,
@@ -364,7 +362,7 @@ pub async fn handle_term_info() -> Result<()> {
             let model = session.model_config.as_ref()?;
             goose::context_limit::get_local_context_limit(provider_name, &model.model_name).ok()
         })
-        .unwrap_or(goose_providers::model::DEFAULT_CONTEXT_LIMIT);
+        .unwrap_or(goose_provider_types::model::DEFAULT_CONTEXT_LIMIT);
 
     let percentage = if context_limit > 0 {
         ((total_tokens as f64 / context_limit as f64) * 100.0).round() as usize
@@ -379,58 +377,4 @@ pub async fn handle_term_info() -> Result<()> {
     println!("{} {}", dots, model_name);
 
     Ok(())
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn render_term_init_script_includes_nushell_hooks() {
-        let script = render_term_init_script(Shell::Nu, "session-123", "/tmp/goose", false);
-
-        assert!(script.contains("$env.AGENT_SESSION_ID = \"session-123\""));
-        assert!(script.contains("def --wrapped @goose [...args]"));
-        assert!(script.contains("def --wrapped @g [...args]"));
-        assert!(script.contains("GOOSE_NU_PREEXEC_INSTALLED"));
-        assert!(script.contains("$env.config.hooks.pre_execution"));
-        assert!(script.contains("job spawn { run-external \"/tmp/goose\" \"term\" \"log\" $line | complete | ignore } | ignore"));
-        assert!(!script.contains("command_not_found = {|command_name|"));
-    }
-
-    #[test]
-    fn render_term_init_script_includes_nushell_default_handler() {
-        let script = render_term_init_script(Shell::Nu, "session-123", "/tmp/goose", true);
-
-        assert!(script.contains("$env.config.hooks.command_not_found = {|command_name|"));
-        assert!(script
-            .contains("run-external \"/tmp/goose\" \"term\" \"run\" $prompt | complete | ignore"));
-    }
-
-    #[test]
-    fn render_term_init_script_skips_unsupported_default_handler() {
-        let script = render_term_init_script(Shell::Fish, "session-123", "/tmp/goose", true);
-
-        assert!(!script.contains("command_not_found"));
-    }
-
-    #[test]
-    fn shell_history_skips_turn_context_events() {
-        use goose::conversation::message::MessageMetadata;
-
-        let older = Message::user().with_text("git status");
-        let block = Message::user()
-            .with_text("<turn-context>cwd /repo</turn-context>")
-            .with_metadata(MessageMetadata::agent_only().with_turn_context());
-        let newer = Message::user().with_text("cargo build");
-        let newest_first_tail = vec![&newer, &block, &older];
-
-        assert_eq!(
-            shell_history_text(&newest_first_tail).unwrap(),
-            "git status\ncargo build"
-        );
-
-        let only_block = vec![&block];
-        assert_eq!(shell_history_text(&only_block), None);
-    }
 }

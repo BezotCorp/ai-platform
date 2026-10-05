@@ -12,13 +12,11 @@
 //! Each accepted connection gets a **fresh** agent (never one shared across
 //! clients); every client drives its own independent sessions.
 
-use std::sync::Arc;
-
 use futures::future::BoxFuture;
 use futures::io::{AsyncRead, AsyncWrite};
+use std::sync::Arc;
 
-use goose::acp::server::serve;
-use goose::acp::server_factory::AcpServer;
+use goose::acp::{server::serve, server_factory::AcpServer};
 use goose_roaming::{AcpStreamServer, EndpointId};
 
 /// An [`AcpStreamServer`] that serves goose's full ACP surface, a fresh agent

@@ -9,19 +9,17 @@
 //! not send our local cwd — the host imposes the `share` working directory.
 
 use std::io::Write;
-
 use tokio::io::{AsyncBufReadExt, BufReader};
 
+use agent_client_protocol::schema::ProtocolVersion;
 use agent_client_protocol::schema::v1::{
     ContentBlock, InitializeRequest, ListSessionsRequest, LoadSessionRequest, PromptRequest,
     RequestPermissionOutcome, RequestPermissionRequest, RequestPermissionResponse,
     SelectedPermissionOutcome, SessionId, SessionInfo, SessionNotification, SessionUpdate,
 };
-use agent_client_protocol::schema::ProtocolVersion;
 use agent_client_protocol::{Agent, Client, ConnectionTo};
 use anyhow::Result;
 use goose_roaming::RoamingClientStream;
-
 /// Run an interactive ACP session over an authorized roaming stream, reading
 /// prompts from stdin until EOF / quit.
 pub async fn run_interactive(stream: RoamingClientStream, agent_label: String) -> Result<()> {

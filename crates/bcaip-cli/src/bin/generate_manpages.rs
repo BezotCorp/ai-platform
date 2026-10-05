@@ -16,14 +16,10 @@
 //!
 //! Output: target/man/goose.1, target/man/goose-session.1, etc.
 
+use bcaip_cli::Cli;
 use clap::CommandFactory;
 use clap_mangen::Man;
-use goose_cli::Cli;
-use std::env;
-use std::fs;
-use std::io::Result;
-use std::path::PathBuf;
-
+use std::{env, fs, io::Result, path::PathBuf};
 fn main() -> Result<()> {
     // Manpages are a Unix/Linux convention - skip generation on Windows
     if cfg!(target_os = "windows") {

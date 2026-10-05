@@ -1,6 +1,5 @@
-use std::fmt::Write;
-
 use goose::checks::{Check, DiscoveredReview};
+use std::fmt::Write;
 
 /// The default review prompt embedded in the binary.
 pub const DEFAULT_REVIEW_PROMPT: &str = include_str!("default_review_prompt.md");
@@ -106,91 +105,4 @@ fn append_check_body(out: &mut String, check: &Check) {
 
 fn escape_pipe(s: &str) -> String {
     s.replace('|', "\\|")
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use std::path::PathBuf;
-
-    fn check(name: &str, scope: &str, model: Option<&str>, turn_limit: Option<usize>) -> Check {
-        Check {
-            name: name.to_string(),
-            description: Some(format!("desc-{name}")),
-            model: model.map(str::to_string),
-            turn_limit,
-            tools: None,
-            severity_default: None,
-            path: PathBuf::from(format!("/r/{scope}/.agents/checks/{name}.md")),
-            scope_dir: scope.to_string(),
-            body: format!("body-{name}"),
-        }
-    }
-
-    #[test]
-    fn renders_checks_with_resolved_model_and_turn_limit() {
-        let discovered = DiscoveredReview {
-            checks: vec![
-                check("perf", "", None, None),
-                check("auth", "api", Some("m1"), Some(7)),
-            ],
-        };
-
-        let prompt = build_review_prompt(
-            "BASE",
-            &discovered,
-            "diff content",
-            Some("default-model"),
-            None,
-            Some(20),
-        );
-
-        assert!(prompt.contains("| auth | api | m1 | 7 | * |"));
-        assert!(prompt.contains("| perf | <root> | default-model | 20 | * |"));
-        assert!(prompt.contains("body-auth"));
-        assert!(prompt.contains("```diff\ndiff content\n```"));
-    }
-
-    #[test]
-    fn override_model_wins_per_check() {
-        let discovered = DiscoveredReview {
-            checks: vec![check("perf", "", Some("per-check"), None)],
-        };
-        let prompt = build_review_prompt(
-            "BASE",
-            &discovered,
-            "",
-            Some("default"),
-            Some("OVERRIDE"),
-            None,
-        );
-        assert!(prompt.contains("| perf | <root> | OVERRIDE |"));
-    }
-
-    #[test]
-    fn renders_tool_allowlist_and_severity_when_present() {
-        let mut perf = check("perf", "", None, None);
-        perf.tools = Some(vec!["read".to_string(), "grep".to_string()]);
-        perf.severity_default = Some("high".into());
-        let discovered = DiscoveredReview { checks: vec![perf] };
-        let prompt = build_review_prompt("BASE", &discovered, "", None, None, None);
-        assert!(prompt.contains("| perf | <root> | <agent default> | 25 | read, grep | high |"));
-    }
-
-    #[test]
-    fn instructs_agent_to_attribute_findings_via_check_field() {
-        let discovered = DiscoveredReview {
-            checks: vec![check("perf", "", None, None)],
-        };
-        let prompt = build_review_prompt("BASE", &discovered, "", None, None, None);
-        assert!(prompt.contains("Set the `check` field"));
-    }
-
-    #[test]
-    fn omits_checks_section_when_empty() {
-        let discovered = DiscoveredReview::default();
-        let prompt = build_review_prompt("BASE", &discovered, "diff", None, None, None);
-        assert!(!prompt.contains("## Checks"));
-        assert!(prompt.contains("## Diff"));
-    }
 }

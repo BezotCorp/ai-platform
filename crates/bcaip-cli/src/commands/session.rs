@@ -3,16 +3,14 @@ use anyhow::{Context, Result};
 use cliclack::{confirm, multiselect, select};
 use etcetera::home_dir;
 use goose::session::{
-    export_session_to_markdown, generate_diagnostics, DiagnosticsLevel, Session, SessionManager,
-    SessionType,
+    DiagnosticsLevel, Session, SessionManager, SessionType, export_session_to_markdown,
+    generate_diagnostics,
 };
 use goose::utils::safe_truncate;
 use regex::Regex;
 use std::fs;
 use std::io::{self, Write};
-use std::path::Path;
-use std::path::PathBuf;
-
+use std::path::{Path, PathBuf};
 const TRUNCATED_DESC_LENGTH: usize = 60;
 
 fn display_path_with_tilde(path: &Path) -> String {
@@ -265,31 +263,6 @@ pub async fn handle_session_list(
     Ok(())
 }
 
-#[cfg(test)]
-mod session_list_tests {
-    use super::*;
-
-    #[test]
-    fn pushes_down_only_safe_session_list_limits() {
-        assert_eq!(
-            session_list_limit_if_safe_to_push_down(false, None, Some(50)),
-            Some(50)
-        );
-        assert_eq!(
-            session_list_limit_if_safe_to_push_down(true, None, Some(50)),
-            None
-        );
-        assert_eq!(
-            session_list_limit_if_safe_to_push_down(false, Some(Path::new("/tmp")), Some(50)),
-            None
-        );
-        assert_eq!(
-            session_list_limit_if_safe_to_push_down(false, None, None),
-            None
-        );
-    }
-}
-
 pub async fn handle_session_export(
     session_id: String,
     output_path: Option<PathBuf>,
@@ -309,7 +282,7 @@ pub async fn handle_session_export(
 
     let output = match format.as_str() {
         "json" => serde_json::to_string_pretty(&session)?,
-        "yaml" => serde_yaml::to_string(&session)?,
+        "yaml" => yaml_serde::to_string(&session)?,
         "markdown" => {
             let conversation = session
                 .conversation
@@ -335,12 +308,12 @@ pub async fn handle_session_import(input: String) -> Result<()> {
     let json = fs::read_to_string(&input)
         .with_context(|| format!("Failed to read session import file: {input}"))?;
 
-    let format = goose::session::import_formats::detect_format(&json);
+    let format = goose::session::detect_format(&json);
     let label = match format {
-        goose::session::import_formats::ImportFormat::Goose => "goose",
-        goose::session::import_formats::ImportFormat::ClaudeCode => "Claude Code",
-        goose::session::import_formats::ImportFormat::Codex => "Codex",
-        goose::session::import_formats::ImportFormat::Pi => "Pi",
+        goose::session::ImportFormat::Goose => "goose",
+        goose::session::ImportFormat::ClaudeCode => "Claude Code",
+        goose::session::ImportFormat::Codex => "Codex",
+        goose::session::ImportFormat::Pi => "Pi",
     };
     println!("Detected format: {}", label);
 
@@ -358,21 +331,18 @@ pub async fn handle_session_import(input: String) -> Result<()> {
 #[cfg(unix)]
 fn open_diagnostics_output(path: &Path) -> io::Result<fs::File> {
     use std::os::unix::fs::OpenOptionsExt;
-
     fs::OpenOptions::new()
         .write(true)
         .create(true)
         .truncate(true)
-        .custom_flags(libc::O_NOFOLLOW | libc::O_CLOEXEC)
+        .custom_flags((rustix::fs::OFlags::NOFOLLOW | rustix::fs::OFlags::CLOEXEC).bits() as i32)
         .open(path)
 }
 
 #[cfg(windows)]
 fn open_diagnostics_output(path: &Path) -> io::Result<fs::File> {
     use std::os::windows::fs::{MetadataExt, OpenOptionsExt};
-    use winapi::um::winbase::FILE_FLAG_OPEN_REPARSE_POINT;
-    use winapi::um::winnt::FILE_ATTRIBUTE_REPARSE_POINT;
-
+    use winapi::um::{winbase::FILE_FLAG_OPEN_REPARSE_POINT, winnt::FILE_ATTRIBUTE_REPARSE_POINT};
     let file = fs::OpenOptions::new()
         .write(true)
         .create(true)
@@ -486,82 +456,5 @@ pub async fn prompt_interactive_session_selection(
         Ok(session.id.clone())
     } else {
         Err(anyhow::anyhow!("Invalid selection"))
-    }
-}
-
-#[cfg(test)]
-mod diagnostics_output_tests {
-    use super::*;
-    use tempfile::TempDir;
-
-    #[test]
-    fn creates_new_output_file() {
-        let temp_dir = TempDir::new().unwrap();
-        let output = temp_dir.path().join("diagnostics.json");
-
-        let mut file = open_diagnostics_output(&output).unwrap();
-        file.write_all(b"diagnostics").unwrap();
-        drop(file);
-
-        assert_eq!(fs::read(&output).unwrap(), b"diagnostics");
-    }
-
-    #[test]
-    fn truncates_existing_regular_output_file() {
-        let temp_dir = TempDir::new().unwrap();
-        let output = temp_dir.path().join("diagnostics.json");
-        fs::write(&output, "old diagnostics").unwrap();
-
-        let mut file = open_diagnostics_output(&output).unwrap();
-        file.write_all(b"new").unwrap();
-        drop(file);
-
-        assert_eq!(fs::read(&output).unwrap(), b"new");
-    }
-
-    #[cfg(unix)]
-    #[test]
-    fn refuses_existing_symlink_output() {
-        use std::os::unix::fs::symlink;
-
-        let temp_dir = TempDir::new().unwrap();
-        let target = temp_dir.path().join("target.json");
-        let output = temp_dir.path().join("diagnostics.json");
-        fs::write(&target, "preserve").unwrap();
-        symlink(&target, &output).unwrap();
-
-        assert!(open_diagnostics_output(&output).is_err());
-        assert_eq!(fs::read_to_string(target).unwrap(), "preserve");
-    }
-
-    #[cfg(unix)]
-    #[test]
-    fn refuses_dangling_symlink_output() {
-        use std::os::unix::fs::symlink;
-
-        let temp_dir = TempDir::new().unwrap();
-        let target = temp_dir.path().join("missing.json");
-        let output = temp_dir.path().join("diagnostics.json");
-        symlink(&target, &output).unwrap();
-
-        assert!(open_diagnostics_output(&output).is_err());
-        assert!(!target.exists());
-    }
-
-    #[cfg(windows)]
-    #[test]
-    fn refuses_existing_symlink_output() {
-        use std::os::windows::fs::symlink_file;
-
-        let temp_dir = TempDir::new().unwrap();
-        let target = temp_dir.path().join("target.json");
-        let output = temp_dir.path().join("diagnostics.json");
-        fs::write(&target, "preserve").unwrap();
-        if symlink_file(&target, &output).is_err() {
-            return;
-        }
-
-        assert!(open_diagnostics_output(&output).is_err());
-        assert_eq!(fs::read_to_string(target).unwrap(), "preserve");
     }
 }

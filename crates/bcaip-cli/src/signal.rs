@@ -1,7 +1,5 @@
-use std::future::Future;
-use std::pin::Pin;
+use std::{future::Future, pin::Pin};
 use tokio::signal;
-
 #[cfg(unix)]
 pub fn shutdown_signal() -> Pin<Box<dyn Future<Output = ()> + Send>> {
     Box::pin(async move {

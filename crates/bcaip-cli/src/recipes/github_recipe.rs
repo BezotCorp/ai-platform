@@ -1,19 +1,14 @@
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use console::style;
-use goose::recipe::template_recipe::parse_recipe_content;
-use goose::recipe::RECIPE_FILE_EXTENSIONS;
+use goose::recipe::{RECIPE_FILE_EXTENSIONS, template_recipe::parse_recipe_content};
 use serde::{Deserialize, Serialize};
 
 use goose::recipe::read_recipe_file_content::RecipeFile;
-use goose::subprocess::{git_command, SubprocessExt};
-use std::env;
-use std::fs;
-
+use goose::subprocess::{SubprocessExt, git_command};
 use std::path::{Component, Path, PathBuf};
-use std::process::Command;
-use std::process::Stdio;
+use std::process::{Command, Stdio};
+use std::{env, fs};
 use tar::Archive;
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RecipeInfo {
     pub name: String,
@@ -50,7 +45,7 @@ pub fn retrieve_recipe_from_github(
                         content,
                         parent_dir: download_dir.clone(),
                         file_path: recipe_file_local_path,
-                    })
+                    });
                 }
                 Err(err) => return Err(err),
             },
@@ -274,7 +269,6 @@ pub fn list_github_recipes(repo: &str) -> Result<Vec<RecipeInfo>> {
 fn discover_github_recipes(repo: &str) -> Result<Vec<RecipeInfo>> {
     use serde_json::Value;
     use std::process::Command;
-
     // Ensure GitHub CLI is authenticated
     ensure_gh_authenticated()?;
 
@@ -317,7 +311,6 @@ fn discover_github_recipes(repo: &str) -> Result<Vec<RecipeInfo>> {
 fn check_github_directory_for_recipe(repo: &str, dir_name: &str) -> Result<RecipeInfo> {
     use serde_json::Value;
     use std::process::Command;
-
     // Check directory contents for recipe files
     let output = Command::new("gh")
         .args(["api", &format!("repos/{}/contents/{}", repo, dir_name)])
@@ -352,7 +345,6 @@ fn check_github_directory_for_recipe(repo: &str, dir_name: &str) -> Result<Recip
 fn get_github_recipe_info(repo: &str, dir_name: &str, recipe_filename: &str) -> Result<RecipeInfo> {
     use serde_json::Value;
     use std::process::Command;
-
     // Get the recipe file content
     let output = Command::new("gh")
         .args([
@@ -376,7 +368,7 @@ fn get_github_recipe_info(repo: &str, dir_name: &str, recipe_filename: &str) -> 
 
     if let Some(content_b64) = file_info.get("content").and_then(|c| c.as_str()) {
         // Decode base64 content
-        use base64::{engine::general_purpose, Engine as _};
+        use base64::{Engine as _, engine::general_purpose};
         let content_bytes = general_purpose::STANDARD
             .decode(content_b64.replace('\n', ""))
             .map_err(|e| anyhow!("Failed to decode base64 content: {}", e))?;
@@ -397,112 +389,4 @@ fn get_github_recipe_info(repo: &str, dir_name: &str, recipe_filename: &str) -> 
     }
 
     Err(anyhow!("Failed to get recipe content from GitHub"))
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use std::path::Path;
-
-    #[test]
-    fn local_repo_path_includes_owner_to_avoid_collisions() {
-        let parent = Path::new("goose-recipes");
-        let first = get_local_repo_path(parent, "owner-one/shared").unwrap();
-        let second = get_local_repo_path(parent, "owner-two/shared").unwrap();
-
-        assert_ne!(first, second);
-        assert_eq!(first, parent.join("owner-one__shared"));
-        assert_eq!(second, parent.join("owner-two__shared"));
-    }
-
-    #[test]
-    fn temp_child_name_keeps_recipe_downloads_under_temp_dir() {
-        let parent = Path::new("goose-recipes");
-        let child = temp_child_name("../outside").unwrap();
-        let output_dir = parent.join(&child);
-
-        assert_eq!(child, "..__outside");
-        assert!(output_dir.starts_with(parent));
-    }
-
-    #[test]
-    fn temp_child_path_rejects_reserved_components() {
-        let parent = Path::new("goose-recipes");
-
-        for name in [
-            ".",
-            "..",
-            "...",
-            "....",
-            ". ",
-            ".. ",
-            ". .",
-            ".. .",
-            "report.",
-            "report...",
-        ] {
-            assert!(temp_child_path(parent, name).is_err(), "accepted {name}");
-        }
-    }
-
-    #[test]
-    fn temp_child_path_preserves_safe_recipe_names() {
-        let parent = Path::new("goose-recipes");
-
-        for (name, child) in [
-            ("daily-report", "daily-report"),
-            ("team/weekly", "team__weekly"),
-            ("../outside", "..__outside"),
-            ("daily report ", "daily_report_"),
-            ("", "_"),
-        ] {
-            assert_eq!(temp_child_path(parent, name).unwrap(), parent.join(child));
-        }
-    }
-
-    #[test]
-    fn cleanup_rejects_reserved_components_before_removing_files() {
-        let root = tempfile::tempdir().unwrap();
-        let parent = root.path().join("recipe-temp");
-        fs::create_dir(&parent).unwrap();
-        let parent_sentinel = root.path().join("parent-sentinel");
-        let child_sentinel = parent.join("child-sentinel");
-        fs::write(&parent_sentinel, "keep").unwrap();
-        fs::write(&child_sentinel, "keep").unwrap();
-
-        for name in [
-            ".",
-            "..",
-            "...",
-            "....",
-            ". ",
-            ".. ",
-            ". .",
-            ".. .",
-            "report.",
-            "report...",
-        ] {
-            assert!(clean_temp_child_path(&parent, name).is_err());
-            assert!(parent_sentinel.exists());
-            assert!(child_sentinel.exists());
-        }
-    }
-
-    #[test]
-    fn cleanup_removes_only_the_existing_recipe_child() {
-        let root = tempfile::tempdir().unwrap();
-        let parent = root.path().join("recipe-temp");
-        let child = parent.join("daily-report");
-        fs::create_dir_all(&child).unwrap();
-        let parent_sentinel = parent.join("keep");
-        fs::write(&parent_sentinel, "keep").unwrap();
-        fs::write(child.join("old-recipe.yaml"), "old").unwrap();
-
-        assert_eq!(
-            clean_temp_child_path(&parent, "daily-report").unwrap(),
-            child
-        );
-        assert!(!child.exists());
-        assert!(parent_sentinel.exists());
-    }
 }

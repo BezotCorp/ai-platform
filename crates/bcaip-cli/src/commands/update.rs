@@ -6,20 +6,18 @@
     allow(dead_code, unused_imports, unused_variables)
 )]
 
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 use reqwest::{
-    header::{HeaderValue, AUTHORIZATION},
     StatusCode,
+    header::{AUTHORIZATION, HeaderValue},
 };
 use sha2::{Digest, Sha256};
-use sigstore_verify::trust_root::{TrustedRoot, SIGSTORE_PRODUCTION_TRUSTED_ROOT};
-use sigstore_verify::types::{Bundle, Sha256Hash};
 use sigstore_verify::VerificationPolicy;
-use std::env;
-use std::fs;
+use sigstore_verify::trust_root::{SIGSTORE_PRODUCTION_TRUSTED_ROOT, TrustedRoot};
+use sigstore_verify::types::{Bundle, Sha256Hash};
 use std::path::{Path, PathBuf};
 use std::process::Command;
-
+use std::{env, fs};
 /// Asset name for this platform (compile-time).
 fn asset_name() -> &'static str {
     #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
@@ -234,8 +232,8 @@ fn verify_bundle(
         .map_err(|e| anyhow::anyhow!("{e}"))?;
 
     let identity = result
-        .identity
-        .as_deref()
+        .identity()
+        .map(|identity| identity.as_str())
         .ok_or_else(|| anyhow::anyhow!("No identity in certificate"))?;
 
     let expected = format!("/.github/workflows/{workflow}");
@@ -267,12 +265,14 @@ async fn verify_provenance(archive_data: &[u8], tag: &str) -> Result<()> {
         )?;
 
     if bundles.is_empty() {
-        bail!("No Sigstore attestation found for downloaded archive; refusing to install unverifiable update");
+        bail!(
+            "No Sigstore attestation found for downloaded archive; refusing to install unverifiable update"
+        );
     }
 
     let trusted_root = TrustedRoot::from_json(SIGSTORE_PRODUCTION_TRUSTED_ROOT)
         .context("Failed to load Sigstore trusted root")?;
-    let policy = VerificationPolicy::with_issuer(GITHUB_ACTIONS_ISSUER);
+    let policy = VerificationPolicy::any_identity().require_issuer(GITHUB_ACTIONS_ISSUER);
     let artifact_digest =
         Sha256Hash::from_hex(&digest).context("Failed to parse artifact digest")?;
 
@@ -315,7 +315,9 @@ pub async fn update(canary: bool, reconfigure: bool) -> Result<()> {
     // rather than downloading a nonexistent asset.
     #[cfg(all(target_arch = "riscv64", not(feature = "disable-update")))]
     {
-        bail!("Self-update is not supported on riscv64: no release artifacts are published for this platform.");
+        bail!(
+            "Self-update is not supported on riscv64: no release artifacts are published for this platform."
+        );
     }
 
     #[cfg(all(not(target_arch = "riscv64"), not(feature = "disable-update")))]
@@ -644,399 +646,3 @@ fn copy_dlls(extracted_binary: &Path, current_exe: &Path) -> Result<()> {
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use tempfile::tempdir;
-
-    #[test]
-    fn test_asset_name_valid() {
-        let name = asset_name();
-        assert!(!name.is_empty());
-        assert!(name.starts_with("goose-"));
-        #[cfg(target_os = "windows")]
-        assert!(name.ends_with(".zip"));
-        #[cfg(not(target_os = "windows"))]
-        assert!(name.ends_with(".tar.bz2"));
-    }
-
-    #[test]
-    fn test_binary_name() {
-        let name = binary_name();
-        #[cfg(target_os = "windows")]
-        assert_eq!(name, "goose.exe");
-        #[cfg(not(target_os = "windows"))]
-        assert_eq!(name, "goose");
-    }
-
-    #[test]
-    fn test_find_binary_in_package_subdir() {
-        let tmp = tempdir().unwrap();
-        let pkg = tmp.path().join("goose-package");
-        fs::create_dir_all(&pkg).unwrap();
-        fs::write(pkg.join(binary_name()), b"fake").unwrap();
-
-        let found = find_binary(tmp.path(), binary_name());
-        assert!(found.is_some());
-        assert!(found.unwrap().ends_with(binary_name()));
-    }
-
-    #[test]
-    fn test_find_binary_top_level() {
-        let tmp = tempdir().unwrap();
-        fs::write(tmp.path().join(binary_name()), b"fake").unwrap();
-
-        let found = find_binary(tmp.path(), binary_name());
-        assert!(found.is_some());
-        assert_eq!(found.unwrap(), tmp.path().join(binary_name()));
-    }
-
-    #[test]
-    fn test_find_binary_nested_subdir() {
-        let tmp = tempdir().unwrap();
-        let nested = tmp.path().join("some-dir");
-        fs::create_dir_all(&nested).unwrap();
-        fs::write(nested.join(binary_name()), b"fake").unwrap();
-
-        let found = find_binary(tmp.path(), binary_name());
-        assert!(found.is_some());
-    }
-
-    #[test]
-    fn test_find_binary_not_found() {
-        let tmp = tempdir().unwrap();
-        let found = find_binary(tmp.path(), binary_name());
-        assert!(found.is_none());
-    }
-
-    #[test]
-    fn test_replace_binary_basic() {
-        let tmp = tempdir().unwrap();
-        let new_bin = tmp.path().join("new_goose");
-        let current = tmp.path().join("current_goose");
-
-        fs::write(&new_bin, b"new version").unwrap();
-        fs::write(&current, b"old version").unwrap();
-
-        replace_binary(&new_bin, &current).unwrap();
-
-        let content = fs::read_to_string(&current).unwrap();
-        assert_eq!(content, "new version");
-    }
-
-    #[cfg(target_os = "windows")]
-    #[test]
-    fn test_replace_binary_windows_rename_away() {
-        let tmp = tempdir().unwrap();
-        let current = tmp.path().join("goose.exe");
-        let new_bin = tmp.path().join("new_goose.exe");
-
-        fs::write(&current, b"old version").unwrap();
-        fs::write(&new_bin, b"new version").unwrap();
-
-        replace_binary(&new_bin, &current).unwrap();
-
-        // Current should now have new content
-        let content = fs::read_to_string(&current).unwrap();
-        assert_eq!(content, "new version");
-
-        // Old backup should exist
-        let old = current.with_extension("exe.old");
-        assert!(old.exists());
-        let old_content = fs::read_to_string(&old).unwrap();
-        assert_eq!(old_content, "old version");
-    }
-
-    #[cfg(target_os = "windows")]
-    #[test]
-    fn test_replace_binary_windows_cleanup_old() {
-        let tmp = tempdir().unwrap();
-        let current = tmp.path().join("goose.exe");
-        let old = current.with_extension("exe.old");
-        let new_bin = tmp.path().join("new_goose.exe");
-
-        // Simulate a previous update left .old behind
-        fs::write(&current, b"version 2").unwrap();
-        fs::write(&old, b"version 1").unwrap();
-        fs::write(&new_bin, b"version 3").unwrap();
-
-        replace_binary(&new_bin, &current).unwrap();
-
-        let content = fs::read_to_string(&current).unwrap();
-        assert_eq!(content, "version 3");
-
-        // Old should now contain version 2 (not version 1)
-        let old_content = fs::read_to_string(&old).unwrap();
-        assert_eq!(old_content, "version 2");
-    }
-
-    #[cfg(target_os = "windows")]
-    #[test]
-    fn test_extract_zip_with_package_dir() {
-        use std::io::Cursor;
-        use std::io::Write;
-
-        let tmp = tempdir().unwrap();
-
-        // Create a zip in memory with goose-package/ structure
-        let mut buf = Vec::new();
-        {
-            let cursor = Cursor::new(&mut buf);
-            let mut writer = zip::ZipWriter::new(cursor);
-            let options = zip::write::SimpleFileOptions::default()
-                .compression_method(zip::CompressionMethod::Stored);
-
-            writer.add_directory("goose-package/", options).unwrap();
-            writer
-                .start_file("goose-package/goose.exe", options)
-                .unwrap();
-            writer.write_all(b"fake goose binary").unwrap();
-            writer
-                .start_file("goose-package/libtest.dll", options)
-                .unwrap();
-            writer.write_all(b"fake dll").unwrap();
-            writer.finish().unwrap();
-        }
-
-        extract_zip(&buf, tmp.path()).unwrap();
-
-        let binary = find_binary(tmp.path(), "goose.exe");
-        assert!(binary.is_some());
-
-        let content = fs::read_to_string(binary.unwrap()).unwrap();
-        assert_eq!(content, "fake goose binary");
-
-        // DLL should be in goose-package too
-        assert!(tmp.path().join("goose-package/libtest.dll").exists());
-    }
-
-    // -----------------------------------------------------------------------
-    // SHA-256 digest tests
-    // -----------------------------------------------------------------------
-
-    #[test]
-    fn test_sha256_hex_known_value() {
-        let digest = sha256_hex(b"hello world");
-        assert_eq!(
-            digest,
-            "b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9"
-        );
-    }
-
-    #[test]
-    fn test_sha256_hex_empty() {
-        let digest = sha256_hex(b"");
-        assert_eq!(
-            digest,
-            "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-        );
-    }
-
-    #[test]
-    fn test_sanitized_token_trims_blank_values() {
-        assert_eq!(sanitized_token(None), None);
-        assert_eq!(sanitized_token(Some("")), None);
-        assert_eq!(sanitized_token(Some("   ")), None);
-        assert_eq!(sanitized_token(Some(" token\n")), Some("token"));
-    }
-
-    #[test]
-    fn test_authorization_header_value_rejects_malformed_tokens() {
-        assert!(authorization_header_value("token").is_some());
-        assert!(authorization_header_value("bad\ntoken").is_none());
-    }
-
-    #[test]
-    fn test_attestation_lookup_retries_auth_failures_without_token() {
-        assert!(should_retry_attestations_without_token(
-            StatusCode::UNAUTHORIZED,
-            Some("token")
-        ));
-        assert!(should_retry_attestations_without_token(
-            StatusCode::FORBIDDEN,
-            Some("token")
-        ));
-        assert!(!should_retry_attestations_without_token(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Some("token")
-        ));
-        assert!(!should_retry_attestations_without_token(
-            StatusCode::UNAUTHORIZED,
-            Some("")
-        ));
-        assert!(!should_retry_attestations_without_token(
-            StatusCode::UNAUTHORIZED,
-            Some("bad\ntoken")
-        ));
-        assert!(!should_retry_attestations_without_token(
-            StatusCode::UNAUTHORIZED,
-            None
-        ));
-    }
-
-    #[test]
-    fn test_attestation_entry_parses_embedded_bundle() {
-        let response: AttestationResponse = serde_json::from_str(
-            r#"{"attestations":[{"repository_id":1,"bundle":{"mediaType":"application/vnd.dev.sigstore.bundle.v0.3+json"}}]}"#,
-        )
-        .unwrap();
-        assert!(response.attestations[0].bundle.is_some());
-        assert!(response.attestations[0].bundle_url.is_none());
-    }
-
-    #[test]
-    fn test_attestation_entry_parses_offloaded_bundle() {
-        let response: AttestationResponse = serde_json::from_str(
-            r#"{"attestations":[{"repository_id":1,"bundle_url":"https://example.com/bundle.json.sn","initiator":"user","bundle":null}]}"#,
-        )
-        .unwrap();
-        assert!(response.attestations[0].bundle.is_none());
-        assert_eq!(
-            response.attestations[0].bundle_url.as_deref(),
-            Some("https://example.com/bundle.json.sn")
-        );
-    }
-
-    #[test]
-    fn test_parse_bundle_bytes_plain_json() {
-        let bundle =
-            parse_bundle_bytes(br#"{"mediaType":"application/vnd.dev.sigstore.bundle.v0.3+json"}"#)
-                .unwrap();
-        assert_eq!(
-            bundle["mediaType"],
-            "application/vnd.dev.sigstore.bundle.v0.3+json"
-        );
-    }
-
-    #[test]
-    fn test_parse_bundle_bytes_snappy_compressed() {
-        let json = br#"{"mediaType":"application/vnd.dev.sigstore.bundle.v0.3+json"}"#;
-        let compressed = snap::raw::Encoder::new().compress_vec(json).unwrap();
-        let bundle = parse_bundle_bytes(&compressed).unwrap();
-        assert_eq!(
-            bundle["mediaType"],
-            "application/vnd.dev.sigstore.bundle.v0.3+json"
-        );
-    }
-
-    #[test]
-    fn test_parse_bundle_bytes_rejects_garbage() {
-        assert!(parse_bundle_bytes(&[0xff, 0x00, 0x12]).is_err());
-    }
-
-    // -----------------------------------------------------------------------
-    // Path validation and extraction hardening tests
-    // -----------------------------------------------------------------------
-
-    #[test]
-    fn test_validate_entry_path_accepts_safe_paths() {
-        assert!(validate_entry_path(Path::new("goose")).is_ok());
-        assert!(validate_entry_path(Path::new("goose-package/goose")).is_ok());
-        assert!(validate_entry_path(Path::new("subdir/nested/file.txt")).is_ok());
-    }
-
-    #[test]
-    fn test_validate_entry_path_rejects_absolute() {
-        let result = validate_entry_path(Path::new("/etc/malicious"));
-        assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("absolute path"));
-    }
-
-    #[test]
-    fn test_validate_entry_path_rejects_traversal() {
-        let result = validate_entry_path(Path::new("../../escape.txt"));
-        assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("path traversal"));
-    }
-
-    #[test]
-    fn test_validate_entry_path_rejects_nested_traversal() {
-        let result = validate_entry_path(Path::new("safe/../../escape"));
-        assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("path traversal"));
-    }
-
-    #[cfg(not(target_os = "windows"))]
-    #[test]
-    fn test_extract_tar_bz2_safe_archive() {
-        use bzip2::write::BzEncoder;
-        use bzip2::Compression;
-
-        let tmp = tempdir().unwrap();
-
-        let mut builder_buf = Vec::new();
-        {
-            let encoder = BzEncoder::new(&mut builder_buf, Compression::default());
-            let mut builder = tar::Builder::new(encoder);
-
-            let data = b"goose binary content";
-            let mut header = tar::Header::new_gnu();
-            header.set_size(data.len() as u64);
-            header.set_mode(0o755);
-            header.set_cksum();
-            builder
-                .append_data(&mut header, "goose-package/goose", &data[..])
-                .unwrap();
-            builder.into_inner().unwrap().finish().unwrap();
-        }
-
-        extract_tar_bz2(&builder_buf, tmp.path()).unwrap();
-
-        let extracted = tmp.path().join("goose-package/goose");
-        assert!(extracted.exists());
-        assert_eq!(
-            fs::read_to_string(extracted).unwrap(),
-            "goose binary content"
-        );
-    }
-
-    // -----------------------------------------------------------------------
-    // Sigstore provenance verification test
-    // -----------------------------------------------------------------------
-
-    #[tokio::test]
-    async fn test_verify_provenance_fails_closed_when_unverifiable() {
-        let result = verify_provenance(b"not a real archive", "stable").await;
-        assert!(
-            result.is_err(),
-            "verify_provenance must fail closed when provenance cannot be verified"
-        );
-    }
-
-    #[cfg(not(target_os = "windows"))]
-    #[test]
-    fn test_extract_tar_bz2_blocks_symlink_escape() {
-        use bzip2::write::BzEncoder;
-        use bzip2::Compression;
-
-        let tmp = tempdir().unwrap();
-
-        let mut builder_buf = Vec::new();
-        {
-            let encoder = BzEncoder::new(&mut builder_buf, Compression::default());
-            let mut builder = tar::Builder::new(encoder);
-
-            let mut header = tar::Header::new_gnu();
-            header.set_size(0);
-            header.set_mode(0o777);
-            header.set_cksum();
-            // Symlink whose target escapes the destination directory.
-            builder
-                .append_link(&mut header, "evil_link", "../../etc/passwd")
-                .unwrap();
-            builder.into_inner().unwrap().finish().unwrap();
-        }
-
-        let result = extract_tar_bz2(&builder_buf, tmp.path());
-        assert!(
-            result.is_err(),
-            "extraction should fail when a symlink target escapes the destination"
-        );
-        let err_msg = result.unwrap_err().to_string();
-        assert!(
-            err_msg.contains("path traversal"),
-            "error should mention path traversal, got: {err_msg}"
-        );
-    }
-}

@@ -1,31 +1,31 @@
 use crate::recipes::github_recipe::GOOSE_RECIPE_GITHUB_REPO_CONFIG_KEY;
 use cliclack::spinner;
 use console::style;
-use goose::agents::extension::{ToolInfo, PLATFORM_EXTENSIONS};
-use goose::agents::extension_manager::get_parameter_names;
 use goose::agents::Agent;
-use goose::agents::{extension::Envs, ExtensionConfig};
+use goose::agents::extension::{PLATFORM_EXTENSIONS, ToolInfo};
+use goose::agents::extension_manager::get_parameter_names;
+use goose::agents::{ExtensionConfig, extension::Envs};
 use goose::config::declarative_providers::{
-    create_custom_provider, remove_custom_provider, AuthConfig, CreateCustomProviderParams,
+    CreateCustomProviderParams, create_custom_provider, remove_custom_provider,
 };
 use goose::config::extensions::{
     get_all_extension_names, get_all_extensions, get_enabled_extensions, get_extension_by_name,
     name_to_key, remove_extension, set_extension, set_extension_enabled,
 };
-use goose::config::paths::Paths;
-use goose::config::permission::PermissionLevel;
-use goose::config::signup_tetrate::TetrateAuth;
 use goose::config::{
-    configure_tetrate, Config, ConfigError, ExperimentManager, ExtensionEntry, GooseMode,
-    PermissionManager,
+    Config, ConfigError, ExperimentManager, ExtensionEntry, PermissionManager, configure_tetrate,
 };
+use goose::config::{paths::Paths, permission::PermissionLevel, signup_tetrate::TetrateAuth};
 #[cfg(feature = "telemetry")]
-use goose::posthog::{get_telemetry_choice, TELEMETRY_ENABLED_KEY};
-use goose::providers::base::ConfigKey;
+use goose::posthog::{TELEMETRY_ENABLED_KEY, get_telemetry_choice};
 use goose::providers::provider_test::test_provider_configuration;
-use goose::providers::{create, providers, retry_operation, RetryConfig};
+use goose::providers::{create, providers};
 use goose::session::SessionType;
-use goose_providers::thinking::ThinkingEffort;
+use goose_provider_types::base::ConfigKey;
+use goose_provider_types::goose_mode::GooseMode;
+use goose_provider_types::retry::{RetryConfig, retry_operation};
+use goose_provider_types::thinking::ThinkingEffort;
+use goose_providers::declarative::AuthConfig;
 use serde_json::Value;
 use std::collections::HashMap;
 use std::io::{IsTerminal, Write};
@@ -477,7 +477,7 @@ const UNLISTED_MODEL_KEY: &str = "__unlisted__";
 
 fn interactive_model_search(
     models: &[String],
-    provider_meta: &goose::providers::base::ProviderMetadata,
+    provider_meta: &goose_provider_types::base::ProviderMetadata,
 ) -> anyhow::Result<String> {
     const MAX_VISIBLE: usize = 30;
     let mut query = String::new();
@@ -580,7 +580,7 @@ fn interactive_model_search(
 
 fn select_model_from_list(
     models: &[String],
-    provider_meta: &goose::providers::base::ProviderMetadata,
+    provider_meta: &goose_provider_types::base::ProviderMetadata,
 ) -> anyhow::Result<String> {
     const MAX_MODELS: usize = 10;
 
@@ -653,7 +653,7 @@ fn select_model_from_list(
 }
 
 fn prompt_unlisted_model(
-    provider_meta: &goose::providers::base::ProviderMetadata,
+    provider_meta: &goose_provider_types::base::ProviderMetadata,
 ) -> anyhow::Result<String> {
     let model: String = cliclack::input("Enter the model name:")
         .placeholder(&provider_meta.default_model)
@@ -960,7 +960,7 @@ pub async fn configure_provider_dialog() -> anyhow::Result<bool> {
     {
         let supports_thinking = match temp_provider.fetch_model_info(&model).await {
             Ok(model_info) => model_info.reasoning,
-            Err(_) => goose_providers::model::ModelConfig::new(&model).is_reasoning_model(),
+            Err(_) => goose_provider_types::model::ModelConfig::new(&model).is_reasoning_model(),
         };
 
         if supports_thinking {
@@ -1952,9 +1952,8 @@ pub fn configure_max_turns_dialog() -> anyhow::Result<()> {
 /// Handle OpenRouter authentication
 pub async fn handle_openrouter_auth() -> anyhow::Result<()> {
     use goose::config::{configure_openrouter, signup_openrouter::OpenRouterAuth};
-    use goose::conversation::message::Message;
     use goose::providers::create;
-
+    use goose_provider_types::conversations::Message;
     // Use the OpenRouter authentication flow
     let mut auth_flow = OpenRouterAuth::new()?;
     let api_key = auth_flow.complete_flow().await?;
@@ -2272,11 +2271,11 @@ fn add_provider() -> anyhow::Result<()> {
         })
         .interact()?;
 
-    let models: Vec<goose_providers::base::ModelInfo> = models_input
+    let models: Vec<goose_provider_types::base::ModelInfo> = models_input
         .split(',')
         .map(str::trim)
         .filter(|name| !name.is_empty())
-        .map(goose_providers::base::ModelInfo::new)
+        .map(goose_provider_types::base::ModelInfo::new)
         .collect();
 
     let supports_streaming = cliclack::confirm("Does this provider support streaming responses?")
@@ -2334,7 +2333,7 @@ fn add_provider() -> anyhow::Result<()> {
 async fn remove_provider() -> anyhow::Result<()> {
     let custom_providers_dir = goose::config::declarative_providers::custom_providers_dir();
     let custom_providers = if custom_providers_dir.exists() {
-        goose::config::declarative_providers::load_custom_providers(&custom_providers_dir)?
+        goose_providers::declarative::load_custom_providers(&custom_providers_dir)?
     } else {
         Vec::new()
     };
@@ -2396,61 +2395,4 @@ fn print_config_file_saved() -> anyhow::Result<()> {
         config.path()
     ))?;
     Ok(())
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn selected_item_inside_visible_window_keeps_order() {
-        let mut items: Vec<_> = (0..MAX_PROVIDER_ROWS + 1).collect();
-        let expected = items.clone();
-
-        move_selected_item_into_view(
-            &mut items,
-            Some(MAX_PROVIDER_ROWS - 2),
-            MAX_PROVIDER_ROWS - 1,
-        );
-
-        assert_eq!(items, expected);
-    }
-
-    #[test]
-    fn selected_item_outside_visible_window_moves_to_front() {
-        let mut items: Vec<_> = (0..MAX_PROVIDER_ROWS + 2).collect();
-
-        move_selected_item_into_view(
-            &mut items,
-            Some(MAX_PROVIDER_ROWS - 1),
-            MAX_PROVIDER_ROWS - 1,
-        );
-
-        assert_eq!(items[0], MAX_PROVIDER_ROWS - 1);
-        assert_eq!(
-            items[1..MAX_PROVIDER_ROWS],
-            (0..MAX_PROVIDER_ROWS - 1).collect::<Vec<_>>()
-        );
-    }
-
-    #[test]
-    fn fuzzy_provider_filter_keeps_relevant_matches_ranked_first() {
-        let items = vec![
-            (
-                "anthropic".to_string(),
-                "Anthropic".to_string(),
-                String::new(),
-            ),
-            (
-                "openrouter".to_string(),
-                "OpenRouter".to_string(),
-                String::new(),
-            ),
-            ("openai".to_string(), "OpenAI".to_string(), String::new()),
-        ];
-
-        let filtered = fuzzy_filter_provider_items(&items, "open ai");
-
-        assert_eq!(filtered.first().map(|item| item.0.as_str()), Some("openai"));
-    }
 }

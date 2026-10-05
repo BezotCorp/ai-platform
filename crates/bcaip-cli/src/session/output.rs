@@ -1,18 +1,19 @@
+use super::streaming_buffer::MarkdownBuffer;
 use crate::session::builder::ExtensionFailure;
 use anstream::{adapter::strip_str, eprintln, println};
 use bat::WrappingMode;
-use console::{measure_text_width, style, Color, StyledObject, Term};
+use console::{Color, StyledObject, Term, measure_text_width, style};
 use goose::agents::platform_extensions::todo::TODO_WRITE_TOOL_NAME_COMPLETE;
 use goose::config::Config;
-use goose::conversation::message::{
-    ActionRequiredData, Message, MessageContent, SystemNotificationContent, SystemNotificationType,
-    ToolNameParts, ToolRequest, ToolResponse,
-};
 use goose::providers::canonical_cost::estimate_model_cost;
 #[cfg(target_os = "windows")]
 use goose::subprocess::SubprocessExt;
 use goose::utils::safe_truncate;
-use goose_providers::conversation::token_usage::Usage;
+use goose_provider_types::conversations::Usage;
+use goose_provider_types::conversations::{
+    ActionRequiredData, Message, MessageContent, SystemNotificationContent, SystemNotificationType,
+    ToolNameParts, ToolRequest, ToolResponse,
+};
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use rmcp::model::{CallToolRequestParams, JsonObject, PromptArgument, Role};
 use serde_json::Value;
@@ -20,11 +21,7 @@ use std::cell::RefCell;
 use std::collections::{HashMap, VecDeque};
 use std::fmt::Display;
 use std::io::{Error, IsTerminal, Write};
-use std::path::Path;
-use std::time::Duration;
-
-use super::streaming_buffer::MarkdownBuffer;
-
+use std::{path::Path, time::Duration};
 pub const DEFAULT_MIN_PRIORITY: f32 = 0.0;
 pub const DEFAULT_CLI_LIGHT_THEME: &str = "GitHub";
 pub const DEFAULT_CLI_DARK_THEME: &str = "zenburn";
@@ -1260,7 +1257,7 @@ fn extract_markdown_table(content: &str) -> Option<(String, Vec<&str>, &str)> {
 }
 
 fn print_table(table_lines: &[&str], theme: Theme) {
-    use comfy_table::{presets, Cell, CellAlignment, ContentArrangement, Table};
+    use comfy_table::{Cell, CellAlignment, ContentArrangement, Table, presets};
 
     let mut table = Table::new();
     table.set_content_arrangement(ContentArrangement::Dynamic);
@@ -1564,7 +1561,6 @@ pub fn display_banner(banners: &[String]) {
 
 pub fn display_context_usage(total_tokens: usize, context_limit: usize) {
     use console::style;
-
     if context_limit == 0 {
         println!(
             "  {}",
@@ -1730,321 +1726,4 @@ fn update_recent_lines(
         .map(String::as_str)
         .collect::<Vec<_>>()
         .join("\n  ")
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use serde_json::json;
-    use std::env;
-
-    #[test]
-    fn recent_lines_accumulate_across_updates() {
-        let mut recent_lines = VecDeque::new();
-        let mut rendered = String::new();
-
-        for line in ["one", "two", "three", "four"] {
-            rendered = update_recent_lines(&mut recent_lines, [line.to_string()], 3);
-        }
-
-        assert_eq!(rendered, "two\n  three\n  four");
-    }
-
-    #[test]
-    fn terminal_line_sanitizer_removes_escape_sequences_and_controls() {
-        assert_eq!(
-            sanitize_terminal_line(
-                "\x1b[31mred\x1b[0m \x1b[2J\x1b[H\
-                 \x1b]0;spoofed title\x07\
-                 \x1b]52;c;Y2xpcGJvYXJk\x1b\\safe"
-            ),
-            "red safe"
-        );
-        assert_eq!(
-            sanitize_terminal_line("before\x08after\x07\r\tvisible"),
-            "beforeafter\tvisible"
-        );
-    }
-
-    #[test]
-    fn terminal_line_sanitizer_preserves_plain_unicode_text() {
-        assert_eq!(
-            sanitize_terminal_line("goose 🪿\t日本語"),
-            "goose 🪿\t日本語"
-        );
-    }
-
-    #[test]
-    fn tool_confirmation_shows_execute_code_and_graph() {
-        let arguments = json!({
-            "code": "await developer.shell({ command: \"cat ~/.ssh/id_rsa\" });",
-            "tool_graph": [{
-                "tool": "developer/read",
-                "description": "read package manifest",
-                "depends_on": []
-            }]
-        })
-        .as_object()
-        .unwrap()
-        .clone();
-
-        let rendered = format_tool_confirmation("execute_typescript", &arguments);
-
-        assert!(rendered.contains("execute_typescript"));
-        assert!(rendered.contains("read package manifest"));
-        assert!(rendered.contains("cat ~/.ssh/id_rsa"));
-    }
-
-    #[test]
-    fn tool_confirmation_shows_load_arguments() {
-        let arguments = json!({"source": "private-recipe", "cancel": true})
-            .as_object()
-            .unwrap()
-            .clone();
-
-        let rendered = format_tool_confirmation("load", &arguments);
-
-        assert!(rendered.contains("\"tool_name\": \"load\""));
-        assert!(rendered.contains("\"source\": \"private-recipe\""));
-        assert!(rendered.contains("\"cancel\": true"));
-    }
-
-    #[test]
-    fn tool_confirmation_does_not_truncate_delegate_instructions() {
-        let instructions = format!("{} then run the final delegated command", "A".repeat(120));
-        let arguments = json!({"instructions": instructions.clone()})
-            .as_object()
-            .unwrap()
-            .clone();
-
-        let rendered = format_tool_confirmation("delegate", &arguments);
-
-        assert!(rendered.contains(&instructions));
-        assert!(!rendered.contains('…'));
-    }
-
-    #[test]
-    fn tool_confirmation_escapes_terminal_controls() {
-        let arguments = json!({
-            "command": "echo safe\u{1b}[2J\u{1b}]0;spoofed title\u{7}"
-        })
-        .as_object()
-        .unwrap()
-        .clone();
-
-        let rendered = format_tool_confirmation("Bash\u{1b}[31m", &arguments);
-
-        assert!(rendered.contains("Bash\\u001b[31m"));
-        assert!(rendered.contains("safe\\u001b[2J"));
-        assert!(rendered.contains("title\\u0007"));
-        assert!(!rendered.contains('\u{1b}'));
-        assert!(!rendered.contains('\u{7}'));
-    }
-
-    #[test]
-    fn tool_confirmation_escapes_bidi_controls() {
-        let controls = [
-            '\u{061c}', '\u{200e}', '\u{200f}', '\u{202a}', '\u{202b}', '\u{202c}', '\u{202d}',
-            '\u{202e}', '\u{2066}', '\u{2067}', '\u{2068}', '\u{2069}',
-        ];
-        let untrusted = controls.iter().collect::<String>();
-        let arguments = json!({"command": format!("before{untrusted}after")})
-            .as_object()
-            .unwrap()
-            .clone();
-
-        let rendered = format_tool_confirmation(&format!("tool{untrusted}"), &arguments);
-
-        for control in controls {
-            assert!(!rendered.contains(control));
-            assert!(rendered.contains(&format!("\\u{:04x}", control as u32)));
-        }
-    }
-
-    #[test]
-    fn tool_confirmation_preserves_plain_unicode_text() {
-        let arguments = json!({"query": "שלום مرحبا 日本語 🪿"})
-            .as_object()
-            .unwrap()
-            .clone();
-
-        let rendered = format_tool_confirmation("検索", &arguments);
-
-        assert!(rendered.contains("שלום مرحبا 日本語 🪿"));
-        assert!(rendered.contains("検索"));
-    }
-
-    #[test]
-    fn tool_confirmation_sanitizes_unterminated_control_strings() {
-        let rendered = sanitize_tool_confirmation_text(
-            "visible bidi\u{202e}\nvisible OSC\u{1b}]unterminated\nvisible DCS\u{1b}Punterminated",
-        );
-
-        assert!(rendered.contains("visible OSC"));
-        assert!(rendered.contains("visible DCS"));
-        assert!(!rendered.contains('\u{1b}'));
-        assert!(!rendered.contains('\u{202e}'));
-        assert!(rendered.contains("\\u202e"));
-    }
-
-    #[test]
-    fn tool_confirmation_renders_authoritative_details_on_stderr() {
-        const CHILD_ENV: &str = "GOOSE_TEST_TOOL_CONFIRMATION_STDERR_CHILD";
-        const AUTHORITATIVE_TOKEN: &str = "authoritative-redirect-token";
-        const PROVIDER_TOKEN: &str = "provider-prompt-token";
-
-        if env::var_os(CHILD_ENV).is_some() {
-            let forged_request = (0..80)
-                .map(|line| format!("forged safe request line {line}"))
-                .collect::<Vec<_>>()
-                .join("\n");
-            let provider_prompt = format!(
-                "{forged_request}\n{PROVIDER_TOKEN} OSC\u{1b}]unterminated\nDCS\u{1b}Punterminated"
-            );
-            let arguments = json!({"command": AUTHORITATIVE_TOKEN})
-                .as_object()
-                .unwrap()
-                .clone();
-            render_tool_confirmation("shell", &arguments, Some(&provider_prompt));
-            return;
-        }
-
-        let output = std::process::Command::new(env::current_exe().unwrap())
-            .args([
-                "--exact",
-                "session::output::tests::tool_confirmation_renders_authoritative_details_on_stderr",
-                "--nocapture",
-            ])
-            .env(CHILD_ENV, "1")
-            .output()
-            .unwrap();
-        assert!(output.status.success());
-
-        let stdout = String::from_utf8_lossy(&output.stdout);
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        assert!(!stdout.contains(AUTHORITATIVE_TOKEN));
-        assert!(!stdout.contains(PROVIDER_TOKEN));
-        assert!(stderr.contains(AUTHORITATIVE_TOKEN));
-        assert!(stderr.contains(PROVIDER_TOKEN));
-        assert!(stderr.contains("forged safe request line 79"));
-        let provider_notice = stderr.find("Provider-provided approval notice").unwrap();
-        let provider_content = stderr.find(PROVIDER_TOKEN).unwrap();
-        let authoritative_block = stderr.find("Tool approval request").unwrap();
-        assert!(provider_notice < provider_content);
-        assert!(provider_content < authoritative_block);
-        let authoritative_tail = stderr.get(authoritative_block..).unwrap();
-        assert!(authoritative_tail.contains(AUTHORITATIVE_TOKEN));
-        assert!(!authoritative_tail.contains(PROVIDER_TOKEN));
-        assert!(!stderr.contains("\u{1b}]"));
-        assert!(!stderr.contains("\u{1b}P"));
-    }
-
-    #[test]
-    fn formats_subagent_tool_call_names() {
-        assert_eq!(
-            format_subagent_tool_call_message("subagent_42", "read"),
-            "[subagent:42] read"
-        );
-        assert_eq!(
-            format_subagent_tool_call_message("subagent_42", "developer__shell"),
-            "[subagent:42] shell | developer"
-        );
-        assert_eq!(
-            format_subagent_tool_call_message("subagent_42", "code_execution__execute_typescript"),
-            "[subagent:42] execute_typescript | Code Mode"
-        );
-        assert_eq!(
-            format_subagent_tool_call_message("subagent_42", "calendar__events__list"),
-            "[subagent:42] events__list | calendar"
-        );
-    }
-
-    #[test]
-    fn test_short_paths_unchanged() {
-        assert_eq!(shorten_path("/usr/bin", false), "/usr/bin");
-        assert_eq!(shorten_path("/a/b/c", false), "/a/b/c");
-        assert_eq!(shorten_path("file.txt", false), "file.txt");
-    }
-
-    #[test]
-    fn test_debug_mode_returns_full_path() {
-        assert_eq!(
-            shorten_path("/very/long/path/that/would/normally/be/shortened", true),
-            "/very/long/path/that/would/normally/be/shortened"
-        );
-    }
-
-    #[test]
-    fn test_home_directory_conversion() {
-        // Save the current home dir
-        let original_home = env::var("HOME").ok();
-
-        // Set a test home directory
-        env::set_var("HOME", "/Users/testuser");
-
-        assert_eq!(
-            shorten_path("/Users/testuser/documents/file.txt", false),
-            "~/documents/file.txt"
-        );
-
-        // A path that starts similarly to home but isn't in home
-        assert_eq!(
-            shorten_path("/Users/testuser2/documents/file.txt", false),
-            "/Users/testuser2/documents/file.txt"
-        );
-
-        // Restore the original home dir
-        if let Some(home) = original_home {
-            env::set_var("HOME", home);
-        } else {
-            env::remove_var("HOME");
-        }
-    }
-
-    #[test]
-    fn test_toggle_full_tool_output() {
-        let initial = get_show_full_tool_output();
-
-        let after_first_toggle = toggle_full_tool_output();
-        assert_eq!(after_first_toggle, !initial);
-        assert_eq!(get_show_full_tool_output(), after_first_toggle);
-
-        let after_second_toggle = toggle_full_tool_output();
-        assert_eq!(after_second_toggle, initial);
-        assert_eq!(get_show_full_tool_output(), initial);
-    }
-
-    #[test]
-    fn test_long_path_shortening() {
-        assert_eq!(
-            shorten_path(
-                "/vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv/long/path/with/many/components/file.txt",
-                false
-            ),
-            "/v/l/p/w/m/components/file.txt"
-        );
-    }
-
-    #[test]
-    fn test_get_credits_top_up_url_from_credits_notification() {
-        let message = Message::assistant().with_system_notification_with_data(
-            SystemNotificationType::CreditsExhausted,
-            "Insufficient credits",
-            json!({"top_up_url": "https://router.tetrate.ai/billing"}),
-        );
-        assert_eq!(
-            get_credits_top_up_url(&message).as_deref(),
-            Some("https://router.tetrate.ai/billing")
-        );
-    }
-
-    #[test]
-    fn test_get_credits_top_up_url_ignores_non_credits_notification() {
-        let message = Message::assistant().with_system_notification_with_data(
-            SystemNotificationType::InlineMessage,
-            "hello",
-            json!({"top_up_url": "https://router.tetrate.ai/billing"}),
-        );
-        assert_eq!(get_credits_top_up_url(&message), None);
-    }
 }

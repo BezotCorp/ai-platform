@@ -1,6 +1,5 @@
 use anyhow::Result;
 use console::style;
-
 pub fn handle_plugin_install(url: &str, auto_update: bool) -> Result<()> {
     let install = goose::plugins::install_plugin_with_options(
         url,

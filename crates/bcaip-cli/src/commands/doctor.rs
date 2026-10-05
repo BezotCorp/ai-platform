@@ -1,8 +1,5 @@
+use crate::session::{SessionBuilderConfig, build_session};
 use anyhow::Result;
-
-use crate::session::build_session;
-use crate::session::SessionBuilderConfig;
-
 pub async fn handle_doctor() -> Result<()> {
     let mut session = build_session(SessionBuilderConfig {
         no_session: true,

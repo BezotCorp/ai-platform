@@ -1,12 +1,13 @@
 //! Message generator for scenario tests with convenience methods to
 //! just generate an image or text message.
 
+use base64::{
+    Engine,
+    engine::general_purpose,
+};
 use crate::scenario_tests::scenario_runner::SCENARIO_TESTS_DIR;
-use base64::engine::general_purpose;
-use base64::Engine;
-use goose::conversation::message::Message;
-use goose::providers::base::Provider;
-
+use goose_provider_types::conversations::Message;
+use goose_provider_types::base::Provider;
 pub type MessageGenerator<'a> = Box<dyn Fn(&dyn Provider) -> Message + 'a>;
 
 pub fn text(text: &str) -> MessageGenerator<'static> {

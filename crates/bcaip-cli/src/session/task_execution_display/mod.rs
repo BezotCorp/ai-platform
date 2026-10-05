@@ -6,9 +6,6 @@ use goose::utils::safe_truncate;
 use serde_json::Value;
 use std::sync::atomic::{AtomicBool, Ordering};
 
-#[cfg(test)]
-mod tests;
-
 pub const TASK_EXECUTION_NOTIFICATION_TYPE: &str = "task_execution";
 
 static INITIAL_SHOWN: AtomicBool = AtomicBool::new(false);

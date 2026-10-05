@@ -1,9 +1,10 @@
 //! Providers for the scenario tests. Keep in sync with
 //! goose/crates/goose/src/providers/factory.rs
 
-use std::collections::HashMap;
-use std::sync::LazyLock;
-
+use std::{
+    collections::HashMap,
+    sync::LazyLock,
+};
 #[derive(Debug, Clone)]
 pub struct ProviderConfig {
     pub name: &'static str,

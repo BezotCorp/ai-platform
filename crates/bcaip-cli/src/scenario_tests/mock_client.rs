@@ -13,7 +13,6 @@ use serde_json::Value;
 use std::collections::HashMap;
 use tokio::sync::mpsc::{self, Receiver};
 use tokio_util::sync::CancellationToken;
-
 type Handler = Box<dyn Fn(&Value) -> Result<Vec<ContentBlock>, ErrorData> + Send + Sync>;
 
 pub struct MockClient {

@@ -1,21 +1,18 @@
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use console::style;
-use goose::config::paths::Paths;
 use goose::config::Config;
-use goose::conversation::message::Message;
-use goose::session::session_manager::{DB_NAME, SESSIONS_FOLDER};
-use goose_providers::errors::ProviderError;
-use serde_yaml;
+use goose::config::paths::Paths;
+use goose::session::{DB_NAME, SESSIONS_FOLDER};
+use goose_provider_types::conversations::Message;
+use goose_provider_types::errors::ProviderError;
 use std::time::Duration;
-
+use yaml_serde;
 fn print_aligned(label: &str, value: &str, width: usize) {
     println!("  {:<width$} {}", label, value, width = width);
 }
 
 use goose::config::base::CONFIG_YAML_NAME;
-use std::fs;
-use std::path::Path;
-
+use std::{fs, path::Path};
 fn check_path_status(path: &Path) -> String {
     if path.exists() {
         "".to_string()
@@ -152,7 +149,7 @@ pub async fn handle_info(verbose: bool, check: bool) -> Result<()> {
             let sorted_values: std::collections::BTreeMap<_, _> =
                 values.iter().map(|(k, v)| (k.clone(), v.clone())).collect();
 
-            if let Ok(yaml) = serde_yaml::to_string(&sorted_values) {
+            if let Ok(yaml) = yaml_serde::to_string(&sorted_values) {
                 for line in yaml.lines() {
                     println!("  {}", line);
                 }

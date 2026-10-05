@@ -1,8 +1,6 @@
 use anyhow::Result;
-use goose::execution::manager::AgentManager;
-use goose::gateway::manager::GatewayManager;
+use goose::{execution::manager::AgentManager, gateway::manager::GatewayManager};
 use std::sync::Arc;
-
 pub async fn handle_gateway_status() -> Result<()> {
     let agent_manager = AgentManager::instance().await?;
     let gateway_manager = Arc::new(GatewayManager::new(agent_manager)?);
