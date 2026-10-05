@@ -1,8 +1,10 @@
+use crate::canonical::CanonicalModel;
 use crate::formats::{
     extract_reasoning_effort, is_openai_responses_model, is_xai_reasoning_model,
     supports_xai_reasoning_effort,
 };
 use crate::thinking::ThinkingEffort;
+use crate::{Modality, maybe_get_canonical_model};
 use serde::de::Deserializer;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -117,14 +119,14 @@ impl ModelConfig {
         config
     }
 
-    fn canonical_model(&self, provider_name: &str) -> Option<crate::canonical::CanonicalModel> {
+    fn canonical_model(&self, provider_name: &str) -> Option<CanonicalModel> {
         // Try canonical lookup with the full model name first, then fall back
         // to the name with reasoning-effort suffixes stripped (e.g.
         // "databricks-gpt-5.4-high" → "databricks-gpt-5.4").
-        crate::canonical::maybe_get_canonical_model(provider_name, &self.model_name).or_else(|| {
+        maybe_get_canonical_model(provider_name, &self.model_name).or_else(|| {
             let (base, _effort) = extract_reasoning_effort(&self.model_name);
             if base != self.model_name {
-                crate::canonical::maybe_get_canonical_model(provider_name, &base)
+                maybe_get_canonical_model(provider_name, &base)
             } else {
                 None
             }
@@ -135,12 +137,7 @@ impl ModelConfig {
         if self.supports_vision.is_none()
             && let Some(canonical) = self.canonical_model(provider_name)
         {
-            self.supports_vision = Some(
-                canonical
-                    .modalities
-                    .input
-                    .contains(&crate::canonical::Modality::Image),
-            );
+            self.supports_vision = Some(canonical.modalities.input.contains(&Modality::Image));
         }
         self
     }
@@ -160,12 +157,7 @@ impl ModelConfig {
                 self.reasoning = canonical.reasoning;
             }
             if self.supports_vision.is_none() {
-                self.supports_vision = Some(
-                    canonical
-                        .modalities
-                        .input
-                        .contains(&crate::canonical::Modality::Image),
-                )
+                self.supports_vision = Some(canonical.modalities.input.contains(&Modality::Image))
             }
         }
 

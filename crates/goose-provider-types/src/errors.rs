@@ -1,4 +1,4 @@
-use std::time::Duration;
+use std::{fmt, time::Duration};
 use thiserror::Error;
 
 use crate::request_log::LogError;
@@ -7,51 +7,38 @@ use crate::request_log::LogError;
 pub enum ProviderError {
     #[error("Provider is not configured")]
     NotConfigured,
-
     #[error("Authentication error: {0}")]
     Authentication(String),
-
     #[error("Context length exceeded: {0}")]
     ContextLengthExceeded(String),
-
     #[error("Rate limit exceeded: {details}")]
     RateLimitExceeded {
         details: String,
         retry_delay: Option<Duration>,
     },
-
     #[error("Server error: {0}")]
     ServerError(String),
-
     #[error("Network error: {0}")]
     NetworkError(String),
-
     #[error("Request failed: {0}")]
     RequestFailed(String),
-
     /// Bad input rather than an operational failure: retrying is pointless, but
     /// a different value may succeed.
     #[error("Invalid value: {0}")]
     InvalidValue(String),
-
     #[error("Execution error: {0}")]
     ExecutionError(String),
-
     #[error("Usage data error: {0}")]
     UsageError(String),
-
     #[error("Unsupported operation: {0}")]
     NotImplemented(String),
-
     #[error("Endpoint not found (404): {0}")]
     EndpointNotFound(String),
-
     #[error("Credits exhausted: {details}")]
     CreditsExhausted {
         details: String,
         top_up_url: Option<String>,
     },
-
     #[error("Provider refused request: {details}")]
     Refusal {
         details: String,
@@ -60,7 +47,7 @@ pub enum ProviderError {
 }
 
 impl ProviderError {
-    pub fn stream_decode_error(error: impl std::fmt::Display) -> Self {
+    pub fn stream_decode_error(error: impl fmt::Display) -> Self {
         ProviderError::NetworkError(format!("Stream decode error: {error}"))
     }
 

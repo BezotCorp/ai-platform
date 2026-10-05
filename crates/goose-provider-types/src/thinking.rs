@@ -1,4 +1,4 @@
-use std::{fmt, str::FromStr, sync::LazyLock};
+use std::{fmt, mem, str::FromStr, sync::LazyLock};
 
 use regex::Regex;
 use serde::{Deserialize, Serialize};
@@ -122,7 +122,7 @@ impl ThinkFilter {
                         self.buffer.drain(..pos);
                     }
                     if self.buffer.len() > MAX_BUFFERED_THINK_TAG_BYTES {
-                        let oversized = std::mem::take(&mut self.buffer);
+                        let oversized = mem::take(&mut self.buffer);
                         if self.inside_think {
                             out.thinking.push_str(&oversized);
                         } else {

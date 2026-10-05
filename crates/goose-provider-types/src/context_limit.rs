@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::future::Future;
 
-use crate::canonical::maybe_get_canonical_model;
+use crate::model_mapping::maybe_get_canonical_model;
 use crate::errors::ProviderError;
 use crate::model::DEFAULT_CONTEXT_LIMIT;
 

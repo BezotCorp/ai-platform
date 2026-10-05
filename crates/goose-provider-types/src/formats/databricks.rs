@@ -1,14 +1,14 @@
 use crate::cache_semantics::{CacheSemantics, apply_chat_payload_breakpoints};
-use crate::conversation::message::{Message, MessageContentBlock};
+use crate::conversations::{Message, MessageContentBlock, ToolResponse};
 use crate::formats::anthropic::{
     ThinkingType, adaptive_output_effort, model_supports_temperature,
     requires_explicit_thinking_disable, thinking_block_is_stale, thinking_budget_tokens,
     thinking_type_for_provider,
 };
+use crate::json;
 use crate::model::{ModelConfig, is_goose_internal_request_param};
-use crate::{conversation, json};
 
-use crate::documents::{
+use crate::document_format::{
     ASSISTANT_ROLE_REASON, DocumentFormat, UNSUPPORTED_MEDIA_TYPE_REASON, convert_document,
     document_media_type_is_supported, unsupported_document_text,
 };
@@ -59,7 +59,7 @@ fn format_text_content(
 }
 
 fn format_tool_response(
-    response: &conversation::message::ToolResponse,
+    response: &ToolResponse,
     image_format: &ImageFormat,
     supports_vision: bool,
 ) -> Vec<DatabricksMessage> {
@@ -345,7 +345,7 @@ fn apply_claude_thinking_config(
     }
 }
 
-pub fn format_tools(tools: &[Tool], _model_name: &str) -> anyhow::Result<Vec<Value>> {
+pub fn format_tools_databricks(tools: &[Tool], _model_name: &str) -> anyhow::Result<Vec<Value>> {
     let mut tool_names = collections::HashSet::new();
     let mut result = Vec::new();
 
@@ -508,7 +508,6 @@ fn is_claude_model(model_name: &str) -> bool {
     model_name.contains("claude")
 }
 
-#[allow(clippy::too_many_lines)]
 pub fn create_request(
     model_config: &ModelConfig,
     system: &str,
@@ -567,7 +566,7 @@ pub fn create_request_for_provider(
         model_supports_vision,
     );
     let mut tools_spec = if !tools.is_empty() {
-        format_tools(tools, &model_config.model_name)?
+        format_tools_databricks(tools, &model_config.model_name)?
     } else {
         vec![]
     };

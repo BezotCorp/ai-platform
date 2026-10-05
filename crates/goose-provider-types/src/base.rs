@@ -8,18 +8,14 @@ use std::pin::Pin;
 use tokio::sync::watch;
 
 use crate::{
-    canonical::{
-        CanonicalModelRegistry, catalog::ProviderSetupMetadata, map_to_canonical_model,
-        recommended_models_from_registry,
-    },
-    conversation::{
-        message::{Message, MessageContentBlock},
-        token_usage::{ProviderUsage, Usage},
-    },
+    Modality,
+    canonical::{CanonicalModelRegistry, ProviderSetupMetadata, map_to_canonical_model},
+    conversations::{Message, MessageContentBlock, ProviderUsage, Usage},
     errors::ProviderError,
     goose_mode::GooseMode,
     maybe_send::{MaybeSend, MaybeSync},
     model::ModelConfig,
+    model_mapping::recommended_models_from_registry,
     permission::PermissionConfirmation,
     retry::RetryConfig,
     thinking::ThinkingEffortSupport,
@@ -599,11 +595,7 @@ pub trait Provider: MaybeSend + MaybeSync {
                     return Some((model.clone(), None));
                 };
 
-                if !canonical_model
-                    .modalities
-                    .input
-                    .contains(&crate::canonical::Modality::Text)
-                {
+                if !canonical_model.modalities.input.contains(&Modality::Text) {
                     return None;
                 }
 

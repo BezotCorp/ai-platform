@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::conversation::token_usage::Usage;
+use crate::conversations::Usage;
 
 /// Modality types for model input/output
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]

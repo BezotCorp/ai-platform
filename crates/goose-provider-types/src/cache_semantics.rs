@@ -1,6 +1,5 @@
 //! Prompt-cache semantics declared per (provider, model), instead of implied
 //! by whichever format module a request flows through.
-
 use serde_json::{Value, json};
 
 use crate::formats::is_openai_responses_model;

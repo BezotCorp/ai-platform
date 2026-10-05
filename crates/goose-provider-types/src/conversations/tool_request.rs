@@ -1,4 +1,4 @@
-use super::message::{
+use crate::conversations::message::{
     TOOL_META_CHAIN_SUMMARY_KEY, TOOL_META_EXTERNAL_DISPATCH_KEY, TOOL_META_PROVIDER_INDEX_KEY,
     TOOL_META_TITLE_KEY, ToolChainSummary, ToolNameParts, ToolRequest,
 };

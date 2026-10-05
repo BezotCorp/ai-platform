@@ -1,6 +1,5 @@
-use crate::conversation::message::{Message, MessageContentBlock};
-use crate::conversation::token_usage::{ProviderUsage, Usage};
-use crate::documents::{
+use crate::conversations::{Message, MessageContentBlock, ProviderUsage, Usage};
+use crate::document_format::{
     ASSISTANT_ROLE_REASON, DocumentFormat, UNSUPPORTED_MEDIA_TYPE_REASON, convert_document,
     document_media_type_is_supported, unsupported_document_text,
 };

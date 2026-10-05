@@ -1,6 +1,5 @@
-use crate::conversation::message::{Message, MessageContentBlock};
-use crate::conversation::token_usage::Usage;
-use crate::documents::{UNSUPPORTED_PROVIDER_REASON, unsupported_document_text};
+use crate::conversations::{Message, MessageContentBlock, Usage};
+use crate::document_format::{UNSUPPORTED_PROVIDER_REASON, unsupported_document_text};
 use crate::errors::ProviderError;
 use crate::mcp_utils::extract_text_from_resource;
 use crate::model::ModelConfig;

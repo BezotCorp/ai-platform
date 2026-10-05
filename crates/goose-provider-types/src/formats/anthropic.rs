@@ -1,8 +1,6 @@
 use crate::canonical::ThinkingMode;
-use crate::canonical::maybe_get_canonical_model;
-use crate::conversation::message::{Message, MessageContentBlock};
-use crate::conversation::token_usage::{CostSource, ProviderUsage, Usage};
-use crate::documents::{
+use crate::conversations::{Message, MessageContentBlock, CostSource, ProviderUsage, Usage};
+use crate::document_format::{
     ASSISTANT_ROLE_REASON, DocumentFormat, UNSUPPORTED_MEDIA_TYPE_REASON, convert_document,
     document_media_type_is_supported, unsupported_document_text,
 };
@@ -12,6 +10,7 @@ use crate::json;
 use crate::maybe_send::MaybeSend;
 use crate::mcp_utils::extract_text_from_resource;
 use crate::model::ModelConfig;
+use crate::model_mapping::maybe_get_canonical_model;
 use crate::thinking::ThinkingEffort;
 use anyhow::{Result, anyhow};
 use rmcp::model::{
@@ -905,7 +904,7 @@ pub fn is_thinking_signature_error(message: &str) -> bool {
             || lower.contains("block_binding"))
 }
 
-pub fn create_request(
+pub fn create_request_anthropic(
     provider_name: &str,
     model_config: &ModelConfig,
     system: &str,
@@ -913,7 +912,7 @@ pub fn create_request(
     tools: &[Tool],
     options: AnthropicFormatOptions,
 ) -> Result<Value> {
-    create_request_for_model(
+    create_request_for_model_anthropic(
         provider_name,
         model_config,
         &model_config.model_name,
@@ -924,7 +923,7 @@ pub fn create_request(
     )
 }
 
-pub fn create_request_for_model(
+pub fn create_request_for_model_anthropic(
     provider_name: &str,
     model_config: &ModelConfig,
     wire_model_name: &str,
@@ -984,7 +983,7 @@ pub fn create_request_for_model(
 }
 
 /// Process streaming response from Anthropic's API
-pub fn response_to_streaming_message<S>(
+pub fn response_to_streaming_message_anthropic<S>(
     mut stream: S,
 ) -> impl futures::Stream<Item = anyhow::Result<(Option<Message>, Option<ProviderUsage>)>> + 'static
 where

@@ -1,6 +1,6 @@
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
-use crate::conversation::message::DocumentContent;
+use crate::conversations::DocumentContent;
 
 #[derive(Debug, Copy, Clone)]
 pub enum DocumentFormat {

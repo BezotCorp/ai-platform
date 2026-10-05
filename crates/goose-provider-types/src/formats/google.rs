@@ -1,5 +1,5 @@
-use crate::conversation::token_usage::{ProviderUsage, Usage};
-use crate::documents::{
+use crate::conversations::{Message, MessageContentBlock, ProviderMetadata, ProviderUsage, Usage};
+use crate::document_format::{
     UNSUPPORTED_MEDIA_TYPE_REASON, document_media_type_is_supported, unsupported_document_text,
 };
 use crate::errors::ProviderError;
@@ -16,7 +16,6 @@ use serde::Serialize;
 use std::borrow::Cow;
 use uuid::Uuid;
 
-use crate::conversation::message::{Message, MessageContentBlock, ProviderMetadata};
 use serde_json::{Map, Value, json};
 use std::collections::HashMap;
 
@@ -77,7 +76,10 @@ fn build_function_response_part(
 }
 
 /// Convert internal Message format to Google's API message specification
-pub fn format_messages(messages: &[Message], nested_function_response_media: bool) -> Vec<Value> {
+pub fn format_messages_google(
+    messages: &[Message],
+    nested_function_response_media: bool,
+) -> Vec<Value> {
     let filtered: Vec<_> = messages
         .iter()
         .filter(|m| m.is_agent_visible())
@@ -403,7 +405,7 @@ pub fn response_to_message_google(response: Value) -> Result<Message> {
 }
 
 /// Extract usage information from Google's API response
-pub fn get_usage(data: &Value) -> Result<Usage> {
+pub fn get_usage_google(data: &Value) -> Result<Usage> {
     if let Some(usage_meta_data) = data.get("usageMetadata") {
         let input_tokens = usage_meta_data
             .get("promptTokenCount")
@@ -450,7 +452,7 @@ pub fn get_usage(data: &Value) -> Result<Usage> {
     }
 }
 
-pub fn response_to_streaming_message<S>(
+pub fn response_to_streaming_message_google<S>(
     mut stream: S,
 ) -> impl futures::Stream<Item = anyhow::Result<(Option<Message>, Option<ProviderUsage>)>> + 'static
 where
@@ -532,7 +534,7 @@ where
                 )))?;
             }
 
-            if let Ok(usage) = get_usage(&chunk)
+            if let Ok(usage) = get_usage_google(&chunk)
                 && (usage.input_tokens.is_some() || usage.output_tokens.is_some()) {
                     let model = chunk.get("modelVersion")
                         .and_then(|v| v.as_str())
@@ -775,7 +777,7 @@ fn create_request_impl(
         system_instruction: SystemInstruction {
             parts: [TextPart { text: system }],
         },
-        contents: format_messages(
+        contents: format_messages_google(
             messages,
             model_config
                 .model_name

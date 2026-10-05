@@ -1,4 +1,4 @@
-use crate::conversation::message::ToolResult;
+use crate::conversations::ToolResult;
 use rmcp::model::{CallToolRequestParams, ErrorCode, ErrorData, JsonObject};
 use serde::ser::SerializeStruct;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
@@ -114,8 +114,9 @@ where
 }
 
 pub mod call_tool_result {
+    use crate::conversations::sanitize_tool_result_in_place;
+
     use super::*;
-    use crate::conversation::message::sanitize_tool_result_in_place;
     use rmcp::model::{CallToolResult, ContentBlock};
 
     pub fn serialize<S>(

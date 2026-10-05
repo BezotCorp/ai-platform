@@ -7,7 +7,7 @@ use std::{
 use serde::Serialize;
 use serde_json::json;
 
-use crate::conversation::token_usage::Usage;
+use crate::conversations::Usage;
 
 type RequestLogError = Box<dyn Error + Send + Sync>;
 

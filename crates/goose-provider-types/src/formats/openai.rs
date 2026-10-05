@@ -1,7 +1,8 @@
 use crate::base::ThinkingPreservationFormat;
-use crate::conversation::message::{Message, MessageContentBlock, ProviderMetadata};
-use crate::conversation::token_usage::{CostSource, ProviderUsage, Usage};
-use crate::documents::{
+use crate::conversations::{
+    CostSource, Message, MessageContentBlock, ProviderMetadata, ProviderUsage, Usage,
+};
+use crate::document_format::{
     ASSISTANT_ROLE_REASON, DocumentFormat, UNSUPPORTED_MEDIA_TYPE_REASON, convert_document,
     document_media_type_is_supported, unsupported_document_text,
 };
@@ -199,7 +200,7 @@ fn extract_content_and_signature(
     }
 }
 
-pub fn format_messages(messages: &[Message], image_format: &ImageFormat) -> Vec<Value> {
+pub fn format_messages_openai(messages: &[Message], image_format: &ImageFormat) -> Vec<Value> {
     format_messages_with_options(
         messages,
         image_format,
@@ -711,7 +712,7 @@ pub fn record_response_metadata(usage: &mut ProviderUsage, response: &Value) {
 }
 
 /// Convert OpenAI's API response to internal Message format
-pub fn response_to_message(response: &Value) -> anyhow::Result<Message> {
+pub fn response_to_message_openai(response: &Value) -> anyhow::Result<Message> {
     let output_token_limit_reached = response
         .pointer("/choices/0/finish_reason")
         .and_then(Value::as_str)
@@ -1234,7 +1235,7 @@ fn output_token_limit_marker(id: Option<String>) -> Message {
     message
 }
 
-pub fn response_to_streaming_message<S>(
+pub fn response_to_streaming_message_openai<S>(
     mut stream: S,
 ) -> impl Stream<Item = anyhow::Result<(Option<Message>, Option<ProviderUsage>)>> + 'static
 where
@@ -1660,7 +1661,7 @@ where
     }
 }
 
-pub fn create_request(
+pub fn create_request_openai(
     model_config: &ModelConfig,
     system: &str,
     messages: &[Message],
@@ -1668,7 +1669,7 @@ pub fn create_request(
     image_format: &ImageFormat,
     for_streaming: bool,
 ) -> anyhow::Result<Value, Error> {
-    create_request_with_options(
+    create_request_with_options_openai(
         model_config,
         system,
         messages,
@@ -1683,7 +1684,7 @@ pub fn create_request(
     )
 }
 
-pub fn create_request_with_options(
+pub fn create_request_with_options_openai(
     model_config: &ModelConfig,
     system: &str,
     messages: &[Message],
@@ -1693,7 +1694,7 @@ pub fn create_request_with_options(
     format_options: OpenAiFormatOptions,
 ) -> anyhow::Result<Value, Error> {
     let (wire_model_name, _) = extract_reasoning_effort(&model_config.model_name);
-    create_request_for_model_with_options(
+    create_request_for_model_with_options_openai(
         model_config,
         &wire_model_name,
         &model_config.model_name,
@@ -1707,7 +1708,7 @@ pub fn create_request_with_options(
 }
 
 #[allow(clippy::too_many_arguments)]
-pub fn create_request_for_model_with_options(
+pub fn create_request_for_model_with_options_openai(
     model_config: &ModelConfig,
     wire_model_name: &str,
     capability_model_name: &str,

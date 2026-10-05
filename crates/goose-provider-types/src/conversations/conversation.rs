@@ -1,24 +1,13 @@
-use crate::conversation::message::{Message, MessageContentBlock, MessageMetadata};
+use crate::conversations::{
+    InvalidConversation, Message, MessageContentBlock, MessageMetadata, effective_role,
+};
 use crate::mcp_utils::extract_text_from_resource;
 use rmcp::model::{ContentBlock, Role};
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
-use thiserror::Error;
-
-pub mod message;
-pub mod token_usage;
-mod tool_request;
-mod tool_result_serde;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Conversation(Vec<Message>);
-
-#[derive(Error, Debug)]
-#[error("invalid conversation: {reason}")]
-pub struct InvalidConversation {
-    reason: String,
-    conversation: Conversation,
-}
 
 impl Conversation {
     pub fn new<I>(messages: I) -> Result<Self, InvalidConversation>
@@ -195,10 +184,7 @@ impl Conversation {
         let (_messages, issues) = fix_messages(self.0.clone());
         if !issues.is_empty() {
             let reason = issues.join("\n");
-            Err(InvalidConversation {
-                reason,
-                conversation: self,
-            })
+            Err(InvalidConversation::new(reason, self))
         } else {
             Ok(self)
         }
@@ -611,44 +597,9 @@ fn dedupe_signed_thinking(messages: Vec<Message>) -> (Vec<Message>, Vec<String>)
     (fixed_messages, issues)
 }
 
-fn has_tool_response(message: &Message) -> bool {
-    message
-        .content
-        .iter()
-        .any(|content| matches!(content, MessageContentBlock::ToolResponse(_)))
-}
-
 pub const TURN_CONTEXT_TAG: &str = "turn-context";
 pub const CURRENT_TIME_TAG: &str = "current-time";
 pub const WORKING_DIRECTORY_TAG: &str = "working-directory";
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum EffectiveRole {
-    User,
-    Assistant,
-    Tool,
-}
-
-impl std::fmt::Display for EffectiveRole {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::User => write!(f, "user"),
-            Self::Assistant => write!(f, "assistant"),
-            Self::Tool => write!(f, "tool"),
-        }
-    }
-}
-
-pub fn effective_role(message: &Message) -> EffectiveRole {
-    if message.role == Role::User && has_tool_response(message) {
-        EffectiveRole::Tool
-    } else {
-        match message.role {
-            Role::User => EffectiveRole::User,
-            Role::Assistant => EffectiveRole::Assistant,
-        }
-    }
-}
 
 fn fix_lead_trail(mut messages: Vec<Message>) -> (Vec<Message>, Vec<String>) {
     let mut issues = Vec::new();

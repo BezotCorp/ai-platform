@@ -8,13 +8,11 @@
 //! Known affected models:
 //! - qwen3-coder
 //! - qwen3-coder-32b
-
-use crate::conversation::message::{Message, MessageContentBlock};
-use crate::maybe_send::MaybeSend;
-use crate::{
-    conversation::token_usage::ProviderUsage,
-    formats::openai::{self, is_valid_function_name},
+use crate::conversations::{Message, MessageContentBlock, ProviderUsage};
+use crate::formats::{
+    is_valid_function_name, response_to_message_openai, response_to_streaming_message_openai,
 };
+use crate::maybe_send::MaybeSend;
 use async_stream::try_stream;
 use chrono;
 use futures::Stream;
@@ -81,7 +79,7 @@ pub fn parse_xml_tool_calls(content: &str) -> (Option<String>, Vec<MessageConten
 /// This wraps the standard OpenAI response parsing and adds XML fallback for models
 /// like Qwen3-coder that output XML tool calls when given many tools.
 pub fn response_to_message_ollama(response: &Value) -> anyhow::Result<Message> {
-    let message = openai::response_to_message(response)?;
+    let message = response_to_message_openai(response)?;
 
     let has_tool_requests = message
         .content
@@ -161,7 +159,7 @@ where
     try_stream! {
         use futures::StreamExt;
 
-        let base_stream = openai::response_to_streaming_message(stream);
+        let base_stream = response_to_streaming_message_openai(stream);
         let mut base_stream = std::pin::pin!(base_stream);
 
         let mut accumulated_text = String::new();

@@ -1,13 +1,15 @@
-use super::CanonicalModel;
 use anyhow::{Context, Result, bail};
 use futures::StreamExt;
 use once_cell::sync::Lazy;
 use reqwest::header::{ETAG, IF_NONE_MATCH};
 use std::collections::{HashMap, HashSet};
+use std::fs;
 use std::ops::Deref;
 use std::path::{Path, PathBuf};
 use std::sync::{RwLock, RwLockReadGuard};
 use std::time::Duration;
+
+use crate::canonical::CanonicalModel;
 
 const MAX_CATALOG_BYTES: usize = 32 * 1024 * 1024;
 const CATALOG_FILENAME: &str = "models_dev_api.json";
@@ -135,7 +137,7 @@ pub fn load_cached_catalog(cache_dir: &Path) -> Result<bool> {
     if !path.exists() {
         return Ok(false);
     }
-    let content = std::fs::read_to_string(path)?;
+    let content = fs::read_to_string(path)?;
     activate(super::models_dev::from_models_dev(&content)?)?;
     Ok(true)
 }

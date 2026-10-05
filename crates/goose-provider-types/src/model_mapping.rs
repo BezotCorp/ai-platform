@@ -1,14 +1,10 @@
-pub mod catalog;
-mod model;
-pub mod models_dev;
-mod name_builder;
-mod registry;
-
-pub use model::{CanonicalModel, Limit, Modalities, Modality, Pricing, ThinkingMode};
-pub use name_builder::{
-    canonical_name, map_provider_name, map_to_canonical_model, strip_version_suffix,
+use crate::{
+    CanonicalModelRegistry, Modality,
+    canonical::{
+        CanonicalModel, Pricing, is_meta_provider, map_provider_name, strip_version_suffix,
+    },
+    map_to_canonical_model,
 };
-pub use registry::{load_cached_catalog, refresh_remote_catalog, CanonicalModelRegistry};
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct ModelMapping {
@@ -176,7 +172,7 @@ pub fn maybe_get_canonical_model(provider: &str, model: &str) -> Option<Canonica
 
     if should_clear_catalog_pricing(provider) {
         canonical.cost = Pricing::default();
-    } else if name_builder::is_meta_provider(provider) && canonical.cost.has_no_usable_rate() {
+    } else if is_meta_provider(provider) && canonical.cost.has_no_usable_rate() {
         // A meta-provider model can infer to a first-party catalog entry that carries literal
         // 0.0 prices (open-weights publishers such as meta-llama do). The host's own catalog
         // row carries the rate it actually charges to proxy that model, so prefer it. Where
@@ -197,8 +193,8 @@ fn host_catalog_pricing(
     model: &str,
     registry: &CanonicalModelRegistry,
 ) -> Option<Pricing> {
-    let host = name_builder::map_provider_name(provider);
-    let stripped = name_builder::strip_version_suffix(model);
+    let host = map_provider_name(provider);
+    let stripped = strip_version_suffix(model);
     let cost = registry
         .get(host, &stripped)
         .or_else(|| registry.get(host, model))

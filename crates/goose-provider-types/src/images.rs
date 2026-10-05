@@ -1,4 +1,4 @@
-use std::{borrow::Cow, io::Read as _, path::Path};
+use std::{borrow::Cow, fs, io::Read as _, path::Path};
 
 use base64::Engine as _;
 use rmcp::model::ImageContent;
@@ -181,7 +181,7 @@ fn find_ascii_ci(haystack: &str, needle: &str, from: usize) -> Option<usize> {
 
 /// Check if a file is actually an image by examining its magic bytes
 fn is_image_file(path: &Path) -> bool {
-    if let Ok(mut file) = std::fs::File::open(path) {
+    if let Ok(mut file) = fs::File::open(path) {
         let mut buffer = [0u8; 8]; // Large enough for most image magic numbers
         if file.read(&mut buffer).is_ok() {
             return has_image_magic(&buffer);
@@ -226,7 +226,7 @@ pub fn load_image_file(path: &str) -> Result<ImageContent, ProviderError> {
         }
     };
 
-    let file = std::fs::File::open(path)
+    let file = fs::File::open(path)
         .map_err(|e| ProviderError::RequestFailed(format!("Failed to read image file: {e}")))?;
     let file_size = file
         .metadata()
