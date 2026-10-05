@@ -1,5 +1,5 @@
 [package]
-name = "goose-test"
+name = "bcaip-test"
 edition.workspace = true
 rust-version.workspace = true
 version.workspace = true

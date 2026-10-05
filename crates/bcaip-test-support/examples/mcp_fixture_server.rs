@@ -1,4 +1,4 @@
-use goose_test_support::mcp::McpFixtureServer;
+use bcaip_test_support::mcp::McpFixtureServer;
 use rmcp::transport::streamable_http_server::{
     StreamableHttpServerConfig, StreamableHttpService, session::local::LocalSessionManager,
 };

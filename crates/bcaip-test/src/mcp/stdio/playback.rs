@@ -1,9 +1,7 @@
+use serde_json::Value;
 use std::fs::File;
 use std::io::{self, BufRead, BufReader, Write};
 use std::process;
-
-use serde_json::Value;
-
 #[derive(Debug, Clone)]
 enum StreamType {
     Stdin,
