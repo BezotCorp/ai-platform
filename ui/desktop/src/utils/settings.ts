@@ -1,7 +1,7 @@
 import type { ExternalBackendConfig } from './externalBackendConfig';
 import type { KeyboardShortcuts } from './keyboardShortcuts';
 import type { DefaultKeyboardShortcuts } from './defaultKeyboardShortcuts';
-import type { RecentModel } from './RecentModel';
+import type { RecentModel } from './recentModel';
 import { LanguageSetting } from './languageSetting';
 
 export interface Settings {

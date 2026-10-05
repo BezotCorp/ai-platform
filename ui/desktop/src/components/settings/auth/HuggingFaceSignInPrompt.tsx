@@ -1,3 +1,5 @@
+import type { HuggingFaceSignInPromptProps } from './huggingFaceSignInPromptProps';
+
 import { useCallback, useEffect, useState } from 'react';
 import { Loader2, LogIn } from 'lucide-react';
 import { toast } from 'react-toastify';
@@ -39,11 +41,6 @@ const i18n = defineMessages<{
   },
 });
 
-interface HuggingFaceSignInPromptProps {
-  description: string;
-  className?: string;
-  onSignedIn?: () => void;
-}
 
 export default function HuggingFaceSignInPrompt({
   description,

@@ -1,3 +1,5 @@
+import type { ParameterInputProps } from './parameterInputProps';
+
 import React from 'react';
 import { AlertTriangle, Trash2, ChevronDown, ChevronRight } from 'lucide-react';
 import { Parameter } from '../../recipe';
@@ -104,14 +106,6 @@ const i18n = defineMessages<{
   },
 });
 
-interface ParameterInputProps {
-  parameter: Parameter;
-  onChange: (name: string, updatedParameter: Partial<Parameter>) => void;
-  onDelete?: (parameterKey: string) => void;
-  isUnused?: boolean;
-  isExpanded?: boolean;
-  onToggleExpanded?: (parameterKey: string) => void;
-}
 
 const ParameterInput: React.FC<ParameterInputProps> = ({
   parameter,

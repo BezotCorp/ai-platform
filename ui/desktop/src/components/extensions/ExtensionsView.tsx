@@ -1,3 +1,6 @@
+import type { ExtensionsViewOptions } from './extensionsViewOptions';
+export type { ExtensionsViewOptions } from './extensionsViewOptions';
+
 import { View, ViewOptions } from '../../utils/navigationUtils';
 import ExtensionsSection from '../settings/extensions/ExtensionsSection';
 import type { ExtensionConfig } from '../../types/extensionConfig';
@@ -61,10 +64,6 @@ const i18n = defineMessages<{
   },
 });
 
-export type ExtensionsViewOptions = {
-  deepLinkConfig?: ExtensionConfig;
-  showEnvVars?: boolean;
-};
 
 export default function ExtensionsView({
   viewOptions,

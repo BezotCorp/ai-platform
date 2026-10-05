@@ -1,3 +1,5 @@
+import type { AnimatedIconsProps } from './animatedIconsProps';
+
 import { useState, useEffect } from 'react';
 import {
   CodeXml,
@@ -16,11 +18,6 @@ import {
   Watch6,
 } from './icons';
 
-interface AnimatedIconsProps {
-  className?: string;
-  cycleInterval?: number; // milliseconds between icon changes
-  variant?: 'thinking' | 'waiting';
-}
 
 const thinkingIcons = [CodeXml, Cog, Fuel, GalleryHorizontalEnd, Gavel, GlassWater, Grape];
 const waitingIcons = [Watch0, Watch1, Watch2, Watch3, Watch4, Watch5, Watch6];

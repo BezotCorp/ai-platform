@@ -1,3 +1,4 @@
+import type { GooseAcpCallbacks } from './gooseAcpCallbacks';
 import { DEFAULT_GOOSE_MCP_HOST_CAPABILITIES } from '@aaif/goose-acp-client';
 import { methods, PROTOCOL_VERSION, type InitializeResponse } from '@agentclientprotocol/sdk';
 import { createWebSocketStream } from '@agentclientprotocol/sdk/experimental/ws-client';
@@ -9,20 +10,15 @@ import {
   handleAcpSessionNotification,
 } from './chatNotifications';
 import { requestAcpElicitation } from './elicitationRequests';
-import {
-  connectGooseAcpClient,
-  type GooseAcpCallbacks,
-  type GooseAcpClient,
-} from './gooseAcpClient';
+import { connectGooseAcpClient, type GooseAcpClient } from './gooseAcpClient';
 import { requestAcpPermission } from './permissionRequests';
 import { requestAcpRecipeParams } from './recipeParamRequests';
 
+import type { AcpRecoveryListener } from './acpRecoveryListener';
 type AcpConnection = {
   client: GooseAcpClient;
   initializeResponse: InitializeResponse;
 };
-
-type AcpRecoveryListener = (recovering: boolean) => void;
 
 const ACP_INITIALIZE_TIMEOUT_MS = 10_000;
 const ACP_RECONNECT_BASE_DELAY_MS = 500;
@@ -32,7 +28,7 @@ const ACP_V1_PROTOCOL_VERSION: 1 = PROTOCOL_VERSION;
 let currentConnection: AcpConnection | null = null;
 let pendingConnection: Promise<AcpConnection> | null = null;
 let connectionGeneration = 0;
-let recovering = false;
+export let recovering = false;
 const recoveryListeners = new Set<AcpRecoveryListener>();
 
 export async function getAcpClient(): Promise<GooseAcpClient> {

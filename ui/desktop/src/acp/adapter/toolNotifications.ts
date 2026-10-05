@@ -5,39 +5,11 @@ import type { NotificationEvent } from '../../types/notificationEvent';
 import type { AcpChatStateChange } from './shared';
 import { isRecord } from './shared';
 
-type ToolNotification =
-  | {
-      type: 'message';
-      params: LoggingMessageNotificationParams;
-    }
-  | {
-      type: 'progress';
-      params: ProgressNotificationParams;
-    }
-  | {
-      type: 'platform_event';
-      params: PlatformEventParams;
-    }
-  | {
-      type: 'live_output';
-      params: LiveOutputNotificationParams;
-    };
 
-type LoggingMessageNotificationParams = {
-  level: string;
-  logger?: string;
-  data: unknown;
-};
-
-type ProgressNotificationParams = {
-  progressToken: string | number;
-  progress: number;
-  total?: number;
-  message?: string;
-};
-
-type PlatformEventParams = Record<string, unknown>;
-
+import type { ToolNotification } from './toolNotification';
+import type { LoggingMessageNotificationParams } from './loggingMessageNotificationParams';
+import type { ProgressNotificationParams } from './progressNotificationParams';
+import type { PlatformEventParams } from './platformEventParams';
 function isLiveOutputChunk(value: unknown): value is LiveOutputNotificationChunk {
   return (
     isRecord(value) &&

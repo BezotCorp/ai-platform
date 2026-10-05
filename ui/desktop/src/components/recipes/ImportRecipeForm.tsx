@@ -1,3 +1,5 @@
+import type { ImportRecipeFormProps } from './importRecipeFormProps';
+
 import { useState } from 'react';
 import { useForm } from '@tanstack/react-form';
 import { z } from 'zod';
@@ -87,11 +89,6 @@ const i18n = defineMessages<{
   },
 });
 
-interface ImportRecipeFormProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onSuccess: () => void;
-}
 
 const MAX_RECIPE_FILE_SIZE_BYTES = 1024 * 1024;
 
@@ -399,7 +396,7 @@ export default function ImportRecipeForm({ isOpen, onClose, onSuccess }: ImportR
                 onClick={() => setShowSchemaModal(false)}
                 className="text-text-secondary hover:text-text-primary"
               >
-                ✕
+                â
               </button>
             </div>
             <p className="mt-4 text-blue-700 text-sm">

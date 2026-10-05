@@ -1,0 +1,16 @@
+export type View =
+  | 'chat'
+  | 'pair'
+  | 'settings'
+  | 'extensions'
+  | 'moreModels'
+  | 'configureProviders'
+  | 'configPage'
+  | 'ConfigureProviders'
+  | 'settingsV2'
+  | 'sessions'
+  | 'schedules'
+  | 'loading'
+  | 'recipes'
+  | 'skills'
+  | 'permission';

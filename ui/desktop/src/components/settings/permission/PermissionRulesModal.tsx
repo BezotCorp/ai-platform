@@ -1,3 +1,5 @@
+import type { PermissionRulesModalProps } from './permissionRulesModalProps';
+
 import React, { useCallback, useEffect, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../ui/dialog';
 import { useConfig } from '../../ConfigContext';
@@ -63,10 +65,6 @@ function RulesSection({ title, rules }: { title: string; rules: React.ReactNode 
   );
 }
 
-interface PermissionRulesModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-}
 
 export default function PermissionRulesModal({ isOpen, onClose }: PermissionRulesModalProps) {
   const intl = useIntl();

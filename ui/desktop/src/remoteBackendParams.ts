@@ -1,4 +1,4 @@
-import type { HopRequest } from './hotRequest';
+import type { HopRequest } from './hopRequest';
 
 export interface RemoteBackendParams {
   baseUrl: string;

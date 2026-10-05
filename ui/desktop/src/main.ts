@@ -71,15 +71,15 @@ import {
   isAuthorizedFileAccessRequest,
   readSelectedRecipe,
 } from './desktopFileAccess';
-import type { BundledConfig } from './bundleConfig';
-import type { RecipeDeeplinkData } from './recipeDeepLinkData';
+import type { BundledConfig } from './bundledConfig';
+import type { RecipeDeeplinkData } from './recipeDeeplinkData';
 import type { AppWithOpenFilesEvent } from './appWithOpenFilesEvent';
 import type { BackendCertificateTrustRegistration } from './backendCertificateTrustRegistration';
 import type { BackendCertificateTrust } from './backendCertificateTrust';
 import type { WebContentsWithLegacyNavigationEvents } from './webContentsWithLegacyNavigationEvents';
 import type { ExternalBackend } from './externalBackend';
 import type { CreateChatOptions } from './createChatOptions';
-import type { GooseServeLease } from './gooseServerLease';
+import type { GooseServeLease } from './gooseServeLease';
 import type { SettingKey } from './utils/settingKey';
 import { LOCALHOST_ADDRESS_HOSTNAME, LOCALHOST_ADDRESS_IP } from './utils/adress_paths';
 

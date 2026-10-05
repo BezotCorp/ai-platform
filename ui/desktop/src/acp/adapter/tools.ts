@@ -21,6 +21,8 @@ import {
   type ToolCallState,
 } from './shared';
 
+import type { DesktopMcpAppMeta } from './desktopMcpAppMeta';
+import type { ToolResultValue } from './toolResultValue';
 export function applyToolCall(state: AdapterState, update: ToolCall): AcpChatStateChange[] {
   updateToolCallState(state, update);
 
@@ -326,21 +328,6 @@ function apiResourceContentsFromAcpResource(
   };
 }
 
-interface DesktopMcpAppMeta extends Record<string, unknown> {
-  ui: {
-    resourceUri: string;
-  };
-  extensionName?: string;
-  toolName?: string;
-  toolNameIsActual?: boolean;
-}
-
-type ToolResultValue = {
-  content: GooseContentBlock[];
-  structuredContent?: unknown;
-  isError: boolean;
-  _meta?: DesktopMcpAppMeta;
-};
 
 function mcpAppMetadata(update: ToolCallUpdate): DesktopMcpAppMeta | undefined {
   if (!isRecord(update._meta)) {

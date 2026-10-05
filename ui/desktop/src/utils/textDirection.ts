@@ -1,6 +1,7 @@
+import type { Range } from './range';
+
 export type TextDirection = 'rtl' | 'ltr';
 
-type Range = readonly [start: number, end: number];
 
 // Blocks whose characters have strong RTL direction (bidi class R or AL).
 // The Arabic block is enumerated as strong sub-ranges only: digits,

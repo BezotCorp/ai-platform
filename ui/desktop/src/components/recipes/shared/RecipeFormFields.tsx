@@ -1,3 +1,5 @@
+import type { RecipeFormFieldsProps } from './recipeFormFieldsProps';
+
 import React, { useState } from 'react';
 import type { Parameter, RecipeExtension } from '../../../recipe';
 import { ChevronDown } from 'lucide-react';
@@ -126,17 +128,6 @@ import {
 import { RecipeModelSelector } from './RecipeModelSelector';
 import { RecipeExtensionSelector } from './RecipeExtensionSelector';
 
-interface RecipeFormFieldsProps {
-  // Form instance from parent
-  form: RecipeFormApi;
-
-  // Event handlers
-  onTitleChange?: (value: string) => void;
-  onDescriptionChange?: (value: string) => void;
-  onInstructionsChange?: (value: string) => void;
-  onPromptChange?: (value: string) => void;
-  onJsonSchemaChange?: (value: string) => void;
-}
 
 export const extractTemplateVariables = (content: string): string[] => {
   const templateVarRegex: RegExp = /\{\{(.*?)\}\}/g;

@@ -1,11 +1,8 @@
+import type { GooseLogoProps } from './gooseLogoProps';
+
 import { Goose, Rain } from './icons/Goose';
 import { cn } from '../utils';
 
-interface GooseLogoProps {
-  className?: string;
-  size?: 'default' | 'small';
-  hover?: boolean;
-}
 
 export default function GooseLogo({
   className = '',

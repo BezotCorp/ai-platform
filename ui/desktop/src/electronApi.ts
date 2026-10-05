@@ -1,4 +1,4 @@
-import type { CreateChatWindowOptions } from './createChatWindowsOptions';
+import type { CreateChatWindowOptions } from './createChatWindowOptions';
 import type { MessageBoxOptions } from './messageBoxOptions';
 import type { MessageBoxResponse } from './messageBoxResponse';
 import type { NotificationData } from './notificationData';
@@ -13,7 +13,7 @@ import type { OpenExternalUrlResult } from './utils/openExternalUrlResult';
 import type { SettingKey } from './utils/settingKey';
 
 // Define the API types in a single place
-export type ElectronAPI = {
+export type ElectronApi = {
   platform: string;
   arch: string;
   reactReady: () => void;

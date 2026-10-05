@@ -1,8 +1,8 @@
-import type { Session } from 'electron';
 
-type ProxySession = Pick<Session, 'setProxy'>;
-type ProxyEnvironment = Record<string, string | undefined>;
 
+
+import type { ProxySession } from './proxySession';
+import type { ProxyEnvironment } from './proxyEnvironment';
 export async function configureProxy(
   defaultSession: ProxySession,
   rendererSession: ProxySession,

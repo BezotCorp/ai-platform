@@ -1,3 +1,5 @@
+import type { SubRecipeModalProps } from './subRecipeModalProps';
+
 import { useState, useEffect } from 'react';
 import { X, FolderOpen } from 'lucide-react';
 import { Button } from '../../ui/button';
@@ -117,12 +119,6 @@ const i18n = defineMessages<{
   },
 });
 
-interface SubRecipeModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onSave: (subRecipe: SubRecipeFormData) => boolean;
-  subRecipe?: SubRecipeFormData | null;
-}
 
 export default function SubRecipeModal({
   isOpen,

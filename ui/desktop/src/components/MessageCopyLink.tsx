@@ -1,3 +1,5 @@
+import type { MessageCopyLinkProps } from './messageCopyLinkProps';
+
 /* global ClipboardItem */
 
 import React, { useState } from 'react';
@@ -19,10 +21,6 @@ const i18n = defineMessages<{
   },
 });
 
-interface MessageCopyLinkProps {
-  text: string;
-  contentRef: React.RefObject<HTMLDivElement | null>;
-}
 
 export default function MessageCopyLink({ text, contentRef }: MessageCopyLinkProps) {
   const intl = useIntl();

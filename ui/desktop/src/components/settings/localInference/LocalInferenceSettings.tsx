@@ -1,19 +1,12 @@
+import type { LocalModelResponse } from '../../../acp/localModelResponse';
+import type { DownloadModelRequest } from '../../../acp/downloadModelRequest';
+import type { DownloadProgress } from '../../../acp/downloadProgress';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Trash2, X, Settings2, Eye, RefreshCw, Cpu, PowerOff } from 'lucide-react';
 import { Button } from '../../ui/button';
 import { useModelAndProvider } from '../../ModelAndProviderContext';
 import { defineMessages, useIntl } from '../../../i18n';
-import {
-  listLocalModels,
-  downloadHfModel,
-  getLocalModelDownloadProgress,
-  cancelLocalModelDownload,
-  deleteLocalModel,
-  evictLocalModel,
-  type DownloadProgress,
-  type DownloadModelRequest,
-  type LocalModelResponse,
-} from '../../../acp/local-inference';
+import { listLocalModels, downloadHfModel, getLocalModelDownloadProgress, cancelLocalModelDownload, deleteLocalModel, evictLocalModel } from '../../../acp/local-inference';
 import { HuggingFaceModelSearch } from './HuggingFaceModelSearch';
 import { ModelSettingsPanel } from './ModelSettingsPanel';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../ui/dialog';

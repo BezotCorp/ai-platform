@@ -1,41 +1,18 @@
+import type { LiveVoiceInteractionEndedNotification } from '../acp/liveVoiceInteractionEndedNotification';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { isAcpRecovering, subscribeToAcpRecovery } from '../acp/acpConnection';
 import { acpStartLiveVoice, acpStopLiveVoice } from '../acp/liveVoice';
-import {
-  subscribeToLiveVoiceInteractionEnded,
-  type LiveVoiceInteractionEndedNotification,
-} from '../acp/liveVoiceNotifications';
-import { LiveVoiceMediaSession } from './LiveVoiceMediaSession';
+import { subscribeToLiveVoiceInteractionEnded } from '../acp/liveVoiceNotifications';
+import { LiveVoiceMediaSession } from './liveVoiceMediaSession';
 
-export type LiveVoicePhase = 'idle' | 'connecting' | 'live' | 'stopping' | 'error';
 
+import type { LiveVoicePhase } from './liveVoicePhase';
+import type { LiveVoiceController } from './liveVoiceController';
+import type { LiveVoiceInteraction } from './liveVoiceInteraction';
 export function isLiveVoiceActive(phase: LiveVoicePhase): boolean {
   return phase === 'connecting' || phase === 'live' || phase === 'stopping';
 }
 
-export interface LiveVoiceController {
-  activeSessionId: string | null;
-  liveVoiceSessionId: string | null;
-  phase: LiveVoicePhase;
-  muted: boolean;
-  start: (sessionId: string, initialCommentary?: string) => Promise<void>;
-  stop: () => Promise<void>;
-  toggleMute: () => void;
-}
-
-interface LiveVoiceInteraction {
-  sessionId: string;
-  interactionId?: string;
-  remoteStartPending: boolean;
-  media: LiveVoiceMediaSession;
-  mediaReady: boolean;
-  invalidated: boolean;
-  acpConnectionLost: boolean;
-  pendingOutcomesByInteractionId: Map<
-    string,
-    LiveVoiceInteractionEndedNotification['update']['outcome']
-  >;
-}
 
 async function stopRemoteInteraction(
   interaction: LiveVoiceInteraction
@@ -240,3 +217,6 @@ export function useLiveVoice(): LiveVoiceController {
   const activeSessionId = isLiveVoiceActive(phase) ? liveVoiceSessionId : null;
   return { activeSessionId, liveVoiceSessionId, phase, muted, start, stop, toggleMute };
 }
+
+export type { LiveVoicePhase } from './liveVoicePhase';
+export type { LiveVoiceController } from './liveVoiceController';

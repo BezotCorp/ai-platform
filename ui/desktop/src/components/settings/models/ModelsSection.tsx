@@ -1,3 +1,5 @@
+import type { ModelsSectionProps } from './modelsSectionProps';
+
 import { useEffect, useState, useCallback, useRef } from 'react';
 import type { JSX } from 'react';
 import { View } from '../../../utils/navigationUtils';
@@ -25,9 +27,6 @@ const i18n = defineMessages<{
   },
 });
 
-interface ModelsSectionProps {
-  setView: (view: View) => void;
-}
 
 export default function ModelsSection({ setView }: ModelsSectionProps): JSX.Element {
   const intl: ReturnType<typeof useIntl> = useIntl();

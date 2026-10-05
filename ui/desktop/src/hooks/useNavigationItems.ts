@@ -1,3 +1,6 @@
+import type { NavItem } from './navItem';
+export type { NavItem } from './navItem';
+
 import {
   AppWindow,
   Clock,
@@ -12,14 +15,6 @@ import type { LucideIcon } from 'lucide-react';
 import { defineMessages, type IntlShape, type MessageDescriptor } from 'react-intl';
 import type { NoMessageValues } from 'react-intl';
 
-export interface NavItem {
-  id: string;
-  path: string;
-  label: string;
-  icon: LucideIcon;
-  getTag?: () => string;
-  tagAlign?: 'left' | 'right';
-}
 
 /** Top-level nav items (excluding Settings which is pinned to the bottom). */
 export const NAV_ITEMS: NavItem[] = [

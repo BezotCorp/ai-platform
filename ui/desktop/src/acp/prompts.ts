@@ -1,9 +1,7 @@
-import type { GetPromptResponseUnstable, PromptTemplateEntry } from '@aaif/goose-acp-client';
 import { getAcpClient } from './acpConnection';
 
-export type PromptTemplate = PromptTemplateEntry;
-export type PromptContent = GetPromptResponseUnstable;
-
+import type { PromptTemplate } from './promptTemplate';
+import type { PromptContent } from './promptContent';
 export async function acpListPrompts(): Promise<PromptTemplate[]> {
   const client = await getAcpClient();
   const response = await client.goose.configPromptsListUnstable({});

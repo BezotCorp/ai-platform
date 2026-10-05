@@ -1,10 +1,4 @@
-import type {
-  RecipeDto,
-  RecipeExtensionDto,
-  RecipeListEntryDto,
-  RecipeParameterDto,
-  RecipeSettingsDto,
-} from '@aaif/goose-acp-client';
+
 import {
   decodeRecipe as acpDecodeRecipe,
   encodeRecipe as acpEncodeRecipe,
@@ -12,19 +6,8 @@ import {
   scanRecipe as acpScanRecipe,
 } from '../acp/recipe';
 
-export type Parameter = RecipeParameterDto;
-export type RecipeExtension = RecipeExtensionDto;
-export type RecipeSettings = RecipeSettingsDto;
-export type Recipe = RecipeDto & {
-  // TODO: Separate these from the raw recipe type
-  // Properties added for scheduled execution
-  scheduledJobId?: string;
-  isScheduledExecution?: boolean;
-};
-export type RecipeManifest = Omit<RecipeListEntryDto, 'recipe'> & {
-  recipe: Recipe;
-};
 
+import type { Recipe } from './recipe';
 export async function encodeRecipe(recipe: Recipe): Promise<string> {
   try {
     return await acpEncodeRecipe(recipe);
@@ -119,3 +102,9 @@ export async function parseDeeplink(deeplink: string): Promise<Recipe | null> {
     return null;
   }
 }
+
+export type { Parameter } from './parameter';
+export type { RecipeExtension } from './recipeExtension';
+export type { RecipeSettings } from './recipeSettings';
+export type { Recipe } from './recipe';
+export type { RecipeManifest } from './recipeManifest';

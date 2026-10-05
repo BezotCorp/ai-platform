@@ -189,7 +189,7 @@ export default function MessageUsageStats({ usage }: { usage: MessageUsage }) {
         <div className="flex items-center gap-1 text-xs font-mono text-text-secondary hover:text-text-primary transition-colors cursor-default">
           {chipSegments.map((segment, index) => (
             <Fragment key={index}>
-              {index > 0 && <span className="text-text-tertiary">·</span>}
+              {index > 0 && <span className="text-text-tertiary">Â·</span>}
               {segment}
             </Fragment>
           ))}

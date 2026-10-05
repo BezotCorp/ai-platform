@@ -1,3 +1,5 @@
+import type { UpdateMethod } from './updateMethod';
+
 /**
  * Frontend Analytics Module
  *
@@ -543,7 +545,6 @@ export function trackDiagnosticsOpened(): void {
 // Auto-Update Tracking
 // ============================================================================
 
-type UpdateMethod = 'electron-updater' | 'github-fallback';
 
 let updateDownloadStartTime: number | null = null;
 let currentUpdateVersion: string | null = null;

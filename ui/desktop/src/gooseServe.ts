@@ -17,7 +17,7 @@ import type { FindGooseBinaryOptions } from './findGooseBinaryOptions';
 import type { GooseServeResult } from './gooseServeResult';
 import type { Logger } from './logger';
 import type { LocalServeUrls } from './localServeUrls';
-import type { StartGooseServeOptions } from './startGooseServerOptions';
+import type { StartGooseServeOptions } from './startGooseServeOptions';
 import type { LocalServeScheme } from './localServeScheme';
 import type { GooseServeExitSignal } from './gooseServeExitSignal';
 import type { ReadinessFetch } from './readinessFetch';

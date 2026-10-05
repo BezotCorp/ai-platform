@@ -1,6 +1,9 @@
+import type { ToolApprovalData } from './toolApprovalData';
+export type { ToolApprovalData } from './toolApprovalData';
+
 import { useState, useEffect } from 'react';
 import { Button } from './ui/button';
-import type { Permission } from '../types/permissions';
+import type { Permission } from '../types/permission';
 import { resolveAcpPermissionRequest } from '../acp/permissionRequests';
 import { defineMessages, useIntl } from '../i18n';
 import type { NoMessageValues } from 'react-intl';
@@ -62,14 +65,6 @@ const globalApprovalState = new Map<
   }
 >();
 
-export interface ToolApprovalData {
-  generation?: string;
-  id: string;
-  toolName: string;
-  prompt?: string;
-  sessionId: string;
-  isClicked?: boolean;
-}
 
 export default function ToolApprovalButtons({ data }: { data: ToolApprovalData }) {
   const intl = useIntl();

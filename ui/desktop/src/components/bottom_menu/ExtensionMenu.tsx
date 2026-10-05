@@ -1,3 +1,5 @@
+import type { ExtensionMenuProps } from './extensionMenuProps';
+
 import { useMemo, useState } from 'react';
 import { Puzzle } from 'lucide-react';
 import type { ExtensionMenuEntry } from './extensionMenuEntry';
@@ -6,20 +8,6 @@ import { Input } from '../ui/input';
 import { Switch } from '../ui/switch';
 import { formatExtensionName } from '../settings/extensions/subcomponents/ExtensionList';
 
-interface ExtensionMenuProps {
-  extensions: ExtensionMenuEntry[];
-  title: string;
-  searchPlaceholder: string;
-  description: string;
-  emptyMessage: string;
-  noResultsMessage: string;
-  hidden: boolean;
-  isTransitioning: boolean;
-  isSortPending: boolean;
-  togglingExtensionName: string | null;
-  onToggle: (extension: ExtensionMenuEntry) => void;
-  onClose?: () => void;
-}
 
 export function ExtensionMenu({
   extensions,

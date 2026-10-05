@@ -1,38 +1,13 @@
 import type {
-  RecipeParameterDto,
   RecipeParamsResponseUnstable,
   RequestRecipeParamsUnstable,
 } from '@aaif/goose-acp-client';
 import { v7 as uuidv7 } from 'uuid';
 
-export interface AcpRecipeParamRequest {
-  id: string;
-  sessionId: string;
-  parameters: RecipeParameterDto[];
-  initialValues?: Record<string, string>;
-}
-
-interface PendingRecipeParamRequest {
-  request: AcpRecipeParamRequest;
-  resolve: (response: RecipeParamsResponseUnstable) => void;
-  usesConfiguredParameters: boolean;
-}
-
-type ConfiguredParameterState =
-  | { status: 'uninitialized' }
-  | {
-      status: 'active';
-      scopeId: string;
-      values: Record<string, string>;
-      sessionId?: string;
-    }
-  | { status: 'consumed' };
-
-export interface ConfiguredRecipeParameterScope {
-  id: string;
-  finish(): void;
-}
-
+import type { AcpRecipeParamRequest } from './acpRecipeParamRequest';
+import type { PendingRecipeParamRequest } from './pendingRecipeParamRequest';
+import type { ConfiguredParameterState } from './configuredParameterState';
+import type { ConfiguredRecipeParameterScope } from './configuredRecipeParameterScope';
 const pendingRequests = new Map<string, PendingRecipeParamRequest>();
 const listeners = new Set<() => void>();
 let snapshot: AcpRecipeParamRequest[] = [];

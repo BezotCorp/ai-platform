@@ -168,7 +168,7 @@ export default function RecipeActivityEditor({
                   size="sm"
                   className="ml-2 text-text-primary hover:text-text-secondary transition-colors p-0 h-auto"
                 >
-                  ×
+                  Ã
                 </Button>
               </div>
             ))}

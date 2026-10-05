@@ -1,3 +1,6 @@
+import type { ExtensionFormData } from './extensionFormData';
+export type { ExtensionFormData } from './extensionFormData';
+
 
 import type { ExtensionConfig } from '../../../types/extensionConfig';
 import type { ConfiguredExtensionEntry } from '../../../types/configuredExtensionEntry';
@@ -19,33 +22,6 @@ export function nameToKey(name: string): string {
     .toLowerCase();
 }
 
-export interface ExtensionFormData {
-  name: string;
-  description: string;
-  type: 'stdio' | 'streamable_http' | 'builtin';
-  cmd?: string;
-  endpoint?: string;
-  enabled: boolean;
-  timeout?: number;
-  envVars: {
-    key: string;
-    value: string;
-    isEdited?: boolean;
-  }[];
-  headers: {
-    key: string;
-    value: string;
-    isEdited?: boolean;
-  }[];
-  installation_notes?: string;
-  available_tools?: string[];
-  // streamable_http fields with no form input yet; carried through so an
-  // unrelated edit does not strip them from the saved config.
-  socket?: string | null;
-  client_id?: string | null;
-  client_secret_key?: string | null;
-  scopes?: string[];
-}
 
 export function getDefaultFormData(): ExtensionFormData {
   return {

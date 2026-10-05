@@ -1,3 +1,5 @@
+import type { SubRecipeEditorProps } from './subRecipeEditorProps';
+
 import { useState } from 'react';
 import { Plus, Edit2, Trash2, FilePlus } from 'lucide-react';
 import { Button } from '../../ui/button';
@@ -62,10 +64,6 @@ const i18n = defineMessages<{
   },
 });
 
-interface SubRecipeEditorProps {
-  subRecipes: SubRecipeFormData[];
-  onChange: (subRecipes: SubRecipeFormData[]) => void;
-}
 
 export default function SubRecipeEditor({ subRecipes, onChange }: SubRecipeEditorProps) {
   const intl = useIntl();

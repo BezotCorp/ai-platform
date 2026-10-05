@@ -1,11 +1,11 @@
+import type { NextChatExtensionDraft } from './nextChatExtensionDraft';
+export type { NextChatExtensionDraft } from './nextChatExtensionDraft';
+
 import type { ExtensionConfig } from '../types/extensionConfig';
 import { configuredExtensionEntryToConfig } from './configuredExtensionEntryToConfig';
 import type { ConfiguredExtensionEntry } from '../types/configuredExtensionEntry';
 
 
-export type NextChatExtensionDraft = {
-  selectedNames: Set<string>;
-};
 
 export function createNextChatExtensionDraft(
   allExtensions: ConfiguredExtensionEntry[] = []

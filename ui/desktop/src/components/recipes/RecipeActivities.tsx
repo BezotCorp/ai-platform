@@ -1,14 +1,10 @@
+import type { RecipeActivitiesProps } from './recipeActivitiesProps';
+
 import { Card } from '../ui/card';
 import GooseLogo from '../GooseLogo';
 import MarkdownContent from '../MarkdownContent';
 import { substituteParameters } from '../../utils/parameterSubstitution';
 
-interface RecipeActivitiesProps {
-  append: (text: string) => void;
-  activities: string[] | null;
-  title?: string;
-  parameterValues?: Record<string, string>;
-}
 
 export default function RecipeActivities({
   append,

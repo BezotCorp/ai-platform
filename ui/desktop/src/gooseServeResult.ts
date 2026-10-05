@@ -1,6 +1,6 @@
 import { type ChildProcess } from 'child_process';
 import type { GooseServeExitSignal } from './gooseServeExitSignal';
-import type { GooseServeStartupDiagnostics } from './gooseServeStatupDiagnostics';
+import type { GooseServeStartupDiagnostics } from './gooseServeStartupDiagnostics';
 
 export interface GooseServeResult {
   acpUrl: string;

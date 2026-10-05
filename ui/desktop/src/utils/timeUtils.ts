@@ -1,3 +1,6 @@
+import type { ClockDisplay } from './clockDisplay';
+export type { ClockDisplay } from './clockDisplay';
+
 import { currentLocale } from '../i18n';
 import { AppDate } from './appDate';
 
@@ -21,11 +24,6 @@ export function formatMessageTimestamp(timestamp?: number): string {
   return `${dateStr} ${timeStr}`;
 }
 
-export interface ClockDisplay {
-  time: string;
-  meridiem: string;
-  hour: number;
-}
 
 export function formatClockDisplay(
   date: AppDate = AppDate.now(),

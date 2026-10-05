@@ -1,15 +1,10 @@
+import type { TooltipWrapperProps } from './tooltipWrapperProps';
+
 // TooltipWrapper.tsx
 import React from 'react';
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '../../../../ui/Tooltip';
 import { Portal } from '@radix-ui/react-portal';
 
-interface TooltipWrapperProps {
-  children: React.ReactNode;
-  tooltipContent: React.ReactNode;
-  side?: 'top' | 'bottom' | 'left' | 'right';
-  align?: 'start' | 'center' | 'end';
-  className?: string;
-}
 
 export function TooltipWrapper({
   children,

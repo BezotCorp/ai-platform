@@ -1,3 +1,6 @@
+import type { SettingsViewOptions } from './settingsViewOptions';
+export type { SettingsViewOptions } from './settingsViewOptions';
+
 import { ScrollArea } from '../ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
 import { View, ViewOptions } from '../../utils/navigationUtils';
@@ -83,11 +86,6 @@ const i18n = defineMessages<{
 const settingsTabClass =
   'w-full gap-3 rounded-full px-3 py-2 text-sm font-medium hover:bg-background-tertiary/60 data-[state=active]:bg-background-tertiary data-[state=active]:shadow-none';
 
-export type SettingsViewOptions = {
-  deepLinkConfig?: ExtensionConfig;
-  showEnvVars?: boolean;
-  section?: string;
-};
 
 export default function SettingsView({
   onClose,

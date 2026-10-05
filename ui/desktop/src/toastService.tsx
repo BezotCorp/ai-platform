@@ -9,8 +9,11 @@ import {
   ExtensionLoadingStatus,
 } from './components/GroupedExtensionLoadingToast';
 import { getInitialWorkingDir } from './utils/workingDir';
-import type { ToastServiceOptions } from './toastServiceOption';
+import type { ToastServiceOptions } from './toastServiceOptions';
 
+import type { ToastSuccessProps } from './toastSuccessProps';
+import type { ToastErrorProps } from './toastErrorProps';
+import type { ToastLoadingProps } from './toastLoadingProps';
 class ToastService {
   private silent: boolean = false;
   private shouldThrow: boolean = false;
@@ -144,7 +147,6 @@ const commonToastOptions: ToastOptions = {
   draggable: true,
 };
 
-type ToastSuccessProps = { title?: string; msg?: string; toastOptions?: ToastOptions };
 
 export function toastSuccess({ title, msg, toastOptions = {} }: ToastSuccessProps) {
   return toast.success(
@@ -156,12 +158,6 @@ export function toastSuccess({ title, msg, toastOptions = {} }: ToastSuccessProp
   );
 }
 
-type ToastErrorProps = {
-  title: string;
-  msg: string;
-  traceback?: string;
-  recoverHints?: string;
-};
 
 function ToastErrorContent({
   title,
@@ -220,11 +216,6 @@ export function toastError({ title, msg, traceback, recoverHints }: ToastErrorPr
   );
 }
 
-type ToastLoadingProps = {
-  title?: string;
-  msg?: string;
-  toastOptions?: ToastOptions;
-};
 
 export function toastLoading({ title, msg, toastOptions }: ToastLoadingProps) {
   return toast.loading(

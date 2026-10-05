@@ -1,3 +1,5 @@
+import type { ShortcutConfig } from './shortcutConfig';
+
 import { useState, useEffect, useCallback } from 'react';
 import { type MessageDescriptor } from 'react-intl';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../ui/card';
@@ -265,12 +267,6 @@ const i18n = defineMessages<{
   },
 });
 
-interface ShortcutConfig {
-  key: keyof KeyboardShortcuts;
-  label: MessageDescriptor;
-  description: MessageDescriptor;
-  category: 'global' | 'application' | 'search' | 'window';
-}
 
 const shortcutConfigs: ShortcutConfig[] = [
   {

@@ -1,37 +1,16 @@
-import {
-  client,
-  methods,
-  type Client,
-  type ClientConnection,
-  type Stream,
-} from '@agentclientprotocol/sdk';
+import { client, methods, type ClientConnection, type Stream } from '@agentclientprotocol/sdk';
 import {
   GOOSE_EXT_AGENT_REQUESTS,
   GOOSE_EXT_NOTIFICATIONS,
   GooseExtClient,
-  type GooseSessionNotificationUnstable,
-  type ProviderDeviceCodeNotificationUnstable,
-  type RecipeParamsResponseUnstable,
-  type RequestRecipeParamsUnstable,
   gooseSessionNotificationUnstableSchema,
   providerDeviceCodeNotificationUnstableSchema,
   requestRecipeParamsUnstableSchema,
 } from '@aaif/goose-acp-client';
 
+import type { GooseAcpCallbacks } from './gooseAcpCallbacks';
 const [gooseSessionUpdate, providerDeviceCode] = GOOSE_EXT_NOTIFICATIONS;
 const [gooseRecipeParamsRequest] = GOOSE_EXT_AGENT_REQUESTS;
-
-export type GooseAcpCallbacks = Required<
-  Pick<Client, 'requestPermission' | 'sessionUpdate' | 'createElicitation'>
-> & {
-  unstable_sessionRecipeRequestParams: (
-    request: RequestRecipeParamsUnstable
-  ) => Promise<RecipeParamsResponseUnstable>;
-  unstable_sessionUpdate: (notification: GooseSessionNotificationUnstable) => Promise<void>;
-  unstable_providerDeviceCode: (
-    notification: ProviderDeviceCodeNotificationUnstable
-  ) => Promise<void>;
-};
 
 export type GooseAcpClient = {
   connection: ClientConnection;

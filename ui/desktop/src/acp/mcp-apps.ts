@@ -1,24 +1,13 @@
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
-import type { ToolListItem } from '@aaif/goose-acp-client';
+
 import type { GooseApp } from '../types/gooseApp';
 import { getAcpClient } from './acpConnection';
 import { normalizeAcpError } from './errors';
 
-type JsonRecord = Record<string, unknown>;
-export type McpAppTool = ToolListItem;
-export type McpAppResourceResponse = {
-  uri: string;
-  mimeType: string | null;
-  text: string;
-  _meta?: Record<string, unknown>;
-};
-type ToolCallResponseLike = {
-  content?: Array<unknown>;
-  structuredContent?: unknown;
-  isError?: boolean;
-  _meta?: unknown;
-};
-
+import type { JsonRecord } from './jsonRecord';
+import type { McpAppTool } from './mcpAppTool';
+import type { McpAppResourceResponse } from './mcpAppResourceResponse';
+import type { ToolCallResponseLike } from './toolCallResponseLike';
 function isRecord(value: unknown): value is JsonRecord {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }

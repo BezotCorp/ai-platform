@@ -1,3 +1,5 @@
+import type { GoosehintsModalProps } from './goosehintsModalProps';
+
 import { useState, useEffect } from 'react';
 import { Button } from '../../ui/button';
 import { Check } from '../../icons';
@@ -167,10 +169,6 @@ const FileInfo = ({ filePath, found }: { filePath: string; found: boolean }) => 
   );
 };
 
-interface GoosehintsModalProps {
-  directory: string;
-  setIsGoosehintsModalOpen: (isOpen: boolean) => void;
-}
 
 export const GoosehintsModal = ({ directory, setIsGoosehintsModalOpen }: GoosehintsModalProps) => {
   const intl = useIntl();

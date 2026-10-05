@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { GooseServeStartupTrace } from './gosseServerStartupTrace';
-import { GooseServeStartupDiagnostics } from './gooseServeStatupDiagnostics';
+import { GooseServeStartupTrace } from './gooseServeStartupTrace';
+import { GooseServeStartupDiagnostics } from './gooseServeStartupDiagnostics';
 
 const STARTUP_TAIL_LIMIT = 80;
 const STARTUP_LOGS_TO_KEEP = 20;

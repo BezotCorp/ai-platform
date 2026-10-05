@@ -13,7 +13,7 @@ import type { UpdaterEvent } from '../updaterEvent';
 import * as path from 'path';
 import * as fs from 'fs/promises';
 import log from './logger';
-import { githubUpdater } from './githubUpdater';
+import { githubUpdater } from './gitHubUpdater';
 import { loadRecentDirs } from './recentDirs';
 import { errorMessage } from './conversionUtils';
 import {

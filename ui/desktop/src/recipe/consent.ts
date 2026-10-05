@@ -1,16 +1,10 @@
+import type { PendingConsent } from './pendingConsent';
+
 import { v7 as uuidv7 } from 'uuid';
-import type { Recipe } from '.';
 
-export interface RecipeConsentRequest {
-  id: string;
-  recipe: Recipe;
-  hasSecurityWarnings: boolean;
-}
 
-interface PendingConsent {
-  request: RecipeConsentRequest;
-  resolve: (accepted: boolean) => void;
-}
+
+import type { RecipeConsentRequest } from './recipeConsentRequest';
 
 const pendingRequests = new Map<string, PendingConsent>();
 const listeners = new Set<() => void>();
@@ -53,3 +47,5 @@ export function resolveRecipeConsent(id: string, accepted: boolean): void {
   emit();
   pending.resolve(accepted);
 }
+
+export type { RecipeConsentRequest } from './recipeConsentRequest';

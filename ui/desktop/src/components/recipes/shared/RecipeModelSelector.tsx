@@ -1,3 +1,5 @@
+import type { RecipeModelSelectorProps } from './recipeModelSelectorProps';
+
 import { useEffect, useState, useCallback } from 'react';
 import { Select } from '../../ui/Select';
 import { Input } from '../../ui/input';
@@ -70,12 +72,6 @@ const i18n = defineMessages<{
   },
 });
 
-interface RecipeModelSelectorProps {
-  selectedProvider?: string;
-  selectedModel?: string;
-  onProviderChange: (provider: string | undefined) => void;
-  onModelChange: (model: string | undefined) => void;
-}
 
 export const RecipeModelSelector = ({
   selectedProvider,

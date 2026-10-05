@@ -1,3 +1,5 @@
+import type { ConfigureApproveModeProps } from './configureApproveModeProps';
+
 import React, { useEffect, useState } from 'react';
 import { Card } from '../../ui/card';
 import { Button } from '../../ui/button';
@@ -54,11 +56,6 @@ const i18n = defineMessages<{
   },
 });
 
-interface ConfigureApproveModeProps {
-  onClose: () => void;
-  handleModeChange: (newMode: string) => void;
-  currentMode: string | null;
-}
 
 export function ConfigureApproveMode({
   onClose,

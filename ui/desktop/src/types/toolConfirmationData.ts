@@ -1,7 +1,7 @@
 import type { ActionRequired } from './actionRequired';
 import type { Message } from './message';
 import type { ToolConfirmationRequestContent } from './toolConfirmationRequestContent';
-import { getToolResponses } from '.';
+import { getToolResponses } from './toolResponseMessageContent';
 
 export interface ToolConfirmationData {
   generation?: string;

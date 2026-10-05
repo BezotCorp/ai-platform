@@ -1,10 +1,9 @@
+import type { SystemNotificationInlineProps } from './systemNotificationInlineProps';
+
 import React from 'react';
 import type { Message } from '../../types/message';
 import type { SystemNotificationContent } from '../../types/systemNotificationContent';
 
-interface SystemNotificationInlineProps {
-  notification: SystemNotificationContent;
-}
 
 export const SystemNotificationInline: React.FC<SystemNotificationInlineProps> = ({
   notification,

@@ -1,3 +1,5 @@
+import type { ChatSessionsContainerProps } from './chatSessionsContainerProps';
+
 import { useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router';
 import BaseChat from './BaseChat';
@@ -7,15 +9,6 @@ import { subscribeToAcpRecovery } from '../acp/acpConnection';
 import { acpChatSessionController } from '../acp/chatSessionController';
 import type { LiveVoiceController } from '../liveVoice/useLiveVoice';
 
-interface ChatSessionsContainerProps {
-  setChat: (chat: ChatType) => void;
-  activeSessions: Array<{
-    sessionId: string;
-    initialMessage?: UserInput;
-    noAutoSubmit?: boolean;
-  }>;
-  liveVoice: LiveVoiceController;
-}
 
 /**
  * Container that mounts ALL active chat sessions to keep them alive.

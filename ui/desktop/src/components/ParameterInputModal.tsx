@@ -1,3 +1,5 @@
+import type { ParameterInputModalProps } from './parameterInputModalProps';
+
 import React, { useId, useState, useEffect } from 'react';
 import { Parameter } from '../recipe';
 import { Button } from './ui/button';
@@ -68,12 +70,6 @@ const i18n = defineMessages<{
   },
 });
 
-interface ParameterInputModalProps {
-  parameters: Parameter[];
-  onSubmit: (values: Record<string, string>) => void;
-  onClose: () => void;
-  initialValues?: Record<string, string>;
-}
 
 function needsUserValue(param: Parameter): boolean {
   return param.requirement === 'required' || param.requirement === 'user_prompt';

@@ -1,3 +1,5 @@
+import type { AlertBoxProps } from './alertBoxProps';
+
 import React, { useState, useEffect } from 'react';
 import { IoIosCloseCircle, IoIosWarning, IoIosInformationCircle } from 'react-icons/io';
 import { FaPencilAlt, FaSave } from 'react-icons/fa';
@@ -14,11 +16,6 @@ const alertIcons: Record<AlertType, React.ReactNode> = {
   [AlertType.Info]: <IoIosInformationCircle className="h-5 w-5" />,
 };
 
-interface AlertBoxProps {
-  alert: Alert;
-  className?: string;
-  compactButtonEnabled?: boolean;
-}
 
 const i18n = defineMessages<{
   readonly autoCompactAt: NoMessageValues;

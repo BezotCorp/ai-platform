@@ -1,3 +1,5 @@
+import type { CreditsExhaustedNotificationProps } from './creditsExhaustedNotificationProps';
+
 import React from 'react';
 import { AlertTriangle, ExternalLink } from 'lucide-react';
 import type { Message } from '../../types/message';
@@ -20,9 +22,6 @@ const i18n = defineMessages<{
   },
 });
 
-interface CreditsExhaustedNotificationProps {
-  notification: SystemNotificationContent;
-}
 
 function getValidatedTopUpUrl(data: unknown): string | null {
   if (!data || typeof data !== 'object') {

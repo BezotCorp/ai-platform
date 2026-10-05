@@ -1,3 +1,5 @@
+import type { OnboardingSuccessProps } from './onboardingSuccessProps';
+
 import { useState } from 'react';
 import { Button } from '../ui/button';
 import PrivacyInfoModal from './PrivacyInfoModal';
@@ -50,10 +52,6 @@ const i18n = defineMessages<{
   },
 });
 
-interface OnboardingSuccessProps {
-  providerName: string;
-  onFinish: (telemetryEnabled: boolean) => void;
-}
 
 export default function OnboardingSuccess({ providerName, onFinish }: OnboardingSuccessProps) {
   const intl = useIntl();

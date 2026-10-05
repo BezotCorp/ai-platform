@@ -1,15 +1,10 @@
-import type {
-  DictationDownloadProgress,
-  DictationLocalModelStatus,
-  DictationProviderStatusEntry,
-} from '@aaif/goose-acp-client';
+import type { DictationProviderStatusEntry } from '@aaif/goose-acp-client';
 import { getAcpClient } from './acpConnection';
 
+import type { DictationProviders } from './dictationProviders';
+import type { LocalDictationModel } from './localDictationModel';
+import type { LocalDictationDownloadProgress } from './localDictationDownloadProgress';
 export type { DictationProviderStatusEntry };
-
-export type DictationProviders = Record<string, DictationProviderStatusEntry>;
-export type LocalDictationModel = DictationLocalModelStatus;
-export type LocalDictationDownloadProgress = DictationDownloadProgress;
 
 export async function getDictationConfig(): Promise<DictationProviders> {
   const client = await getAcpClient();

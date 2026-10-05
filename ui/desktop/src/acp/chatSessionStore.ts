@@ -1,52 +1,29 @@
+import type { AcpElicitationRequest } from './acpElicitationRequest';
+import type { AcpChatSessionStore } from './acpChatSessionStore';
+export type { AcpChatSessionStore } from './acpChatSessionStore';
+
 import { useSyncExternalStore } from 'react';
-import type { GooseSessionNotificationUnstable } from '@aaif/goose-acp-client';
-import type { SessionNotification } from '@agentclientprotocol/sdk';
-import type { TokenState } from '../types/tokenState';
-import { ChatState } from '../types/chatState';
-import type { Message } from '../types/message';
-import type { NotificationEvent } from '../types/notificationEvent';
-import type { Session } from '../types/session';
 import {
   createAcpSessionNotificationAdapter,
   type AcpChatStateChange,
   type AcpSessionNotificationAdapter,
 } from './sessionNotificationAdapter';
-import type { ElicitationStatus } from './adapter/elicitationStatus';
 import { cloneMessage } from './adapter/shared';
-import type { AcpElicitationRequest } from './elicitationRequests';
-import type { AcpPermissionRequest } from './permissionRequestTypes';
+import { ChatState } from '../types/chatState';
 
-export interface AcpChatSessionSnapshot {
-  session: Session | undefined;
-  messages: Message[];
-  tokenState: TokenState;
-  notifications: NotificationEvent[];
-  progressMessage: string | undefined;
-  chatState: ChatState;
-  sessionLoadError: string | undefined;
-  activePromptAttemptId: string | null;
-  activeRunId: string | null;
-  pendingCancelPromptAttemptId: string | null;
-}
+import type { GooseSessionNotificationUnstable } from '@aaif/goose-acp-client';
+import type { SessionNotification } from '@agentclientprotocol/sdk';
+import type { TokenState } from '../types/tokenState';
+import type { Message } from '../types/message';
+import type { Session } from '../types/session';
+import type { ElicitationStatus } from './adapter/elicitationStatus';
 
-type SnapshotListener = (snapshot: AcpChatSessionSnapshot) => void;
-
-interface StoreEntry extends AcpChatSessionSnapshot {
-  adapter: AcpSessionNotificationAdapter;
-  promptCancellationRestoreState: {
-    activeRunId: string | null;
-    chatState: ChatState;
-    pendingUserInputRequestIds: Set<string>;
-  } | null;
-  pendingUserInputRequestIds: Set<string>;
-  pendingLocalSteerMessageIds: Set<string>;
-  preConfirmedSteerMessageIds: Set<string>;
-  // Cached result of the last notify(); reused while a session-load replay is
-  // in flight so per-notification reads don't deep-clone the growing message
-  // array (see applyAcpSessionNotification / getSnapshot).
-  lastSnapshot?: AcpChatSessionSnapshot;
-}
-
+import type { AcpPermissionRequest } from './acpPermissionRequest';
+import type { AcpChatSessionSnapshot } from './acpChatSessionSnapshot';
+import type { SnapshotListener } from './snapshotListener';
+import type { StoreEntry } from './storeEntry';
+import type { AcpChatSessionActions } from './acpChatSessionActions';
+import type { AcpChatSessionStoreInternal } from './acpChatSessionStoreInternal';
 const initialTokenState: TokenState = {
   inputTokens: 0,
   outputTokens: 0,
@@ -56,69 +33,6 @@ const initialTokenState: TokenState = {
   accumulatedTotalTokens: 0,
 };
 
-export interface AcpChatSessionStore {
-  getSnapshot(sessionId: string): AcpChatSessionSnapshot | undefined;
-}
-
-export interface AcpChatSessionActions {
-  deleteSnapshot(sessionId: string): void;
-
-  applyAcpSessionNotification(notification: SessionNotification): AcpChatSessionSnapshot;
-  applyAcpGooseSessionNotification(
-    notification: GooseSessionNotificationUnstable
-  ): AcpChatSessionSnapshot;
-  applyPermissionRequest(request: AcpPermissionRequest): AcpChatSessionSnapshot;
-  cancelPermissionRequest(
-    sessionId: string,
-    toolCallId: string,
-    generation: string
-  ): AcpChatSessionSnapshot | undefined;
-  applyElicitationRequest(request: AcpElicitationRequest): AcpChatSessionSnapshot;
-  setElicitationStatus(
-    sessionId: string,
-    elicitationId: string,
-    status: ElicitationStatus
-  ): AcpChatSessionSnapshot | undefined;
-
-  setSessionMetadata(sessionId: string, session: Session | undefined): AcpChatSessionSnapshot;
-  startSessionLoad(sessionId: string): AcpChatSessionSnapshot;
-  finishSessionLoad(sessionId: string, session: Session): AcpChatSessionSnapshot;
-  failSessionLoad(sessionId: string, sessionLoadError: string): AcpChatSessionSnapshot;
-  setSessionLoadError(
-    sessionId: string,
-    sessionLoadError: string | undefined
-  ): AcpChatSessionSnapshot;
-
-  setMessages(sessionId: string, messages: Message[]): AcpChatSessionSnapshot;
-  addPendingLocalSteerMessage(sessionId: string, message: Message): AcpChatSessionSnapshot;
-  setChatState(sessionId: string, chatState: ChatState): AcpChatSessionSnapshot;
-  resolveUserInputRequest(
-    sessionId: string,
-    userInputRequestId: string
-  ): AcpChatSessionSnapshot | undefined;
-
-  startPromptAttempt(sessionId: string, promptAttemptId: string): AcpChatSessionSnapshot;
-  startPromptCancellation(
-    sessionId: string,
-    promptAttemptId: string
-  ): AcpChatSessionSnapshot | undefined;
-  clearPromptCancellation(
-    sessionId: string,
-    promptAttemptId: string
-  ): AcpChatSessionSnapshot | undefined;
-  restorePromptCancellation(
-    sessionId: string,
-    promptAttemptId: string
-  ): AcpChatSessionSnapshot | undefined;
-  waitForPromptCancellation(sessionId: string, promptAttemptId: string): Promise<void>;
-  finishPromptAttemptIfCurrent(sessionId: string, promptAttemptId: string): boolean;
-  clearActivePromptAttempt(sessionId: string): AcpChatSessionSnapshot | undefined;
-  isCurrentPromptAttempt(sessionId: string, promptAttemptId: string): boolean;
-}
-
-interface AcpChatSessionStoreInternal extends AcpChatSessionStore, AcpChatSessionActions {
-  subscribe(sessionId: string, listener: (snapshot: AcpChatSessionSnapshot) => void): () => void;
-}
 
 function createAcpChatSessionStoreInternal(): AcpChatSessionStoreInternal {
   const sessionsById = new Map<string, StoreEntry>();

@@ -1,3 +1,5 @@
+import type { SchedulesViewProps } from './schedulesViewProps';
+
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router';
 import type { ScheduledJobDto } from '@aaif/goose-acp-client';
@@ -110,9 +112,6 @@ const i18n = defineMessages<{
   inspectError: { id: 'schedulesView.inspectError', defaultMessage: 'Inspect Job Error' },
 });
 
-interface SchedulesViewProps {
-  onClose?: () => void;
-}
 
 const ScheduleCard: React.FC<{
   job: ScheduledJobDto;

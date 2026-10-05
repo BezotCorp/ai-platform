@@ -1,5 +1,5 @@
 import type { RequestPermissionRequest } from '@agentclientprotocol/sdk';
-import type { AcpPermissionRequest } from '../permissionRequestTypes';
+import type { AcpPermissionRequest } from '../acpPermissionRequest';
 import {
   type AcpChatStateChange,
   type AdapterState,

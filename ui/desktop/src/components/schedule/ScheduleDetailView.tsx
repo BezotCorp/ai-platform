@@ -1,3 +1,5 @@
+import type { ScheduleDetailViewProps } from './scheduleDetailViewProps';
+
 import React, { useState, useEffect, useCallback } from 'react';
 import type { ScheduledJobDto, SessionInfo } from '@aaif/goose-acp-client';
 import { Button } from '../ui/button';
@@ -195,10 +197,6 @@ const i18n = defineMessages<{
   },
 });
 
-interface ScheduleDetailViewProps {
-  scheduleId: string | null;
-  onNavigateBack: () => void;
-}
 
 function sessionMeta(session: SessionInfo): Record<string, unknown> {
   return typeof session._meta === 'object' && session._meta !== null ? session._meta : {};

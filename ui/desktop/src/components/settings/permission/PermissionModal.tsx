@@ -1,3 +1,5 @@
+import type { PermissionModalProps } from './permissionModalProps';
+
 import { useEffect, useMemo, useState } from 'react';
 import { Button } from '../../ui/button';
 import { ChevronDownIcon, SlidersHorizontal, AlertCircle } from 'lucide-react';
@@ -80,10 +82,6 @@ function getFirstSentence(text: string): string {
   return match ? match[0] : '';
 }
 
-interface PermissionModalProps {
-  extensionName: string;
-  onClose: () => void;
-}
 
 export default function PermissionModal({ extensionName, onClose }: PermissionModalProps) {
   const intl = useIntl();

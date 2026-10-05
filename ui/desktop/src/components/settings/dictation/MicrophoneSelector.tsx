@@ -1,3 +1,5 @@
+import type { MicrophoneSelectorProps } from './microphoneSelectorProps';
+
 import { useState, useEffect, useRef, useCallback } from 'react';
 import type { JSX } from 'react';
 import { ChevronDown, Mic } from 'lucide-react';
@@ -66,10 +68,6 @@ const i18n = defineMessages<{
   },
 });
 
-interface MicrophoneSelectorProps {
-  selectedDeviceId: string | null;
-  onDeviceChange: (deviceId: string | null) => void;
-}
 
 const TEST_DURATION_MS = 5000;
 

@@ -1,3 +1,5 @@
+import type { InstructionsEditorProps } from './instructionsEditorProps';
+
 import React, { useState } from 'react';
 import { Button } from '../../ui/button';
 import { useEscapeKey } from '../../../hooks/useEscapeKey';
@@ -43,13 +45,6 @@ const i18n = defineMessages<{
   },
 });
 
-interface InstructionsEditorProps {
-  isOpen: boolean;
-  onClose: () => void;
-  value: string;
-  onChange: (value: string) => void;
-  error?: string;
-}
 
 export default function InstructionsEditor({
   isOpen,
@@ -122,7 +117,7 @@ Use {{parameter_name}} syntax for any user-provided values.`;
             onClick={handleCancel}
             className="text-text-secondary hover:text-text-primary text-2xl leading-none"
           >
-            ×
+            Ã
           </button>
         </div>
 

@@ -1,42 +1,16 @@
-import type { ToolCall, ToolCallUpdate } from '@agentclientprotocol/sdk';
-import type { TokenState } from '../../types/tokenState';
+import type {
+  ToolCall,
+  ToolCallUpdate,
+} from '@agentclientprotocol/sdk';
+
 import type { Message } from '../../types/message';
-import type { NotificationEvent } from '../../types/notificationEvent';
 
-export type AcpChatStateChange =
-  | { type: 'messages'; messages: Message[] }
-  | { type: 'tokenState'; tokenState: Partial<TokenState> }
-  | { type: 'progressMessage'; message: string | undefined }
-  | {
-      type: 'sessionInfo';
-      name?: string;
-      activeRunId?: string | null;
-      gooseMode?: string;
-    }
-  | { type: 'localSteerConfirmed'; messageId: string }
-  | { type: 'notification'; notification: NotificationEvent };
 
-export interface AdapterState {
-  messages: Message[];
-  localSteerTextByMessageId: Map<string, string>;
-  toolCallStatesById: Map<string, ToolCallState>;
-}
 
-export type ToolCallState = Omit<ToolCallUpdate, '_meta'>;
-
-export interface GooseMessageMeta {
-  messageId?: string;
-  created?: number;
-  outputTokenLimitReached?: boolean;
-  fallbackContent?: boolean;
-  steer?: boolean;
-}
-
-export interface ToolIdentity {
-  toolName?: string;
-  extensionName?: string;
-}
-
+import type { AcpChatStateChange } from './acpChatStateChange';
+import type { AdapterState } from './adapterState';
+import type { GooseMessageMeta } from './gooseMessageMeta';
+import type { ToolIdentity } from './toolIdentity';
 export const DEFAULT_VISIBLE_MESSAGE_METADATA: Message['metadata'] = {
   userVisible: true,
   agentVisible: true,
@@ -125,3 +99,9 @@ export function toolIdentity(update: ToolCall | ToolCallUpdate): ToolIdentity {
 export function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
 }
+
+export type { AcpChatStateChange } from './acpChatStateChange';
+export type { AdapterState } from './adapterState';
+export type { ToolCallState } from './toolCallState';
+export type { GooseMessageMeta } from './gooseMessageMeta';
+export type { ToolIdentity } from './toolIdentity';

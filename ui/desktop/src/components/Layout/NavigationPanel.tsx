@@ -1,3 +1,5 @@
+import type { SessionTooltipContentProps } from './sessionTooltipContentProps';
+
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation } from 'react-router';
 import { AudioLines, ChevronDown, ChevronRight } from 'lucide-react';
@@ -11,7 +13,7 @@ import {
   getNavItemLabel,
   type NavItem,
 } from '../../hooks/useNavigationItems';
-import { AppEvents } from '../../constants/events';
+import { AppEvents } from '../../constants/appEvents';
 import { InlineEditText } from '../common/InlineEditText';
 import { SessionIndicators } from '../SessionIndicators';
 import { acpRenameSession } from '../../acp/sessions';
@@ -136,10 +138,6 @@ const MetaRow: React.FC<{ label: string; value: string }> = ({ label, value }) =
   </div>
 );
 
-interface SessionTooltipContentProps {
-  session: SessionListItem;
-  statusLabel: string;
-}
 
 const SessionTooltipContent: React.FC<SessionTooltipContentProps> = ({ session, statusLabel }) => {
   const intl = useIntl();

@@ -1,3 +1,5 @@
+import type { OnboardingGuardProps } from './onboardingGuardProps';
+
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { useConfig } from '../ConfigContext';
@@ -48,9 +50,6 @@ const i18n = defineMessages<{
 
 const TELEMETRY_CONFIG_KEY = 'GOOSE_TELEMETRY_ENABLED';
 
-interface OnboardingGuardProps {
-  children: React.ReactNode;
-}
 
 export default function OnboardingGuard({ children }: OnboardingGuardProps) {
   const intl = useIntl();

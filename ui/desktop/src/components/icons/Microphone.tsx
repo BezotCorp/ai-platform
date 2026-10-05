@@ -1,9 +1,7 @@
+import type { MicrophoneProps } from './microphoneProps';
+
 import React from 'react';
 
-interface MicrophoneProps {
-  className?: string;
-  size?: number;
-}
 
 export const Microphone: React.FC<MicrophoneProps> = ({ className = '', size = 24 }) => {
   return (

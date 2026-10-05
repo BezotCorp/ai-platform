@@ -1,3 +1,5 @@
+import type { PrivacyInfoModalProps } from './privacyInfoModalProps';
+
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
 import { defineMessages, useIntl } from '../../i18n';
 import type { NoMessageValues } from 'react-intl';
@@ -56,10 +58,6 @@ const i18n = defineMessages<{
   },
 });
 
-interface PrivacyInfoModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-}
 
 export default function PrivacyInfoModal({ isOpen, onClose }: PrivacyInfoModalProps) {
   const intl = useIntl();

@@ -1,3 +1,5 @@
+import type { GooseMessageProps } from './gooseMessageProps';
+
 import { memo, useMemo, useRef } from 'react';
 import { AlertTriangle } from 'lucide-react';
 import ImagePreview from './ImagePreview';
@@ -27,20 +29,6 @@ import {
 const MAX_STREAMING_MARKDOWN_LENGTH = 16_000;
 const LARGE_STREAMING_RENDER_COOLDOWN_MS = 250;
 
-interface GooseMessageProps {
-  sessionId: string;
-  message: Message;
-  hideTimestamp: boolean;
-  toolStates: readonly ToolRenderState[];
-  toolNotifications: readonly (NotificationEvent[] | undefined)[];
-  toolConfirmationShownInline: boolean;
-  append: (value: string) => void;
-  isStreaming: boolean;
-  submitElicitationResponse?: (
-    elicitationId: string,
-    userData: Record<string, unknown>
-  ) => Promise<boolean>;
-}
 
 function GooseMessage({
   sessionId,

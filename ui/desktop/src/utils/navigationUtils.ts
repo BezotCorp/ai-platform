@@ -1,40 +1,11 @@
 import type { NavigateFunction } from 'react-router';
-import type { Recipe } from '../recipe';
-import type { UserInput } from '../types/userInput';
 
-export type View =
-  | 'chat'
-  | 'pair'
-  | 'settings'
-  | 'extensions'
-  | 'moreModels'
-  | 'configureProviders'
-  | 'configPage'
-  | 'ConfigureProviders'
-  | 'settingsV2'
-  | 'sessions'
-  | 'schedules'
-  | 'loading'
-  | 'recipes'
-  | 'skills'
-  | 'permission';
 
-export type ViewOptions = {
-  showEnvVars?: boolean;
-  deepLinkConfig?: unknown;
-  error?: string;
-  recipe?: Recipe;
-  parentView?: View;
-  parentViewOptions?: ViewOptions;
-  disableAnimation?: boolean;
-  initialMessage?: UserInput;
-  resumeSessionId?: string;
-  startLiveVoice?: boolean;
-  pendingScheduleDeepLink?: string;
-};
 
-export type NavigationHandler = (view: View, options?: ViewOptions) => void;
 
+import type { View } from './view';
+import type { ViewOptions } from './viewOptions';
+import type { NavigationHandler } from './navigationHandler';
 export const createNavigationHandler = (navigate: NavigateFunction): NavigationHandler => {
   return (view: View, options?: ViewOptions): void => {
     switch (view) {
@@ -84,3 +55,7 @@ export const createNavigationHandler = (navigate: NavigateFunction): NavigationH
     }
   };
 };
+
+export type { View } from './view';
+export type { ViewOptions } from './viewOptions';
+export type { NavigationHandler } from './navigationHandler';

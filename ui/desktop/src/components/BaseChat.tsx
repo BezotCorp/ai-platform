@@ -1,4 +1,6 @@
-import { AppEvents } from '../constants/events';
+import type { BaseChatProps } from './baseChatProps';
+
+import { AppEvents } from '../constants/appEvents';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { defineMessages, useIntl } from '../i18n';
 import { useLocation, useNavigate } from 'react-router';
@@ -76,21 +78,6 @@ function isImageData(value: unknown): value is ImageData {
   );
 }
 
-interface BaseChatProps {
-  setChat: (chat: ChatType) => void;
-  onMessageSubmit?: (message: string) => void;
-  renderHeader?: () => React.ReactNode;
-  customChatInputProps?: Record<string, unknown>;
-  customMainLayoutProps?: Record<string, unknown>;
-  contentClassName?: string;
-  disableSearch?: boolean;
-  suppressEmptyState: boolean;
-  sessionId: string;
-  isActiveSession: boolean;
-  initialMessage?: UserInput;
-  noAutoSubmit?: boolean;
-  liveVoice: LiveVoiceController;
-}
 
 export default function BaseChat({
   setChat,

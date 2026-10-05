@@ -10,7 +10,7 @@ import { LocalModelManager } from './LocalModelManager';
 import { MicrophoneSelector } from './MicrophoneSelector';
 import { DICTATION_ALLOWED_PROVIDERS } from '../../../updates';
 import { useFeatures } from '../../../contexts/FeaturesContext';
-import type { DictationProvider } from '../../../types/dictation';
+import type { DictationProvider } from '../../../types/dictationProvider';
 import {
   DropdownMenu,
   DropdownMenuContent,

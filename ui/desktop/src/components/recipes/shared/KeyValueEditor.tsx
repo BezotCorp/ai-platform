@@ -1,3 +1,5 @@
+import type { KeyValueEditorProps } from './keyValueEditorProps';
+
 import React, { useState } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 import { Button } from '../../ui/button';
@@ -28,12 +30,6 @@ const i18n = defineMessages<{
   },
 });
 
-interface KeyValueEditorProps {
-  values: Record<string, string>;
-  onChange: (values: Record<string, string>) => void;
-  keyPlaceholder?: string;
-  valuePlaceholder?: string;
-}
 
 export default function KeyValueEditor({
   values,

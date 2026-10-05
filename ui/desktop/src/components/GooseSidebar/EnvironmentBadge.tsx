@@ -1,3 +1,5 @@
+import type { EnvironmentBadgeProps } from './environmentBadgeProps';
+
 import React from 'react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/Tooltip';
 import { defineMessages, useIntl } from '../../i18n';
@@ -12,9 +14,6 @@ const i18n = defineMessages<{
   },
 });
 
-interface EnvironmentBadgeProps {
-  className?: string;
-}
 
 const EnvironmentBadge: React.FC<EnvironmentBadgeProps> = ({ className = '' }) => {
   const intl = useIntl();

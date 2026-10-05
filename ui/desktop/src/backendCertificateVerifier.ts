@@ -1,12 +1,8 @@
-import type { Session } from 'electron';
 
-export interface BackendCertificateTrustVerifier {
-  has(hostname: string): boolean;
-  verify(hostname: string, fingerprint: string): boolean;
-}
 
-type CertificateVerifierSession = Pick<Session, 'setCertificateVerifyProc'>;
 
+import type { BackendCertificateTrustVerifier } from './backendCertificateTrustVerifier';
+import type { CertificateVerifierSession } from './certificateVerifierSession';
 export function installBackendCertificateVerifiers(
   targetSessions: CertificateVerifierSession[],
   trustVerifier: BackendCertificateTrustVerifier
@@ -22,3 +18,5 @@ export function installBackendCertificateVerifiers(
     });
   }
 }
+
+export type { BackendCertificateTrustVerifier } from './backendCertificateTrustVerifier';

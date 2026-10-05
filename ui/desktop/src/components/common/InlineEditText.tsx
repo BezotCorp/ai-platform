@@ -1,3 +1,5 @@
+import type { InlineEditTextProps } from './inlineEditTextProps';
+
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { toast } from 'react-toastify';
 import { errorMessage } from '../../utils/conversionUtils';
@@ -28,19 +30,6 @@ const i18n = defineMessages<{
   },
 });
 
-interface InlineEditTextProps {
-  value: string;
-  onSave: (newValue: string) => Promise<void>;
-  maxLength?: number;
-  placeholder?: string;
-  disabled?: boolean;
-  className?: string;
-  editClassName?: string;
-  onEditStart?: () => void;
-  onEditEnd?: () => void;
-  allowEmpty?: boolean;
-  singleClickEdit?: boolean;
-}
 
 export const InlineEditText: React.FC<InlineEditTextProps> = ({
   value,

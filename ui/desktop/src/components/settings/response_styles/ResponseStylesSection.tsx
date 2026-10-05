@@ -1,4 +1,4 @@
-import { AppEvents } from '../../../constants/events';
+import { AppEvents } from '../../../constants/appEvents';
 import { useEffect, useState } from 'react';
 import { all_response_styles, ResponseStyleSelectionItem } from './ResponseStyleSelectionItem';
 

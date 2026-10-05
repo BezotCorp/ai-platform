@@ -1,17 +1,11 @@
+import type { LocalDictationModel } from '../../../acp/localDictationModel';
+import type { LocalDictationDownloadProgress } from '../../../acp/localDictationDownloadProgress';
 import { useState, useEffect } from 'react';
 import type { ChangeEvent, JSX } from 'react';
 import { Download, Trash2, X, Check, ChevronDown, ChevronUp } from 'lucide-react';
 import { Button } from '../../ui/button';
 import { useConfig } from '../../ConfigContext';
-import {
-  cancelLocalDictationModelDownload,
-  deleteLocalDictationModel,
-  downloadLocalDictationModel,
-  getLocalDictationModelDownloadProgress,
-  listLocalDictationModels,
-  type LocalDictationDownloadProgress,
-  type LocalDictationModel,
-} from '../../../acp/dictation';
+import { cancelLocalDictationModelDownload, deleteLocalDictationModel, downloadLocalDictationModel, getLocalDictationModelDownloadProgress, listLocalDictationModels } from '../../../acp/dictation';
 import { defineMessages, useIntl } from '../../../i18n';
 import type { MessageValue, NoMessageValues } from 'react-intl';
 

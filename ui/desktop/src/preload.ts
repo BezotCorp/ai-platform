@@ -1,11 +1,13 @@
+import type { LocalStorageParserMap } from './localStorageParserMap';
+
 import { contextBridge, ipcRenderer, webUtils, type IpcRendererEvent } from 'electron';
 import type { Recipe } from './recipe';
 import type { GooseApp } from './types/gooseApp';
 import { defaultSettings, type Settings } from './utils/settings';
 import type { OpenExternalUrlResult } from './utils/openExternalUrlResult';
-import type { AppConfigAPI } from './appConfigApi';
-import type { ElectronAPI } from './electronApi';
-import type { CreateChatWindowOptions } from './createChatWindowsOptions';
+import type { AppConfigApi } from './appConfigApi';
+import type { ElectronApi } from './electronApi';
+import type { CreateChatWindowOptions } from './createChatWindowOptions';
 import type { NotificationData } from './notificationData';
 import type { MessageBoxOptions } from './messageBoxOptions';
 import type { SaveDialogOptions } from './saveDialogOptions';
@@ -21,9 +23,6 @@ const localStorageKeyMap: Partial<Record<SettingKey, string>> = {
   seenAnnouncementIds: 'seenAnnouncementIds',
 };
 
-type LocalStorageParserMap = {
-  [K in SettingKey]?: (rawValue: string) => Settings[K] | null;
-};
 
 const localStorageParsers: LocalStorageParserMap = {
   theme: (rawValue) => (rawValue === 'dark' || rawValue === 'light' ? rawValue : null),
@@ -59,7 +58,7 @@ function parseLocalStorageValue<K extends SettingKey>(
 
 const config = JSON.parse(process.argv.find((arg) => arg.startsWith('{')) || '{}');
 
-const electronAPI: ElectronAPI = {
+const electronAPI: ElectronApi = {
   platform: process.platform,
   arch: process.arch,
   reactReady: () => ipcRenderer.send('react-ready'),
@@ -218,7 +217,7 @@ function getAppLocale(): unknown {
   }
 }
 
-const appConfigAPI: AppConfigAPI = {
+const appConfigAPI: AppConfigApi = {
   get: (key: string) => (key === 'GOOSE_LOCALE' ? getAppLocale() : config[key]),
   getAll: () => ({ ...config, GOOSE_LOCALE: getAppLocale() }),
 };
@@ -228,7 +227,7 @@ contextBridge.exposeInMainWorld('appConfig', appConfigAPI);
 // Type declaration for TypeScript
 declare global {
   interface Window {
-    electron: ElectronAPI;
-    appConfig: AppConfigAPI;
+    electron: ElectronApi;
+    appConfig: AppConfigApi;
   }
 }

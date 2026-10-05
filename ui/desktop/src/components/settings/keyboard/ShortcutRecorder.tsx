@@ -1,3 +1,5 @@
+import type { ShortcutRecorderProps } from './shortcutRecorderProps';
+
 import { useState, useEffect, useRef } from 'react';
 import { Button } from '../../ui/button';
 import { KeyboardShortcuts } from '../../../utils/keyboardShortcuts';
@@ -35,13 +37,6 @@ const i18n = defineMessages<{
   },
 });
 
-interface ShortcutRecorderProps {
-  value: string;
-  onSave: (shortcut: string) => void;
-  onCancel: () => void;
-  allShortcuts?: KeyboardShortcuts;
-  currentKey?: keyof KeyboardShortcuts;
-}
 
 export function ShortcutRecorder({
   value,
@@ -216,7 +211,7 @@ export function ShortcutRecorder({
       </div>
       {conflict && (
         <div className="text-xs text-yellow-600 flex items-center gap-1">
-          <span>⚠️</span>
+          <span>â ï¸</span>
           <span>
             {intl.formatMessage(i18n.conflictWarning, {
               label: getShortcutLabel(conflict, intl.formatMessage),

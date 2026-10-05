@@ -1,10 +1,9 @@
 import type { AgentMention, AvailableCommand } from '@aaif/goose-acp-client';
-import type { DisplayItem } from '../components/MentionPopover';
+
 import { getAcpClient } from './acpConnection';
 
-type SlashCommandItemType = Extract<DisplayItem['itemType'], 'Builtin' | 'Recipe' | 'Skill'>;
-type AutocompleteDisplayItem = DisplayItem;
-
+import type { SlashCommandItemType } from './slashCommandItemType';
+import type { AutocompleteDisplayItem } from './autocompleteDisplayItem';
 const SLASH_COMMAND_ITEM_TYPES = new Set<string>(['Builtin', 'Recipe', 'Skill']);
 
 function isSlashCommandItemType(value: unknown): value is SlashCommandItemType {

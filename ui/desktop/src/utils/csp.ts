@@ -6,6 +6,8 @@ import {
   GITHUB_ADDRESS,
 } from './adress_paths';
 
+import type { BackendOriginLease } from './backendOriginLease';
+import type { LeasedBackendOrigin } from './leasedBackendOrigin';
 const DEFAULT_CONNECT_SOURCES = [
   "'self'",
   `http://${LOCALHOST_ADDRESS_IP}:*`,
@@ -21,14 +23,6 @@ const DEFAULT_CONNECT_SOURCES = [
   'https://objects.githubusercontent.com',
 ];
 
-export interface BackendOriginLease {
-  release: () => void;
-}
-
-interface LeasedBackendOrigin {
-  origin: string;
-  insecure: boolean;
-}
 
 const leasedBackendOrigins = new Set<LeasedBackendOrigin>();
 
@@ -120,3 +114,5 @@ export function buildCSP(externalBackend?: ExternalBackendConfig): string {
     upgradeDirective
   );
 }
+
+export type { BackendOriginLease } from './backendOriginLease';

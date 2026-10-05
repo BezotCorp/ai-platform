@@ -9,7 +9,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import { defineMessages, useIntl } from '../i18n';
-import { AppEvents } from '../constants/events';
+import { AppEvents } from '../constants/appEvents';
 import ChatInput from './ChatInput';
 import { ChatInputCard } from './ChatInputCard';
 import { ChatState } from '../types/chatState';

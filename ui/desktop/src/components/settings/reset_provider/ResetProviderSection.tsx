@@ -1,3 +1,5 @@
+import type { ResetProviderSectionProps } from './resetProviderSectionProps';
+
 import { Button } from '../../ui/button';
 import { RefreshCw } from 'lucide-react';
 import { acpClearDefaults } from '../../../acp/providers';
@@ -19,9 +21,6 @@ const i18n = defineMessages<{
   },
 });
 
-interface ResetProviderSectionProps {
-  setView: (view: View, viewOptions?: ViewOptions) => void;
-}
 
 export default function ResetProviderSection(_props: ResetProviderSectionProps) {
   const intl = useIntl();

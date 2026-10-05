@@ -1,6 +1,6 @@
 import { GooseServeExitSignal } from './gooseServeExitSignal';
 import { GooseServeResult } from './gooseServeResult';
-import { GooseServeLease } from './gooseServerLease';
+import { GooseServeLease } from './gooseServeLease';
 import { Logger } from './logger';
 
 export const GOOSE_SERVE_EXITED_USER_MESSAGE =

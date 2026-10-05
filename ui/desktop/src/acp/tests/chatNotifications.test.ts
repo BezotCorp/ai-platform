@@ -1,3 +1,4 @@
+import type { AcpChatSessionSnapshot } from '../acpChatSessionSnapshot';
 /**
  * @vitest-environment jsdom
  */
@@ -12,7 +13,7 @@ import {
   handleAcpGooseSessionNotification,
   handleAcpSessionNotification,
 } from '../chatNotifications';
-import type { AcpChatSessionSnapshot } from '../chatSessionStore';
+
 import { acpChatSessionActions, acpChatSessionStore } from '../chatSessionStore';
 import { subscribeToLiveVoiceInteractionEnded } from '../liveVoiceNotifications';
 

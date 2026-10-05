@@ -1,3 +1,5 @@
+import type { JsonSchemaEditorProps } from './jsonSchemaEditorProps';
+
 import React, { useState } from 'react';
 import { Button } from '../../ui/button';
 import { useEscapeKey } from '../../../hooks/useEscapeKey';
@@ -43,13 +45,6 @@ const i18n = defineMessages<{
   },
 });
 
-interface JsonSchemaEditorProps {
-  isOpen: boolean;
-  onClose: () => void;
-  value: string;
-  onChange: (value: string) => void;
-  error?: string;
-}
 
 export default function JsonSchemaEditor({
   isOpen,
@@ -142,7 +137,7 @@ export default function JsonSchemaEditor({
             onClick={handleCancel}
             className="text-text-secondary hover:text-text-primary text-2xl leading-none"
           >
-            ×
+            Ã
           </button>
         </div>
 

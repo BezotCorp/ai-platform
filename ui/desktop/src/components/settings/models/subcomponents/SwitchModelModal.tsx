@@ -1,3 +1,5 @@
+import type { SwitchModelModalProps } from './switchModelModalProps';
+
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { Bot, ExternalLink } from 'lucide-react';
 import { defineMessages, useIntl } from '../../../../i18n';
@@ -284,16 +286,6 @@ function findPreferredModel(
   return validModels[0].value;
 }
 
-type SwitchModelModalProps = {
-  sessionId: string | null;
-  onClose: () => void;
-  setView: (view: View) => void;
-  onModelSelected?: (model: string, provider: string) => void;
-  initialProvider?: string | null;
-  titleOverride?: string;
-  sessionModel?: string | null;
-  sessionProvider?: string | null;
-};
 export const SwitchModelModal = ({
   sessionId,
   onClose,
@@ -828,7 +820,7 @@ export const SwitchModelModal = ({
                         </div>
                         <div className="flex items-center gap-2 mt-[2px]">
                           <span className="text-xs text-text-secondary">{model.subtext}</span>
-                          <span className="text-xs text-text-secondary">•</span>
+                          <span className="text-xs text-text-secondary">â¢</span>
                           <span className="text-xs text-text-secondary">{model.provider}</span>
                         </div>
                       </div>

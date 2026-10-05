@@ -1,6 +1,8 @@
+import type { ConfigReadValue } from './configReadValue';
+export type { ConfigReadValue } from './configReadValue';
+
 import { getAcpClient } from './acpConnection';
 
-export type ConfigReadValue = unknown;
 
 export async function acpReadConfig(
   key: string,

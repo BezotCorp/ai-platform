@@ -1,3 +1,5 @@
+import type { ExtensionItemProps } from './extensionItemProps';
+
 import { useState, useEffect } from 'react';
 import kebabCase from 'lodash/kebabCase';
 import { Switch } from '../../../ui/switch';
@@ -23,12 +25,6 @@ const i18n = defineMessages<{
   },
 });
 
-interface ExtensionItemProps {
-  extension: ConfiguredExtensionEntry;
-  onToggle: (extension: ConfiguredExtensionEntry) => Promise<boolean | void> | void;
-  onConfigure?: (extension: ConfiguredExtensionEntry) => void;
-  isStatic?: boolean; // to not allow users to edit configuration
-}
 
 export default function ExtensionItem({
   extension,

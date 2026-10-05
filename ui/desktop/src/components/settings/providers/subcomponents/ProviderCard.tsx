@@ -1,3 +1,5 @@
+import type { ProviderCardProps } from './providerCardProps';
+
 import { useMemo } from 'react';
 import CardContainer from './CardContainer';
 import CardHeader from './CardHeader';
@@ -27,12 +29,6 @@ const i18n = defineMessages<{
   },
 });
 
-type ProviderCardProps = {
-  provider: ProviderDetails;
-  onConfigure: () => void;
-  onLaunch: () => void;
-  isOnboarding: boolean;
-};
 
 export const ProviderCard = function ProviderCard({
   provider,

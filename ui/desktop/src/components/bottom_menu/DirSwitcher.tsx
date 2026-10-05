@@ -1,3 +1,5 @@
+import type { DirSwitcherProps } from './dirSwitcherProps';
+
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Check, FolderDot, FolderOpen, GitBranch, Plus } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/Tooltip';
@@ -89,14 +91,6 @@ const DirNameLabel: React.FC<{ dir: string }> = ({ dir }) => {
   );
 };
 
-interface DirSwitcherProps {
-  className: string;
-  sessionId: string | undefined;
-  workingDir: string;
-  onWorkingDirChange?: (newDir: string) => Promise<void> | void;
-  onRestartStart?: () => void;
-  onRestartEnd?: () => void;
-}
 
 export const DirSwitcher: React.FC<DirSwitcherProps> = ({
   className,

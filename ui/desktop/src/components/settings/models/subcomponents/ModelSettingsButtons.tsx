@@ -1,3 +1,5 @@
+import type { ConfigureModelButtonsProps } from './configureModelButtonsProps';
+
 import { useState } from 'react';
 import { Button } from '../../../ui/button';
 import { SwitchModelModal } from './SwitchModelModal';
@@ -20,9 +22,6 @@ const i18n = defineMessages<{
   },
 });
 
-interface ConfigureModelButtonsProps {
-  setView: (view: View) => void;
-}
 
 export default function ModelSettingsButtons({ setView }: ConfigureModelButtonsProps) {
   const intl = useIntl();

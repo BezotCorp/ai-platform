@@ -1,3 +1,5 @@
+import type { ExtensionConfigFieldsProps } from './extensionConfigFieldsProps';
+
 import { Input } from '../../../ui/input';
 import { defineMessages, useIntl } from '../../../../i18n';
 import type { NoMessageValues } from 'react-intl';
@@ -36,14 +38,6 @@ const i18n = defineMessages<{
   },
 });
 
-interface ExtensionConfigFieldsProps {
-  type: 'stdio' | 'streamable_http' | 'builtin';
-  full_cmd: string;
-  endpoint: string;
-  onChange: (key: string, value: string) => void;
-  submitAttempted?: boolean;
-  isValid?: boolean;
-}
 
 export default function ExtensionConfigFields({
   type,

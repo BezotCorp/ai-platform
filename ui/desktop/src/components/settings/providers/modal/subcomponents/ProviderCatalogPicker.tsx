@@ -1,3 +1,5 @@
+import type { ProviderCatalogPickerProps } from './providerCatalogPickerProps';
+
 import { useState, useEffect } from 'react';
 import { Button } from '../../../../ui/button';
 import { Search, ExternalLink, Check } from 'lucide-react';
@@ -80,11 +82,6 @@ const i18n = defineMessages<{
   },
 });
 
-interface ProviderCatalogPickerProps {
-  onSelect: (template: ProviderTemplateDto) => void;
-  onCancel: () => void;
-  embedded?: boolean;
-}
 
 export default function ProviderCatalogPicker({
   onSelect,

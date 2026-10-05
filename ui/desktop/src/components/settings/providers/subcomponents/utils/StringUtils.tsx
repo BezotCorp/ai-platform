@@ -1,3 +1,5 @@
+import type { ProviderDescriptionProps } from './providerDescriptionProps';
+
 import { defineMessages } from '../../../../../i18n';
 import type { IntlShape } from 'react-intl';
 import type { MessageValue } from 'react-intl';
@@ -15,9 +17,6 @@ export function ConfiguredProviderTooltipMessage(intl: IntlShape, name: string) 
   return intl.formatMessage(i18n.configuredProvider, { name });
 }
 
-interface ProviderDescriptionProps {
-  description: string;
-}
 
 export function ProviderDescription({ description }: ProviderDescriptionProps) {
   return (

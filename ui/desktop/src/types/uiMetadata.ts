@@ -1,5 +1,5 @@
 import type { CspMetadata } from './cspMetadata';
-import type { PermissionsMetadata } from './permissionMetadata';
+import type { PermissionsMetadata } from './permissionsMetadata';
 
 export type UiMetadata = {
   csp?: CspMetadata | null;

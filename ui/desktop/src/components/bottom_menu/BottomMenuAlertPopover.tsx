@@ -1,4 +1,6 @@
-import { AppEvents } from '../../constants/events';
+import type { AlertPopoverProps } from './alertPopoverProps';
+
+import { AppEvents } from '../../constants/appEvents';
 import React, { useRef, useEffect, useCallback, useState } from 'react';
 import { FaCircle } from 'react-icons/fa';
 import { isEqual } from 'lodash';
@@ -6,10 +8,6 @@ import { cn } from '../../utils';
 import { Alert, AlertType } from '../alerts';
 import { AlertBox } from '../alerts';
 
-interface AlertPopoverProps {
-  alerts: Alert[];
-  children?: React.ReactNode;
-}
 
 export default function BottomMenuAlertPopover({ alerts, children }: AlertPopoverProps) {
   const [isOpen, setIsOpen] = useState(false);

@@ -1,3 +1,6 @@
+import type { McpAppTool } from '../../acp/mcpAppTool';
+import type { ToolsList } from './toolsList';
+
 /**
  * Module-level cache for MCP tool definitions fetched from /agent/tools.
  *
@@ -9,9 +12,8 @@
  * automatically coalesce into a single network call.
  */
 
-import { listMcpAppTools, type McpAppTool } from '../../acp/mcp-apps';
+import { listMcpAppTools } from '../../acp/mcp-apps';
 
-type ToolsList = Array<McpAppTool>;
 
 const cache = new Map<string, Promise<ToolsList | null>>();
 

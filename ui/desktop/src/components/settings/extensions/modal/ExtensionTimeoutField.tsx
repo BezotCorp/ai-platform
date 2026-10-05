@@ -1,3 +1,5 @@
+import type { ExtensionTimeoutFieldProps } from './extensionTimeoutFieldProps';
+
 import { Input } from '../../../ui/input';
 import { defineMessages, useIntl } from '../../../../i18n';
 import type { NoMessageValues } from 'react-intl';
@@ -11,11 +13,6 @@ const i18n = defineMessages<{
   },
 });
 
-interface ExtensionTimeoutFieldProps {
-  timeout: number;
-  onChange: (key: string, value: string | number) => void;
-  submitAttempted: boolean;
-}
 
 export default function ExtensionTimeoutField({
   timeout,

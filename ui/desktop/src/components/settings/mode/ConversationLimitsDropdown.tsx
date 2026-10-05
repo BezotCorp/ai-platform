@@ -1,3 +1,5 @@
+import type { ConversationLimitsDropdownProps } from './conversationLimitsDropdownProps';
+
 import { useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { Input } from '../../ui/input';
@@ -23,10 +25,6 @@ const i18n = defineMessages<{
   },
 });
 
-interface ConversationLimitsDropdownProps {
-  maxTurns: number;
-  onMaxTurnsChange: (value: number) => void;
-}
 
 export const ConversationLimitsDropdown = ({
   maxTurns,

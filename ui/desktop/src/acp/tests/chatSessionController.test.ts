@@ -1,3 +1,4 @@
+import type { AcpChatSessionSnapshot } from '../acpChatSessionSnapshot';
 /**
  * @vitest-environment jsdom
  */
@@ -7,11 +8,7 @@ import type { Message } from '../../types/message';
 import { ChatState } from '../../types/chatState';
 import { Session } from '../../types/session';
 import { acpChatSessionController } from '../chatSessionController';
-import {
-  acpChatSessionActions,
-  acpChatSessionStore,
-  type AcpChatSessionSnapshot,
-} from '../chatSessionStore';
+import { acpChatSessionActions, acpChatSessionStore } from '../chatSessionStore';
 import { acpCancelPrompt, acpPromptSession } from '../prompt';
 import {
   acpLoadSession,

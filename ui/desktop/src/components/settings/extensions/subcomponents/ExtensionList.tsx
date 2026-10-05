@@ -1,3 +1,5 @@
+import type { ExtensionListProps } from './extensionListProps';
+
 import ExtensionItem from './ExtensionItem';
 import builtInExtensionsData from '../../../../built-in-extensions.json';
 import type { ExtensionConfig } from '../../../../types/extensionConfig';
@@ -31,14 +33,6 @@ const i18n = defineMessages<{
   },
 });
 
-interface ExtensionListProps {
-  extensions: ConfiguredExtensionEntry[];
-  onToggle: (extension: ConfiguredExtensionEntry) => Promise<boolean | void> | void;
-  onConfigure?: (extension: ConfiguredExtensionEntry) => void;
-  isStatic?: boolean;
-  disableConfiguration?: boolean;
-  searchTerm?: string;
-}
 
 export default function ExtensionList({
   extensions,

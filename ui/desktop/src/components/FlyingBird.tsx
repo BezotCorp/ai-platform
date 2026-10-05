@@ -1,10 +1,8 @@
+import type { FlyingBirdProps } from './flyingBirdProps';
+
 import { useState, useEffect } from 'react';
 import { Bird1, Bird2, Bird3, Bird4, Bird5, Bird6 } from './icons';
 
-interface FlyingBirdProps {
-  className?: string;
-  cycleInterval?: number; // milliseconds between bird frame changes
-}
 
 const birdFrames = [Bird1, Bird2, Bird3, Bird4, Bird5, Bird6];
 

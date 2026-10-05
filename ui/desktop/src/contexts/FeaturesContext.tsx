@@ -1,11 +1,9 @@
+import type { FeaturesContextValue } from './featuresContextValue';
+
 import { createContext, useContext, useEffect, useState, useMemo } from 'react';
 import type { ReactNode } from 'react';
 import { getAcpFeatureCapabilities } from '../acp/capabilities';
 
-interface FeaturesContextValue {
-  localInference: boolean;
-  isLoading: boolean;
-}
 
 const FeaturesContext = createContext<FeaturesContextValue | null>(null);
 

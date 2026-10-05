@@ -1,11 +1,11 @@
+import { RecipeDeclinedError } from './recipeDeclinedError';
+export { RecipeDeclinedError } from './recipeDeclinedError';
+
 import { RequestError } from '@agentclientprotocol/sdk';
 import { errorMessage } from '../utils/conversionUtils';
 
-export interface AcpCreditsExhaustedError {
-  message: string;
-  url?: string;
-}
-
+import type { AcpCreditsExhaustedError } from './acpCreditsExhaustedError';
+import type { AcpJsonRpcError } from './acpJsonRpcError';
 const CREDITS_EXHAUSTED_REASON = 'credits_exhausted';
 const AUTH_REQUIRED_CODE = -32000;
 
@@ -28,12 +28,6 @@ export function isRecipeParameterScopesUnsupported(
   return error instanceof RecipeParameterScopesUnsupportedError;
 }
 
-export class RecipeDeclinedError extends Error {
-  constructor() {
-    super('Recipe was not trusted by the user');
-    this.name = 'RecipeDeclinedError';
-  }
-}
 
 export function isRecipeDeclined(error: unknown): error is RecipeDeclinedError {
   return error instanceof RecipeDeclinedError;
@@ -62,11 +56,6 @@ export function formatAcpError(error: unknown): string {
     return 'Sign in to your provider, then try again.';
   }
   return errorMessage(error);
-}
-
-interface AcpJsonRpcError {
-  message: string;
-  data: Record<string, unknown>;
 }
 
 function asAcpJsonRpcError(error: unknown): AcpJsonRpcError | null {

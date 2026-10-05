@@ -1,12 +1,10 @@
+import type { ThinkingContentProps } from './thinkingContentProps';
+
 import { useState, useEffect, useRef } from 'react';
 import MarkdownContent from './MarkdownContent';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from './ui/collapsible';
 import Expand from './ui/Expand';
 
-interface ThinkingContentProps {
-  content: string;
-  isExpanded: boolean;
-}
 
 export default function ThinkingContent({ content, isExpanded }: ThinkingContentProps) {
   const [manualToggle, setManualToggle] = useState<boolean | null>(null);

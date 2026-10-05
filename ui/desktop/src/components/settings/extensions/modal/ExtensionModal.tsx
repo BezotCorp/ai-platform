@@ -1,3 +1,5 @@
+import type { ExtensionModalProps } from './extensionModalProps';
+
 import { useState, useCallback } from 'react';
 import { Button } from '../../../ui/button';
 import {
@@ -70,15 +72,6 @@ const i18n = defineMessages<{
   },
 });
 
-interface ExtensionModalProps {
-  title: string;
-  initialData: ExtensionFormData;
-  onClose: () => void;
-  onSubmit: (formData: ExtensionFormData) => void;
-  onDelete?: (name: string) => void;
-  submitLabel: string;
-  modalType: 'add' | 'edit';
-}
 
 export default function ExtensionModal({
   title,

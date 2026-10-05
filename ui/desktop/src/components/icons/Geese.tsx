@@ -1,6 +1,7 @@
+import type { Props } from './props';
+
 import React from 'react';
 
-type Props = React.ComponentPropsWithoutRef<'svg'>;
 
 export function Geese({ ...props }: Props) {
   return (

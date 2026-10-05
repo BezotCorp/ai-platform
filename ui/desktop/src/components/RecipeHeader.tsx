@@ -1,3 +1,5 @@
+import type { RecipeHeaderProps } from './recipeHeaderProps';
+
 import { defineMessages, useIntl } from '../i18n';
 import type { NoMessageValues } from 'react-intl';
 
@@ -10,9 +12,6 @@ const i18n = defineMessages<{
   },
 });
 
-interface RecipeHeaderProps {
-  title: string;
-}
 
 export function RecipeHeader({ title }: RecipeHeaderProps) {
   const intl = useIntl();

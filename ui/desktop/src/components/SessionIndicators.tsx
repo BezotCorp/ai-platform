@@ -1,3 +1,5 @@
+import type { SessionIndicatorsProps } from './sessionIndicatorsProps';
+
 import { AlertCircle, Loader2 } from 'lucide-react';
 import React from 'react';
 import { defineMessages, useIntl } from '../i18n';
@@ -22,11 +24,6 @@ const i18n = defineMessages<{
   },
 });
 
-interface SessionIndicatorsProps {
-  isStreaming: boolean;
-  hasUnread: boolean;
-  hasError: boolean;
-}
 
 /**
  * Visual indicators for session status (priority order: error > streaming > unread)

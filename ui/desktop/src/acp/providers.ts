@@ -1,3 +1,6 @@
+import type { AppliedSessionProviderModel } from './appliedSessionProviderModel';
+export type { AppliedSessionProviderModel } from './appliedSessionProviderModel';
+
 import type {
   CanonicalModelInfoDto,
   CustomProviderCreateRequestUnstable,
@@ -371,10 +374,6 @@ export async function acpSaveThinkingEffort(effort: ThinkingEffort): Promise<voi
   });
 }
 
-export type AppliedSessionProviderModel = {
-  providerId?: string;
-  modelId?: string;
-};
 
 function extractAppliedSessionProviderModel(configOptions: unknown): AppliedSessionProviderModel {
   if (!Array.isArray(configOptions)) {

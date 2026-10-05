@@ -1,3 +1,5 @@
+import type { ElicitationRequestProps } from './elicitationRequestProps';
+
 import { useState, useEffect, useRef } from 'react';
 import type { ActionRequired } from '../types/actionRequired';
 import { defineMessages, useIntl } from '../i18n';
@@ -52,12 +54,6 @@ const i18n = defineMessages<{
 
 const ELICITATION_TIMEOUT_SECONDS = 300;
 
-interface ElicitationRequestProps {
-  isCancelledMessage: boolean;
-  isClicked: boolean;
-  actionRequiredContent: ActionRequired & { type: 'actionRequired' };
-  onSubmit: (elicitationId: string, userData: Record<string, unknown>) => Promise<boolean>;
-}
 
 function formatTime(seconds: number): string {
   const mins = Math.floor(seconds / 60);

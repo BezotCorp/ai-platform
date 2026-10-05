@@ -1,16 +1,9 @@
+import type { DroppedFile } from './droppedFile';
+export type { DroppedFile } from './droppedFile';
+
 import { useCallback, useState, useRef, useEffect } from 'react';
 import { compressImageDataUrl, errorMessage } from '../utils/conversionUtils';
 
-export interface DroppedFile {
-  id: string;
-  path: string;
-  name: string;
-  type: string;
-  isImage: boolean;
-  dataUrl?: string;
-  isLoading?: boolean;
-  error?: string;
-}
 
 export const useFileDrop = () => {
   const [droppedFiles, setDroppedFiles] = useState<DroppedFile[]>([]);

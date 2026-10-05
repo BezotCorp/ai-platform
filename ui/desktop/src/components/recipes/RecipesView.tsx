@@ -60,7 +60,7 @@ import {
 } from '../ui/dropdown-menu';
 import { getSearchShortcutText } from '../../utils/keyboardShortcuts';
 import { errorMessage } from '../../utils/conversionUtils';
-import { AppEvents } from '../../constants/events';
+import { AppEvents } from '../../constants/appEvents';
 import { defineMessages, useIntl } from '../../i18n';
 import type { MessageValue, NoMessageValues } from 'react-intl';
 

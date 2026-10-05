@@ -1,3 +1,5 @@
+import type { BackButtonProps } from './backButtonProps';
+
 import React, { useEffect, useCallback } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { Button } from './button';
@@ -16,12 +18,6 @@ const i18n = defineMessages<{
   },
 });
 
-interface BackButtonProps extends VariantProps<typeof buttonVariants> {
-  onClick?: () => void;
-  className?: string;
-  showText?: boolean;
-  shape?: 'pill' | 'round';
-}
 
 const BackButton: React.FC<BackButtonProps> = ({
   onClick,

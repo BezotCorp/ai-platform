@@ -1,3 +1,5 @@
+import type { ProviderSettingsProps } from './providerSettingsProps';
+
 import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router';
 import { ScrollArea } from '../../ui/scroll-area';
@@ -37,11 +39,6 @@ const i18n = defineMessages<{
   },
 });
 
-interface ProviderSettingsProps {
-  onClose: () => void;
-  isOnboarding: boolean;
-  onProviderLaunched?: (model?: string) => void;
-}
 
 export default function ProviderSettings({
   onClose,

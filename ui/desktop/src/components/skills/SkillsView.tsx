@@ -1,3 +1,5 @@
+import type { SkillEntry } from './skillEntry';
+
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Zap, AlertCircle, Plus } from 'lucide-react';
 import { ScrollArea } from '../ui/scroll-area';
@@ -73,10 +75,6 @@ const i18n = defineMessages<{
   },
 });
 
-interface SkillEntry {
-  name: string;
-  description: string;
-}
 
 function SkillItem({ skill }: { skill: SkillEntry }) {
   return (

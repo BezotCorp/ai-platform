@@ -1,3 +1,5 @@
+import type { AnnouncementMeta } from './announcementMeta';
+
 import { useState, useEffect } from 'react';
 import { BaseModal } from './ui/BaseModal';
 import MarkdownContent from './MarkdownContent';
@@ -17,12 +19,6 @@ const i18n = defineMessages<{
   },
 });
 
-interface AnnouncementMeta {
-  id: string;
-  version: string;
-  title: string;
-  file: string;
-}
 
 // Simple version comparison function for semantic versioning (x.y.z)
 // Returns: -1 if a < b, 0 if a === b, 1 if a > b

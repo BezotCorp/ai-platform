@@ -1,31 +1,11 @@
-import type {
-  LocalInferenceDownloadProgressDto,
-  LocalInferenceHfModelInfoDto,
-  LocalInferenceHfModelVariantDto,
-  LocalInferenceModelDownloadRequestUnstable,
-  LocalInferenceModelDto,
-  LocalInferenceModelSettingsDto,
-} from '@aaif/goose-acp-client';
 import { getAcpClient } from './acpConnection';
 
-export type LocalModelResponse = LocalInferenceModelDto;
-export type DownloadProgress = LocalInferenceDownloadProgressDto;
-export type DownloadModelRequest = LocalInferenceModelDownloadRequestUnstable;
-export type HfModelInfo = LocalInferenceHfModelInfoDto;
-export type HfModelVariant = LocalInferenceHfModelVariantDto;
-export type ModelSettings = LocalInferenceModelSettingsDto;
-export type SamplingConfig = NonNullable<LocalInferenceModelSettingsDto['sampling']>;
-export type ToolCallingMode = NonNullable<LocalInferenceModelSettingsDto['toolCalling']>;
-export type ChatTemplate = NonNullable<LocalInferenceModelSettingsDto['chatTemplate']>;
-
-export type RepoVariantsResponse = {
-  variants: HfModelVariant[];
-  recommendedIndex: number | null;
-  availableMemoryBytes: number;
-  downloadedQuants: string[];
-  downloadedVariants: string[];
-};
-
+import type { LocalModelResponse } from './localModelResponse';
+import type { DownloadProgress } from './downloadProgress';
+import type { DownloadModelRequest } from './downloadModelRequest';
+import type { HfModelInfo } from './hfModelInfo';
+import type { ModelSettings } from './modelSettings';
+import type { RepoVariantsResponse } from './repoVariantsResponse';
 export async function listLocalModels(): Promise<LocalModelResponse[]> {
   const client = await getAcpClient();
   const response = await client.goose.localInferenceModelsListUnstable({});

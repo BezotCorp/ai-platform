@@ -1,3 +1,5 @@
+import type { HeadersSectionProps } from './headersSectionProps';
+
 import React from 'react';
 import { Button } from '../../../ui/button';
 import { Plus, X } from 'lucide-react';
@@ -50,17 +52,6 @@ const i18n = defineMessages<{
   },
 });
 
-interface HeadersSectionProps {
-  headers: { key: string; value: string; isEdited?: boolean }[];
-  onAdd: (key: string, value: string) => void;
-  onRemove: (index: number) => void;
-  onChange: (index: number, field: 'key' | 'value', value: string) => void;
-  submitAttempted: boolean;
-  onPendingInputChange: (
-    hasPendingInput: boolean,
-    pendingHeader: { key: string; value: string } | null
-  ) => void;
-}
 
 export default function HeadersSection({
   headers,

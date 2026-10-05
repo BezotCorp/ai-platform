@@ -11,7 +11,7 @@ import { Probe } from './probe';
 import { RemoteBackendParams } from './remoteBackendParams';
 import { RemoteBackendConnection } from './remoteBackendConnection';
 import { RemoteBackendStep } from './remoteBackendStep';
-import { HopRequest } from './hotRequest';
+import { HopRequest } from './hopRequest';
 
 const RETRY_BUDGET_MS = 15000;
 const RETRY_INTERVAL_MS = 250;

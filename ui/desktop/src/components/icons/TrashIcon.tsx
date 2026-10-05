@@ -1,8 +1,7 @@
+import type { IconProps } from './iconProps';
+
 // /Users/mnovich/Development/goose-1.0/ui/desktop/src/components/icons/TrashIcon.tsx
 
-interface IconProps {
-  className?: string;
-}
 
 export const TrashIcon: React.FC<IconProps> = (props) => (
   <svg

@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef, type ReactElement, type RefObject } from 'react';
 import type { IpcRendererEvent } from 'electron';
 import { HashRouter, Routes, Route, useNavigate, useLocation, useSearchParams } from 'react-router';
-import { ErrorUI } from './components/ErrorBoundary';
+import { ErrorUI } from './components/errorBoundary';
 import { ExtensionInstallModal } from './components/ExtensionInstallModal';
 import RecipeParamsModalContainer from './components/RecipeParamsModalContainer';
 import RecipeConsentModalContainer from './components/RecipeConsentModalContainer';
@@ -43,7 +43,7 @@ import { errorMessage } from './utils/conversionUtils';
 import { getInitialWorkingDir } from './utils/workingDir';
 import { usePageViewTracking } from './hooks/useAnalytics';
 import { trackErrorWithContext } from './utils/analyticsEvent';
-import { AppEvents } from './constants/events';
+import { AppEvents } from './constants/appEvents';
 import { registerPlatformEventHandlers } from './utils/platformEvents';
 import { reconnectAcpAfterSystemResume } from './acp/acpConnection';
 import { useLiveVoice, type LiveVoiceController } from './liveVoice/useLiveVoice';

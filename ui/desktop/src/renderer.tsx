@@ -2,7 +2,7 @@ import React, { Suspense, lazy } from 'react';
 import ReactDOM from 'react-dom/client';
 import { IntlProvider } from 'react-intl';
 import { ConfigProvider } from './components/ConfigContext';
-import { ErrorBoundary } from './components/ErrorBoundary';
+import { ErrorBoundary } from './components/errorBoundary';
 import SuspenseLoader from './suspense-loader';
 import { applyThemeTokens } from './theme/theme-tokens';
 import { currentLocale, currentMessageLocale, loadMessages } from './i18n';

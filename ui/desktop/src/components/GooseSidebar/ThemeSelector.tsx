@@ -1,3 +1,5 @@
+import type { ThemeSelectorProps } from './themeSelectorProps';
+
 import React from 'react';
 import { Moon, Sliders, Sparkles, Sun } from 'lucide-react';
 import { Button } from '../ui/button';
@@ -34,11 +36,6 @@ const i18n = defineMessages<{
   },
 });
 
-interface ThemeSelectorProps {
-  className?: string;
-  hideTitle?: boolean;
-  horizontal?: boolean;
-}
 
 const ThemeSelector: React.FC<ThemeSelectorProps> = ({
   className = '',

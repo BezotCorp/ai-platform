@@ -1,3 +1,5 @@
+import type { ExtensionSectionProps } from './extensionSectionProps';
+
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { Button } from '../../ui/button';
 import { Plus } from 'lucide-react';
@@ -48,16 +50,6 @@ const i18n = defineMessages<{
   },
 });
 
-interface ExtensionSectionProps {
-  deepLinkConfig?: ExtensionConfig;
-  showEnvVars?: boolean;
-  hideButtons?: boolean;
-  disableConfiguration?: boolean;
-  customToggle?: (extension: ConfiguredExtensionEntry) => Promise<boolean | void>;
-  selectedExtensions?: string[]; // Add controlled state
-  onModalClose?: (extensionName: string) => void;
-  searchTerm?: string;
-}
 
 export default function ExtensionsSection({
   deepLinkConfig,

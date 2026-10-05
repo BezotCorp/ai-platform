@@ -1,3 +1,7 @@
+import type { AcpElicitationRequest } from './acpElicitationRequest';
+import type { AcpSessionNotificationAdapter } from './acpSessionNotificationAdapter';
+export type { AcpSessionNotificationAdapter } from './acpSessionNotificationAdapter';
+
 import type { GooseSessionNotificationUnstable } from '@aaif/goose-acp-client';
 import type { SessionNotification } from '@agentclientprotocol/sdk';
 import type { Message } from '../types/message';
@@ -20,20 +24,11 @@ import {
   getGooseQueuedSteer,
 } from './adapter/shared';
 import { applyToolCall, applyToolCallUpdate } from './adapter/tools';
-import type { AcpElicitationRequest } from './elicitationRequests';
-import type { AcpPermissionRequest } from './permissionRequestTypes';
+
+import type { AcpPermissionRequest } from './acpPermissionRequest';
 
 export type { AcpChatStateChange } from './adapter/shared';
 
-export interface AcpSessionNotificationAdapter {
-  apply(notification: SessionNotification): AcpChatStateChange[];
-  applyGoose(notification: GooseSessionNotificationUnstable): AcpChatStateChange[];
-  applyPermissionRequest(request: AcpPermissionRequest): AcpChatStateChange[];
-  cancelPermissionRequest(toolCallId: string, generation: string): AcpChatStateChange[];
-  applyElicitationRequest(request: AcpElicitationRequest): AcpChatStateChange[];
-  applyElicitationStatus(elicitationId: string, status: ElicitationStatus): AcpChatStateChange[];
-  getMessages(): Message[];
-}
 
 export function createAcpSessionNotificationAdapter(
   initialMessages: Message[] = [],

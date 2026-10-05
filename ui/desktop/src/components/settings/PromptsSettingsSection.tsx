@@ -1,13 +1,8 @@
+import type { PromptTemplate } from '../../acp/promptTemplate';
+import type { PromptContent } from '../../acp/promptContent';
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import type { ChangeEvent, JSX } from 'react';
-import {
-  acpGetPrompt,
-  acpListPrompts,
-  acpResetPrompt,
-  acpSavePrompt,
-  type PromptContent,
-  type PromptTemplate,
-} from '../../acp/prompts';
+import { acpGetPrompt, acpListPrompts, acpResetPrompt, acpSavePrompt } from '../../acp/prompts';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { AlertTriangle, RotateCcw, ArrowLeft } from 'lucide-react';

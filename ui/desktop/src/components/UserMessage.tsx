@@ -1,3 +1,5 @@
+import type { UserMessageProps } from './userMessageProps';
+
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import ImagePreview from './ImagePreview';
 import MarkdownContent from './MarkdownContent';
@@ -104,15 +106,6 @@ const i18n = defineMessages<{
   },
 });
 
-interface UserMessageProps {
-  message: Message;
-  onMessageUpdate?: (
-    messageId: string,
-    newContent: string,
-    editType: 'fork' | 'edit',
-    retainedImages: ImageData[]
-  ) => void;
-}
 
 function UserMessage({ message, onMessageUpdate }: UserMessageProps) {
   const intl = useIntl();

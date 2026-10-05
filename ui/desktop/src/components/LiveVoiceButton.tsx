@@ -1,3 +1,5 @@
+import type { LiveVoiceButtonProps } from './liveVoiceButtonProps';
+
 import type { LiveVoiceAvailabilityResponseUnstable } from '@aaif/goose-acp-client';
 import { AudioLines, LoaderCircle, Mic, MicOff, Square } from 'lucide-react';
 import { defineMessages, useIntl } from '../i18n';
@@ -51,16 +53,6 @@ const i18n = defineMessages<{
   },
 });
 
-interface LiveVoiceButtonProps {
-  availability: LiveVoiceAvailabilityResponseUnstable | null;
-  composerEmpty: boolean;
-  phase: LiveVoicePhase;
-  muted: boolean;
-  activeInAnotherSession: boolean;
-  onStart: () => void;
-  onStop: () => void;
-  onToggleMute: () => void;
-}
 
 export function LiveVoiceButton({
   availability,

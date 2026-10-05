@@ -1,5 +1,6 @@
+import type { AcpElicitationRequest } from '../acpElicitationRequest';
 import type { Message } from '../../types/message';
-import type { AcpElicitationRequest } from '../elicitationRequests';
+
 import {
   type AcpChatStateChange,
   type AdapterState,

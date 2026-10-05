@@ -12,4 +12,4 @@ export const useNavigation = () => {
   return createNavigationHandler(navigate);
 };
 
-export type setViewType = ReturnType<typeof useNavigation>;
+export type SetViewType = ReturnType<typeof useNavigation>;

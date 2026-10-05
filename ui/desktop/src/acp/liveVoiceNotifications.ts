@@ -1,17 +1,5 @@
-import type { GooseSessionNotificationUnstable } from '@aaif/goose-acp-client';
-
-export type LiveVoiceInteractionEndedNotification = {
-  sessionId: string;
-  update: Extract<
-    GooseSessionNotificationUnstable['update'],
-    { sessionUpdate: 'live_voice_interaction_ended' }
-  >;
-};
-
-type LiveVoiceInteractionEndedListener = (
-  notification: LiveVoiceInteractionEndedNotification
-) => void;
-
+import type { LiveVoiceInteractionEndedNotification } from './liveVoiceInteractionEndedNotification';
+import type { LiveVoiceInteractionEndedListener } from './liveVoiceInteractionEndedListener';
 const listeners = new Set<LiveVoiceInteractionEndedListener>();
 
 export function subscribeToLiveVoiceInteractionEnded(

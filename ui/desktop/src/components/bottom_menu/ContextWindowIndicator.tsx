@@ -1,11 +1,8 @@
+import type { ContextWindowIndicatorProps } from './contextWindowIndicatorProps';
+
 import BottomMenuAlertPopover from './BottomMenuAlertPopover';
 import { Alert } from '../alerts';
 
-interface ContextWindowIndicatorProps {
-  totalTokens: number;
-  tokenLimit: number;
-  alerts: Alert[];
-}
 
 const formatTokenCount = (count: number): string => {
   if (count >= 1_000_000) return `${Math.round(count / 1_000_000)}M`;

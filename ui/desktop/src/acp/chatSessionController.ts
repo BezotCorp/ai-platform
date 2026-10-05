@@ -1,6 +1,10 @@
+import type { AcpCreditsExhaustedError } from './acpCreditsExhaustedError';
+import type { AcpChatSessionController } from './acpChatSessionController';
+export type { AcpChatSessionController } from './acpChatSessionController';
+
 import { v7 as uuidv7 } from 'uuid';
 import type { GooseExtension } from '@aaif/goose-acp-client';
-import { AppEvents } from '../constants/events';
+import { AppEvents } from '../constants/appEvents';
 import { ChatState } from '../types/chatState';
 import type { Session } from '../types/session';
 import { showExtensionLoadResults } from '../utils/extensionErrorUtils';
@@ -8,17 +12,9 @@ import { createUserMessage } from '../types/message';
 import type { Message } from '../types/message';
 import type { ImageData } from '../types/imageData';
 import { getPendingToolConfirmationIds } from '../types/toolConfirmationData';
-import {
-  acpChatSessionActions,
-  acpChatSessionStore,
-  type AcpChatSessionSnapshot,
-} from './chatSessionStore';
+import { acpChatSessionActions, acpChatSessionStore } from './chatSessionStore';
 import { cancelAcpElicitationRequestsForSession } from './elicitationRequests';
-import {
-  formatAcpError,
-  parseAcpCreditsExhaustedError,
-  type AcpCreditsExhaustedError,
-} from './errors';
+import { formatAcpError, parseAcpCreditsExhaustedError } from './errors';
 import { cancelAcpPermissionRequestsForSession } from './permissionRequests';
 import { acpCancelPrompt, acpPromptSession } from './prompt';
 import {
@@ -28,44 +24,11 @@ import {
   acpTruncateSessionConversation,
   isAcpSessionLoadInFlight,
   sessionInfoToSession,
-} from './sessions';
+} from '../sessions';
 import { AcpRecipeOptions } from './acpRecipeOptions';
 
-export interface AcpLoadSessionOptions {
-  onSessionLoaded?: () => void;
-}
-
-export interface AcpSnapshotOptions {
-  getCurrentSnapshot(): AcpChatSessionSnapshot | undefined;
-}
-
-export interface AcpSubmitMessageOptions extends AcpSnapshotOptions {
-  onFinish(error?: string): void | Promise<void>;
-}
-
-export interface AcpChatSessionController {
-  createSession(
-    cwd: string,
-    gooseExtensions: GooseExtension[] | undefined,
-    recipe?: AcpRecipeOptions
-  ): Promise<Session>;
-  loadSession(sessionId: string, options?: AcpLoadSessionOptions): Promise<void>;
-  restoreSession(sessionId: string): Promise<void>;
-  submitMessage(
-    sessionId: string,
-    userMessage: Message,
-    options: AcpSubmitMessageOptions
-  ): Promise<void>;
-  stop(sessionId: string): void;
-  updateMessage(
-    sessionId: string,
-    messageId: string,
-    newContent: string,
-    editType: 'fork' | 'edit',
-    retainedImages: ImageData[],
-    options: AcpSubmitMessageOptions
-  ): Promise<void>;
-}
+import type { AcpLoadSessionOptions } from './acpLoadSessionOptions';
+import type { AcpSubmitMessageOptions } from './acpSubmitMessageOptions';
 
 function createAcpCreditsExhaustedMessage(error: AcpCreditsExhaustedError): Message {
   return {

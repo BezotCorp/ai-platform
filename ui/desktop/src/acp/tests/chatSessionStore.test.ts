@@ -1,3 +1,4 @@
+import type { AcpElicitationRequest } from '../acpElicitationRequest';
 /**
  * @vitest-environment jsdom
  */
@@ -15,7 +16,7 @@ import {
   acpChatSessionStore,
   useAcpChatSessionSnapshot,
 } from '../chatSessionStore';
-import type { AcpElicitationRequest } from '../elicitationRequests';
+
 import type { AcpPermissionRequest } from '../permissionRequestTypes';
 
 function message(id: string, text: string): Message {

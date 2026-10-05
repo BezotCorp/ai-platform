@@ -1,3 +1,5 @@
+import type { CreateEditRecipeModalProps } from './createEditRecipeModalProps';
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { useForm } from '@tanstack/react-form';
 import { generateDeepLink } from '../../recipe';
@@ -131,14 +133,6 @@ const i18n = defineMessages<{
   },
 });
 
-interface CreateEditRecipeModalProps {
-  isOpen: boolean;
-  onClose: (wasSaved?: boolean) => void;
-  recipe?: Recipe;
-  isCreateMode?: boolean;
-  recipeId?: string | null;
-  onRecipeSaved?: (savedRecipeId: string) => void;
-}
 
 export default function CreateEditRecipeModal({
   isOpen,

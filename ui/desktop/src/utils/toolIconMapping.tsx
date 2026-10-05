@@ -1,3 +1,6 @@
+import type { ToolIconProps } from './toolIconProps';
+export type { ToolIconProps } from './toolIconProps';
+
 import React from 'react';
 import {
   Brain,
@@ -16,9 +19,6 @@ import {
   Tool,
 } from '../components/icons/toolcalls';
 
-export type ToolIconProps = {
-  className?: string;
-};
 
 /**
  * Maps tool names to their corresponding icon components

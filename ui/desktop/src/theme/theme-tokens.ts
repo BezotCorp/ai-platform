@@ -18,16 +18,15 @@ import type {
   McpUiStyleVariableKey,
   McpUiStyles,
 } from '@modelcontextprotocol/ext-apps/app-bridge';
+import type { ThemeTokens } from './themeTokens';
 
-type ThemeTokens = Record<McpUiStyleVariableKey, string>;
+import type { BaseTokenKey } from './baseTokenKey';
+import type { ColorTokens } from './colorTokens';
+import type { ThemeId } from './themeId';
+import type { ThemeDefinition } from './themeDefinition';
 
 // Subset of keys that are the same across both themes.
-type BaseTokenKey = Extract<
-  McpUiStyleVariableKey,
-  `--font-${string}` | `--border-radius-${string}` | `--border-width-${string}`
->;
 
-type ColorTokenKey = Exclude<McpUiStyleVariableKey, BaseTokenKey>;
 
 // ---------------------------------------------------------------------------
 // Base tokens — shared across light and dark themes
@@ -86,7 +85,7 @@ const baseTokens: Pick<ThemeTokens, BaseTokenKey> = {
 };
 
 // Theme-specific color/shadow tokens only.
-type ColorTokens = Pick<ThemeTokens, ColorTokenKey>;
+
 
 // ---------------------------------------------------------------------------
 // Light theme — colors & shadows
@@ -277,13 +276,7 @@ export const auraTokens: ThemeTokens = { ...baseTokens, ...auraFontTokens, ...au
 // the token system; `tokens` is the map applied to :root. Adding a future theme
 // is a single entry here plus its token map above.
 // ---------------------------------------------------------------------------
-export type ThemeId = 'light' | 'dark' | 'aura';
-export type ThemeVariant = 'light' | 'dark';
 
-interface ThemeDefinition {
-  variant: ThemeVariant;
-  tokens: ThemeTokens;
-}
 
 export const themes: Record<ThemeId, ThemeDefinition> = {
   light: { variant: 'light', tokens: lightTokens },
@@ -379,3 +372,6 @@ export function applyThemeTokens(theme?: ThemeId): void {
     root.style.setProperty(key, value);
   }
 }
+
+export type { ThemeId } from './themeId';
+export type { ThemeVariant } from './themeVariant';

@@ -1,3 +1,5 @@
+import type { ProviderSetupActionsProps } from './providerSetupActionsProps';
+
 import { SyntheticEvent } from 'react';
 import { Button } from '../../../../ui/button';
 import { Trash2, AlertTriangle } from 'lucide-react';
@@ -51,18 +53,6 @@ const i18n = defineMessages<{
   },
 });
 
-interface ProviderSetupActionsProps {
-  onCancel: () => void;
-  onSubmit: (e: SyntheticEvent) => void;
-  onDelete?: () => void;
-  showDeleteConfirmation?: boolean;
-  onConfirmDelete?: () => void;
-  onCancelDelete?: () => void;
-  canDelete?: boolean;
-  providerName?: string;
-  primaryParameters?: ConfigKey[];
-  isActiveProvider?: boolean; // Made optional with default false
-}
 
 /**
  * Renders the action buttons at the bottom of the provider modal.

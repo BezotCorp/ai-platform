@@ -1,3 +1,5 @@
+import type { EnvVarsSectionProps } from './envVarsSectionProps';
+
 import React from 'react';
 import { Button } from '../../../ui/button';
 import { Plus, X, Edit } from 'lucide-react';
@@ -45,17 +47,6 @@ const i18n = defineMessages<{
   },
 });
 
-interface EnvVarsSectionProps {
-  envVars: { key: string; value: string; isEdited?: boolean }[];
-  onAdd: (key: string, value: string) => void;
-  onRemove: (index: number) => void;
-  onChange: (index: number, field: 'key' | 'value', value: string) => void;
-  submitAttempted: boolean;
-  onPendingInputChange: (
-    hasPendingInput: boolean,
-    pendingEnvVar: { key: string; value: string } | null
-  ) => void;
-}
 
 export default function EnvVarsSection({
   envVars,

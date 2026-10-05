@@ -2,9 +2,9 @@ import type { Session } from './types/session';
 import { configuredExtensionEntryToConfig } from './utils/configuredExtensionEntryToConfig';
 import type { ExtensionConfig } from './types/extensionConfig';
 import type { GooseExtension } from '@aaif/goose-acp-client';
-import type { setViewType } from './hooks/useNavigation';
+import type { SetViewType } from './hooks/useNavigation';
 
-import { AppEvents } from './constants/events';
+import { AppEvents } from './constants/appEvents';
 import { acpChatSessionController } from './acp/chatSessionController';
 import { getConfiguredGooseExtensions, gooseExtensionName } from './acp/extensions';
 import { beginConfiguredRecipeParameterScope } from './acp/recipeParamRequests';
@@ -133,7 +133,7 @@ export async function createSession(
 
 export async function startNewSession(
   initialText: string | undefined,
-  setView: setViewType,
+  setView: SetViewType,
   workingDir: string,
   options?: {
     recipeDeeplink?: string;

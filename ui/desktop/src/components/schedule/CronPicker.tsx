@@ -1,3 +1,5 @@
+import type { CronPickerProps } from './cronPickerProps';
+
 import React, { useState, useEffect } from 'react';
 import type { ScheduledJobDto } from '@aaif/goose-acp-client';
 import { errorMessage } from '../../utils/conversionUtils';
@@ -102,11 +104,6 @@ const i18n = defineMessages<{
   atSecond: { id: 'cronPicker.atSecond', defaultMessage: 'at second' },
 });
 
-interface CronPickerProps {
-  schedule: ScheduledJobDto | null;
-  onChange: (cron: string) => void;
-  isValid: (valid: boolean) => void;
-}
 
 const to24Hour = (hour12: number, isPM: boolean): number => {
   if (hour12 === 12) {

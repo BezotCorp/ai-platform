@@ -1,4 +1,4 @@
-import type { Annotations } from './annotation';
+import type { Annotations } from './annotations';
 import type { JsonObject } from './jsonObject';
 
 export type TextContent = {

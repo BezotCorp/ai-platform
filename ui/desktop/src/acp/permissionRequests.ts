@@ -1,13 +1,10 @@
-import type { RequestPermissionRequest, RequestPermissionResponse } from '@agentclientprotocol/sdk';
-import type { Permission } from '../types/permissions';
-import { acpChatSessionActions, acpPermissionUserInputRequestId } from './chatSessionStore';
-import type { AcpPermissionRequest } from './permissionRequestTypes';
+import type { PendingPermissionRequest } from './pendingPermissionRequest';
 
-interface PendingPermissionRequest {
-  request: RequestPermissionRequest;
-  generation: string;
-  resolve: (response: RequestPermissionResponse) => void;
-}
+import type { RequestPermissionRequest, RequestPermissionResponse } from '@agentclientprotocol/sdk';
+import type { Permission } from '../types/permission';
+import { acpChatSessionActions, acpPermissionUserInputRequestId } from './chatSessionStore';
+import type { AcpPermissionRequest } from './acpPermissionRequest';
+
 
 const pendingRequests = new Map<string, PendingPermissionRequest>();
 

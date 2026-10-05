@@ -1,3 +1,5 @@
+import type { DiagnosticsModalProps } from './diagnosticsModalProps';
+
 import React, { useState } from 'react';
 import { AlertTriangle, Bug, Download } from 'lucide-react';
 import { Button } from './button';
@@ -97,11 +99,6 @@ const i18n = defineMessages<{
   },
 });
 
-interface DiagnosticsModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  sessionId: string;
-}
 
 export const DiagnosticsModal: React.FC<DiagnosticsModalProps> = ({
   isOpen,

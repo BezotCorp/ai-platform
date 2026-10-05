@@ -1,3 +1,5 @@
+import type { CostTrackerProps } from './costTrackerProps';
+
 import { useState, useEffect } from 'react';
 import type { JSX } from 'react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/Tooltip';
@@ -40,13 +42,6 @@ const i18n = defineMessages<{
   },
 });
 
-interface CostTrackerProps {
-  inputTokens?: number;
-  outputTokens?: number;
-  accumulatedCost?: number | null;
-  model: string | null;
-  provider: string | null;
-}
 
 export function CostTracker({
   inputTokens = 0,
@@ -145,7 +140,7 @@ export function CostTracker({
       return (
         <div className="flex items-center justify-center h-full text-text-primary/70 transition-colors cursor-default translate-y-[1px]">
           <span className="text-xs font-mono">
-            {inputTokens.toLocaleString()}↑ {outputTokens.toLocaleString()}↓
+            {inputTokens.toLocaleString()}â {outputTokens.toLocaleString()}â
           </span>
         </div>
       );

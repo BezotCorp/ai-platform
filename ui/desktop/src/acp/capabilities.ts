@@ -1,10 +1,9 @@
+import type { AcpFeatureCapabilities } from './acpFeatureCapabilities';
+export type { AcpFeatureCapabilities } from './acpFeatureCapabilities';
+
 import type { InitializeResponse } from '@agentclientprotocol/sdk';
 import { getAcpInitializeResponse } from './acpConnection';
 
-export interface AcpFeatureCapabilities {
-  localInference: boolean;
-  recipeParameterScopes: boolean;
-}
 
 export async function getAcpFeatureCapabilities(): Promise<AcpFeatureCapabilities> {
   const initializeResponse = await getAcpInitializeResponse();

@@ -3,7 +3,7 @@ import { pruneDeprecatedBundledExtensions, syncBundledExtensions } from '../bund
 import type { ConfiguredExtensionEntry } from '../../../../types/configuredExtensionEntry';
 
 
-vi.mock('../bundled-extensions.json', () => ({
+vi.mock('../bundled-extensions/bundled-extensions.json', () => ({
   default: [
     {
       id: 'developer',
@@ -29,7 +29,7 @@ vi.mock('../bundled-extensions.json', () => ({
   ],
 }));
 
-vi.mock('../deprecated-bundled-extensions.json', () => ({
+vi.mock('../bundled-extensions/deprecated-bundled-extensions.json', () => ({
   default: [{ id: 'googledrive' }, { id: 'old-bundled-extension' }],
 }));
 

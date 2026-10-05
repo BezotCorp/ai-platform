@@ -1,7 +1,5 @@
-interface StoredMessage {
-  content: string;
-  timestamp: number;
-}
+import type { StoredMessage } from './storedMessage';
+
 
 const STORAGE_KEY = 'goose-chat-history';
 const MAX_MESSAGES = 500;

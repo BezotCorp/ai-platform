@@ -1,6 +1,5 @@
-interface StopProps {
-  size?: number;
-}
+import type { StopProps } from './stopProps';
+
 
 export default function Stop({ size = 24 }: StopProps) {
   return (

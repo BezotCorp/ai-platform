@@ -1,3 +1,5 @@
+import type { CardButtonsProps } from './cardButtonsProps';
+
 import { ConfigureSettingsButton, RocketButton } from './CardButtons';
 import type { ProviderDetails } from '../../../../../types/providerDetails';
 import { defineMessages, useIntl } from '../../../../../i18n';
@@ -28,12 +30,6 @@ const i18n = defineMessages<{
 });
 
 // can define other optional callbacks as needed
-interface CardButtonsProps {
-  provider: ProviderDetails;
-  isOnboardingPage: boolean;
-  onConfigure: (provider: ProviderDetails) => void;
-  onLaunch: (provider: ProviderDetails) => void;
-}
 
 export default function DefaultCardButtons({
   provider,

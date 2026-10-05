@@ -1,3 +1,5 @@
+import type { CreateSubRecipeInlineProps } from './createSubRecipeInlineProps';
+
 import { useState, useCallback } from 'react';
 import { useForm } from '@tanstack/react-form';
 import { X, Save, Loader2 } from 'lucide-react';
@@ -155,12 +157,6 @@ const i18n = defineMessages<{
   },
 });
 
-interface CreateSubRecipeInlineProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onSubRecipeSaved: (subRecipe: SubRecipeFormData) => void;
-  existingSubRecipes?: SubRecipeFormData[];
-}
 
 export default function CreateSubRecipeInline({
   isOpen,

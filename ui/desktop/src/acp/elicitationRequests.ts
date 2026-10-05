@@ -2,29 +2,13 @@ import type {
   CreateElicitationRequest,
   CreateElicitationResponse,
   ElicitationContentValue,
-  ElicitationSchema,
 } from '@agentclientprotocol/sdk';
 import { v7 as uuidv7 } from 'uuid';
 import { acpChatSessionActions, acpElicitationUserInputRequestId } from './chatSessionStore';
 
-type SessionScopedFormElicitationRequest = CreateElicitationRequest & {
-  mode: 'form';
-  sessionId: string;
-  requestedSchema: ElicitationSchema;
-};
-
-export interface AcpElicitationRequest {
-  id: string;
-  sessionId: string;
-  request: SessionScopedFormElicitationRequest;
-}
-
-interface PendingElicitationRequest {
-  request: AcpElicitationRequest;
-  resolve: (response: CreateElicitationResponse) => void;
-  timeoutId: ReturnType<typeof setTimeout>;
-}
-
+import type { SessionScopedFormElicitationRequest } from './sessionScopedFormElicitationRequest';
+import type { AcpElicitationRequest } from './acpElicitationRequest';
+import type { PendingElicitationRequest } from './pendingElicitationRequest';
 const pendingRequests = new Map<string, PendingElicitationRequest>();
 export const ACP_ELICITATION_TIMEOUT_SECONDS = 300;
 

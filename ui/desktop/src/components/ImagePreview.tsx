@@ -1,3 +1,5 @@
+import type { ImagePreviewProps } from './imagePreviewProps';
+
 import { useState } from 'react';
 import { defineMessages, useIntl } from '../i18n';
 import type { NoMessageValues } from 'react-intl';
@@ -26,9 +28,6 @@ const i18n = defineMessages<{
   },
 });
 
-interface ImagePreviewProps {
-  src: string;
-}
 
 export default function ImagePreview({ src }: ImagePreviewProps) {
   const intl = useIntl();

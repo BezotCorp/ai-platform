@@ -1,12 +1,9 @@
+import type { InterruptionKeyword } from './interruptionKeyword';
+export type { InterruptionKeyword } from './interruptionKeyword';
+
 /**
  * Utility for detecting interruption keywords in user input
  */
-export interface InterruptionKeyword {
-  keyword: string;
-  variations: string[];
-  priority: 'high' | 'medium' | 'low';
-  action: 'stop' | 'pause' | 'redirect';
-}
 
 // Define interruption keywords and their variations
 export const INTERRUPTION_KEYWORDS: InterruptionKeyword[] = [
