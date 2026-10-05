@@ -24,7 +24,7 @@ use futures::io::{AsyncRead, AsyncWrite};
 use std::sync::Arc;
 
 use bcaip_cli::commands::roam_client;
-use goose_roaming::{
+use bcaip_roaming::{
     AcpStreamServer, Directory, EndpointId, RelaySettings, RoamingConfig, RoamingIdentity,
     RoamingNode, TrustBook,
 };

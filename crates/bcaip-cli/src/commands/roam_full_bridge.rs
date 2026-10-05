@@ -16,8 +16,8 @@ use futures::future::BoxFuture;
 use futures::io::{AsyncRead, AsyncWrite};
 use std::sync::Arc;
 
+use bcaip_roaming::{AcpStreamServer, EndpointId};
 use goose::acp::{server::serve, server_factory::AcpServer};
-use goose_roaming::{AcpStreamServer, EndpointId};
 
 /// An [`AcpStreamServer`] that serves goose's full ACP surface, a fresh agent
 /// per connection.

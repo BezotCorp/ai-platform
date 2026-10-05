@@ -3,11 +3,10 @@ use rmcp::model::{
     Role, ServerCapabilities, ServerConfig, TextContent,
 };
 use rmcp::transport::streamable_http_server::{
-    session::local::LocalSessionManager, StreamableHttpServerConfig, StreamableHttpService,
+    StreamableHttpServerConfig, StreamableHttpService, session::local::LocalSessionManager,
 };
-use rmcp::{tool, tool_handler, tool_router, ErrorData as McpError, ServerHandler};
+use rmcp::{ErrorData as McpError, ServerHandler, tool, tool_handler, tool_router};
 use tokio::task::JoinHandle;
-
 pub const FAKE_CODE: &str = "test-uuid-12345-67890";
 
 pub const TEST_IMAGE_B64: &str = include_str!("test_assets/test_image.b64").trim_ascii_end();

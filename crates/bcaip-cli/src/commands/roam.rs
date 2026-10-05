@@ -16,15 +16,16 @@
 //! * `connections` (alias `list`) — show live/observed connections.
 
 use anyhow::{Context, Result};
+use bcaip_roaming::{
+    ConnectionCard, Direction, Directory, EndpointId, PeerBook, RelayEntry, RelaySettings,
+    RoamingClientStream, RoamingConfig, RoamingIdentity, RoamingNode, TrustBook, default_key_path,
+    parse_endpoint_id,
+};
 use clap::Subcommand;
 use goose::acp::server::AcpBuiltinSelection;
 use goose::acp::server_factory::{AcpServer, AcpServerFactoryConfig};
 use goose::config::{Config, ConfigError};
 use goose::{agents::GoosePlatform, config::paths::Paths};
-use goose_roaming::{
-    ConnectionCard, Directory, EndpointId, RelayEntry, RelaySettings, RoamingConfig,
-    RoamingIdentity, RoamingNode, TrustBook, default_key_path, parse_endpoint_id,
-};
 use std::sync::Arc;
 
 use crate::commands::roam_full_bridge::FullAcpBridge;
@@ -404,7 +405,7 @@ async fn handle_pair(name: Option<String>) -> Result<()> {
         return Ok(());
     }
 
-    goose_roaming::PeerBook::update(peerbook_path(), |book| {
+    PeerBook::update(peerbook_path(), |book| {
         book.save(&name, device_card, now_ms())
     })?;
     let path = trust_path();
@@ -429,14 +430,12 @@ fn read_stdin_line() -> Result<String> {
 }
 
 async fn handle_peers(command: PeersCommand) -> Result<()> {
-    let book = goose_roaming::PeerBook::load(peerbook_path())?;
+    let book = PeerBook::load(peerbook_path())?;
     match command {
         PeersCommand::Add { card, name } => {
             let decoded = ConnectionCard::decode(&card)?;
             let name = name.unwrap_or_else(|| short_id(&decoded.endpoint_id.to_string()));
-            goose_roaming::PeerBook::update(peerbook_path(), |book| {
-                book.save(&name, &card, now_ms())
-            })?;
+            PeerBook::update(peerbook_path(), |book| book.save(&name, &card, now_ms()))?;
             eprintln!(
                 "saved peer `{name}` -> {} (fingerprint {})",
                 decoded.endpoint_id,
@@ -450,9 +449,7 @@ async fn handle_peers(command: PeersCommand) -> Result<()> {
             let card = match ConnectionCard::decode(&target) {
                 Ok(card) => {
                     let name = name.unwrap_or_else(|| short_id(&card.endpoint_id.to_string()));
-                    goose_roaming::PeerBook::update(peerbook_path(), |book| {
-                        book.save(&name, &target, now_ms())
-                    })?;
+                    PeerBook::update(peerbook_path(), |book| book.save(&name, &target, now_ms()))?;
                     card
                 }
                 Err(_) => {
@@ -496,8 +493,7 @@ async fn handle_peers(command: PeersCommand) -> Result<()> {
             Ok(())
         }
         PeersCommand::Remove { name } => {
-            let existed =
-                goose_roaming::PeerBook::update(peerbook_path(), |book| book.remove(&name))?;
+            let existed = PeerBook::update(peerbook_path(), |book| book.remove(&name))?;
             if existed {
                 eprintln!("removed peer `{name}` from the address book");
             } else {
@@ -506,7 +502,7 @@ async fn handle_peers(command: PeersCommand) -> Result<()> {
             Ok(())
         }
         PeersCommand::Rename { from, to } => {
-            goose_roaming::PeerBook::update(peerbook_path(), |book| book.rename(&from, &to))?;
+            PeerBook::update(peerbook_path(), |book| book.rename(&from, &to))?;
             eprintln!("renamed `{from}` -> `{to}`");
             Ok(())
         }
@@ -543,7 +539,7 @@ async fn handle_peers(command: PeersCommand) -> Result<()> {
 }
 
 /// Resolve a target (saved nickname, inline card, or raw endpoint id) to a key.
-fn resolve_key(book: &goose_roaming::PeerBook, target: &str) -> Result<EndpointId> {
+fn resolve_key(book: &PeerBook, target: &str) -> Result<EndpointId> {
     if let Ok(card) = ConnectionCard::decode(target) {
         return Ok(card.endpoint_id);
     }
@@ -575,8 +571,8 @@ async fn handle_list() -> Result<()> {
     for e in entries {
         let status = if e.connected { "connected" } else { "seen" };
         let dir = match e.direction {
-            goose_roaming::Direction::Inbound => "inbound",
-            goose_roaming::Direction::Outbound => "outbound",
+            Direction::Inbound => "inbound",
+            Direction::Outbound => "outbound",
         };
         let agent = e.agent_id.unwrap_or_else(|| "-".to_string());
         let agent = if agent.chars().count() > 20 {
@@ -737,7 +733,7 @@ fn resolve_card(target: &str) -> Result<ConnectionCard> {
     if target.starts_with(CARD_SCHEME) {
         return ConnectionCard::decode(target).map_err(Into::into);
     }
-    let book = goose_roaming::PeerBook::load(peerbook_path())?;
+    let book = PeerBook::load(peerbook_path())?;
     match book.get(target) {
         Some(rec) => Ok(rec.card.clone()),
         None => anyhow::bail!(
@@ -752,10 +748,7 @@ fn resolve_card(target: &str) -> Result<ConnectionCard> {
 async fn dial_target(
     target: &str,
     label: Option<String>,
-) -> Result<(
-    std::sync::Arc<RoamingNode>,
-    goose_roaming::RoamingClientStream,
-)> {
+) -> Result<(std::sync::Arc<RoamingNode>, RoamingClientStream)> {
     let card = resolve_card(target)?;
     let node = RoamingNode::bind(RoamingConfig {
         identity: load_identity()?,
@@ -847,7 +840,7 @@ async fn handle_bridge(
     // The raw iroh streams carry post-handshake ACP and already implement
     // tokio's AsyncRead/AsyncWrite, so we splice them directly. `conn` must
     // outlive the splice.
-    let goose_roaming::RoamingClientStream {
+    let RoamingClientStream {
         conn,
         send: remote_send,
         recv: remote_recv,

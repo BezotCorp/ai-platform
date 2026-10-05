@@ -19,7 +19,7 @@ use agent_client_protocol::schema::v1::{
 };
 use agent_client_protocol::{Agent, Client, ConnectionTo};
 use anyhow::Result;
-use goose_roaming::RoamingClientStream;
+use bcaip_roaming::RoamingClientStream;
 /// Run an interactive ACP session over an authorized roaming stream, reading
 /// prompts from stdin until EOF / quit.
 pub async fn run_interactive(stream: RoamingClientStream, agent_label: String) -> Result<()> {

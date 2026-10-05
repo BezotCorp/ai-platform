@@ -1,4 +1,6 @@
 use anyhow::Result;
+#[cfg(feature = "roaming")]
+use bcaip_roaming::RoamingNode;
 use clap::{Args, CommandFactory, Parser, Subcommand};
 use clap_complete::{Shell as ClapShell, generate};
 use clap_complete_nushell::Nushell as ClapNushell;
@@ -1663,8 +1665,7 @@ struct ServeCommandArgs {
 }
 
 #[cfg(feature = "roaming")]
-type RoamShareSlot =
-    std::sync::Arc<tokio::sync::RwLock<Option<std::sync::Arc<goose_roaming::RoamingNode>>>>;
+type RoamShareSlot = std::sync::Arc<tokio::sync::RwLock<Option<std::sync::Arc<RoamingNode>>>>;
 
 #[cfg(feature = "roaming")]
 fn spawn_roam_share(
@@ -1713,13 +1714,13 @@ fn spawn_roam_share(
 #[cfg(feature = "roaming")]
 async fn start_roam_share(
     server: std::sync::Arc<goose::acp::server_factory::AcpServer>,
-) -> Result<std::sync::Arc<goose_roaming::RoamingNode>> {
+) -> Result<std::sync::Arc<RoamingNode>> {
     use crate::commands::roam::{
         directory_path, load_identity, resolve_relay_settings, trust_path,
     };
     use crate::commands::roam_full_bridge::FullAcpBridge;
+    use bcaip_roaming::{RoamingConfig, RoamingNode, TrustBook};
     use goose::config::paths::Paths;
-    use goose_roaming::{RoamingConfig, RoamingNode, TrustBook};
     use std::sync::Arc;
     let status_path = Paths::data_dir().join("roam/serve.json");
     let _ = std::fs::remove_file(&status_path);
@@ -1730,7 +1731,7 @@ async fn start_roam_share(
         relay: resolve_relay_settings()?,
         trust: TrustBook::new(),
         trust_path: Some(trust_path()),
-        directory: goose_roaming::Directory::persistent_owned(directory_path()),
+        directory: bcaip_roaming::Directory::persistent_owned(directory_path()),
         bind_addr: None,
         relay_tls: None,
     })
