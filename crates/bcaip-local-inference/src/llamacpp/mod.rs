@@ -25,7 +25,7 @@ use crate::backend::{BackendLoadedModel, LocalGenerationRequest, LocalInferenceB
 use crate::model::{ChatTemplate, ModelSettings, ToolCallingMode};
 use crate::{ResolvedModelPaths, build_openai_messages_json, build_openai_text_messages_json};
 use crate::{multimodal::ExtractedImage, tool_parsing::compact_tools_json};
-use goose_provider_types::{errors::ProviderError, formats::format_tools};
+use bcaip_provider_types::{errors::ProviderError, formats::format_tools};
 pub(crate) const LLAMACPP_BACKEND_ID: &str = "llamacpp";
 
 const CODE_EXECUTION_TOOL: &str = "code_execution__execute_typescript";

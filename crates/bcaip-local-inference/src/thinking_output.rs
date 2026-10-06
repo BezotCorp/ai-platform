@@ -1,4 +1,4 @@
-use goose_provider_types::thinking::{FilterOut, ThinkFilter};
+use bcaip_provider_types::thinking::{FilterOut, ThinkFilter};
 use std::mem;
 pub(crate) struct ThinkingOutputFilter {
     enabled: bool,

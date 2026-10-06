@@ -1,6 +1,6 @@
 use anyhow::{Context, Result};
+use bcaip_provider_types::conversations::{Conversation, Message};
 use goose::config::Config;
-use goose_provider_types::conversations::{Conversation, Message};
 use std::{
     fs,
     io::{Read, Write},
@@ -91,11 +91,11 @@ fn build_template(messages: &[&str], prefill: Option<&str>) -> String {
     let mut content = String::from("# Goose Prompt Editor\n\n");
 
     content.push_str("# Your prompt:\n\n");
-    if let Some(text) = prefill {
-        if !text.is_empty() {
-            content.push_str(text);
-            content.push('\n');
-        }
+    if let Some(text) = prefill
+        && !text.is_empty()
+    {
+        content.push_str(text);
+        content.push('\n');
     }
 
     if !messages.is_empty() {

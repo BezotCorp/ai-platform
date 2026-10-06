@@ -1,4 +1,4 @@
-use goose_provider_types::errors::ProviderError;
+use bcaip_provider_types::errors::ProviderError;
 use std::collections::{HashMap, HashSet};
 use std::path::Path;
 fn safetensors_shard(filename: &str) -> Option<(&str, u32, u32)> {

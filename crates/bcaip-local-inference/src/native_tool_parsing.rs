@@ -2,8 +2,8 @@ use crate::native_tool_format::{
     DEEPSEEK_CALL_BEGIN, DEEPSEEK_CALLS_BEGIN, FUNCTION_OPEN, LLAMA3_PYTHON_TAG,
     MISTRAL_TOOL_CALLS, TOOL_CALL_CLOSE, TOOL_CALL_OPEN,
 };
-use goose_provider_types::conversations::{Message, MessageContent};
-use goose_provider_types::{
+use bcaip_provider_types::conversations::{Message, MessageContent};
+use bcaip_provider_types::{
     errors::ProviderError, formats::is_valid_function_name, json::safely_parse_json,
 };
 use rmcp::model::{CallToolRequestParams, ErrorCode, ErrorData, object};

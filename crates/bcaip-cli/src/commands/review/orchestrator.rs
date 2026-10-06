@@ -417,10 +417,10 @@ pub fn split_diff_by_file(diff: &str) -> Vec<(String, String)> {
             current_chunk.push_str(line);
         }
     }
-    if let Some(p) = current_path {
-        if !current_chunk.is_empty() {
-            out.push((p, current_chunk));
-        }
+    if let Some(p) = current_path
+        && !current_chunk.is_empty()
+    {
+        out.push((p, current_chunk));
     }
     out
 }
@@ -634,15 +634,15 @@ fn build_check_prompt(
     let mut s = String::new();
     s.push_str("You are running an automated code review check.\n\n");
     s.push_str(&format!("Check name: {}\n", check.name));
-    if let Some(d) = check.description.as_deref() {
-        if !d.is_empty() {
-            s.push_str(&format!("Description: {}\n", d));
-        }
+    if let Some(d) = check.description.as_deref()
+        && !d.is_empty()
+    {
+        s.push_str(&format!("Description: {}\n", d));
     }
-    if let Some(sev) = check.severity_default.as_deref() {
-        if !sev.is_empty() {
-            s.push_str(&format!("Default severity: {}\n", sev));
-        }
+    if let Some(sev) = check.severity_default.as_deref()
+        && !sev.is_empty()
+    {
+        s.push_str(&format!("Default severity: {}\n", sev));
     }
     if let Some(text) = instructions {
         let trimmed = text.trim();

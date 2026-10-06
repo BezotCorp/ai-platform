@@ -1,6 +1,7 @@
 use super::output;
 use super::{CliSession, derive_extension_name_from_command, split_extension_name_prefix};
 use crate::cli::StreamableHttpOptions;
+use bcaip_provider_types::goose_mode::GooseMode;
 use console::style;
 use goose::agents::{Agent, Container, ExtensionError};
 use goose::config::{Config, ExtensionConfig};
@@ -11,7 +12,6 @@ use goose::{
     recipe::Recipe,
     session::{EnabledExtensionsState, SessionType},
 };
-use goose_provider_types::goose_mode::GooseMode;
 use rustyline::EditMode;
 use std::collections::{HashMap, HashSet};
 use std::{process, sync::Arc};
@@ -257,7 +257,7 @@ async fn load_extensions(
 struct ResolvedProviderConfig {
     provider_name: String,
     model_name: String,
-    model_config: goose_provider_types::model::ModelConfig,
+    model_config: bcaip_provider_types::model::ModelConfig,
 }
 
 fn validate_provider_override_context(
@@ -290,7 +290,7 @@ async fn resolve_provider_and_model(
     session_config: &SessionBuilderConfig,
     config: &Config,
     saved_provider: Option<String>,
-    saved_model_config: Option<goose_provider_types::model::ModelConfig>,
+    saved_model_config: Option<bcaip_provider_types::model::ModelConfig>,
 ) -> ResolvedProviderConfig {
     let recipe_settings = session_config
         .recipe
@@ -803,15 +803,14 @@ pub async fn build_session(session_config: SessionBuilderConfig) -> CliSession {
             process::exit(1);
         });
 
-    if let Some(recipe) = session_config.recipe.clone() {
-        if let Err(e) = session_manager
+    if let Some(recipe) = session_config.recipe.clone()
+        && let Err(e) = session_manager
             .update(&session_id)
             .recipe(Some(recipe))
             .apply()
             .await
-        {
-            tracing::warn!("Failed to store recipe on session: {}", e);
-        }
+    {
+        tracing::warn!("Failed to store recipe on session: {}", e);
     }
 
     for warning in goose::config::get_warnings() {

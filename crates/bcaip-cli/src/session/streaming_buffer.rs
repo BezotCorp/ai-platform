@@ -367,14 +367,12 @@ impl MarkdownBuffer {
                 };
             }
 
-            if at_line_start {
-                if let Some(new_pos) = self.process_line_start(&mut state, pos) {
-                    pos = new_pos;
-                    if state.is_clean() {
-                        last_safe = pos;
-                    }
-                    continue;
+            if at_line_start && let Some(new_pos) = self.process_line_start(&mut state, pos) {
+                pos = new_pos;
+                if state.is_clean() {
+                    last_safe = pos;
                 }
+                continue;
             }
 
             if state.in_code_block {

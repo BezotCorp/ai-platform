@@ -6,15 +6,15 @@ use crate::operation::{
 };
 use anyhow::Result;
 use async_trait::async_trait;
-use futures::StreamExt;
-use goose_provider_types::conversations::{
+use bcaip_provider_types::conversations::{
     Conversation, EffectiveRole, effective_role, fix_conversation,
     merge_consecutive_messages_for_request,
 };
-use goose_provider_types::conversations::{InferenceMetadata, Message, MessageContent};
-use goose_provider_types::maybe_send::{MaybeSend, MaybeSync};
-use goose_provider_types::{base::Provider, conversations::ProviderUsage};
-use goose_provider_types::{errors::ProviderError, model::ModelConfig};
+use bcaip_provider_types::conversations::{InferenceMetadata, Message, MessageContent};
+use bcaip_provider_types::maybe_send::{MaybeSend, MaybeSync};
+use bcaip_provider_types::{base::Provider, conversations::ProviderUsage};
+use bcaip_provider_types::{errors::ProviderError, model::ModelConfig};
+use futures::StreamExt;
 use std::sync::Arc;
 use tracing_futures::Instrument;
 
@@ -397,14 +397,14 @@ impl<S: MaybeSync, E: InferenceEffect> Inference<S, E> for InferenceRunner<'_, S
             let mut usage_effects: Vec<E> = additional_messages.into_iter().map(E::from).collect();
 
             let provider_name = self.provider.get_name();
-            if let Some(session_id) = latest_provider_session_id(conversation, provider_name) {
-                if let Err(error) = self.provider.resume(session_id).await {
-                    tracing::warn!(
-                        provider = provider_name,
-                        %error,
-                        "Could not resume provider session; continuing with a handoff"
-                    );
-                }
+            if let Some(session_id) = latest_provider_session_id(conversation, provider_name)
+                && let Err(error) = self.provider.resume(session_id).await
+            {
+                tracing::warn!(
+                    provider = provider_name,
+                    %error,
+                    "Could not resume provider session; continuing with a handoff"
+                );
             }
 
             let projected =
@@ -504,11 +504,11 @@ impl<S: MaybeSync, E: InferenceEffect> Inference<S, E> for InferenceRunner<'_, S
                 usage_effects.push(E::record_usage(usage));
             }
 
-            if cancelled || emit.cancel_token().is_cancelled() {
-                if let Some(response) = cancellation_response(messages, accumulator.messages()) {
-                    let response = emit.message(response).await;
-                    accumulator.push(response);
-                }
+            if (cancelled || emit.cancel_token().is_cancelled())
+                && let Some(response) = cancellation_response(messages, accumulator.messages())
+            {
+                let response = emit.message(response).await;
+                accumulator.push(response);
             }
 
             let empty_response = !cancelled

@@ -1,4 +1,4 @@
-use goose_provider_types::conversations::{Conversation, Message, MessageUsage, ProviderUsage};
+use bcaip_provider_types::conversations::{Conversation, Message, MessageUsage, ProviderUsage};
 use rmcp::model::ServerNotification;
 #[derive(Clone, Debug)]
 pub enum AgentEvent {

@@ -2,7 +2,7 @@ use std::{collections::HashSet, sync::Arc};
 
 use anyhow::Result;
 use async_trait::async_trait;
-use goose_provider_types::conversations::{
+use bcaip_provider_types::conversations::{
     Conversation, {Message, MessageContent, ToolRequest},
 };
 use rmcp::{
@@ -15,7 +15,7 @@ use crate::operation::{
     Emitter, Operation, OperationFuture, OperationResult, applied, messages_since_kickoff,
     not_applicable,
 };
-use goose_provider_types::maybe_send::{MaybeSend, MaybeSync};
+use bcaip_provider_types::maybe_send::{MaybeSend, MaybeSync};
 
 fn empty_input_schema() -> Arc<JsonObject> {
     Arc::new(

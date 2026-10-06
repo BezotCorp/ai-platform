@@ -1,6 +1,6 @@
 use base64::prelude::*;
-use goose_provider_types::conversations::{Message, MessageContent};
-use goose_provider_types::errors::ProviderError;
+use bcaip_provider_types::conversations::{Message, MessageContent};
+use bcaip_provider_types::errors::ProviderError;
 use serde_json::Value;
 #[derive(Debug)]
 pub struct ExtractedImage {

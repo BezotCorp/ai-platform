@@ -59,10 +59,10 @@ pub fn custom_methods(_attr: TokenStream, item: TokenStream) -> TokenStream {
             let mut request_type = None;
             method.attrs.retain(|attr| {
                 if attr.path().is_ident("custom_method") {
-                    if let Ok(meta_list) = attr.meta.require_list() {
-                        if let Ok(ty) = meta_list.parse_args::<Type>() {
-                            request_type = Some(ty);
-                        }
+                    if let Ok(meta_list) = attr.meta.require_list()
+                        && let Ok(ty) = meta_list.parse_args::<Type>()
+                    {
+                        request_type = Some(ty);
                     }
                     false // strip the attribute
                 } else {
@@ -279,12 +279,12 @@ fn extract_result_ok_type(sig: &syn::Signature) -> Option<Type> {
     // Peel through the type to find a path ending in `Result`.
     if let Type::Path(type_path) = ty.as_ref() {
         let last_seg = type_path.path.segments.last()?;
-        if last_seg.ident == "Result" {
-            if let PathArguments::AngleBracketed(args) = &last_seg.arguments {
-                // First generic argument is the Ok type.
-                if let Some(GenericArgument::Type(ok_ty)) = args.args.first() {
-                    return Some(ok_ty.clone());
-                }
+        if last_seg.ident == "Result"
+            && let PathArguments::AngleBracketed(args) = &last_seg.arguments
+        {
+            // First generic argument is the Ok type.
+            if let Some(GenericArgument::Type(ok_ty)) = args.args.first() {
+                return Some(ok_ty.clone());
             }
         }
     }
@@ -294,10 +294,10 @@ fn extract_result_ok_type(sig: &syn::Signature) -> Option<Type> {
 /// Extract the last segment name from a type path (e.g. `GetSessionRequest` from
 /// `crate::custom_requests::GetSessionRequest` or just `GetSessionRequest`).
 fn type_name(ty: &Type) -> String {
-    if let Type::Path(type_path) = ty {
-        if let Some(seg) = type_path.path.segments.last() {
-            return seg.ident.to_string();
-        }
+    if let Type::Path(type_path) = ty
+        && let Some(seg) = type_path.path.segments.last()
+    {
+        return seg.ident.to_string();
     }
     quote::quote!(#ty).to_string()
 }

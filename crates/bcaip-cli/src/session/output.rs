@@ -2,6 +2,11 @@ use super::streaming_buffer::MarkdownBuffer;
 use crate::session::builder::ExtensionFailure;
 use anstream::{adapter::strip_str, eprintln, println};
 use bat::WrappingMode;
+use bcaip_provider_types::conversations::Usage;
+use bcaip_provider_types::conversations::{
+    ActionRequiredData, Message, MessageContent, SystemNotificationContent, SystemNotificationType,
+    ToolNameParts, ToolRequest, ToolResponse,
+};
 use console::{Color, StyledObject, Term, measure_text_width, style};
 use goose::agents::platform_extensions::todo::TODO_WRITE_TOOL_NAME_COMPLETE;
 use goose::config::Config;
@@ -9,11 +14,6 @@ use goose::providers::canonical_cost::estimate_model_cost;
 #[cfg(target_os = "windows")]
 use goose::subprocess::SubprocessExt;
 use goose::utils::safe_truncate;
-use goose_provider_types::conversations::Usage;
-use goose_provider_types::conversations::{
-    ActionRequiredData, Message, MessageContent, SystemNotificationContent, SystemNotificationType,
-    ToolNameParts, ToolRequest, ToolResponse,
-};
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use rmcp::model::{CallToolRequestParams, JsonObject, PromptArgument, Role};
 use serde_json::Value;
@@ -613,10 +613,10 @@ fn render_tool_response(resp: &ToolResponse, debug: bool) {
                     rmcp::model::ContentBlock::ResourceLink(r) => r.annotations.as_ref(),
                     _ => None,
                 };
-                if let Some(audience) = annotations.and_then(|a| a.audience.as_ref()) {
-                    if !audience.contains(&rmcp::model::Role::User) {
-                        continue;
-                    }
+                if let Some(audience) = annotations.and_then(|a| a.audience.as_ref())
+                    && !audience.contains(&rmcp::model::Role::User)
+                {
+                    continue;
                 }
 
                 let min_priority = config
@@ -996,10 +996,10 @@ fn render_delegate_request(call: &CallToolRequestParams, debug: bool) {
 fn render_todo_request(call: &CallToolRequestParams, _debug: bool) {
     print_tool_header(call);
 
-    if let Some(args) = &call.arguments {
-        if let Some(Value::String(content)) = args.get("content") {
-            println!("    {} {}", style("content").dim(), style(content).dim());
-        }
+    if let Some(args) = &call.arguments
+        && let Some(Value::String(content)) = args.get("content")
+    {
+        println!("    {} {}", style("content").dim(), style(content).dim());
     }
     println!();
 }

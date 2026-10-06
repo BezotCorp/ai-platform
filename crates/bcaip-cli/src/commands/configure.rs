@@ -1,4 +1,8 @@
 use crate::recipes::github_recipe::GOOSE_RECIPE_GITHUB_REPO_CONFIG_KEY;
+use bcaip_provider_types::base::ConfigKey;
+use bcaip_provider_types::goose_mode::GooseMode;
+use bcaip_provider_types::retry::{RetryConfig, retry_operation};
+use bcaip_provider_types::thinking::ThinkingEffort;
 use cliclack::spinner;
 use console::style;
 use goose::agents::Agent;
@@ -21,10 +25,6 @@ use goose::posthog::{TELEMETRY_ENABLED_KEY, get_telemetry_choice};
 use goose::providers::provider_test::test_provider_configuration;
 use goose::providers::{create, providers};
 use goose::session::SessionType;
-use goose_provider_types::base::ConfigKey;
-use goose_provider_types::goose_mode::GooseMode;
-use goose_provider_types::retry::{RetryConfig, retry_operation};
-use goose_provider_types::thinking::ThinkingEffort;
 use goose_providers::declarative::AuthConfig;
 use serde_json::Value;
 use std::collections::HashMap;
@@ -477,7 +477,7 @@ const UNLISTED_MODEL_KEY: &str = "__unlisted__";
 
 fn interactive_model_search(
     models: &[String],
-    provider_meta: &goose_provider_types::base::ProviderMetadata,
+    provider_meta: &bcaip_provider_types::base::ProviderMetadata,
 ) -> anyhow::Result<String> {
     const MAX_VISIBLE: usize = 30;
     let mut query = String::new();
@@ -580,7 +580,7 @@ fn interactive_model_search(
 
 fn select_model_from_list(
     models: &[String],
-    provider_meta: &goose_provider_types::base::ProviderMetadata,
+    provider_meta: &bcaip_provider_types::base::ProviderMetadata,
 ) -> anyhow::Result<String> {
     const MAX_MODELS: usize = 10;
 
@@ -653,7 +653,7 @@ fn select_model_from_list(
 }
 
 fn prompt_unlisted_model(
-    provider_meta: &goose_provider_types::base::ProviderMetadata,
+    provider_meta: &bcaip_provider_types::base::ProviderMetadata,
 ) -> anyhow::Result<String> {
     let model: String = cliclack::input("Enter the model name:")
         .placeholder(&provider_meta.default_model)
@@ -960,7 +960,7 @@ pub async fn configure_provider_dialog() -> anyhow::Result<bool> {
     {
         let supports_thinking = match temp_provider.fetch_model_info(&model).await {
             Ok(model_info) => model_info.reasoning,
-            Err(_) => goose_provider_types::model::ModelConfig::new(&model).is_reasoning_model(),
+            Err(_) => bcaip_provider_types::model::ModelConfig::new(&model).is_reasoning_model(),
         };
 
         if supports_thinking {
@@ -1951,9 +1951,9 @@ pub fn configure_max_turns_dialog() -> anyhow::Result<()> {
 
 /// Handle OpenRouter authentication
 pub async fn handle_openrouter_auth() -> anyhow::Result<()> {
+    use bcaip_provider_types::conversations::Message;
     use goose::config::{configure_openrouter, signup_openrouter::OpenRouterAuth};
     use goose::providers::create;
-    use goose_provider_types::conversations::Message;
     // Use the OpenRouter authentication flow
     let mut auth_flow = OpenRouterAuth::new()?;
     let api_key = auth_flow.complete_flow().await?;
@@ -2271,11 +2271,11 @@ fn add_provider() -> anyhow::Result<()> {
         })
         .interact()?;
 
-    let models: Vec<goose_provider_types::base::ModelInfo> = models_input
+    let models: Vec<bcaip_provider_types::base::ModelInfo> = models_input
         .split(',')
         .map(str::trim)
         .filter(|name| !name.is_empty())
-        .map(goose_provider_types::base::ModelInfo::new)
+        .map(bcaip_provider_types::base::ModelInfo::new)
         .collect();
 
     let supports_streaming = cliclack::confirm("Does this provider support streaming responses?")

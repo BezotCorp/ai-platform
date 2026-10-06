@@ -6,8 +6,8 @@ use crate::{
     native_tool_format::NativeToolFormat, native_tool_parsing::message_from_native_tool_text,
     native_tool_stream_splitter::NativeToolStreamSplitter, thinking_output::ThinkingOutputFilter,
 };
-use goose_provider_types::conversations::{Message, MessageContent};
-use goose_provider_types::errors::ProviderError;
+use bcaip_provider_types::conversations::{Message, MessageContent};
+use bcaip_provider_types::errors::ProviderError;
 pub(crate) fn generate_with_native_tools(
     ctx: &mut GenerationContext<'_>,
     oai_messages_json: &str,

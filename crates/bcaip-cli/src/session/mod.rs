@@ -13,6 +13,14 @@ use crate::session::task_execution_display::{
     TASK_EXECUTION_NOTIFICATION_TYPE, format_task_execution_notification,
 };
 use anyhow::Result;
+use bcaip_agent::events::AgentEvent;
+use bcaip_provider_types::conversations::Conversation;
+use bcaip_provider_types::conversations::ProviderUsage;
+use bcaip_provider_types::conversations::{
+    ActionRequiredData, Message, MessageContent, ToolConfirmationRequest,
+};
+use bcaip_provider_types::goose_mode::GooseMode;
+use bcaip_provider_types::permission::Permission;
 pub use builder::{ExtensionFailure, SessionBuilderConfig, build_session};
 use completion::GooseCompleter;
 use console::Color;
@@ -30,14 +38,6 @@ use goose::config::extensions::name_to_key;
 use goose::config::{paths::Paths, providers};
 use goose::utils::safe_truncate;
 use goose::{providers::inventory::ProviderInventoryService, session::SessionManager};
-use goose_agent::events::AgentEvent;
-use goose_provider_types::conversations::Conversation;
-use goose_provider_types::conversations::ProviderUsage;
-use goose_provider_types::conversations::{
-    ActionRequiredData, Message, MessageContent, ToolConfirmationRequest,
-};
-use goose_provider_types::goose_mode::GooseMode;
-use goose_provider_types::permission::Permission;
 use input::InputResult;
 use rmcp::model::ServerNotification;
 use rmcp::model::{ElicitationAction, PromptMessage};
@@ -193,19 +193,18 @@ impl HistoryManager {
         &self,
         editor: &mut rustyline::Editor<GooseCompleter, rustyline::history::DefaultHistory>,
     ) {
-        if let Some(parent) = self.history_file.parent() {
-            if !parent.exists() {
-                if let Err(e) = std::fs::create_dir_all(parent) {
-                    eprintln!("Warning: Failed to create history directory: {}", e);
-                }
-            }
+        if let Some(parent) = self.history_file.parent()
+            && !parent.exists()
+            && let Err(e) = std::fs::create_dir_all(parent)
+        {
+            eprintln!("Warning: Failed to create history directory: {}", e);
         }
 
         let history_files = [&self.history_file, &self.old_history_file];
-        if let Some(file) = history_files.iter().find(|f| f.exists()) {
-            if let Err(err) = editor.load_history(file) {
-                eprintln!("Warning: Failed to load command history: {}", err);
-            }
+        if let Some(file) = history_files.iter().find(|f| f.exists())
+            && let Err(err) = editor.load_history(file)
+        {
+            eprintln!("Warning: Failed to load command history: {}", err);
         }
     }
 
@@ -215,10 +214,10 @@ impl HistoryManager {
     ) {
         if let Err(err) = editor.save_history(&self.history_file) {
             eprintln!("Warning: Failed to save command history: {}", err);
-        } else if self.old_history_file.exists() {
-            if let Err(err) = std::fs::remove_file(&self.old_history_file) {
-                eprintln!("Warning: Failed to remove old history file: {}", err);
-            }
+        } else if self.old_history_file.exists()
+            && let Err(err) = std::fs::remove_file(&self.old_history_file)
+        {
+            eprintln!("Warning: Failed to remove old history file: {}", err);
         }
     }
 }
@@ -488,10 +487,10 @@ impl CliSession {
         let prompts = self.agent.list_extension_prompts(&self.session_id).await;
 
         // Early validation if filtering by extension
-        if let Some(filter) = &extension {
-            if !prompts.contains_key(filter) {
-                return Err(anyhow::anyhow!("Extension '{}' not found", filter));
-            }
+        if let Some(filter) = &extension
+            && !prompts.contains_key(filter)
+        {
+            return Err(anyhow::anyhow!("Extension '{}' not found", filter));
         }
 
         // Convert prompts into filtered map of extension names to prompt names
@@ -1070,7 +1069,7 @@ impl CliSession {
             .config
             .session_manager
             .update(&self.session_id)
-            .usage(goose_provider_types::conversations::Usage::new(
+            .usage(bcaip_provider_types::conversations::Usage::new(
                 Some(0),
                 Some(0),
                 Some(0),
@@ -1533,12 +1532,10 @@ impl CliSession {
             stream_error,
             &self.messages,
         );
-        if is_stream_json_mode {
-            if let Some(error) = &terminal_error {
-                emit_stream_event(&StreamEvent::Error {
-                    error: error.to_string(),
-                });
-            }
+        if is_stream_json_mode && let Some(error) = &terminal_error {
+            emit_stream_event(&StreamEvent::Error {
+                error: error.to_string(),
+            });
         }
 
         if !is_json_mode && !is_stream_json_mode {
@@ -1687,25 +1684,25 @@ impl CliSession {
             while self.messages.last().is_some_and(Message::is_turn_context) {
                 self.messages.pop();
             }
-            if let Some(last_msg) = self.messages.last() {
-                if last_msg.role == rmcp::model::Role::User {
-                    match last_msg.content.first() {
-                        Some(MessageContent::ToolResponse(_)) => {
-                            self.push_message(Message::assistant().with_text(interrupt_prompt));
-                            output::render_message(
-                                &Message::assistant().with_text(interrupt_prompt),
-                                self.debug,
-                            );
-                        }
-                        Some(_) => {
-                            self.messages.pop();
-                            let assistant_msg = Message::assistant().with_text(interrupt_prompt);
-                            self.push_message(assistant_msg.clone());
-                            output::render_message(&assistant_msg, self.debug);
-                        }
-                        None => {
-                            // Empty message content — nothing to do, just continue gracefully
-                        }
+            if let Some(last_msg) = self.messages.last()
+                && last_msg.role == rmcp::model::Role::User
+            {
+                match last_msg.content.first() {
+                    Some(MessageContent::ToolResponse(_)) => {
+                        self.push_message(Message::assistant().with_text(interrupt_prompt));
+                        output::render_message(
+                            &Message::assistant().with_text(interrupt_prompt),
+                            self.debug,
+                        );
+                    }
+                    Some(_) => {
+                        self.messages.pop();
+                        let assistant_msg = Message::assistant().with_text(interrupt_prompt);
+                        self.push_message(assistant_msg.clone());
+                        output::render_message(&assistant_msg, self.debug);
+                    }
+                    None => {
+                        // Empty message content — nothing to do, just continue gracefully
                     }
                 }
             }
@@ -1819,10 +1816,10 @@ impl CliSession {
                 }
             }
 
-            if let Some(model) = configured_models.get(&metadata.name) {
-                if !models.contains(model) {
-                    models.push(model.clone());
-                }
+            if let Some(model) = configured_models.get(&metadata.name)
+                && !models.contains(model)
+            {
+                models.push(model.clone());
             }
 
             cache.provider_models.insert(metadata.name.clone(), models);
@@ -2210,21 +2207,20 @@ fn prompt_tool_confirmation(request: &ToolConfirmationRequest) -> Result<Permiss
 /// Extract tool confirmation request from a message
 fn find_tool_confirmation(message: &Message) -> Option<ToolConfirmationRequest> {
     message.content.iter().find_map(|content| {
-        if let MessageContent::ActionRequired(action) = content {
-            if let ActionRequiredData::ToolConfirmation {
+        if let MessageContent::ActionRequired(action) = content
+            && let ActionRequiredData::ToolConfirmation {
                 id,
                 tool_name,
                 arguments,
                 prompt,
             } = &action.data
-            {
-                return Some(ToolConfirmationRequest {
-                    id: id.clone(),
-                    tool_name: tool_name.clone(),
-                    arguments: arguments.clone(),
-                    prompt: prompt.clone(),
-                });
-            }
+        {
+            return Some(ToolConfirmationRequest {
+                id: id.clone(),
+                tool_name: tool_name.clone(),
+                arguments: arguments.clone(),
+                prompt: prompt.clone(),
+            });
         }
         None
     })
@@ -2233,15 +2229,14 @@ fn find_tool_confirmation(message: &Message) -> Option<ToolConfirmationRequest> 
 /// Extract elicitation request from a message
 fn find_elicitation_request(message: &Message) -> Option<(String, String, Value)> {
     message.content.iter().find_map(|content| {
-        if let MessageContent::ActionRequired(action) = content {
-            if let ActionRequiredData::Elicitation {
+        if let MessageContent::ActionRequired(action) = content
+            && let ActionRequiredData::Elicitation {
                 id,
                 message,
                 requested_schema,
             } = &action.data
-            {
-                return Some((id.clone(), message.clone(), requested_schema.clone()));
-            }
+        {
+            return Some((id.clone(), message.clone(), requested_schema.clone()));
         }
         None
     })
@@ -2260,46 +2255,45 @@ fn handle_mcp_notification(
 ) {
     match notification {
         ServerNotification::LoggingMessageNotification(log_notif) => {
-            if let Some(obj) = log_notif.params.data.as_object() {
-                if obj.get("type").and_then(|v| v.as_str()) == Some(SUBAGENT_TOOL_REQUEST_TYPE) {
-                    if let (Some(subagent_id), Some(tool_call)) = (
-                        obj.get("subagent_id").and_then(|v| v.as_str()),
-                        obj.get("tool_call").and_then(|v| v.as_object()),
-                    ) {
-                        let tool_name = tool_call
-                            .get("name")
-                            .and_then(|v| v.as_str())
-                            .unwrap_or("unknown");
-                        let arguments = tool_call
-                            .get("arguments")
-                            .and_then(|v| v.as_object())
-                            .cloned();
+            if let Some(obj) = log_notif.params.data.as_object()
+                && obj.get("type").and_then(|v| v.as_str()) == Some(SUBAGENT_TOOL_REQUEST_TYPE)
+                && let (Some(subagent_id), Some(tool_call)) = (
+                    obj.get("subagent_id").and_then(|v| v.as_str()),
+                    obj.get("tool_call").and_then(|v| v.as_object()),
+                )
+            {
+                let tool_name = tool_call
+                    .get("name")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("unknown");
+                let arguments = tool_call
+                    .get("arguments")
+                    .and_then(|v| v.as_object())
+                    .cloned();
 
-                        if interactive {
-                            let _ = progress_bars.hide();
-                        }
-                        if is_stream_json_mode {
-                            emit_stream_event(&StreamEvent::Notification {
-                                extension_id: extension_id.to_string(),
-                                data: NotificationData::Log {
-                                    message: output::format_subagent_tool_call_message(
-                                        subagent_id,
-                                        tool_name,
-                                    ),
-                                },
-                            });
-                            return;
-                        }
-                        if !is_json_mode {
-                            output::render_subagent_tool_call(
+                if interactive {
+                    let _ = progress_bars.hide();
+                }
+                if is_stream_json_mode {
+                    emit_stream_event(&StreamEvent::Notification {
+                        extension_id: extension_id.to_string(),
+                        data: NotificationData::Log {
+                            message: output::format_subagent_tool_call_message(
                                 subagent_id,
                                 tool_name,
-                                arguments.as_ref(),
-                                debug,
-                            );
-                            return;
-                        }
-                    }
+                            ),
+                        },
+                    });
+                    return;
+                }
+                if !is_json_mode {
+                    output::render_subagent_tool_call(
+                        subagent_id,
+                        tool_name,
+                        arguments.as_ref(),
+                        debug,
+                    );
+                    return;
                 }
             }
 
@@ -2522,14 +2516,14 @@ fn display_log_notification(
 /// Log tool request/response metrics
 fn log_tool_metrics(message: &Message, messages: &Conversation) {
     for content in &message.content {
-        if let MessageContent::ToolRequest(tool_request) = content {
-            if let Ok(tool_call) = &tool_request.tool_call {
-                tracing::info!(
-                    monotonic_counter.goose.tool_calls = 1,
-                    tool_name = %tool_call.name,
-                    "Tool call started"
-                );
-            }
+        if let MessageContent::ToolRequest(tool_request) = content
+            && let Ok(tool_call) = &tool_request.tool_call
+        {
+            tracing::info!(
+                monotonic_counter.goose.tool_calls = 1,
+                tool_name = %tool_call.name,
+                "Tool call started"
+            );
         }
         if let MessageContent::ToolResponse(tool_response) = content {
             let tool_name = messages
@@ -2575,11 +2569,11 @@ fn handle_agent_error(e: &anyhow::Error, is_stream_json_mode: bool) {
         });
     }
 
-    if e.downcast_ref::<goose_provider_types::errors::ProviderError>()
+    if e.downcast_ref::<bcaip_provider_types::errors::ProviderError>()
         .map(|provider_error| {
             matches!(
                 provider_error,
-                goose_provider_types::errors::ProviderError::ContextLengthExceeded(_)
+                bcaip_provider_types::errors::ProviderError::ContextLengthExceeded(_)
             )
         })
         .unwrap_or(false)
@@ -2635,8 +2629,8 @@ fn format_elapsed_time(duration: std::time::Duration) -> String {
 fn build_switched_model_config(
     provider_name: &str,
     model_name: &str,
-    current_model_config: &goose_provider_types::model::ModelConfig,
-) -> Result<goose_provider_types::model::ModelConfig> {
+    current_model_config: &bcaip_provider_types::model::ModelConfig,
+) -> Result<bcaip_provider_types::model::ModelConfig> {
     goose::model_config::model_config_from_user_config(provider_name, model_name)
         .map(|config| {
             config

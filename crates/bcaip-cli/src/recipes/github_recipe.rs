@@ -294,12 +294,11 @@ fn discover_github_recipes(repo: &str) -> Result<Vec<RecipeInfo>> {
             if let (Some(name), Some(item_type)) = (
                 item.get("name").and_then(|n| n.as_str()),
                 item.get("type").and_then(|t| t.as_str()),
-            ) {
-                if item_type == "dir" {
-                    // Check if this directory contains a recipe file
-                    if let Ok(recipe_info) = check_github_directory_for_recipe(repo, name) {
-                        recipes.push(recipe_info);
-                    }
+            ) && item_type == "dir"
+            {
+                // Check if this directory contains a recipe file
+                if let Ok(recipe_info) = check_github_directory_for_recipe(repo, name) {
+                    recipes.push(recipe_info);
                 }
             }
         }
@@ -327,14 +326,13 @@ fn check_github_directory_for_recipe(repo: &str, dir_name: &str) -> Result<Recip
 
     if let Some(items) = contents.as_array() {
         for item in items {
-            if let Some(name) = item.get("name").and_then(|n| n.as_str()) {
-                if RECIPE_FILE_EXTENSIONS
+            if let Some(name) = item.get("name").and_then(|n| n.as_str())
+                && RECIPE_FILE_EXTENSIONS
                     .iter()
                     .any(|ext| name == format!("recipe.{}", ext))
-                {
-                    // Found a recipe file, get its content
-                    return get_github_recipe_info(repo, dir_name, name);
-                }
+            {
+                // Found a recipe file, get its content
+                return get_github_recipe_info(repo, dir_name, name);
             }
         }
     }

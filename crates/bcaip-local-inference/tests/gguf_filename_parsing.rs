@@ -3,7 +3,7 @@
 
 #![cfg(feature = "hf-hub")]
 
-use goose_local_inference::hf_models::{is_auxiliary_gguf_file, parse_quantization_from_filename};
+use bcaip_local_inference::hf_models::{is_auxiliary_gguf_file, parse_quantization_from_filename};
 
 fn quant(filename: &str) -> String {
     parse_quantization_from_filename(filename)

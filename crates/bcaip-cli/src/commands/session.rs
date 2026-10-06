@@ -15,10 +15,10 @@ const TRUNCATED_DESC_LENGTH: usize = 60;
 
 fn display_path_with_tilde(path: &Path) -> String {
     #[cfg(not(target_os = "windows"))]
-    if let Ok(home) = home_dir() {
-        if let Ok(stripped) = path.strip_prefix(&home) {
-            return format!("~/{}", stripped.display());
-        }
+    if let Ok(home) = home_dir()
+        && let Ok(stripped) = path.strip_prefix(&home)
+    {
+        return format!("~/{}", stripped.display());
     }
     path.display().to_string()
 }

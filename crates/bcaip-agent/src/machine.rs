@@ -6,8 +6,8 @@ use crate::operation::{
 };
 use anyhow::{Result, anyhow};
 use async_trait::async_trait;
-use goose_provider_types::conversations::Conversation;
-use goose_provider_types::maybe_send::{MaybeSend, MaybeSync};
+use bcaip_provider_types::conversations::{Conversation, Usage};
+use bcaip_provider_types::maybe_send::{MaybeSend, MaybeSync};
 use tokio_util::sync::CancellationToken;
 
 pub trait MachineSession: MaybeSend + MaybeSync {
@@ -28,7 +28,7 @@ pub trait EffectHandler<S, E>: MaybeSend + MaybeSync {
 }
 
 pub trait EffectUsage<E>: MaybeSend + MaybeSync {
-    fn usage(&self, _effect: &E) -> Option<goose_provider_types::conversations::Usage> {
+    fn usage(&self, _effect: &E) -> Option<Usage> {
         None
     }
 }

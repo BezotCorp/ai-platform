@@ -29,6 +29,15 @@ pub(crate) mod thinking_output;
 mod tool_emulation;
 mod tool_parsing;
 
+use bcaip_provider_types::Message;
+use bcaip_provider_types::base::{MessageStream, Provider, ProviderDescriptor, ProviderMetadata};
+use bcaip_provider_types::conversations::{
+    MessageContent, ProviderUsage, SystemNotificationType, Usage,
+};
+use bcaip_provider_types::request_log::{LoggerHandleExt, RequestLogHandle, start_log};
+use bcaip_provider_types::{
+    context_limit, errors::ProviderError, formats, images::ImageFormat, model::ModelConfig,
+};
 pub use dir_type::DirType;
 pub use llamacpp::LlamaCppBackend;
 
@@ -37,12 +46,7 @@ use async_stream::try_stream;
 use async_trait::async_trait;
 use backend::LocalInferenceBackend;
 use explicit_model_path::ExplicitModelPath;
-use goose_provider_types::base::{MessageStream, Provider, ProviderDescriptor, ProviderMetadata};
-use goose_provider_types::conversations::{
-    Message, MessageContent, ProviderUsage, SystemNotificationType, Usage,
-};
-use goose_provider_types::request_log::{LoggerHandleExt, RequestLogHandle, start_log};
-use goose_provider_types::{errors::ProviderError, images::ImageFormat, model::ModelConfig};
+
 use llamacpp::LLAMACPP_BACKEND_ID;
 use mlx::{MLX_BACKEND_ID, MlxBackend};
 use model::ChatTemplate;
@@ -426,7 +430,7 @@ fn build_openai_messages_json(
     messages: &[Message],
     media_marker: Option<&str>,
 ) -> String {
-    use goose_provider_types::formats::format_messages_openai;
+    use formats::format_messages_openai;
     let mut arr: Vec<Value> = vec![json!({"role": "system", "content": system})];
     arr.extend(format_messages_openai(messages, &ImageFormat::OpenAi));
     strip_image_parts_from_messages(&mut arr);
@@ -690,7 +694,7 @@ impl Provider for LocalInferenceProvider {
     }
 
     async fn get_context_limit(&self, model: &str, override_limit: Option<usize>) -> usize {
-        goose_provider_types::context_limit::ContextLimitResolver::new(&self.name)
+        context_limit::ContextLimitResolver::new(&self.name)
             .resolve(model, override_limit, || async {
                 Ok(resolve_model_path(model)
                     .await

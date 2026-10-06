@@ -8,8 +8,8 @@ use crate::{
     model::ModelSettings,
     multimodal::ExtractedImage,
 };
-use goose_provider_types::errors::ProviderError;
-use goose_provider_types::request_log::{LoggerHandleExt, RequestLogHandle};
+use bcaip_provider_types::errors::ProviderError;
+use bcaip_provider_types::request_log::{LoggerHandleExt, RequestLogHandle};
 use llama_cpp_2::model::{LlamaChatTemplate, LlamaModel};
 use llama_cpp_2::mtmd::{MtmdBitmap, MtmdContext, MtmdInputText};
 use llama_cpp_2::sampling::LlamaSampler;

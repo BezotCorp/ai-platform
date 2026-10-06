@@ -1,6 +1,11 @@
 use anyhow::Result;
 #[cfg(feature = "local-inference")]
 use bcaip_download_manager::{DownloadManager, DownloadStatus, get_download_manager};
+#[cfg(feature = "bundled-mcp")]
+use bcaip_mcp::mcp_server_runner::{McpCommand, serve};
+#[cfg(feature = "bundled-mcp")]
+use bcaip_mcp::{AutoVisualiserRouter, ComputerControllerServer, MemoryServer, TutorialServer};
+use bcaip_provider_types::goose_mode::GooseMode;
 #[cfg(feature = "roaming")]
 use bcaip_roaming::RoamingNode;
 use clap::{Args, CommandFactory, Parser, Subcommand};
@@ -15,11 +20,6 @@ use goose::posthog::get_telemetry_choice;
 use goose::recipe::Recipe;
 #[cfg(feature = "acp-http")]
 use goose::source_roots::SourceRoot;
-#[cfg(feature = "bundled-mcp")]
-use goose_mcp::mcp_server_runner::{McpCommand, serve};
-#[cfg(feature = "bundled-mcp")]
-use goose_mcp::{AutoVisualiserRouter, ComputerControllerServer, MemoryServer, TutorialServer};
-use goose_provider_types::goose_mode::GooseMode;
 
 #[cfg(feature = "telemetry")]
 use crate::commands::configure::configure_telemetry_consent_dialog;
@@ -177,10 +177,10 @@ fn parse_streamable_http_extension(input: &str) -> Result<StreamableHttpOptions,
         let (key, value) = kv_pair.split_once('=').unwrap();
 
         // We Can have more keys here for setting other properties
-        if key == "timeout" {
-            if let Ok(seconds) = value.parse::<u64>() {
-                timeout = seconds;
-            }
+        if key == "timeout"
+            && let Ok(seconds) = value.parse::<u64>()
+        {
+            timeout = seconds;
         }
     }
 
@@ -2532,8 +2532,8 @@ fn local_search_memory_limit(ram_gb: Option<f64>) -> Result<u64> {
         return gb_to_bytes(gb);
     }
 
-    match goose_local_inference::InferenceRuntime::get_or_init() {
-        Ok(runtime) => Ok(goose_local_inference::available_inference_memory_bytes(
+    match bcaip_local_inference::InferenceRuntime::get_or_init() {
+        Ok(runtime) => Ok(bcaip_local_inference::available_inference_memory_bytes(
             runtime.as_ref(),
         )),
         Err(_) => gb_to_bytes(16.0),
@@ -2551,10 +2551,10 @@ fn format_size(bytes: u64) -> String {
 
 #[cfg(feature = "local-inference")]
 fn recommended_variant(
-    model: &goose_local_inference::hf_models::HfModelInfo,
+    model: &bcaip_local_inference::hf_models::HfModelInfo,
     available_memory: u64,
-) -> Option<&goose_local_inference::hf_models::HfModelVariant> {
-    use goose_local_inference::hf_models::{HfQuantVariant, recommend_variant};
+) -> Option<&bcaip_local_inference::hf_models::HfModelVariant> {
+    use bcaip_local_inference::hf_models::{HfQuantVariant, recommend_variant};
 
     let mut variant_indexes = Vec::new();
     let mut gguf_variants = Vec::new();
@@ -2580,7 +2580,7 @@ fn recommended_variant(
 
 #[cfg(feature = "local-inference")]
 async fn handle_local_models_command(command: LocalModelsCommand) -> Result<()> {
-    use goose_local_inference::hf_models;
+    use bcaip_local_inference::hf_models;
     goose::providers::local_inference::configure_huggingface_auth();
 
     match command {
@@ -2820,7 +2820,7 @@ async fn handle_default_session() -> Result<()> {
 
 pub async fn cli() -> anyhow::Result<()> {
     #[cfg(feature = "bundled-mcp")]
-    register_builtin_extensions(goose_mcp::BUILTIN_EXTENSIONS.clone());
+    register_builtin_extensions(bcaip_mcp::BUILTIN_EXTENSIONS.clone());
 
     let cli = Cli::parse();
 

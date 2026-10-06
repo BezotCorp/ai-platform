@@ -117,10 +117,11 @@ fn generate_see_also(
     }
 
     // Reference parent command if exists and not already added
-    if let Some(parent) = parent_name {
-        if parent != "goose" && !references.contains(&parent.to_string()) {
-            references.push(parent.to_string());
-        }
+    if let Some(parent) = parent_name
+        && parent != "goose"
+        && !references.contains(&parent.to_string())
+    {
+        references.push(parent.to_string());
     }
 
     // For the main command, list immediate subcommands

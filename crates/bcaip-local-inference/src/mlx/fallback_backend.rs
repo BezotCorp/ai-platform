@@ -2,7 +2,7 @@ use super::snapshot_validation::validate_snapshot_files;
 use crate::ResolvedModelPaths;
 use crate::backend::{BackendLoadedModel, LocalGenerationRequest, LocalInferenceBackend};
 use crate::model::ModelSettings;
-use goose_provider_types::errors::ProviderError;
+use bcaip_provider_types::errors::ProviderError;
 use std::path::Path;
 pub(crate) const MLX_BACKEND_ID: &str = "mlx";
 

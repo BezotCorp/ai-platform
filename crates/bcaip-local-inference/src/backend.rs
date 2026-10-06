@@ -1,5 +1,5 @@
 use crate::{StreamSender, model::ModelSettings, resolved_model_paths::ResolvedModelPaths};
-use goose_provider_types::{
+use bcaip_provider_types::{
     conversations::Message, errors::ProviderError, request_log::RequestLogHandle,
 };
 use rmcp::model::Tool;

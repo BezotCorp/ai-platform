@@ -123,10 +123,10 @@ pub async fn delegate(
         .name("goose-roam-delegate")
         .on_receive_notification(
             async move |notification: SessionNotification, _cx| {
-                if let SessionUpdate::AgentMessageChunk(chunk) = &notification.update {
-                    if let ContentBlock::Text(text) = &chunk.content {
-                        sink.lock().unwrap().push_str(&text.text);
-                    }
+                if let SessionUpdate::AgentMessageChunk(chunk) = &notification.update
+                    && let ContentBlock::Text(text) = &chunk.content
+                {
+                    sink.lock().unwrap().push_str(&text.text);
                 }
                 Ok(())
             },

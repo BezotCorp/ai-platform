@@ -3,8 +3,8 @@ use console::style;
 use goose::config::Config;
 use goose::config::paths::Paths;
 use goose::session::{DB_NAME, SESSIONS_FOLDER};
-use goose_provider_types::conversations::Message;
-use goose_provider_types::errors::ProviderError;
+use bcaip_provider_types::conversations::Message;
+use bcaip_provider_types::errors::ProviderError;
 use std::time::Duration;
 use yaml_serde;
 fn print_aligned(label: &str, value: &str, width: usize) {

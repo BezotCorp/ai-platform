@@ -8,14 +8,14 @@ use std::{
 
 use anyhow::Result;
 use async_trait::async_trait;
-use goose_agent::{
+use bcaip_agent::{
     machine::{MachineSession, StateMachine, Step},
     operation::{
         ConversationEffect, Emitter, Inference, InferenceInput, Operation, OperationResult,
     },
     tool::{ToolOperation, ToolProvider},
 };
-use goose_provider_types::conversations::{Conversation, Message, MessageContent};
+use bcaip_provider_types::conversations::{Conversation, Message, MessageContent};
 use rmcp::{
     handler::server::router::tool::{AsyncTool, SyncTool, ToolBase},
     model::{CallToolRequestParams, CallToolResult, ErrorData, Tool},

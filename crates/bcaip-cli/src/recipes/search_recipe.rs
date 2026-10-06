@@ -48,10 +48,10 @@ pub fn list_available_recipes() -> Result<Vec<RecipeInfo>> {
     }
 
     // Search GitHub recipes if configured
-    if let Some(repo) = configured_github_recipe_repo() {
-        if let Ok(github_recipes) = list_github_recipes(&repo) {
-            recipes.extend(github_recipes);
-        }
+    if let Some(repo) = configured_github_recipe_repo()
+        && let Ok(github_recipes) = list_github_recipes(&repo)
+    {
+        recipes.extend(github_recipes);
     }
 
     Ok(recipes)

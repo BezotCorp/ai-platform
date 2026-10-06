@@ -1,9 +1,9 @@
 use crate::events::AgentEvent;
 use anyhow::{Result, anyhow};
 use async_trait::async_trait;
-use goose_provider_types::conversations::{Conversation, EffectiveRole, effective_role};
-use goose_provider_types::conversations::{Message, MessageContent, MessageErrorKind};
-use goose_provider_types::maybe_send::{MaybeSend, MaybeSync};
+use bcaip_provider_types::conversations::{Conversation, EffectiveRole, effective_role};
+use bcaip_provider_types::conversations::{Message, MessageContent, MessageErrorKind};
+use bcaip_provider_types::maybe_send::{MaybeSend, MaybeSync};
 use rmcp::model::Tool;
 use std::{future::Future, pin::Pin};
 use tokio::sync::mpsc;

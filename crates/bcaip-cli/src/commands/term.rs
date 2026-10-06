@@ -3,7 +3,7 @@ use anyhow::{Result, anyhow};
 use chrono;
 use goose::config::Config;
 use goose::session::{SessionManager, SessionType};
-use goose_provider_types::conversations::{Message, MessageContent, MessageMetadata};
+use bcaip_provider_types::conversations::{Message, MessageContent, MessageMetadata};
 use rmcp::model::Role;
 
 use clap::ValueEnum;
@@ -362,7 +362,7 @@ pub async fn handle_term_info() -> Result<()> {
             let model = session.model_config.as_ref()?;
             goose::context_limit::get_local_context_limit(provider_name, &model.model_name).ok()
         })
-        .unwrap_or(goose_provider_types::model::DEFAULT_CONTEXT_LIMIT);
+        .unwrap_or(bcaip_provider_types::model::DEFAULT_CONTEXT_LIMIT);
 
     let percentage = if context_limit > 0 {
         ((total_tokens as f64 / context_limit as f64) * 100.0).round() as usize

@@ -1,7 +1,7 @@
 use super::{CompletionCache, HintStatus};
+use bcaip_provider_types::goose_mode::GooseMode;
 use goose::agents::execute_commands::list_commands;
 use goose::config::Config;
-use goose_provider_types::goose_mode::GooseMode;
 use rustyline::completion::{Completer, FilenameCompleter, Pair};
 use rustyline::highlight::{CmdKind, Highlighter};
 use rustyline::{Context, Helper, Result};
@@ -283,8 +283,8 @@ impl GooseCompleter {
         let cache = self.completion_cache.read().unwrap();
         let prompt_info = cache.prompt_info.get(prompt_name).cloned();
 
-        if let Some(info) = prompt_info {
-            if let Some(args) = info.arguments {
+        if let Some(info) = prompt_info
+            && let Some(args) = info.arguments {
                 // Find required arguments that haven't been provided yet
                 let existing_args: Vec<&str> = parts
                     .iter()
@@ -301,11 +301,10 @@ impl GooseCompleter {
                 // Check if we're trying to complete a partial argument name
                 if let Some(last_part) = parts.last() {
                     // ignore if last_part starts with = / \ for suggestions
-                    if let Some(c) = last_part.chars().next() {
-                        if matches!(c, '=' | '/' | '\\') {
+                    if let Some(c) = last_part.chars().next()
+                        && matches!(c, '=' | '/' | '\\') {
                             return Ok((line.len(), vec![]));
                         }
-                    }
 
                     // If the last part doesn't contain '=', it might be a partial argument name
                     if !last_part.contains('=') {
@@ -367,7 +366,6 @@ impl GooseCompleter {
                 }
                 return Ok((line.len(), candidates));
             }
-        }
 
         // No completions available
         Ok((line.len(), vec![]))
@@ -440,11 +438,10 @@ impl Completer for GooseCompleter {
                 }
 
                 // Check if we might be typing a flag
-                if let Some(last_part) = parts.last() {
-                    if last_part.starts_with('-') {
+                if let Some(last_part) = parts.last()
+                    && last_part.starts_with('-') {
                         return self.complete_prompt_flags(line);
                     }
-                }
 
                 // If we have a prompt name and need argument completion
                 if parts.len() >= 2 {

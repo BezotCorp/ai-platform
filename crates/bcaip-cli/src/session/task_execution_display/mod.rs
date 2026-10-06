@@ -162,20 +162,20 @@ fn format_task_display(task: &TaskInfo) -> String {
         }
     }
 
-    if matches!(task.status, TaskStatus::Completed) {
-        if let Some(result_data) = &task.result_data {
-            let result_preview = format_result_data_for_display(result_data);
-            if !result_preview.is_empty() {
-                task_display.push_str(&format!("   📄 {}\n", result_preview));
-            }
+    if matches!(task.status, TaskStatus::Completed)
+        && let Some(result_data) = &task.result_data
+    {
+        let result_preview = format_result_data_for_display(result_data);
+        if !result_preview.is_empty() {
+            task_display.push_str(&format!("   📄 {}\n", result_preview));
         }
     }
 
-    if matches!(task.status, TaskStatus::Failed) {
-        if let Some(error) = &task.error {
-            let error_preview = safe_truncate(error, 80);
-            task_display.push_str(&format!("   ⚠️  {}\n", error_preview.replace('\n', " ")));
-        }
+    if matches!(task.status, TaskStatus::Failed)
+        && let Some(error) = &task.error
+    {
+        let error_preview = safe_truncate(error, 80);
+        task_display.push_str(&format!("   ⚠️  {}\n", error_preview.replace('\n', " ")));
     }
 
     task_display.push('\n');

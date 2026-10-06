@@ -64,10 +64,11 @@ fn collect_elicitation_input_inner(
 
     let properties = schema.get("properties").and_then(|p| p.as_object());
 
-    if io::stdin().is_terminal() && io::stderr().is_terminal() {
-        if let Some(select) = single_select(schema) {
-            return prompt_single_select(select);
-        }
+    if io::stdin().is_terminal()
+        && io::stderr().is_terminal()
+        && let Some(select) = single_select(schema)
+    {
+        return prompt_single_select(select);
     }
 
     let properties = match properties {
@@ -179,10 +180,10 @@ fn collect_elicitation_input_inner(
             Some(parse_value(&input, field_type, enum_values))
         };
 
-        if let Some(v) = value {
-            if !v.is_null() {
-                data.insert(name.clone(), v);
-            }
+        if let Some(v) = value
+            && !v.is_null()
+        {
+            data.insert(name.clone(), v);
         }
 
         if is_required && !data.contains_key(name) {
@@ -450,10 +451,11 @@ fn parse_value(input: &str, field_type: &str, enum_values: Option<&Vec<Value>>) 
         if valid.contains(&input) {
             return Value::String(input.to_string());
         }
-        if let Ok(idx) = input.parse::<usize>() {
-            if idx > 0 && idx <= valid.len() {
-                return Value::String(valid[idx - 1].to_string());
-            }
+        if let Ok(idx) = input.parse::<usize>()
+            && idx > 0
+            && idx <= valid.len()
+        {
+            return Value::String(valid[idx - 1].to_string());
         }
     }
 

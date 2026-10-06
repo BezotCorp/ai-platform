@@ -26,8 +26,8 @@ use crate::llamacpp::inference_engine::{
 use crate::thinking_output::ThinkingOutputFilter;
 use crate::tool_emulation::{EmulatorAction, StreamingEmulatorParser};
 use crate::{StreamSender, finalize_usage};
-use goose_provider_types::conversations::{Message, MessageContent};
-use goose_provider_types::errors::ProviderError;
+use bcaip_provider_types::conversations::{Message, MessageContent};
+use bcaip_provider_types::errors::ProviderError;
 use rmcp::model::{CallToolRequestParams, Tool};
 use serde_json::json;
 use std::borrow::Cow;

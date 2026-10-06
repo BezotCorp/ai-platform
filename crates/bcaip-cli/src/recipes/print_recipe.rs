@@ -11,24 +11,24 @@ pub fn print_recipe_explanation(recipe: &Recipe) {
     );
     println!("{}", style("📄 Description:").bold());
     println!("   {}", recipe.description);
-    if let Some(params) = &recipe.parameters {
-        if !params.is_empty() {
-            println!("{}", style("⚙️  Recipe Parameters:").bold());
-            for param in params {
-                let default_display = match &param.default {
-                    Some(val) => format!(" (default: {})", val),
-                    None => String::new(),
-                };
+    if let Some(params) = &recipe.parameters
+        && !params.is_empty()
+    {
+        println!("{}", style("⚙️  Recipe Parameters:").bold());
+        for param in params {
+            let default_display = match &param.default {
+                Some(val) => format!(" (default: {})", val),
+                None => String::new(),
+            };
 
-                println!(
-                    "   - {} ({}, {}){}: {}",
-                    style(&param.key).cyan(),
-                    param.input_type,
-                    param.requirement,
-                    default_display,
-                    param.description
-                );
-            }
+            println!(
+                "   - {} ({}, {}){}: {}",
+                style(&param.key).cyan(),
+                param.input_type,
+                param.requirement,
+                default_display,
+                param.description
+            );
         }
     }
 }

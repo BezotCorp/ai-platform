@@ -4,8 +4,8 @@ use super::paste::{
 };
 use super::{CompletionCache, HintStatus};
 use anyhow::Result;
+use bcaip_provider_types::goose_mode::GooseMode;
 use goose::config::Config;
-use goose_provider_types::goose_mode::GooseMode;
 use rustyline::Editor;
 use shlex;
 use std::{collections::HashMap, sync::Arc};
@@ -121,21 +121,20 @@ pub fn get_input(
     let editor_always_override = config.get_goose_prompt_editor_always().ok().flatten();
     let editor_always = should_use_editor_always(prompt_editor.as_deref(), editor_always_override);
 
-    if editor_always {
-        if let Ok(Some(editor_cmd)) = config.get_goose_prompt_editor() {
-            if !editor_cmd.is_empty() {
-                let messages = extract_recent_messages(conversation_messages);
-                let message_refs: Vec<&str> = messages.iter().map(|s| s.as_str()).collect();
-                let (message, has_meaningful_content) =
-                    crate::session::editor::get_editor_input(&editor_cmd, &message_refs, None)?;
+    if editor_always
+        && let Ok(Some(editor_cmd)) = config.get_goose_prompt_editor()
+        && !editor_cmd.is_empty()
+    {
+        let messages = extract_recent_messages(conversation_messages);
+        let message_refs: Vec<&str> = messages.iter().map(|s| s.as_str()).collect();
+        let (message, has_meaningful_content) =
+            crate::session::editor::get_editor_input(&editor_cmd, &message_refs, None)?;
 
-                if has_meaningful_content {
-                    editor.add_history_entry(message.as_str())?;
-                    return Ok(InputResult::Message(message));
-                }
-                // Empty editor content — fall through to inline prompt
-            }
+        if has_meaningful_content {
+            editor.add_history_entry(message.as_str())?;
+            return Ok(InputResult::Message(message));
         }
+        // Empty editor content — fall through to inline prompt
     }
 
     let completion_cache = editor
