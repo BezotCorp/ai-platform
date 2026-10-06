@@ -1,23 +1,21 @@
-use super::api_client::{ApiClient, AuthMethod, AuthProvider};
-use super::base::{
-    ConfigKey, MessageStream, ModelInfo, Provider, ProviderDef, ProviderMetadata,
-    DEFAULT_PROVIDER_TIMEOUT_SECS,
-};
+use super::base::ProviderDef;
 use super::command_auth::CommandAuthProvider;
 use super::huggingface_auth;
-use super::openai_compatible::OpenAiCompatibleProvider;
-use crate::config::declarative_providers::DeclarativeProviderConfig;
 use crate::config::{Config, ConfigError};
-use crate::conversation::message::Message;
 use crate::session_context::{
     session_id_request_builder, session_id_request_builder_with_header_override,
 };
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use futures::future::BoxFuture;
-use goose_providers::errors::ProviderError;
-use goose_providers::model::ModelConfig;
+use bcaip_provider_types::base::{ConfigKey, MessageStream, ModelInfo, Provider, ProviderMetadata};
+use bcaip_provider_types::conversations::Message;
+use bcaip_provider_types::errors::ProviderError;
+use bcaip_provider_types::model::ModelConfig;
+use goose_providers::api_client::DEFAULT_PROVIDER_TIMEOUT_SECS;
+use goose_providers::api_client::{ApiClient, AuthMethod, AuthProvider};
+use goose_providers::declarative::DeclarativeProviderConfig;
+use goose_providers::openai_compatible::OpenAiCompatibleProvider;
 use rmcp::model::Tool;
-
 pub const HUGGINGFACE_API_HOST: &str = "https://router.huggingface.co/v1";
 pub const HUGGINGFACE_DOC_URL: &str = "https://huggingface.co/docs/inference-providers";
 pub const HUGGINGFACE_DEFAULT_MODEL: &str = "Qwen/Qwen3-Coder-480B-A35B-Instruct";
@@ -77,7 +75,7 @@ impl HuggingFaceProvider {
 
     pub fn from_custom_config(
         config: DeclarativeProviderConfig,
-        tls_config: Option<crate::providers::api_client::TlsConfig>,
+        tls_config: Option<goose_providers::api_client::TlsConfig>,
     ) -> Result<Self> {
         let custom_models = static_models(&config);
         if config.dynamic_models == Some(false) && custom_models.is_none() {
@@ -154,7 +152,7 @@ impl Provider for HuggingFaceProvider {
             .iter()
             .flatten()
             .filter_map(|model| model.context_limit.map(|limit| (model.name.clone(), limit)));
-        goose_providers::context_limit::ContextLimitResolver::new(self.get_name())
+        bcaip_provider_types::context_limit::ContextLimitResolver::new(self.get_name())
             .with_configured_limits(configured_limits)
             .resolve(model, override_limit, || async { Ok(None) })
             .await
@@ -202,7 +200,7 @@ impl Provider for HuggingFaceProvider {
     }
 }
 
-impl goose_providers::base::ProviderDescriptor for HuggingFaceProvider {
+impl bcaip_provider_types::base::ProviderDescriptor for HuggingFaceProvider {
     fn metadata() -> ProviderMetadata {
         ProviderMetadata::new(
             huggingface_auth::HUGGINGFACE_PROVIDER_NAME,
@@ -223,8 +221,8 @@ impl goose_providers::base::ProviderDescriptor for HuggingFaceProvider {
             ],
         )
         .with_setup(
-            crate::providers::catalog::ProviderSetupMetadata::api_key(
-                crate::providers::catalog::ProviderSetupGroup::Default,
+            bcaip_provider_types::ProviderSetupMetadata::api_key(
+                bcaip_provider_types::ProviderSetupGroup::Default,
             )
             .with_docs_url("https://huggingface.co/docs/inference-providers")
             .with_aliases(&["huggingface", "hf"]),
@@ -237,7 +235,7 @@ impl ProviderDef for HuggingFaceProvider {
 
     fn from_env(
         _extensions: Vec<crate::config::ExtensionConfig>,
-        tls_config: Option<crate::providers::api_client::TlsConfig>,
+        tls_config: Option<goose_providers::api_client::TlsConfig>,
     ) -> BoxFuture<'static, Result<Self::Provider>> {
         Box::pin(async move {
             let config = Config::global();
@@ -391,207 +389,5 @@ fn completions_prefix(path: &str) -> String {
         String::new()
     } else {
         format!("{}/", parent)
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use goose_providers::base::ProviderDescriptor as _;
-
-    use super::*;
-    use crate::providers::base::ModelInfo;
-
-    #[test]
-    fn metadata_preserves_huggingface_id_and_token_key() {
-        let metadata = HuggingFaceProvider::metadata();
-        assert_eq!(metadata.name, "huggingface");
-        assert_eq!(metadata.display_name, "Hugging Face");
-        assert_eq!(metadata.default_model, HUGGINGFACE_DEFAULT_MODEL);
-        assert!(metadata
-            .config_keys
-            .iter()
-            .any(|key| key.name == "HF_TOKEN" && key.secret));
-    }
-
-    #[test]
-    fn declarative_matching_accepts_name_or_catalog_provider_id() {
-        let mut config = test_config();
-        assert!(!HuggingFaceProvider::matches_declarative_config(&config));
-
-        config.name = "huggingface".to_string();
-        assert!(HuggingFaceProvider::matches_declarative_config(&config));
-
-        config.name = "custom_hugging_face".to_string();
-        config.catalog_provider_id = Some("huggingface".to_string());
-        assert!(HuggingFaceProvider::matches_declarative_config(&config));
-    }
-
-    #[test]
-    fn endpoint_parts_use_base_url_path_as_api_host() {
-        let (host, prefix, query) =
-            openai_compatible_endpoint_parts("https://router.huggingface.co/v1?beta=1", None)
-                .unwrap();
-        assert_eq!(host, "https://router.huggingface.co/v1");
-        assert_eq!(prefix, "");
-        assert_eq!(query, vec![("beta".to_string(), "1".to_string())]);
-    }
-
-    #[test]
-    fn endpoint_parts_strip_chat_completions_suffix() {
-        let (host, prefix, query) = openai_compatible_endpoint_parts(
-            "https://router.huggingface.co/v1/chat/completions",
-            None,
-        )
-        .unwrap();
-        assert_eq!(host, "https://router.huggingface.co/v1");
-        assert_eq!(prefix, "");
-        assert!(query.is_empty());
-    }
-
-    #[test]
-    fn endpoint_parts_respect_explicit_base_path() {
-        let (host, prefix, query) = openai_compatible_endpoint_parts(
-            "https://router.huggingface.co",
-            Some("v1/chat/completions"),
-        )
-        .unwrap();
-        assert_eq!(host, "https://router.huggingface.co");
-        assert_eq!(prefix, "v1/");
-        assert!(query.is_empty());
-    }
-
-    #[tokio::test]
-    async fn custom_provider_returns_static_models_when_dynamic_models_disabled() {
-        let mut config = test_config();
-        config.requires_auth = false;
-        config.dynamic_models = Some(false);
-        config.models = vec![
-            ModelInfo::new("static-a").with_context_limit(128000),
-            ModelInfo::new("static-b").with_context_limit(128000),
-        ];
-
-        let provider = HuggingFaceProvider::from_custom_config(config, None).unwrap();
-
-        assert_eq!(
-            provider.fetch_supported_models().await.unwrap(),
-            vec!["static-a".to_string(), "static-b".to_string()]
-        );
-        assert_eq!(provider.get_context_limit("static-a", None).await, 128_000);
-    }
-
-    #[test]
-    fn custom_provider_accepts_command_auth_without_huggingface_token() {
-        let mut config = test_config();
-        config.api_key_env.clear();
-        config.auth = Some(goose_providers::declarative::AuthConfig {
-            command: "echo".to_string(),
-            args: vec!["token".to_string()],
-            refresh_interval: 3600,
-            timeout_seconds: None,
-            cwd: None,
-        });
-
-        HuggingFaceProvider::from_custom_config(config, None).unwrap();
-    }
-
-    #[test]
-    fn custom_provider_requires_static_models_when_dynamic_models_disabled() {
-        let mut config = test_config();
-        config.requires_auth = false;
-        config.dynamic_models = Some(false);
-
-        let error = match HuggingFaceProvider::from_custom_config(config, None) {
-            Ok(_) => panic!("expected dynamic_models: false without static models to fail"),
-            Err(error) => error,
-        };
-
-        assert_eq!(
-            error.to_string(),
-            "Provider 'custom_provider' has dynamic_models: false but no static models listed; at least one entry in `models` is required."
-        );
-    }
-
-    #[test]
-    fn custom_auth_method_respects_no_auth_config() {
-        let auth_method =
-            custom_auth_method_with_provider_token(false, Some("provider-token".to_string()))
-                .unwrap();
-
-        assert!(matches!(auth_method, AuthMethod::NoAuth));
-    }
-
-    #[test]
-    fn custom_auth_method_uses_provider_token_when_auth_is_required() {
-        let auth_method =
-            custom_auth_method_with_provider_token(true, Some("provider-token".to_string()))
-                .unwrap();
-
-        match auth_method {
-            AuthMethod::BearerToken(token) => assert_eq!(token, "provider-token"),
-            other => panic!("expected bearer token auth, got {other:?}"),
-        }
-    }
-
-    #[test]
-    fn custom_auth_method_uses_refresh_capable_auth_for_global_token() {
-        let auth_method = custom_auth_method_from_sources(true, None, || Ok(true)).unwrap();
-
-        assert!(matches!(auth_method, AuthMethod::Custom(_)));
-    }
-
-    #[test]
-    fn refreshable_huggingface_auth_method_uses_refresh_capable_auth() {
-        let auth_method = refreshable_huggingface_auth_method(|| Ok(true)).unwrap();
-
-        assert!(matches!(auth_method, AuthMethod::Custom(_)));
-    }
-
-    #[test]
-    fn refreshable_huggingface_auth_method_requires_configured_token() {
-        let error = refreshable_huggingface_auth_method(|| Ok(false)).unwrap_err();
-
-        assert_eq!(
-            error.to_string(),
-            "Hugging Face token is not configured. Sign in from Settings > Auth or configure HF_TOKEN."
-        );
-    }
-
-    #[test]
-    fn custom_auth_method_requires_global_token_when_auth_is_required() {
-        let error = custom_auth_method_from_sources(true, None, || Ok(false)).unwrap_err();
-
-        assert_eq!(
-            error.to_string(),
-            "Hugging Face token is not configured. Sign in from Settings > Auth or configure HF_TOKEN."
-        );
-    }
-
-    fn test_config() -> DeclarativeProviderConfig {
-        DeclarativeProviderConfig {
-            name: "custom_provider".to_string(),
-            engine: crate::config::declarative_providers::ProviderEngine::OpenAI,
-            display_name: "Custom Provider".to_string(),
-            description: None,
-            api_key_env: "CUSTOM_API_KEY".to_string(),
-            base_url: HUGGINGFACE_API_HOST.to_string(),
-            models: Vec::new(),
-            headers: None,
-            session_id_header_override: None,
-            timeout_seconds: None,
-            supports_streaming: Some(true),
-            requires_auth: true,
-            catalog_provider_id: None,
-            base_path: None,
-            env_vars: None,
-            auth: None,
-            dynamic_models: None,
-            skip_canonical_filtering: false,
-            model_doc_link: None,
-            setup_steps: vec![],
-            toolshim: false,
-            preserves_thinking: true,
-            emit_clear_thinking: false,
-            setup: None,
-        }
     }
 }

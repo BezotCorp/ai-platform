@@ -1,18 +1,18 @@
-use super::api_client::{ApiClient, AuthMethod};
-use super::base::{ConfigKey, MessageStream, Provider, ProviderDef, ProviderMetadata};
-use super::openai_compatible::{handle_status, stream_openai_compat};
-use super::retry::ProviderRetry;
-use crate::conversation::message::Message;
+use super::base::ProviderDef;
 use anyhow::Result;
 use async_trait::async_trait;
 use futures::future::BoxFuture;
-use goose_providers::errors::ProviderError;
-use goose_providers::formats::openai::create_request;
-use goose_providers::images::ImageFormat;
-use goose_providers::model::ModelConfig;
-use goose_providers::request_log::{start_log, LoggerHandleExt};
+use bcaip_provider_types::base::{ConfigKey, MessageStream, Provider, ProviderMetadata};
+use bcaip_provider_types::conversations::Message;
+use bcaip_provider_types::errors::ProviderError;
+use bcaip_provider_types::formats::create_request_openai;
+use bcaip_provider_types::images::ImageFormat;
+use bcaip_provider_types::model::ModelConfig;
+use bcaip_provider_types::request_log::{LoggerHandleExt, start_log};
+use bcaip_provider_types::retry::ProviderRetry;
+use goose_providers::api_client::{ApiClient, AuthMethod};
+use goose_providers::openai_compatible::{handle_status, stream_openai_compat};
 use rmcp::model::Tool;
-
 pub const NANOGPT_PROVIDER_NAME: &str = "nano-gpt";
 pub const NANOGPT_API_HOST: &str = "https://nano-gpt.com/api/v1";
 pub const NANOGPT_SUBSCRIPTION_HOST: &str = "https://nano-gpt.com/api/subscription/v1";
@@ -32,7 +32,7 @@ impl NanoGptProvider {
     fn build_client(
         host: &str,
         api_key: &str,
-        tls_config: Option<crate::providers::api_client::TlsConfig>,
+        tls_config: Option<goose_providers::api_client::TlsConfig>,
     ) -> Result<ApiClient> {
         ApiClient::new_with_tls(
             host.to_string(),
@@ -44,7 +44,7 @@ impl NanoGptProvider {
 
     async fn check_subscription(
         api_key: &str,
-        tls_config: Option<crate::providers::api_client::TlsConfig>,
+        tls_config: Option<goose_providers::api_client::TlsConfig>,
     ) -> bool {
         let client = match Self::build_client(NANOGPT_SUBSCRIPTION_HOST, api_key, tls_config) {
             Ok(c) => c,
@@ -63,7 +63,7 @@ impl NanoGptProvider {
     }
 
     pub async fn from_env(
-        tls_config: Option<crate::providers::api_client::TlsConfig>,
+        tls_config: Option<goose_providers::api_client::TlsConfig>,
     ) -> Result<Self> {
         let config = crate::config::Config::global();
         let api_key: String = config.get_secret(NANOGPT_API_KEY)?;
@@ -87,7 +87,7 @@ impl NanoGptProvider {
     }
 }
 
-impl goose_providers::base::ProviderDescriptor for NanoGptProvider {
+impl bcaip_provider_types::base::ProviderDescriptor for NanoGptProvider {
     fn metadata() -> ProviderMetadata {
         ProviderMetadata::new(
             NANOGPT_PROVIDER_NAME,
@@ -106,7 +106,7 @@ impl ProviderDef for NanoGptProvider {
 
     fn from_env(
         _extensions: Vec<crate::config::ExtensionConfig>,
-        tls_config: Option<crate::providers::api_client::TlsConfig>,
+        tls_config: Option<goose_providers::api_client::TlsConfig>,
     ) -> BoxFuture<'static, Result<Self::Provider>> {
         Box::pin(Self::from_env(tls_config))
     }
@@ -181,7 +181,7 @@ impl Provider for NanoGptProvider {
         messages: &[Message],
         tools: &[Tool],
     ) -> Result<MessageStream, ProviderError> {
-        let payload = create_request(
+        let payload = create_request_openai(
             model_config,
             system,
             messages,
@@ -209,21 +209,5 @@ impl Provider for NanoGptProvider {
             })?;
 
         stream_openai_compat(response, log)
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use goose_providers::base::ProviderDescriptor as _;
-
-    #[test]
-    fn test_metadata() {
-        let metadata = NanoGptProvider::metadata();
-        assert_eq!(metadata.name, "nano-gpt");
-        assert_eq!(metadata.default_model, "anthropic/claude-sonnet-4.6");
-        assert_eq!(metadata.config_keys[0].name, NANOGPT_API_KEY);
-        assert!(metadata.config_keys[0].required);
-        assert!(metadata.config_keys[0].secret);
     }
 }

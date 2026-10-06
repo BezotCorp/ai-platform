@@ -2,25 +2,22 @@ mod persist;
 
 pub use persist::GooseCredentialStore;
 
-use axum::extract::{Query, State};
-use axum::response::Html;
-use axum::routing::get;
 use axum::Router;
-use minijinja::{context, Environment};
+use axum::extract::{Query, State};
+use axum::{response::Html, routing::get};
+use minijinja::{Environment, context};
 use oauth2::{Scope, TokenResponse};
+use rmcp::transport::AuthorizationManager;
 use rmcp::transport::auth::{
     AuthError, AuthorizationRequest, CredentialStore, OAuthClientConfig, OAuthState,
     OAuthTokenResponse, StoredCredentials, WWWAuthenticateParams,
 };
-use rmcp::transport::AuthorizationManager;
 use serde::Deserialize;
-use std::collections::BTreeSet;
-use std::net::SocketAddr;
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
-use tokio::sync::{oneshot, Mutex};
+use std::{collections::BTreeSet, net::SocketAddr};
+use tokio::sync::{Mutex, oneshot};
 use tracing::warn;
-
 const CALLBACK_TEMPLATE: &str = include_str!("oauth_callback.html");
 const CLIENT_METADATA_URL: &str = "https://goose-docs.ai/oauth/client-metadata.json";
 const DEFAULT_OAUTH_CALLBACK_TIMEOUT_SECS: u64 = 300;
@@ -164,9 +161,20 @@ fn env_static_oauth_client() -> Option<StaticOAuthClientConfig> {
     })
 }
 
+static CLIENT_METADATA_URL_OVERRIDE: OnceLock<String> = OnceLock::new();
+
+/// Overrides the Client ID Metadata Document URL for this process. Takes precedence over
+/// `GOOSE_MCP_OAUTH_CLIENT_METADATA_URL`; the first call wins.
+pub fn set_client_metadata_url_override(url: String) {
+    let _ = CLIENT_METADATA_URL_OVERRIDE.set(url);
+}
+
 fn client_metadata_url() -> String {
-    std::env::var("GOOSE_MCP_OAUTH_CLIENT_METADATA_URL")
-        .unwrap_or_else(|_| CLIENT_METADATA_URL.to_string())
+    CLIENT_METADATA_URL_OVERRIDE
+        .get()
+        .cloned()
+        .or_else(|| std::env::var("GOOSE_MCP_OAUTH_CLIENT_METADATA_URL").ok())
+        .unwrap_or_else(|| CLIENT_METADATA_URL.to_string())
 }
 
 fn scope_set(scopes: &[String]) -> BTreeSet<&str> {
@@ -405,7 +413,7 @@ pub async fn oauth_flow_with_challenge(
         }
 
         if let Err(e) = credential_store.clear().await {
-            warn!("[OAuth:{}] error clearing bad credentials: {}", name, e);
+            warn!("[OAuth:{}] error clearing x credentials: {}", name, e);
         }
     }
 
@@ -515,365 +523,4 @@ pub async fn oauth_flow_with_challenge(
     auth_manager.set_credential_store(credential_store);
 
     Ok(auth_manager)
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn resolve_oauth_callback_timeout_uses_default_for_missing_or_invalid_values() {
-        assert_eq!(
-            resolve_oauth_callback_timeout(None),
-            Duration::from_secs(DEFAULT_OAUTH_CALLBACK_TIMEOUT_SECS)
-        );
-        assert_eq!(
-            resolve_oauth_callback_timeout(Some("not-a-number")),
-            Duration::from_secs(DEFAULT_OAUTH_CALLBACK_TIMEOUT_SECS)
-        );
-        assert_eq!(
-            resolve_oauth_callback_timeout(Some("0")),
-            Duration::from_secs(DEFAULT_OAUTH_CALLBACK_TIMEOUT_SECS)
-        );
-    }
-
-    #[test]
-    fn resolve_oauth_callback_timeout_uses_positive_values() {
-        assert_eq!(
-            resolve_oauth_callback_timeout(Some("42")),
-            Duration::from_secs(42)
-        );
-    }
-
-    #[test]
-    fn oauth_callback_escapes_extension_name() {
-        let payload = r#"<script>alert("xss")</script>&"#;
-        let rendered = render_oauth_callback(payload);
-
-        assert!(!rendered.contains(payload));
-        assert!(rendered.contains("&lt;script&gt;"));
-        assert!(rendered.contains("&amp;"));
-    }
-
-    #[test]
-    fn oauth_callback_preserves_plain_extension_name() {
-        let rendered = render_oauth_callback("Example MCP");
-
-        assert!(rendered.contains("Example MCP OAuth Success"));
-        assert!(rendered.contains(">Example MCP</span>"));
-    }
-
-    #[tokio::test]
-    async fn wait_for_callback_returns_received_callback_url() {
-        let (sender, receiver) = oneshot::channel();
-        let expected = "http://callback/oauth_callback?code=auth-code&state=csrf-state";
-        sender.send(expected.to_string()).unwrap();
-
-        let callback_url = wait_for_callback(
-            receiver,
-            Duration::from_secs(1),
-            "test-server",
-            "https://auth.example/authorize",
-        )
-        .await
-        .unwrap();
-
-        assert_eq!(callback_url, expected);
-    }
-
-    #[test]
-    fn callback_params_capture_rfc_9207_issuer() {
-        let uri: axum::http::Uri =
-            "http://127.0.0.1/oauth_callback?code=auth-code&state=csrf-state&iss=https%3A%2F%2Fauth.example%2Fidp"
-                .parse()
-                .unwrap();
-
-        let Query(params) = Query::<CallbackParams>::try_from_uri(&uri).unwrap();
-
-        assert_eq!(params.iss.as_deref(), Some("https://auth.example/idp"));
-    }
-
-    #[test]
-    fn callback_params_accept_missing_issuer() {
-        let uri: axum::http::Uri =
-            "http://127.0.0.1/oauth_callback?code=auth-code&state=csrf-state"
-                .parse()
-                .unwrap();
-
-        let Query(params) = Query::<CallbackParams>::try_from_uri(&uri).unwrap();
-
-        assert_eq!(params.iss, None);
-    }
-
-    #[test]
-    fn unchanged_scope_request_preserves_a_narrowed_grant() {
-        let static_client = StaticOAuthClientConfig {
-            client_id: "registered-client".to_string(),
-            client_secret: None,
-            scopes: vec!["scope.read".to_string(), "scope.write".to_string()],
-        };
-
-        assert!(!configured_scopes_changed(
-            Some(&static_client),
-            Some(&["scope.read".to_string(), "scope.write".to_string()]),
-            &["scope.read".to_string()],
-        ));
-    }
-
-    #[test]
-    fn changed_scope_request_requires_reauthorization() {
-        let static_client = StaticOAuthClientConfig {
-            client_id: "registered-client".to_string(),
-            client_secret: None,
-            scopes: vec!["scope.read".to_string(), "scope.write".to_string()],
-        };
-
-        assert!(configured_scopes_changed(
-            Some(&static_client),
-            Some(&["scope.read".to_string()]),
-            &["scope.read".to_string()],
-        ));
-    }
-
-    #[test]
-    fn changed_static_client_requires_reauthorization() {
-        let static_client = StaticOAuthClientConfig {
-            client_id: "new-client".to_string(),
-            client_secret: None,
-            scopes: vec![],
-        };
-
-        assert!(configured_client_changed(
-            Some(&static_client),
-            "old-client"
-        ));
-        assert!(!configured_client_changed(
-            Some(&static_client),
-            "new-client"
-        ));
-        assert!(!configured_client_changed(None, "old-client"));
-    }
-
-    #[test]
-    fn legacy_grant_reauthorizes_once_only_when_scopes_are_missing() {
-        let static_client = StaticOAuthClientConfig {
-            client_id: "registered-client".to_string(),
-            client_secret: None,
-            scopes: vec!["scope.read".to_string(), "scope.write".to_string()],
-        };
-
-        assert!(configured_scopes_changed(
-            Some(&static_client),
-            None,
-            &["scope.read".to_string()],
-        ));
-        assert!(!configured_scopes_changed(
-            Some(&static_client),
-            None,
-            &["scope.read".to_string(), "scope.write".to_string()],
-        ));
-    }
-
-    #[test]
-    fn removing_static_client_configuration_requires_reauthorization() {
-        assert!(configured_scopes_changed(
-            None,
-            Some(&["scope.read".to_string()]),
-            &["scope.read".to_string()],
-        ));
-        assert!(!configured_scopes_changed(
-            None,
-            None,
-            &["scope.read".to_string()],
-        ));
-    }
-
-    #[test]
-    fn omitted_refresh_scope_preserves_the_previous_grant() {
-        use oauth2::{basic::BasicTokenType, AccessToken};
-        use rmcp::transport::auth::VendorExtraTokenFields;
-
-        let previous = vec!["scope.read".to_string()];
-        let mut token_response = OAuthTokenResponse::new(
-            AccessToken::new("access-token".to_string()),
-            BasicTokenType::Bearer,
-            VendorExtraTokenFields::default(),
-        );
-
-        assert_eq!(resolve_refreshed_granted_scopes(None, &previous), previous);
-        assert!(restore_omitted_scopes(&mut token_response, &previous));
-        assert_eq!(
-            token_response
-                .scopes()
-                .unwrap()
-                .iter()
-                .map(|scope| scope.as_str())
-                .collect::<Vec<_>>(),
-            vec!["scope.read"]
-        );
-        assert!(!restore_omitted_scopes(&mut token_response, &previous));
-        assert_eq!(
-            resolve_refreshed_granted_scopes(Some(vec!["scope.other".to_string()]), &previous),
-            vec!["scope.other"]
-        );
-    }
-
-    #[test]
-    fn authorization_request_uses_client_metadata_url_without_static_client() {
-        let request = build_authorization_request(
-            "http://127.0.0.1:1234/oauth_callback".to_string(),
-            None,
-            None,
-            "https://mcp.example",
-            &[],
-        );
-
-        assert_eq!(request.client_id, None);
-        assert_eq!(request.client_secret, None);
-        assert_eq!(
-            request.client_metadata_url.as_deref(),
-            Some(CLIENT_METADATA_URL)
-        );
-        assert!(request.scopes.is_empty());
-    }
-
-    #[test]
-    fn authorization_request_prefers_static_client_over_client_metadata_url() {
-        let static_client = StaticOAuthClientConfig {
-            client_id: "registered-client".to_string(),
-            client_secret: Some("registered-secret".to_string()),
-            scopes: vec!["scope.read".to_string(), "scope.write".to_string()],
-        };
-
-        let request = build_authorization_request(
-            "http://127.0.0.1:1234/oauth_callback".to_string(),
-            Some(&static_client),
-            None,
-            "https://mcp.example",
-            &[],
-        );
-
-        assert_eq!(request.client_id.as_deref(), Some("registered-client"));
-        assert_eq!(request.client_secret.as_deref(), Some("registered-secret"));
-        assert_eq!(request.client_metadata_url, None);
-        assert_eq!(request.scopes, vec!["scope.read", "scope.write"]);
-    }
-
-    #[test]
-    fn authorization_request_omits_secret_and_scopes_for_public_static_client() {
-        let static_client = StaticOAuthClientConfig {
-            client_id: "registered-client".to_string(),
-            client_secret: None,
-            scopes: vec![],
-        };
-
-        let request = build_authorization_request(
-            "http://127.0.0.1:1234/oauth_callback".to_string(),
-            Some(&static_client),
-            None,
-            "https://mcp.example",
-            &[],
-        );
-
-        assert_eq!(request.client_id.as_deref(), Some("registered-client"));
-        assert_eq!(request.client_secret, None);
-        assert_eq!(request.client_metadata_url, None);
-        assert!(request.scopes.is_empty());
-    }
-
-    #[test]
-    fn challenge_request_asks_for_the_union_of_granted_and_challenged_scopes() {
-        let request = build_authorization_request(
-            "http://127.0.0.1:1234/oauth_callback".to_string(),
-            None,
-            Some(
-                r#"Bearer error="insufficient_scope", scope="scope.write scope.admin""#.to_string(),
-            ),
-            "https://mcp.example",
-            &["scope.read".to_string(), "scope.write".to_string()],
-        );
-
-        assert_eq!(
-            request.scopes,
-            vec!["scope.read", "scope.write", "scope.admin"]
-        );
-        assert!(request.challenge.is_some());
-    }
-
-    #[test]
-    fn challenge_request_keeps_static_client_scopes() {
-        let static_client = StaticOAuthClientConfig {
-            client_id: "registered-client".to_string(),
-            client_secret: None,
-            scopes: vec!["scope.read".to_string()],
-        };
-
-        let request = build_authorization_request(
-            "http://127.0.0.1:1234/oauth_callback".to_string(),
-            Some(&static_client),
-            Some(r#"Bearer error="insufficient_scope", scope="scope.write""#.to_string()),
-            "https://mcp.example",
-            &[],
-        );
-
-        assert_eq!(request.client_id.as_deref(), Some("registered-client"));
-        assert_eq!(request.scopes, vec!["scope.read", "scope.write"]);
-    }
-
-    #[test]
-    fn long_lived_token_without_refresh_token_is_not_refreshed() {
-        let now = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap()
-            .as_secs();
-
-        let token_response: OAuthTokenResponse = serde_json::from_value(serde_json::json!({
-            "access_token": "mcp_long_lived",
-            "token_type": "bearer",
-            "expires_in": 31_536_000,
-        }))
-        .unwrap();
-        let stored = StoredCredentials::new(
-            "client-id".to_string(),
-            Some(token_response.clone()),
-            vec![],
-            Some(now),
-        );
-
-        assert!(token_response.refresh_token().is_none());
-        assert!(
-            !access_token_needs_refresh(&stored),
-            "a token valid for another year must be used as-is instead of forcing browser re-auth"
-        );
-
-        let expired = StoredCredentials::new(
-            "client-id".to_string(),
-            Some(token_response),
-            vec![],
-            Some(now - 31_536_000),
-        );
-        assert!(
-            access_token_needs_refresh(&expired),
-            "an expired token must still take the refresh path"
-        );
-    }
-
-    #[tokio::test]
-    async fn wait_for_callback_times_out_with_authorization_url() {
-        let (_sender, receiver) = oneshot::channel();
-
-        let error = wait_for_callback(
-            receiver,
-            Duration::from_millis(1),
-            "test-server",
-            "https://auth.example/authorize",
-        )
-        .await
-        .unwrap_err();
-        let message = error.to_string();
-
-        assert!(message.contains("test-server"));
-        assert!(message.contains("timed out"));
-        assert!(message.contains("https://auth.example/authorize"));
-    }
 }

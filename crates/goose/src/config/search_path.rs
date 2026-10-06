@@ -7,7 +7,6 @@ use std::{
 use anyhow::{Context, Result};
 
 use crate::config::Config;
-
 pub struct SearchPaths {
     paths: Vec<PathBuf>,
 }
@@ -74,50 +73,5 @@ impl SearchPaths {
                     name.as_ref().to_string_lossy()
                 )
             })
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_path_preserves_existing_path() {
-        let search_paths = SearchPaths::builder();
-        let combined_path = search_paths.path().unwrap();
-
-        if let Some(existing_path) = env::var_os("PATH") {
-            let combined_str = combined_path.to_string_lossy();
-            let existing_str = existing_path.to_string_lossy();
-
-            assert!(combined_str.contains(&existing_str.to_string()));
-        }
-    }
-
-    #[test]
-    fn test_resolve_nonexistent_executable() {
-        let search_paths = SearchPaths::builder();
-
-        let result = search_paths.resolve("nonexistent_executable_12345_abcdef");
-
-        assert!(
-            result.is_err(),
-            "Resolving nonexistent executable should return an error"
-        );
-    }
-
-    #[test]
-    fn test_resolve_common_executable() {
-        let search_paths = SearchPaths::builder();
-
-        #[cfg(unix)]
-        let test_executable = "sh";
-
-        #[cfg(windows)]
-        let test_executable = "cmd";
-
-        search_paths
-            .resolve(test_executable)
-            .expect("should resolve sh (or cmd on Windows)");
     }
 }

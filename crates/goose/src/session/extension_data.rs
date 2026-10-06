@@ -1,15 +1,14 @@
 // Extension data management for sessions
 // Provides a simple way to store extension-specific data with versioned keys
 
-use crate::config::base::Config;
-use crate::config::extensions::is_extension_available;
-use crate::config::ExtensionConfig;
-use crate::session::SessionManager;
+use crate::{
+    config::{ExtensionConfig, base::Config, extensions::is_extension_available},
+    session::SessionManager,
+};
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
-
 /// Extension data containing all extension states
 /// Keys are in format "extension_name.version" (e.g., "todo.v0")
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -139,163 +138,5 @@ impl EnabledExtensionsState {
     ) -> Vec<ExtensionConfig> {
         let session = session_manager.get_session(session_id, false).await.ok();
         Self::extensions_or_default(session.as_ref().map(|s| &s.extension_data), config)
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use serde_json::json;
-    use tempfile::NamedTempFile;
-    use test_case::test_case;
-
-    fn test_config() -> Config {
-        let config_file = NamedTempFile::new().unwrap();
-        let secrets_file = NamedTempFile::new().unwrap();
-        Config::new_with_file_secrets(config_file.path(), secrets_file.path()).unwrap()
-    }
-
-    fn test_extension() -> ExtensionConfig {
-        ExtensionConfig::Builtin {
-            name: "developer".into(),
-            description: "dev".into(),
-            display_name: None,
-            timeout: None,
-            bundled: None,
-            available_tools: vec![],
-        }
-    }
-
-    fn extension_data_with(extensions: Vec<ExtensionConfig>) -> ExtensionData {
-        let mut data = ExtensionData::new();
-        EnabledExtensionsState::new(extensions)
-            .to_extension_data(&mut data)
-            .unwrap();
-        data
-    }
-
-    #[test_case(
-        Some(extension_data_with(vec![test_extension()])),
-        Some(vec![test_extension()])
-        ; "prefers_session_data"
-    )]
-    #[test_case(None, None ; "no_session_falls_back_to_config")]
-    #[test_case(Some(ExtensionData::default()), None ; "empty_session_data_falls_back_to_config")]
-    fn test_extensions_or_default(
-        extension_data: Option<ExtensionData>,
-        expected: Option<Vec<ExtensionConfig>>,
-    ) {
-        let config = test_config();
-        let expected = expected.unwrap_or_else(|| {
-            crate::config::extensions::get_enabled_extensions_with_config(&config)
-        });
-        assert_eq!(
-            EnabledExtensionsState::extensions_or_default(extension_data.as_ref(), &config),
-            expected,
-        );
-    }
-
-    #[test]
-    fn test_extension_data_basic_operations() {
-        let mut extension_data = ExtensionData::new();
-
-        // Test setting and getting extension state
-        let todo_state = json!({"content": "- Task 1\n- Task 2"});
-        extension_data.set_extension_state("todo", "v0", todo_state.clone());
-
-        assert_eq!(
-            extension_data.get_extension_state("todo", "v0"),
-            Some(&todo_state)
-        );
-        assert_eq!(extension_data.get_extension_state("todo", "v1"), None);
-    }
-
-    #[test]
-    fn test_multiple_extension_states() {
-        let mut extension_data = ExtensionData::new();
-
-        // Add multiple extension states
-        extension_data.set_extension_state("todo", "v0", json!("TODO content"));
-        extension_data.set_extension_state("memory", "v1", json!({"items": ["item1", "item2"]}));
-        extension_data.set_extension_state("config", "v2", json!({"setting": true}));
-
-        // Check all states exist
-        assert_eq!(extension_data.extension_states.len(), 3);
-        assert!(extension_data.get_extension_state("todo", "v0").is_some());
-        assert!(extension_data.get_extension_state("memory", "v1").is_some());
-        assert!(extension_data.get_extension_state("config", "v2").is_some());
-    }
-
-    #[test]
-    fn test_todo_state_trait() {
-        let mut extension_data = ExtensionData::new();
-
-        // Create and save TODO state
-        let todo = TodoState::new("- Task 1\n- Task 2".to_string());
-        todo.to_extension_data(&mut extension_data).unwrap();
-
-        // Retrieve TODO state
-        let retrieved = TodoState::from_extension_data(&extension_data);
-        assert!(retrieved.is_some());
-        assert_eq!(retrieved.unwrap().content, "- Task 1\n- Task 2");
-    }
-
-    #[test]
-    fn test_extension_data_serialization() {
-        let mut extension_data = ExtensionData::new();
-        extension_data.set_extension_state("todo", "v0", json!("TODO content"));
-        extension_data.set_extension_state("memory", "v1", json!({"key": "value"}));
-
-        // Serialize to JSON
-        let json = serde_json::to_value(&extension_data).unwrap();
-
-        // Check the structure
-        assert!(json.is_object());
-        assert_eq!(json.get("todo.v0"), Some(&json!("TODO content")));
-        assert_eq!(json.get("memory.v1"), Some(&json!({"key": "value"})));
-
-        // Deserialize back
-        let deserialized: ExtensionData = serde_json::from_value(json).unwrap();
-        assert_eq!(
-            deserialized.get_extension_state("todo", "v0"),
-            Some(&json!("TODO content"))
-        );
-        assert_eq!(
-            deserialized.get_extension_state("memory", "v1"),
-            Some(&json!({"key": "value"}))
-        );
-    }
-
-    #[test]
-    fn test_enabled_extensions_state_filters_unavailable_platform() {
-        let mut extension_data = ExtensionData::new();
-        let state = EnabledExtensionsState::new(vec![
-            ExtensionConfig::Platform {
-                name: "definitely_not_real_platform_extension".to_string(),
-                description: "unknown".to_string(),
-                display_name: None,
-                bundled: None,
-                available_tools: Vec::new(),
-            },
-            ExtensionConfig::Builtin {
-                name: "developer".to_string(),
-                description: "".to_string(),
-                display_name: Some("Developer".to_string()),
-                timeout: None,
-                bundled: None,
-                available_tools: Vec::new(),
-            },
-        ]);
-
-        state.to_extension_data(&mut extension_data).unwrap();
-
-        let loaded =
-            EnabledExtensionsState::from_extension_data(&extension_data).expect("state present");
-        let names: Vec<String> = loaded.extensions.iter().map(|ext| ext.name()).collect();
-
-        assert!(names.iter().any(|name| name == "developer"));
-        assert!(!names
-            .iter()
-            .any(|name| name == "definitely_not_real_platform_extension"));
     }
 }

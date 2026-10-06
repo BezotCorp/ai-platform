@@ -19,14 +19,12 @@ pub mod summarize;
 pub mod templates;
 
 use anyhow::Result;
-use goose_provider_types::conversation::message::Message;
-use goose_provider_types::conversation::token_usage::ProviderUsage;
-
 pub use format::format_message_for_compacting;
+use bcaip_provider_types::conversations::{Message, ProviderUsage};
 pub use model::{CompactionModel, ProviderModel, TokenEstimator};
 pub use provider::CompactingProvider;
 pub use structured::{FileActivity, StructuredSummary};
-pub use summarize::{summarize, Summary};
+pub use summarize::{Summary, summarize};
 pub use templates::Templates;
 
 pub const DEFAULT_COMPACTION_THRESHOLD: f64 = 0.8;

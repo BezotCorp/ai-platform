@@ -1,7 +1,7 @@
 use std::path::{Path, PathBuf};
 use tree_sitter::{Language, Parser as TsParser, Query, QueryCursor, StreamingIterator};
 
-use super::languages::{lang_for_ext, LangInfo};
+use super::languages::{LangInfo, lang_for_ext};
 
 // ── Types ──────────────────────────────────────────────────────────────
 
@@ -87,7 +87,7 @@ fn extract_functions(
     let mut symbols = Vec::new();
 
     while let Some(m) = matches.next() {
-        for cap in m.captures {
+        for cap in m.captures() {
             if query.capture_names()[cap.index as usize] == "name" {
                 let name = node_text(source, &cap.node).to_string();
                 let line = cap.node.start_position().row + 1;
@@ -119,7 +119,7 @@ fn collect_init_deinit(
     info: &LangInfo,
     symbols: &mut Vec<Symbol>,
 ) {
-    for i in 0..node.child_count() as u32 {
+    for i in 0..node.child_count() {
         if let Some(child) = node.child(i) {
             match child.kind() {
                 "init_declaration" => {
@@ -160,7 +160,7 @@ fn extract_classes(
     let mut symbols = Vec::new();
 
     while let Some(m) = matches.next() {
-        for cap in m.captures {
+        for cap in m.captures() {
             if query.capture_names()[cap.index as usize] == "name" {
                 let name_text = node_text(source, &cap.node).to_string();
                 let line = cap.node.start_position().row + 1;
@@ -215,21 +215,18 @@ fn extract_inheritance(lang_name: &str, class_node: &tree_sitter::Node, source: 
         // class_declaration → class_heritage → extends_clause → type_identifier
         // interface_declaration → extends_type_clause → type_identifier
         "typescript" | "tsx" => {
-            if let Some(heritage) = find_child_by_kind(class_node, "class_heritage") {
-                if let Some(extends_clause) = find_child_by_kind(&heritage, "extends_clause") {
-                    if let Some(ti) = find_descendant_by_kind(&extends_clause, "type_identifier")
-                        .or_else(|| find_descendant_by_kind(&extends_clause, "identifier"))
-                    {
-                        return node_text(source, &ti).to_string();
-                    }
-                }
-            }
-            if let Some(extends_clause) = find_child_by_kind(class_node, "extends_type_clause") {
-                if let Some(ti) = find_descendant_by_kind(&extends_clause, "type_identifier")
+            if let Some(heritage) = find_child_by_kind(class_node, "class_heritage")
+                && let Some(extends_clause) = find_child_by_kind(&heritage, "extends_clause")
+                && let Some(ti) = find_descendant_by_kind(&extends_clause, "type_identifier")
                     .or_else(|| find_descendant_by_kind(&extends_clause, "identifier"))
-                {
-                    return node_text(source, &ti).to_string();
-                }
+            {
+                return node_text(source, &ti).to_string();
+            }
+            if let Some(extends_clause) = find_child_by_kind(class_node, "extends_type_clause")
+                && let Some(ti) = find_descendant_by_kind(&extends_clause, "type_identifier")
+                    .or_else(|| find_descendant_by_kind(&extends_clause, "identifier"))
+            {
+                return node_text(source, &ti).to_string();
             }
             String::new()
         }
@@ -239,7 +236,7 @@ fn extract_inheritance(lang_name: &str, class_node: &tree_sitter::Node, source: 
         "javascript" => {
             if let Some(heritage) = find_child_by_kind(class_node, "class_heritage") {
                 // Get the full extends expression (could be identifier, member_expression, etc.)
-                for i in 0..heritage.child_count() as u32 {
+                for i in 0..heritage.child_count() {
                     if let Some(child) = heritage.child(i) {
                         let text = node_text(source, &child).trim();
                         if !text.is_empty() && text != "extends" {
@@ -254,19 +251,17 @@ fn extract_inheritance(lang_name: &str, class_node: &tree_sitter::Node, source: 
         // Java: class Foo extends Bar implements Baz { ... }
         // class_declaration → superclass → type_identifier
         "java" => {
-            if let Some(superclass) = find_child_by_kind(class_node, "superclass") {
-                if let Some(ti) = find_descendant_by_kind(&superclass, "type_identifier")
+            if let Some(superclass) = find_child_by_kind(class_node, "superclass")
+                && let Some(ti) = find_descendant_by_kind(&superclass, "type_identifier")
                     .or_else(|| find_descendant_by_kind(&superclass, "identifier"))
-                {
-                    return node_text(source, &ti).to_string();
-                }
+            {
+                return node_text(source, &ti).to_string();
             }
-            if let Some(extends) = find_child_by_kind(class_node, "extends_interfaces") {
-                if let Some(ti) = find_descendant_by_kind(&extends, "type_identifier")
+            if let Some(extends) = find_child_by_kind(class_node, "extends_interfaces")
+                && let Some(ti) = find_descendant_by_kind(&extends, "type_identifier")
                     .or_else(|| find_descendant_by_kind(&extends, "identifier"))
-                {
-                    return node_text(source, &ti).to_string();
-                }
+            {
+                return node_text(source, &ti).to_string();
             }
             String::new()
         }
@@ -274,26 +269,23 @@ fn extract_inheritance(lang_name: &str, class_node: &tree_sitter::Node, source: 
         // Kotlin: class Foo : Bar(), Baz { ... }
         // class_declaration → delegation_specifiers → delegation_specifier → user_type → type_identifier
         "kotlin" => {
-            if let Some(specs) = find_child_by_kind(class_node, "delegation_specifiers") {
-                if let Some(spec) = find_child_by_kind(&specs, "delegation_specifier") {
-                    // Try user_type → type_identifier first
-                    if let Some(ut) = find_child_by_kind(&spec, "user_type") {
-                        if let Some(ti) = find_descendant_by_kind(&ut, "type_identifier")
-                            .or_else(|| find_descendant_by_kind(&ut, "identifier"))
-                        {
-                            return node_text(source, &ti).to_string();
-                        }
-                    }
-                    // Fallback: constructor_invocation → user_type
-                    if let Some(ci) = find_child_by_kind(&spec, "constructor_invocation") {
-                        if let Some(ut) = find_child_by_kind(&ci, "user_type") {
-                            if let Some(ti) = find_descendant_by_kind(&ut, "type_identifier")
-                                .or_else(|| find_descendant_by_kind(&ut, "identifier"))
-                            {
-                                return node_text(source, &ti).to_string();
-                            }
-                        }
-                    }
+            if let Some(specs) = find_child_by_kind(class_node, "delegation_specifiers")
+                && let Some(spec) = find_child_by_kind(&specs, "delegation_specifier")
+            {
+                // Try user_type → type_identifier first
+                if let Some(ut) = find_child_by_kind(&spec, "user_type")
+                    && let Some(ti) = find_descendant_by_kind(&ut, "type_identifier")
+                        .or_else(|| find_descendant_by_kind(&ut, "identifier"))
+                {
+                    return node_text(source, &ti).to_string();
+                }
+                // Fallback: constructor_invocation → user_type
+                if let Some(ci) = find_child_by_kind(&spec, "constructor_invocation")
+                    && let Some(ut) = find_child_by_kind(&ci, "user_type")
+                    && let Some(ti) = find_descendant_by_kind(&ut, "type_identifier")
+                        .or_else(|| find_descendant_by_kind(&ut, "identifier"))
+                {
+                    return node_text(source, &ti).to_string();
                 }
             }
             String::new()
@@ -317,10 +309,10 @@ fn extract_inheritance(lang_name: &str, class_node: &tree_sitter::Node, source: 
         // class_declaration → inheritance_specifier → type_identifier
         "swift" => {
             if let Some(inh) = find_child_by_kind(class_node, "inheritance_specifier") {
-                if let Some(ti) = find_descendant_by_kind(&inh, "user_type") {
-                    if let Some(id) = find_descendant_by_kind(&ti, "type_identifier") {
-                        return node_text(source, &id).to_string();
-                    }
+                if let Some(ti) = find_descendant_by_kind(&inh, "user_type")
+                    && let Some(id) = find_descendant_by_kind(&ti, "type_identifier")
+                {
+                    return node_text(source, &id).to_string();
                 }
                 if let Some(ti) = find_descendant_by_kind(&inh, "type_identifier") {
                     return node_text(source, &ti).to_string();
@@ -336,12 +328,12 @@ fn extract_inheritance(lang_name: &str, class_node: &tree_sitter::Node, source: 
                 return String::new();
             }
             let mut has_for = false;
-            for i in 0..class_node.child_count() as u32 {
-                if let Some(child) = class_node.child(i) {
-                    if node_text(source, &child) == "for" {
-                        has_for = true;
-                        break;
-                    }
+            for i in 0..class_node.child_count() {
+                if let Some(child) = class_node.child(i)
+                    && node_text(source, &child) == "for"
+                {
+                    has_for = true;
+                    break;
                 }
             }
             if !has_for {
@@ -350,7 +342,7 @@ fn extract_inheritance(lang_name: &str, class_node: &tree_sitter::Node, source: 
             }
             let mut trait_name = String::new();
             let mut found_for = false;
-            for i in 0..class_node.child_count() as u32 {
+            for i in 0..class_node.child_count() {
                 if let Some(child) = class_node.child(i) {
                     if node_text(source, &child) == "for" {
                         found_for = true;
@@ -381,7 +373,7 @@ fn find_enclosing_class(node: tree_sitter::Node, source: &str, info: &LangInfo) 
             if parent.kind() == "impl_item" {
                 // For trait impls (impl Trait for Type), get the type after "for"
                 let mut found_for = false;
-                for i in 0..parent.child_count() as u32 {
+                for i in 0..parent.child_count() {
                     if let Some(child) = parent.child(i) {
                         if node_text(source, &child) == "for" {
                             found_for = true;
@@ -400,21 +392,21 @@ fn find_enclosing_class(node: tree_sitter::Node, source: &str, info: &LangInfo) 
             }
             // Go method_declaration: func (r *ReceiverType) Method() — extract receiver type
             if parent.kind() == "method_declaration" {
-                if let Some(params) = find_child_by_kind(&parent, "parameter_list") {
-                    if let Some(ti) = find_descendant_by_kind(&params, "type_identifier") {
-                        return Some(node_text(source, &ti).to_string());
-                    }
+                if let Some(params) = find_child_by_kind(&parent, "parameter_list")
+                    && let Some(ti) = find_descendant_by_kind(&params, "type_identifier")
+                {
+                    return Some(node_text(source, &ti).to_string());
                 }
                 return None;
             }
             // For Go type_declaration, look inside type_spec
             if parent.kind() == "type_declaration" {
-                for i in 0..parent.child_count() as u32 {
-                    if let Some(child) = parent.child(i) {
-                        if child.kind() == "type_spec" {
-                            return find_child_by_kind(&child, "type_identifier")
-                                .map(|n| node_text(source, &n).to_string());
-                        }
+                for i in 0..parent.child_count() {
+                    if let Some(child) = parent.child(i)
+                        && child.kind() == "type_spec"
+                    {
+                        return find_child_by_kind(&child, "type_identifier")
+                            .map(|n| node_text(source, &n).to_string());
                     }
                 }
                 return None;
@@ -476,7 +468,7 @@ fn extract_fn_signature_from_node(fn_node: tree_sitter::Node, source: &str) -> O
     // For Rust: look for a child that is "->" followed by a type
     // For Python: look for "return_type" or "type" child
     // Generic approach: scan children for return type indicators
-    for i in 0..fn_node.child_count() as u32 {
+    for i in 0..fn_node.child_count() {
         if let Some(child) = fn_node.child(i) {
             if ret_kinds.contains(&child.kind()) {
                 let ret_text = node_text(source, &child).trim().to_string();
@@ -554,24 +546,24 @@ fn collect_field_names(
     source: &str,
     out: &mut Vec<String>,
 ) {
-    for i in 0..node.child_count() as u32 {
-        if let Some(child) = node.child(i) {
-            if field_kinds.contains(&child.kind()) {
-                // Java/Kotlin: field name is inside variable_declarator, not a direct child.
-                // e.g. (field_declaration type: (type_identifier) declarator: (variable_declarator name: (identifier)))
-                if let Some(vd) = find_child_by_kind(&child, "variable_declarator") {
-                    if let Some(n) = find_child_by_kind(&vd, "identifier") {
-                        out.push(node_text(source, &n).to_string());
-                        continue;
-                    }
-                }
-                // Default: direct child lookup (Rust, Go, etc.)
-                let name_kinds = &["field_identifier", "identifier", "type_identifier"];
-                for nk in name_kinds {
-                    if let Some(n) = find_child_by_kind(&child, nk) {
-                        out.push(node_text(source, &n).to_string());
-                        break;
-                    }
+    for i in 0..node.child_count() {
+        if let Some(child) = node.child(i)
+            && field_kinds.contains(&child.kind())
+        {
+            // Java/Kotlin: field name is inside variable_declarator, not a direct child.
+            // e.g. (field_declaration type: (type_identifier) declarator: (variable_declarator name: (identifier)))
+            if let Some(vd) = find_child_by_kind(&child, "variable_declarator")
+                && let Some(n) = find_child_by_kind(&vd, "identifier")
+            {
+                out.push(node_text(source, &n).to_string());
+                continue;
+            }
+            // Default: direct child lookup (Rust, Go, etc.)
+            let name_kinds = &["field_identifier", "identifier", "type_identifier"];
+            for nk in name_kinds {
+                if let Some(n) = find_child_by_kind(&child, nk) {
+                    out.push(node_text(source, &n).to_string());
+                    break;
                 }
             }
         }
@@ -582,7 +574,7 @@ fn find_child_by_kind<'a>(
     node: &tree_sitter::Node<'a>,
     kind: &str,
 ) -> Option<tree_sitter::Node<'a>> {
-    (0..node.child_count() as u32)
+    (0..node.child_count())
         .filter_map(|i| node.child(i))
         .find(|c| c.kind() == kind)
 }
@@ -594,11 +586,11 @@ fn find_descendant_by_kind<'a>(
     if node.kind() == kind {
         return Some(*node);
     }
-    for i in 0..node.child_count() as u32 {
-        if let Some(child) = node.child(i) {
-            if let Some(found) = find_descendant_by_kind(&child, kind) {
-                return Some(found);
-            }
+    for i in 0..node.child_count() {
+        if let Some(child) = node.child(i)
+            && let Some(found) = find_descendant_by_kind(&child, kind)
+        {
+            return Some(found);
         }
     }
     None
@@ -618,7 +610,7 @@ fn extract_imports(
     let mut imports: Vec<Import> = Vec::new();
 
     while let Some(m) = matches.next() {
-        for cap in m.captures {
+        for cap in m.captures() {
             if query.capture_names()[cap.index as usize] != "path" {
                 continue;
             }
@@ -682,7 +674,7 @@ fn extract_calls(
     let mut calls = Vec::new();
 
     while let Some(m) = matches.next() {
-        for cap in m.captures {
+        for cap in m.captures() {
             if query.capture_names()[cap.index as usize] != "name" {
                 continue;
             }
@@ -732,7 +724,7 @@ fn find_enclosing_fn(node: tree_sitter::Node, source: &str, info: &LangInfo) -> 
 }
 
 fn find_child_text(node: &tree_sitter::Node, kinds: &[&str], source: &str) -> Option<String> {
-    (0..node.child_count() as u32)
+    (0..node.child_count())
         .filter_map(|i| node.child(i))
         .find(|c| kinds.contains(&c.kind()))
         .map(|c| node_text(source, &c).to_string())

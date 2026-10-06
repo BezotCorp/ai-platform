@@ -1,18 +1,16 @@
 use futures::StreamExt;
-use goose_providers::{
-    base::Provider,
-    conversation::message::{Message, MessageContentBlock},
-    declarative::{deserialize_provider_config, KeyResolver},
-    model::ModelConfig,
-    openai::from_declarative_config,
-    zai_coding_plan,
-};
+use bcaip_provider_types::base::Provider;
+use bcaip_provider_types::model::ModelConfig;
+use bcaip_provider_types::{Message, MessageContentBlock};
+use goose_providers::declarative::{KeyResolver, deserialize_provider_config};
+use goose_providers::openai::from_declarative_config;
+use goose_providers::zai_coding_plan;
 use rmcp::model::{CallToolResult, ContentBlock, Tool};
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use std::{convert::Infallible, sync::Arc, time::Duration};
 use wiremock::{
-    matchers::{body_partial_json, header, method, path},
     Mock, MockServer, ResponseTemplate,
+    matchers::{body_partial_json, header, method, path},
 };
 
 struct TestKey;
@@ -182,17 +180,19 @@ async fn cancelled_request_does_not_contaminate_next_turn() {
         .mount(&server)
         .await;
     let model = ModelConfig::new("glm-5.3");
-    assert!(tokio::time::timeout(
-        Duration::from_millis(100),
-        provider.stream(
-            &model,
-            "system",
-            &[Message::user().with_text("Old task")],
-            &[tool()]
-        ),
-    )
-    .await
-    .is_err());
+    assert!(
+        tokio::time::timeout(
+            Duration::from_millis(100),
+            provider.stream(
+                &model,
+                "system",
+                &[Message::user().with_text("Old task")],
+                &[tool()]
+            ),
+        )
+        .await
+        .is_err()
+    );
     server.reset().await;
     Mock::given(method("POST"))
         .and(body_partial_json(json!({"stream":true,"tool_stream":true})))

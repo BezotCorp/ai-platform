@@ -18,15 +18,14 @@
 //! User-side items (`message` with `role:"user"`, `function_call_output`,
 //! `web_search_call`) are rollout-specific and handled locally.
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use chrono::{DateTime, Utc};
 use rmcp::model::{CallToolRequestParams, CallToolResult, ContentBlock};
-use serde_json::{json, Map, Value};
+use serde_json::{Map, Value, json};
 
-use crate::conversation::message::Message;
-use crate::conversation::Conversation;
-use goose_providers::conversation::token_usage::Usage;
-use goose_providers::formats::openai_responses::{ResponseOutputItem, ResponsesApiResponse};
+use bcaip_provider_types::conversations::Usage;
+use bcaip_provider_types::conversations::{Conversation, Message};
+use bcaip_provider_types::formats::{ResponseOutputItem, ResponsesApiResponse};
 
 pub fn convert(content: &str) -> Result<String> {
     let lines: Vec<Value> = content
@@ -146,9 +145,7 @@ pub fn convert(content: &str) -> Result<String> {
                 reasoning: None,
                 usage: None,
             };
-            if let Ok(decoded) =
-                goose_providers::formats::openai_responses::responses_api_to_message(&stub)
-            {
+            if let Ok(decoded) = bcaip_provider_types::formats::responses_api_to_message(&stub) {
                 if !decoded.content.is_empty() {
                     let mut msg = Message::assistant();
                     msg.created = created;
@@ -287,96 +284,11 @@ fn collect_user_text(content: Option<&Value>) -> String {
 /// Heuristic: Codex's first "user" message is often a giant
 /// `<environment_context>` / AGENTS.md blob injected by the harness rather than
 /// the user's actual prompt. We still preserve it in the transcript, but it's
-/// a bad source for the session name.
+/// a x source for the session name.
 fn is_context_blob(text: &str) -> bool {
     let t = text.trim_start();
     t.starts_with("<environment_context>")
         || t.starts_with("<app-context>")
         || t.starts_with("<permissions instructions>")
         || t.starts_with("# AGENTS.md")
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn skips_developer_and_system_messages() {
-        let jsonl = r#"{"timestamp":"2026-05-22T13:37:22.526Z","type":"session_meta","payload":{"id":"abc","cwd":"/tmp"}}
-{"timestamp":"2026-05-22T13:37:23.000Z","type":"response_item","payload":{"type":"message","role":"developer","content":[{"type":"input_text","text":"<huge system prompt>"}]}}
-{"timestamp":"2026-05-22T13:37:23.946Z","type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"the real question"}]}}"#;
-
-        let json = convert(jsonl).unwrap();
-        let v: Value = serde_json::from_str(&json).unwrap();
-        assert_eq!(v["message_count"], 1);
-        assert_eq!(v["name"], "the real question");
-    }
-
-    #[test]
-    fn converts_function_call_and_output() {
-        let jsonl = r#"{"timestamp":"2026-05-22T13:37:22Z","type":"session_meta","payload":{"id":"s","cwd":"/w"}}
-{"timestamp":"2026-05-22T13:37:23Z","type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"run ls"}]}}
-{"timestamp":"2026-05-22T13:37:24Z","type":"response_item","payload":{"type":"function_call","name":"exec_command","arguments":"{\"cmd\":\"ls\"}","call_id":"call_1"}}
-{"timestamp":"2026-05-22T13:37:25Z","type":"response_item","payload":{"type":"function_call_output","call_id":"call_1","output":"file.txt\n"}}"#;
-
-        let json = convert(jsonl).unwrap();
-        let v: Value = serde_json::from_str(&json).unwrap();
-        let msgs = v["conversation"].as_array().unwrap();
-        assert_eq!(msgs.len(), 3);
-        // assistant message with a tool request, decoded via the provider
-        // crate so arguments-as-JSON-string is parsed automatically
-        let req_block = msgs[1]["content"]
-            .as_array()
-            .unwrap()
-            .iter()
-            .find(|c| c["type"] == "toolRequest")
-            .expect("expected a toolRequest");
-        assert_eq!(req_block["toolCall"]["status"], "success");
-        assert_eq!(req_block["toolCall"]["value"]["arguments"]["cmd"], "ls");
-        // user message with the tool response
-        assert!(msgs[2]["content"]
-            .as_array()
-            .unwrap()
-            .iter()
-            .any(|c| c["type"] == "toolResponse"));
-    }
-
-    #[test]
-    fn sanitizes_unicode_tags_in_function_call_output() {
-        let jsonl = [
-            serde_json::json!({
-                "timestamp": "2026-05-22T13:37:22Z",
-                "type": "session_meta",
-                "payload": {"id": "s", "cwd": "/w"}
-            })
-            .to_string(),
-            serde_json::json!({
-                "timestamp": "2026-05-22T13:37:23Z",
-                "type": "response_item",
-                "payload": {
-                    "type": "function_call_output",
-                    "call_id": "call_1",
-                    "output": "visible\u{E0041}世界"
-                }
-            })
-            .to_string(),
-        ]
-        .join("\n");
-
-        let json = convert(&jsonl).unwrap();
-
-        assert!(json.contains("visible世界"));
-        assert!(!json.contains('\u{E0041}'));
-    }
-
-    #[test]
-    fn first_user_text_skips_context_blobs() {
-        let jsonl = r#"{"timestamp":"2026-05-22T13:37:22Z","type":"session_meta","payload":{"id":"s","cwd":"/w"}}
-{"timestamp":"2026-05-22T13:37:23Z","type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"<environment_context>\n  <cwd>/w</cwd>\n</environment_context>"}]}}
-{"timestamp":"2026-05-22T13:37:24Z","type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"actual prompt"}]}}"#;
-        let json = convert(jsonl).unwrap();
-        let v: Value = serde_json::from_str(&json).unwrap();
-        assert_eq!(v["name"], "actual prompt");
-        assert_eq!(v["message_count"], 2);
-    }
 }

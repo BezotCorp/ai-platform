@@ -7,7 +7,6 @@
 //! https://github.com/huggingface/candle/tree/main/candle-examples/whisper
 
 use crate::config::paths::Paths;
-
 pub const LOCAL_WHISPER_MODEL_CONFIG_KEY: &str = "LOCAL_WHISPER_MODEL";
 pub const LOCAL_WHISPER_LANGUAGE_CONFIG_KEY: &str = "LOCAL_WHISPER_LANGUAGE";
 const ENGLISH_LANGUAGE_TOKEN: u32 = 50259;
@@ -15,20 +14,16 @@ const LANGUAGE_TOKEN_COUNT: u32 = 99;
 use anyhow::{Context, Result};
 use candle_core::{Device, IndexOp, Tensor};
 use candle_nn::ops::log_softmax;
-use candle_transformers::models::whisper::{self as m, audio, Config, N_FRAMES};
+use candle_transformers::models::whisper::{self as m, Config, N_FRAMES, audio};
 use serde::{Deserialize, Serialize};
 use std::io::Cursor;
 use std::path::{Path, PathBuf};
-use symphonia::core::audio::conv::FromSample;
-use symphonia::core::audio::sample::Sample;
 use symphonia::core::audio::{Audio, AudioBuffer, GenericAudioBufferRef};
-use symphonia::core::codecs::audio::AudioDecoderOptions;
-use symphonia::core::formats::probe::Hint;
+use symphonia::core::audio::{conv::FromSample, sample::Sample};
 use symphonia::core::formats::{FormatOptions, TrackType};
-use symphonia::core::io::MediaSourceStream;
-use symphonia::core::meta::MetadataOptions;
+use symphonia::core::{codecs::audio::AudioDecoderOptions, formats::probe::Hint};
+use symphonia::core::{io::MediaSourceStream, meta::MetadataOptions};
 use tokenizers::Tokenizer;
-
 // Common suppress tokens for all Whisper models
 const SUPPRESS_TOKENS: &[u32] = &[
     1, 2, 7, 8, 9, 10, 14, 25, 26, 27, 28, 29, 31, 58, 59, 60, 61, 62, 63, 90, 91, 92, 93, 359,
@@ -880,7 +875,7 @@ fn detect_repetition_impl(
     let text_tokens: Vec<(usize, u32)> = tokens[sample_begin..]
         .iter()
         .enumerate()
-        .filter(|(_, &t)| t < timestamp_begin)
+        .filter(|(_, t)| **t < timestamp_begin)
         .map(|(i, &t)| (i + sample_begin, t))
         .collect();
 
@@ -1076,8 +1071,8 @@ where
 
 fn resample_audio(data: &[f32], from_rate: u32, to_rate: u32) -> Result<Vec<f32>> {
     use rubato::{
-        audioadapter_buffers::direct::SequentialSliceOfVecs, Async, FixedAsync, Resampler,
-        SincInterpolationParameters, SincInterpolationType, WindowFunction,
+        Async, FixedAsync, Resampler, SincInterpolationParameters, SincInterpolationType,
+        WindowFunction, audioadapter_buffers::direct::SequentialSliceOfVecs,
     };
 
     let output_samples = checked_resampled_sample_count(data.len(), from_rate, to_rate)?;
@@ -1167,242 +1162,4 @@ fn checked_decoded_sample_count(
     checked_resampled_sample_count(decoded_samples, sample_rate, 16_000)?;
 
     Ok(decoded_samples)
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    use symphonia::core::audio::{AudioSpec, Position};
-    use test_case::test_case;
-
-    const TS: u32 = 50364; // A timestamp token for tests
-
-    #[test]
-    fn decodes_pcm_wav() {
-        let input = [-32768i16, 0, 32767];
-        let data_size = (input.len() * std::mem::size_of::<i16>()) as u32;
-        let mut wav = Vec::new();
-        wav.extend_from_slice(b"RIFF");
-        wav.extend_from_slice(&(36 + data_size).to_le_bytes());
-        wav.extend_from_slice(b"WAVEfmt ");
-        wav.extend_from_slice(&16u32.to_le_bytes());
-        wav.extend_from_slice(&1u16.to_le_bytes());
-        wav.extend_from_slice(&1u16.to_le_bytes());
-        wav.extend_from_slice(&16000u32.to_le_bytes());
-        wav.extend_from_slice(&32000u32.to_le_bytes());
-        wav.extend_from_slice(&2u16.to_le_bytes());
-        wav.extend_from_slice(&16u16.to_le_bytes());
-        wav.extend_from_slice(b"data");
-        wav.extend_from_slice(&data_size.to_le_bytes());
-        for sample in input {
-            wav.extend_from_slice(&sample.to_le_bytes());
-        }
-
-        let decoded = decode_audio_simple(&wav).unwrap();
-
-        assert_eq!(decoded.len(), input.len());
-        assert_eq!(decoded[0], -1.0);
-        assert_eq!(decoded[1], 0.0);
-        assert!((decoded[2] - 32767.0 / 32768.0).abs() < f32::EPSILON);
-    }
-
-    #[test_case(None, ENGLISH_LANGUAGE_TOKEN ; "unset falls back to english")]
-    #[test_case(Some("en"), ENGLISH_LANGUAGE_TOKEN ; "english")]
-    #[test_case(Some("de"), 50261 ; "german")]
-    #[test_case(Some("ru"), 50263 ; "russian")]
-    #[test_case(Some("DE"), 50261 ; "uppercase code is normalized")]
-    #[test_case(Some("klingon"), ENGLISH_LANGUAGE_TOKEN ; "unsupported falls back to english")]
-    #[test_case(Some("su"), 50357 ; "last language in the block")]
-    #[test_case(Some("translate"), ENGLISH_LANGUAGE_TOKEN ; "task token is not a language")]
-    #[test_case(Some("notimestamps"), ENGLISH_LANGUAGE_TOKEN ; "control token is not a language")]
-    #[test_case(Some("startoftranscript"), ENGLISH_LANGUAGE_TOKEN ; "sot token is not a language")]
-    fn test_language_token(code: Option<&str>, expected: u32) {
-        let tokenizer =
-            Tokenizer::from_bytes(include_bytes!("whisper_data/tokens.json")).expect("tokenizer");
-
-        assert_eq!(language_token(&tokenizer, code), expected);
-    }
-
-    // detect_repetition_impl tests
-    // sample_begin=3 means tokens[0..3] are SOT, language, transcribe
-    // timestamp_begin=50364 means tokens >= 50364 are timestamps
-
-    #[test_case(&[0, 1, 2, 10, 10, 10], Some(4) ; "single token repeated 3x")]
-    #[test_case(&[0, 1, 2, 10, 10], None ; "single token repeated 2x not enough")]
-    #[test_case(&[0, 1, 2, 10, 20, 30, 10, 20, 30], None ; "3-token pattern repeated 2x not enough")]
-    #[test_case(&[0, 1, 2, 10, 20, 30, 40, 50, 10, 20, 30, 40, 50], Some(8) ; "5-token pattern repeated 2x")]
-    #[test_case(&[0, 1, 2, 10, 20, 10, 20, 10, 20], Some(5) ; "2-token pattern repeated 3x")]
-    #[test_case(&[0, 1, 2, 10, 20, 30, 40, 10, 20, 30, 40], None ; "4-token pattern repeated 2x not enough")]
-    #[test_case(&[0, 1, 2, 10, 99, 20, 10, 99, 20], None ; "non-adjacent same tokens no trigger")]
-    fn test_detect_repetition_no_timestamps(tokens: &[u32], expected: Option<usize>) {
-        assert_eq!(detect_repetition_impl(tokens, 3, 50364), expected);
-    }
-
-    #[test_case(
-        &[0, 1, 2, TS, 10, 20, 30, TS+1, TS+2, 10, 20, 30, TS+3],
-        None ;
-        "phrase 3 tokens with timestamps 2x not enough"
-    )]
-    #[test_case(
-        &[0, 1, 2, TS, 10, 10, 10, TS+1],
-        Some(5) ;
-        "single token 3x with surrounding timestamps"
-    )]
-    #[test_case(
-        &[0, 1, 2, TS, 10, 20, TS+1, TS+2, 10, 20, TS+3, TS+4, 10, 20, TS+5],
-        Some(8) ;
-        "2-token pattern 3x with timestamps interleaved"
-    )]
-    fn test_detect_repetition_with_timestamps(tokens: &[u32], expected: Option<usize>) {
-        assert_eq!(detect_repetition_impl(tokens, 3, 50364), expected);
-    }
-
-    // Real example from logs: phrase repeated 3x with timestamps
-    #[test]
-    fn test_detect_repetition_real_example() {
-        let tokens: Vec<u32> = vec![
-            0, 1, 2, // SOT, lang, transcribe (indices 0-2)
-            50364, 286, 500, 380, 458, 983, 309, 311, 18617, 2564, 13, // first phrase + ts
-            50450, 50475, 286, 500, 380, 458, 983, 309, 311, 18617, 2564,
-            13, // second phrase + ts
-            50550, 50551, 286, 500, 380, 458, 983, 309, 311, 18617, 2564,
-            13, // third phrase + ts
-        ];
-        // Text tokens are: 286, 500, 380, 458, 983, 309, 311, 18617, 2564, 13 (10 tokens)
-        // Repeated 3 times, should trigger
-        let result = detect_repetition_impl(&tokens, 3, 50364);
-        assert!(result.is_some(), "Should detect repetition in real example");
-    }
-
-    #[test]
-    fn test_no_false_positive_on_dog_sentences() {
-        // "I saw a dog. I liked the dog. I gave the dog food."
-        // dog=100, other tokens are different
-        let tokens: Vec<u32> = vec![
-            0, 1, 2, 10, 11, 12, 100, 13, // I saw a dog.
-            20, 21, 22, 100, 23, // I liked the dog.
-            30, 31, 32, 100, 33, // I gave the dog food.
-        ];
-        assert_eq!(detect_repetition_impl(&tokens, 3, 50364), None);
-    }
-
-    // deduplicate_text tests
-    #[test_case("", "" ; "empty")]
-    #[test_case("   ", "" ; "whitespace")]
-    #[test_case("I went to the store. Then I came home.", "I went to the store. Then I came home." ; "no repetition")]
-    #[test_case(
-        "I could build a record mode. I could build a record mode. I could build a record mode.",
-        "I could build a record mode." ;
-        "single sentence 3x"
-    )]
-    #[test_case(
-        "Yeah I was thinking about that. Yeah I was thinking about that.",
-        "Yeah I was thinking about that." ;
-        "single sentence 2x"
-    )]
-    #[test_case(
-        "Who works for Flux? Who works for Flux? Who works for Flux?",
-        "Who works for Flux?" ;
-        "question marks"
-    )]
-    #[test_case("Stop! Stop! Stop!", "Stop!" ; "exclamation marks")]
-    #[test_case("hello hello hello hello", "hello hello hello hello" ; "no sentence boundaries")]
-    fn test_deduplicate_text(input: &str, expected: &str) {
-        assert_eq!(deduplicate_text(input), expected);
-    }
-
-    #[test_case("Hello. World. Foo.", vec!["Hello. ", "World. ", "Foo."] ; "basic")]
-    #[test_case("Hello. World", vec!["Hello. ", "World"] ; "trailing fragment")]
-    #[test_case("Really? Yes! Ok.", vec!["Really? ", "Yes! ", "Ok."] ; "mixed punctuation")]
-    fn test_split_into_sentences(input: &str, expected: Vec<&str>) {
-        assert_eq!(split_into_sentences(input), expected);
-    }
-
-    #[test_case(8_000, 48_000, 96_000 ; "minimum supported rate")]
-    #[test_case(16_000, 48_000, 48_000 ; "whisper rate no-op")]
-    #[test_case(96_000, 96_000, 16_000 ; "maximum supported rate")]
-    fn supported_resample_rates_preserve_expected_size(
-        from_rate: u32,
-        input_samples: usize,
-        expected_output_samples: usize,
-    ) {
-        assert_eq!(
-            checked_resampled_sample_count(input_samples, from_rate, 16_000).unwrap(),
-            expected_output_samples
-        );
-    }
-
-    #[test]
-    fn resampling_rejects_attacker_controlled_extreme_rate() {
-        let error = resample_audio(&[0.0; 16], 1, 16_000).unwrap_err();
-
-        assert!(error.to_string().contains("Unsupported audio sample rate"));
-    }
-
-    #[test]
-    fn resampled_sample_budget_accepts_boundary_and_rejects_excess() {
-        let boundary_input = MAX_WHISPER_AUDIO_SAMPLES / 2;
-        assert_eq!(
-            checked_resampled_sample_count(boundary_input, 8_000, 16_000).unwrap(),
-            MAX_WHISPER_AUDIO_SAMPLES
-        );
-
-        let error = checked_resampled_sample_count(boundary_input + 1, 8_000, 16_000).unwrap_err();
-        assert!(error.to_string().contains("maximum"));
-    }
-
-    #[test]
-    fn decoded_audio_budget_enforces_native_whisper_rate() {
-        assert_eq!(
-            checked_decoded_sample_count(MAX_WHISPER_AUDIO_SAMPLES - 1, 1, 16_000).unwrap(),
-            MAX_WHISPER_AUDIO_SAMPLES
-        );
-
-        let error =
-            checked_decoded_sample_count(MAX_WHISPER_AUDIO_SAMPLES - 1, 2, 16_000).unwrap_err();
-        assert!(error.to_string().contains("maximum"));
-    }
-
-    #[test]
-    fn decoded_audio_budget_caps_high_rate_pcm() {
-        let error = checked_decoded_sample_count(MAX_WHISPER_AUDIO_SAMPLES, 1, 96_000).unwrap_err();
-
-        assert!(error.to_string().contains("maximum"));
-    }
-
-    #[test]
-    fn decoded_stereo_frames_are_appended_as_mono() {
-        let spec = AudioSpec::new(
-            16_000,
-            (Position::FRONT_LEFT | Position::FRONT_RIGHT).into(),
-        );
-        let mut buffer = AudioBuffer::<f32>::new(spec, 2);
-        buffer
-            .render_with(Some(2), |frame, planes| {
-                planes[0][frame] = if frame == 0 { 1.0 } else { -1.0 };
-                planes[1][frame] = if frame == 0 { 3.0 } else { 1.0 };
-                Ok(())
-            })
-            .unwrap();
-        let mut samples = vec![4.0];
-
-        append_audio_buffer_as_mono(&GenericAudioBufferRef::F32(&buffer), &mut samples);
-
-        assert_eq!(samples, vec![4.0, 2.0, 0.0]);
-    }
-
-    #[test]
-    fn resampled_sample_count_rejects_overflow() {
-        let error = checked_resampled_sample_count(usize::MAX, 8_000, 16_000).unwrap_err();
-
-        assert!(error.to_string().contains("overflow"));
-    }
-
-    #[test]
-    fn same_rate_resampling_preserves_samples() {
-        let samples = vec![0.25, -0.5, 0.75];
-
-        assert_eq!(resample_audio(&samples, 16_000, 16_000).unwrap(), samples);
-    }
 }

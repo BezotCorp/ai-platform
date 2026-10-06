@@ -1,8 +1,9 @@
 use anyhow::Result;
+use bcaip_provider_types::base::Provider;
+use bcaip_provider_types::conversations::Message;
+use bcaip_provider_types::model::ModelConfig;
 use futures::StreamExt;
-use goose_providers::{
-    base::Provider, conversation::message::Message, declarative::EnvKeyResolver, model::ModelConfig,
-};
+use goose_providers::declarative::EnvKeyResolver;
 
 async fn complete(provider: &dyn Provider, model: ModelConfig) -> Result<()> {
     let system = "You are a knowledgable geography expert";

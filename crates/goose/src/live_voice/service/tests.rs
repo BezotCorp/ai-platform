@@ -1,14 +1,14 @@
 mod fake_live_voice_provider;
 
-use super::super::interaction::{LiveMainAgent, DELEGATION_INSTRUCTION, PROVIDER_CLEANUP_TIMEOUT};
+use super::super::interaction::{DELEGATION_INSTRUCTION, LiveMainAgent, PROVIDER_CLEANUP_TIMEOUT};
 use super::*;
 use crate::agents::Agent;
-use fake_live_voice_provider::{provider_channel, FakeConnectionDriver};
-use goose_providers::{live_voice_provider::ProviderConnectionEvent, model::ModelConfig};
+use fake_live_voice_provider::{FakeConnectionDriver, provider_channel};
+use goose_providers::live_voice_provider::ProviderConnectionEvent;
+use goose_provider_types::model::ModelConfig;
 use rmcp::model::Role;
 use std::time::Duration;
 use tokio::task::JoinHandle;
-
 type StartResult = Result<StartLiveVoiceInteractionResult, LiveVoiceError>;
 
 impl LiveVoiceService {
@@ -71,7 +71,7 @@ async fn live_session(
         .create_session(
             std::path::PathBuf::from("/tmp/test"),
             "Live voice".into(),
-            crate::session::session_manager::SessionType::User,
+            crate::session::SessionType::User,
             GooseMode::Auto,
         )
         .await
@@ -248,9 +248,11 @@ async fn input_messages_include_all_visible_non_empty_text_when_it_fits() {
     assert_eq!(input_messages.first().unwrap().role, Role::User);
     assert_eq!(input_messages.last().unwrap().text, "delegated result");
     assert_eq!(input_messages.last().unwrap().role, Role::Assistant);
-    assert!(!input_messages
-        .iter()
-        .any(|message| message.text == "other hidden"));
+    assert!(
+        !input_messages
+            .iter()
+            .any(|message| message.text == "other hidden")
+    );
 }
 
 #[tokio::test]
@@ -401,11 +403,13 @@ async fn session_stop_tracks_provider_start_until_the_interaction_stops() {
     };
     let ((), ()) = tokio::join!(stop, provider);
 
-    assert!(!service
-        .interactions_by_session
-        .lock()
-        .unwrap()
-        .contains_key(&session_id));
+    assert!(
+        !service
+            .interactions_by_session
+            .lock()
+            .unwrap()
+            .contains_key(&session_id)
+    );
     assert_eq!(
         service.availability(Some(&session_id), GooseMode::Auto),
         Ok(())
@@ -419,14 +423,16 @@ async fn session_stop_waits_for_cleanup_after_interaction_completion() {
         establish_interaction_with(main_agent, ignore_transcript_publisher()).await;
     let active_runs = service.active_runs.clone();
     let cancel_token = CancellationToken::new();
-    assert!(active_runs
-        .start_live_delegation(
-            &session_id,
-            "delegated".into(),
-            cancel_token.clone(),
-            Arc::new(Agent::new()),
-        )
-        .is_ok());
+    assert!(
+        active_runs
+            .start_live_delegation(
+                &session_id,
+                "delegated".into(),
+                cancel_token.clone(),
+                Arc::new(Agent::new()),
+            )
+            .is_ok()
+    );
     connection
         .send_event(ProviderConnectionEvent::TranscriptDelta {
             event_id: "transcript".into(),
@@ -552,10 +558,12 @@ async fn stale_stop_does_not_stop_the_current_interaction() {
         .unwrap()
         .insert("main-session".into(), control.clone());
 
-    assert!(service
-        .stop_interaction("main-session", &LiveVoiceInteractionId("stale".into()))
-        .await
-        .is_ok());
+    assert!(
+        service
+            .stop_interaction("main-session", &LiveVoiceInteractionId("stale".into()))
+            .await
+            .is_ok()
+    );
     assert!(!control.stop_requested.is_cancelled());
 }
 
@@ -744,7 +752,7 @@ async fn transcript_is_projected_and_flushed_before_delegation() {
         .create_session(
             std::path::PathBuf::from("/tmp/test"),
             "Live transcript".into(),
-            crate::session::session_manager::SessionType::User,
+            crate::session::SessionType::User,
             GooseMode::Auto,
         )
         .await
@@ -874,9 +882,11 @@ async fn transcript_is_projected_and_flushed_before_delegation() {
     assert!(!messages.messages()[1].is_agent_visible());
     assert!(messages.messages()[2].is_agent_visible());
     assert!(!messages.messages()[2].is_user_visible());
-    assert!(messages.messages()[2]
-        .as_concat_text()
-        .contains("User: world"));
+    assert!(
+        messages.messages()[2]
+            .as_concat_text()
+            .contains("User: world")
+    );
     assert!(!messages.messages()[2].as_concat_text().contains("hello"));
 }
 
@@ -1027,13 +1037,17 @@ async fn running_transcript_is_saved_user_only_and_steered_to_the_main_agent() {
     }
     assert!(!messages[6].is_user_visible());
     assert!(messages[6].is_agent_visible());
-    assert!(messages[6]
-        .as_concat_text()
-        .contains("Voice assistant: Anything else?\nUser: Document it"));
+    assert!(
+        messages[6]
+            .as_concat_text()
+            .contains("Voice assistant: Anything else?\nUser: Document it")
+    );
     assert!(!messages[6].as_concat_text().contains("also run tests"));
-    assert!(!messages[6]
-        .as_concat_text()
-        .contains(DELEGATION_INSTRUCTION));
+    assert!(
+        !messages[6]
+            .as_concat_text()
+            .contains(DELEGATION_INSTRUCTION)
+    );
 }
 
 #[tokio::test]
@@ -1059,10 +1073,12 @@ async fn provider_terminal_events_fail_and_release_the_session() {
             wait_for_completion(completion_rx).await.unwrap(),
             LiveVoiceInteractionCompletion::Failed
         );
-        assert!(service
-            .stop_interaction(&session_id, &interaction_id)
-            .await
-            .is_ok());
+        assert!(
+            service
+                .stop_interaction(&session_id, &interaction_id)
+                .await
+                .is_ok()
+        );
         assert_eq!(
             service.availability(Some(&session_id), GooseMode::Auto),
             Ok(())

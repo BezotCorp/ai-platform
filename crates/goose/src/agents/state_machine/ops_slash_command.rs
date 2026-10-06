@@ -1,17 +1,14 @@
 //! Handles a recognized slash command before the normal agent turn begins.
 
-use std::sync::Arc;
-
+use crate::agents::state_machine::effects::GooseEffect;
+use crate::session::Session;
 use anyhow::Result;
 use async_trait::async_trait;
-
-use crate::agents::state_machine::effects::GooseEffect;
-use crate::agents::state_machine::{
-    messages_since_kickoff, not_applicable, Emitter, Operation, OperationResult, SlashCommand,
+use bcaip_agent::operation::{
+    Emitter, Operation, OperationResult, SlashCommand, messages_since_kickoff, not_applicable,
 };
-use crate::conversation::Conversation;
-use crate::session::Session;
-
+use bcaip_provider_types::conversations::Conversation;
+use std::sync::Arc;
 pub struct SlashCommandOperation<'a> {
     operations: Vec<Arc<dyn Operation<Session, GooseEffect> + 'a>>,
 }

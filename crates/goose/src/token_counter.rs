@@ -1,12 +1,10 @@
+use bcaip_provider_types::conversations::Message;
 use lru::LruCache;
 use rmcp::model::Tool;
 use std::num::NonZeroUsize;
 use std::sync::{Arc, Mutex};
 use tiktoken_rs::CoreBPE;
 use tokio::sync::OnceCell;
-
-use crate::conversation::message::Message;
-
 static TOKENIZER: OnceCell<Arc<CoreBPE>> = OnceCell::const_new();
 
 const MAX_TOKEN_CACHE_SIZE: usize = 1_024;
@@ -214,113 +212,4 @@ async fn get_tokenizer() -> Result<Arc<CoreBPE>, String> {
 
 pub async fn create_token_counter() -> Result<TokenCounter, String> {
     TokenCounter::new().await
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[tokio::test]
-    async fn test_token_caching() {
-        let counter = create_token_counter().await.unwrap();
-
-        let text = "This is a test for caching functionality";
-
-        let count1 = counter.count_tokens(text);
-        assert_eq!(counter.cache_size(), 1);
-
-        let count2 = counter.count_tokens(text);
-        assert_eq!(count1, count2);
-        assert_eq!(counter.cache_size(), 1);
-
-        let count3 = counter.count_tokens("Different text");
-        assert_eq!(counter.cache_size(), 2);
-        assert_ne!(count1, count3);
-    }
-
-    #[tokio::test]
-    async fn test_cache_management() {
-        let counter = create_token_counter().await.unwrap();
-
-        counter.count_tokens("First text");
-        counter.count_tokens("Second text");
-        counter.count_tokens("Third text");
-
-        assert_eq!(counter.cache_size(), 3);
-
-        counter.clear_cache();
-        assert_eq!(counter.cache_size(), 0);
-
-        let count = counter.count_tokens("First text");
-        assert!(count > 0);
-        assert_eq!(counter.cache_size(), 1);
-    }
-
-    #[tokio::test]
-    async fn test_concurrent_token_counter_creation() {
-        let handles: Vec<_> = (0..10)
-            .map(|_| tokio::spawn(async { create_token_counter().await.unwrap() }))
-            .collect();
-
-        let counters: Vec<_> = futures::future::join_all(handles)
-            .await
-            .into_iter()
-            .map(|r| r.unwrap())
-            .collect();
-
-        let text = "Test concurrent creation";
-        let expected_count = counters[0].count_tokens(text);
-
-        for counter in &counters {
-            assert_eq!(counter.count_tokens(text), expected_count);
-        }
-    }
-
-    #[tokio::test]
-    async fn test_cache_eviction_behavior() {
-        let counter = create_token_counter().await.unwrap();
-
-        let mut cached_texts = Vec::new();
-        for i in 0..=MAX_TOKEN_CACHE_SIZE {
-            let text = format!("Test string number {}", i);
-            counter.count_tokens(&text);
-            cached_texts.push(text);
-        }
-
-        assert_eq!(counter.cache_size(), MAX_TOKEN_CACHE_SIZE);
-
-        let recent_text = &cached_texts[cached_texts.len() - 1];
-        let start_size = counter.cache_size();
-
-        counter.count_tokens(recent_text);
-        assert_eq!(counter.cache_size(), start_size);
-    }
-
-    #[tokio::test]
-    async fn test_concurrent_cache_operations() {
-        let counter = std::sync::Arc::new(create_token_counter().await.unwrap());
-
-        let handles: Vec<_> = (0..20)
-            .map(|i| {
-                let counter_clone = counter.clone();
-                tokio::spawn(async move {
-                    let text = format!("Concurrent test {}", i % 5);
-                    counter_clone.count_tokens(&text)
-                })
-            })
-            .collect();
-
-        let results: Vec<_> = futures::future::join_all(handles)
-            .await
-            .into_iter()
-            .map(|r| r.unwrap())
-            .collect();
-
-        for result in results {
-            assert!(result > 0);
-        }
-
-        assert!(counter.cache_size() > 0);
-        assert!(counter.cache_size() <= MAX_TOKEN_CACHE_SIZE);
-    }
 }

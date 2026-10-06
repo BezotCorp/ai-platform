@@ -1,26 +1,24 @@
 //! Turns tool requests that no operation can handle into tool errors.
 
-use anyhow::Result;
-use async_trait::async_trait;
-use rmcp::model::{CallToolResult, ContentBlock, ErrorCode, ErrorData};
-use tracing_futures::Instrument;
-
-use crate::agents::final_output_tool::FINAL_OUTPUT_TOOL_NAME;
-use crate::agents::state_machine::effects::GooseEffect;
 use crate::agents::state_machine::ops_toolcalling::{
-    emit_extended_pre_hooks, emit_post_tool_use, pending_tool_requests, request_was_advertised,
-    run_pre_tool_hooks, tool_span, ToolDisposition,
-};
-use crate::agents::state_machine::{
-    applied, messages_since_kickoff, not_applicable, Emitter, Operation, OperationResult,
+    ToolDisposition, emit_extended_pre_hooks, emit_post_tool_use, pending_tool_requests,
+    request_was_advertised, run_pre_tool_hooks, tool_span,
 };
 use crate::agents::tool_execution::{CHAT_MODE_TOOL_SKIPPED_RESPONSE, DECLINED_RESPONSE};
-use crate::config::GooseMode;
-use crate::conversation::message::Message;
-use crate::conversation::Conversation;
+use crate::agents::{
+    final_output_tool::FINAL_OUTPUT_TOOL_NAME, state_machine::effects::GooseEffect,
+};
 use crate::hooks::HookManager;
 use crate::session::Session;
-
+use anyhow::Result;
+use async_trait::async_trait;
+use bcaip_agent::operation::{
+    Emitter, Operation, OperationResult, applied, messages_since_kickoff, not_applicable,
+};
+use bcaip_provider_types::conversations::{Conversation, Message};
+use bcaip_provider_types::goose_mode::GooseMode;
+use rmcp::model::{CallToolResult, ContentBlock, ErrorCode, ErrorData};
+use tracing_futures::Instrument;
 pub(super) const UNCLAIMED_TOOL_ERROR: &str = "goose.unclaimed_tool";
 
 pub struct UnknownToolOperation {
@@ -101,81 +99,76 @@ impl Operation<Session, GooseEffect> for UnknownToolOperation {
                     )])),
                     false,
                 ),
-                ToolDisposition::Execute => {
-                    match request.tool_call.as_ref() {
-                        Ok(tool_call) => {
-                            let tool_input = tool_call
-                                .arguments
-                                .as_ref()
-                                .map(|arguments| serde_json::Value::Object(arguments.clone()));
-                            match run_pre_tool_hooks(
-                                &self.hook_manager,
-                                session,
-                                &request.id,
-                                &tool_call.name,
-                                tool_input.as_ref(),
-                            )
-                            .instrument(span.clone())
-                            .await
-                            {
-                                Err(denial) => (Err(denial), false),
-                                Ok(()) => {
-                                    emit_extended_pre_hooks(
-                                        &self.hook_manager,
-                                        &tool_call.name,
-                                        tool_input.as_ref(),
-                                        session,
+                ToolDisposition::Execute => match request.tool_call.as_ref() {
+                    Ok(tool_call) => {
+                        let tool_input = tool_call
+                            .arguments
+                            .as_ref()
+                            .map(|arguments| serde_json::Value::Object(arguments.clone()));
+                        match run_pre_tool_hooks(
+                            &self.hook_manager,
+                            session,
+                            &request.id,
+                            &tool_call.name,
+                            tool_input.as_ref(),
+                        )
+                        .instrument(span.clone())
+                        .await
+                        {
+                            Err(denial) => (Err(denial), false),
+                            Ok(()) => {
+                                emit_extended_pre_hooks(
+                                    &self.hook_manager,
+                                    &tool_call.name,
+                                    tool_input.as_ref(),
+                                    session,
+                                )
+                                .instrument(span.clone())
+                                .await;
+                                let (output, unclaimed) = if tool_call.name
+                                    == FINAL_OUTPUT_TOOL_NAME
+                                    && !active_final_output
+                                {
+                                    span.record("error.type", "final_output_not_defined");
+                                    (
+                                        Err(ErrorData::new(
+                                            ErrorCode::INTERNAL_ERROR,
+                                            "Final output tool not defined".to_string(),
+                                            None,
+                                        )),
+                                        false,
                                     )
-                                    .instrument(span.clone())
-                                    .await;
-                                    let (output, unclaimed) =
-                                        if tool_call.name == FINAL_OUTPUT_TOOL_NAME
-                                            && !active_final_output
-                                        {
-                                            span.record("error.type", "final_output_not_defined");
-                                            (
-                                                Err(ErrorData::new(
-                                                    ErrorCode::INTERNAL_ERROR,
-                                                    "Final output tool not defined".to_string(),
-                                                    None,
-                                                )),
-                                                false,
-                                            )
-                                        } else {
-                                            span.record("error.type", "tool_not_available");
-                                            (
-                                                Ok(CallToolResult::error(vec![
-                                                    ContentBlock::text(format!(
-                                                        "Tool '{}' is not available.",
-                                                        tool_call.name
-                                                    )),
-                                                ])),
-                                                true,
-                                            )
-                                        };
-                                    emit_post_tool_use(
-                                        &self.hook_manager,
-                                        &session.id,
-                                        &session.working_dir.to_string_lossy(),
-                                        &tool_call.name,
-                                        &request.id,
-                                        tool_input.as_ref(),
-                                        &output,
+                                } else {
+                                    span.record("error.type", "tool_not_available");
+                                    (
+                                        Ok(CallToolResult::error(vec![ContentBlock::text(
+                                            format!("Tool '{}' is not available.", tool_call.name),
+                                        )])),
+                                        true,
                                     )
-                                    .instrument(span.clone())
-                                    .await;
-                                    (output, unclaimed)
-                                }
+                                };
+                                emit_post_tool_use(
+                                    &self.hook_manager,
+                                    &session.id,
+                                    &session.working_dir.to_string_lossy(),
+                                    &tool_call.name,
+                                    &request.id,
+                                    tool_input.as_ref(),
+                                    &output,
+                                )
+                                .instrument(span.clone())
+                                .await;
+                                (output, unclaimed)
                             }
                         }
-                        Err(error) => (
-                            Ok(CallToolResult::error(vec![ContentBlock::text(format!(
-                                "The tool call could not be parsed: {error}."
-                            ))])),
-                            false,
-                        ),
                     }
-                }
+                    Err(error) => (
+                        Ok(CallToolResult::error(vec![ContentBlock::text(format!(
+                            "The tool call could not be parsed: {error}."
+                        ))])),
+                        false,
+                    ),
+                },
                 ToolDisposition::Decline => (
                     Ok(CallToolResult::error(vec![ContentBlock::text(
                         DECLINED_RESPONSE,

@@ -1,9 +1,8 @@
-use crate::errors::ProviderError;
 use async_trait::async_trait;
+use bcaip_provider_types::errors::ProviderError;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
-
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct DecisionRequest {
     pub model: String,

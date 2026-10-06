@@ -1,15 +1,12 @@
-use anyhow::Result;
-use async_trait::async_trait;
-
 use crate::agents::state_machine::effects::GooseEffect;
-use crate::agents::state_machine::{
-    messages_since_kickoff, not_applicable, Emitter, Operation, OperationResult,
-};
-use crate::conversation::message::Message;
-use crate::conversation::Conversation;
 use crate::hooks::{HookContext, HookEvent, HookManager};
 use crate::session::Session;
-
+use anyhow::Result;
+use async_trait::async_trait;
+use bcaip_agent::operation::{
+    Emitter, Operation, OperationResult, messages_since_kickoff, not_applicable,
+};
+use bcaip_provider_types::conversations::{Conversation, Message};
 pub struct EntryHookOperation {
     hook_manager: HookManager,
 }

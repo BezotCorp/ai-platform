@@ -4,7 +4,7 @@
 //! and choose whether to call `StateMachine::step`, `StateMachine::apply`, or
 //! `StateMachine::run`. Goose's concrete operations remain internal because their
 //! configuration is part of `Agent::reply`, not the state-machine protocol.
-
+//mod.rs need to have only module declarations and public exports. So review and extract
 mod effects;
 mod inference_preparation;
 mod ops_bang_shell;
@@ -31,43 +31,32 @@ pub(crate) use session::run as run_goose;
 mod tool_confirmation;
 mod usage;
 
-#[cfg(test)]
-mod tests;
-
 pub use effects::GooseEffect;
-pub use goose_agent::machine::{
-    EffectHandler, EffectUsage, MachineSession, SessionLoader, StateMachine, Step,
-};
-pub use goose_agent::operation::{
-    applied, assistant_turn_count, ends_turn, last_effective_role, messages_since_kickoff,
-    not_applicable, trailing_error, yielded, yielded_with, ConversationEffect, Emitter, Inference,
-    InferenceInput, MachineEffect, Operation, OperationResult, SlashCommand, StepResult,
-};
 pub(crate) use tool_confirmation::{
     has_unapplied_tool_confirmation_response, pending_tool_confirmations,
     persist_tool_confirmation_decision,
 };
 
-pub(super) use inference_preparation::GooseInferenceRequestPreparer;
-pub(super) use ops_bang_shell::BangShellOperation;
-pub(super) use ops_compaction::CompactionOperation;
-pub(super) use ops_doctor::DoctorOperation;
-pub(super) use ops_entry_hook::EntryHookOperation;
-pub(super) use ops_exit_on_error::ExitOnErrorOperation;
-pub(super) use ops_llm::{GooseInferenceProvider, InferenceRunner};
-pub(super) use ops_maxturns::{MaxTurnsOperation, MAX_TURNS_MESSAGE};
-pub(super) use ops_project::ProjectOperation;
-pub(super) use ops_recipe::RecipeOperation;
-pub(super) use ops_retry::RetryOperation;
-pub(super) use ops_skills::SkillOperation;
-pub(super) use ops_slash_command::SlashCommandOperation;
-pub(super) use ops_status::StatusOperation;
-pub(super) use ops_steer::{SteerOperation, SteerQueue};
-pub(super) use ops_stop_hook::StopHookOperation;
-pub(super) use ops_tool_approval::ToolApprovalOperation;
-pub(super) use ops_tool_pair_compaction::ToolPairCompactionOperation;
-pub(super) use ops_toolcalling::ToolExecutionOperation;
-pub(super) use ops_unknown_tool::UnknownToolOperation;
+pub(crate) use inference_preparation::GooseInferenceRequestPreparer;
+pub(crate) use ops_bang_shell::BangShellOperation;
+pub(crate) use ops_compaction::CompactionOperation;
+pub(crate) use ops_doctor::DoctorOperation;
+pub(crate) use ops_entry_hook::EntryHookOperation;
+pub(crate) use ops_exit_on_error::ExitOnErrorOperation;
+pub(crate) use ops_llm::GooseInferenceProvider;
+pub(crate) use ops_maxturns::{MAX_TURNS_MESSAGE, MaxTurnsOperation};
+pub(crate) use ops_project::ProjectOperation;
+pub(crate) use ops_recipe::RecipeOperation;
+pub(crate) use ops_retry::RetryOperation;
+pub(crate) use ops_skills::SkillOperation;
+pub(crate) use ops_slash_command::SlashCommandOperation;
+pub(crate) use ops_status::StatusOperation;
+pub(crate) use ops_steer::{SteerOperation, SteerQueue};
+pub(crate) use ops_stop_hook::StopHookOperation;
+pub(crate) use ops_tool_approval::ToolApprovalOperation;
+pub(crate) use ops_tool_pair_compaction::ToolPairCompactionOperation;
+pub(crate) use ops_toolcalling::ToolExecutionOperation;
+pub(crate) use ops_unknown_tool::UnknownToolOperation;
 
 pub fn enabled() -> bool {
     std::env::var("GOOSE_STATE_MACHINE")

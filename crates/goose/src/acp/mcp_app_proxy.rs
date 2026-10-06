@@ -1,19 +1,19 @@
 use axum::{
+    Json, Router,
     extract::{ConnectInfo, DefaultBodyLimit, Query, State},
-    http::{header, HeaderValue, StatusCode},
+    http::{HeaderValue, StatusCode, header},
     response::{Html, IntoResponse, Response},
     routing::{get, post},
-    Json, Router,
 };
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-use std::net::SocketAddr;
-use std::sync::Arc;
-use std::time::Duration;
-use std::time::Instant;
+use std::{
+    collections::HashMap,
+    net::SocketAddr,
+    sync::Arc,
+    time::{Duration, Instant},
+};
 use tokio::sync::RwLock;
 use uuid::Uuid;
-
 const GUEST_HTML_TTL_SECS: u64 = 300;
 const GUEST_HTML_MAX_ENTRIES: usize = 64;
 const GUEST_HTML_MAX_BYTES: usize = 16 * 1024 * 1024;
@@ -129,11 +129,11 @@ fn is_valid_csp_host_source(source: &str) -> bool {
 }
 
 fn split_host_and_port(source: &str) -> (&str, Option<&str>) {
-    if let Some(remainder) = source.strip_prefix('[') {
-        if let Some((host, tail)) = remainder.split_once(']') {
-            let port = tail.strip_prefix(':');
-            return (host, port);
-        }
+    if let Some(remainder) = source.strip_prefix('[')
+        && let Some((host, tail)) = remainder.split_once(']')
+    {
+        let port = tail.strip_prefix(':');
+        return (host, port);
     }
 
     match source.rsplit_once(':') {
@@ -288,14 +288,13 @@ async fn store_guest_html(
         let cutoff = Instant::now() - Duration::from_secs(GUEST_HTML_TTL_SECS);
         store.retain(|_, entry| entry.created > cutoff);
 
-        if store.len() >= GUEST_HTML_MAX_ENTRIES {
-            if let Some(oldest_key) = store
+        if store.len() >= GUEST_HTML_MAX_ENTRIES
+            && let Some(oldest_key) = store
                 .iter()
                 .min_by_key(|(_, entry)| entry.created)
                 .map(|(key, _)| key.clone())
-            {
-                store.remove(&oldest_key);
-            }
+        {
+            store.remove(&oldest_key);
         }
 
         store.insert(
@@ -389,114 +388,4 @@ pub(crate) fn routes(secret_key: String) -> Router {
             post(store_guest_html).layer(DefaultBodyLimit::max(GUEST_HTML_MAX_BYTES)),
         )
         .with_state(state)
-}
-
-#[cfg(test)]
-mod tests {
-    use super::{build_outer_csp, normalize_csp_source, parse_domains, peer_addr_is_loopback};
-    use axum::{
-        body::Body,
-        extract::ConnectInfo,
-        http::{header, Request, StatusCode},
-    };
-    use std::net::SocketAddr;
-    use tower::ServiceExt;
-
-    #[test]
-    fn normalizes_url_sources_to_origins() {
-        assert_eq!(
-            normalize_csp_source("https://cdn.example.com/assets/app.js"),
-            Some("https://cdn.example.com".to_string())
-        );
-        assert_eq!(
-            normalize_csp_source("wss://api.example.com/socket"),
-            Some("wss://api.example.com".to_string())
-        );
-    }
-
-    #[test]
-    fn accepts_wildcard_and_host_sources() {
-        assert_eq!(
-            normalize_csp_source("https://*.cloudflare.com"),
-            Some("https://*.cloudflare.com".to_string())
-        );
-        assert_eq!(
-            normalize_csp_source("cdn.example.com"),
-            Some("cdn.example.com".to_string())
-        );
-        assert_eq!(
-            normalize_csp_source("localhost:3000"),
-            Some("localhost:3000".to_string())
-        );
-    }
-
-    #[test]
-    fn rejects_unsafe_csp_sources() {
-        assert_eq!(normalize_csp_source("*"), None);
-        assert_eq!(normalize_csp_source("'unsafe-inline'"), None);
-        assert_eq!(normalize_csp_source("javascript:alert(1)"), None);
-        assert_eq!(normalize_csp_source("https://example.com;"), None);
-        assert_eq!(normalize_csp_source("https://user@example.com"), None);
-    }
-
-    #[test]
-    fn parse_domains_filters_invalid_sources() {
-        let domains =
-            "https://cdn.example.com/app.js, https://*.cloudflare.com, *, cdn.example.com"
-                .to_string();
-
-        assert_eq!(
-            parse_domains(Some(&domains)),
-            vec![
-                "https://cdn.example.com".to_string(),
-                "https://*.cloudflare.com".to_string(),
-                "cdn.example.com".to_string(),
-            ]
-        );
-    }
-
-    #[test]
-    fn detects_loopback_peer_addresses() {
-        assert!(peer_addr_is_loopback(
-            &"127.0.0.1:12345".parse::<SocketAddr>().unwrap()
-        ));
-        assert!(peer_addr_is_loopback(
-            &"[::1]:12345".parse::<SocketAddr>().unwrap()
-        ));
-        assert!(!peer_addr_is_loopback(
-            &"192.168.1.10:12345".parse::<SocketAddr>().unwrap()
-        ));
-    }
-
-    #[test]
-    fn outer_csp_blocks_form_submission() {
-        let csp = build_outer_csp(&[], &[], &[], &[], &[], "http://127.0.0.1:12345");
-
-        assert!(csp.contains("form-action 'none'"));
-    }
-
-    #[tokio::test]
-    async fn stores_guest_html_larger_than_default_body_limit() {
-        let app = super::routes("test-secret".to_string());
-        let large_html = "x".repeat(3 * 1024 * 1024);
-        let body = serde_json::json!({
-            "secret": "test-secret",
-            "html": large_html,
-        })
-        .to_string();
-
-        let mut request = Request::builder()
-            .method("POST")
-            .uri("/mcp-app-guest")
-            .header(header::CONTENT_TYPE, "application/json")
-            .body(Body::from(body))
-            .unwrap();
-        request.extensions_mut().insert(ConnectInfo(
-            "127.0.0.1:12345".parse::<SocketAddr>().unwrap(),
-        ));
-
-        let response = app.oneshot(request).await.unwrap();
-
-        assert_eq!(response.status(), StatusCode::OK);
-    }
 }

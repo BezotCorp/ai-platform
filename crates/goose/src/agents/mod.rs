@@ -1,3 +1,4 @@
+//mod.rs need to have only module declarations and public exports. So review and extract
 mod agent;
 pub mod container;
 pub mod execute_commands;
@@ -30,10 +31,9 @@ pub mod validate_extensions;
 
 pub use agent::{Agent, AgentConfig, ExtensionLoadResult, GoosePlatform};
 pub use container::Container;
-pub use execute_commands::{context_management_unsupported_message, COMPACT_TRIGGERS};
+pub use execute_commands::{COMPACT_TRIGGERS, context_management_unsupported_message};
 pub use extension::{ExtensionConfig, ExtensionError};
 pub use extension_manager::ExtensionManager;
-pub use goose_agent::events::AgentEvent;
 pub(crate) use large_response_handler::max_tool_response_size;
 pub use prompt_manager::PromptManager;
 #[cfg(feature = "scheduler")]
@@ -44,7 +44,7 @@ pub use tool_execution::ToolCallContext;
 pub use types::{RetryConfig, SessionConfig, SuccessCheck};
 
 pub(crate) fn latest_provider_session_id<'a>(
-    messages: &'a [crate::conversation::message::Message],
+    messages: &'a [bcaip_provider_types::conversations::Message],
     provider: &str,
 ) -> Option<&'a str> {
     let inference = messages

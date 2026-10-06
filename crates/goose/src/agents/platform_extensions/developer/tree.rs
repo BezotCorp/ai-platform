@@ -1,12 +1,10 @@
-use std::collections::BTreeMap;
-use std::fs;
 use std::path::{Component, Path, PathBuf};
+use std::{collections::BTreeMap, fs};
 
 use ignore::WalkBuilder;
 use rmcp::model::{CallToolResult, ContentBlock};
 use schemars::JsonSchema;
 use serde::Deserialize;
-
 #[derive(Debug, Deserialize, JsonSchema)]
 pub struct TreeParams {
     pub path: String,
@@ -216,84 +214,5 @@ fn format_lines(lines: usize) -> String {
         format!("[{}K]", lines / 1000)
     } else {
         format!("[{}]", lines)
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use rmcp::model::ContentBlock;
-    use tempfile::TempDir;
-
-    fn extract_text(result: &CallToolResult) -> &str {
-        match &result.content[0] {
-            ContentBlock::Text(t) => &t.text,
-            _ => panic!("expected text"),
-        }
-    }
-
-    fn setup_tree() -> TempDir {
-        let dir = tempfile::tempdir().unwrap();
-        fs::create_dir_all(dir.path().join("src")).unwrap();
-        fs::create_dir_all(dir.path().join("tests")).unwrap();
-        fs::write(dir.path().join("src/main.rs"), "fn main() {}\n").unwrap();
-        fs::write(dir.path().join("src/lib.rs"), "pub fn lib() {}\n").unwrap();
-        fs::write(dir.path().join("tests/test.rs"), "#[test]\nfn t() {}\n").unwrap();
-        dir
-    }
-
-    #[test]
-    fn tree_lists_files_and_directories() {
-        let dir = setup_tree();
-        let tool = TreeTool::new();
-
-        let result = tool.tree(TreeParams {
-            path: dir.path().display().to_string(),
-            depth: 2,
-        });
-
-        let text = extract_text(&result);
-        assert!(text.contains("src/"));
-        assert!(text.contains("tests/"));
-        assert!(text.contains("main.rs"));
-    }
-
-    #[test]
-    fn tree_respects_depth() {
-        let dir = tempfile::tempdir().unwrap();
-        fs::create_dir_all(dir.path().join("a/b/c")).unwrap();
-        fs::write(dir.path().join("a/b/c/deep.rs"), "fn deep() {}\n").unwrap();
-
-        let tool = TreeTool::new();
-        let result = tool.tree(TreeParams {
-            path: dir.path().display().to_string(),
-            depth: 1,
-        });
-
-        let text = extract_text(&result);
-        assert!(text.contains("a/"));
-        assert!(text.contains("b/"));
-        assert!(!text.contains("deep.rs"));
-    }
-
-    #[test]
-    fn tree_uses_gitignore() {
-        let dir = tempfile::tempdir().unwrap();
-        fs::write(dir.path().join(".gitignore"), "ignored/\n*.log\n").unwrap();
-        fs::create_dir_all(dir.path().join("ignored")).unwrap();
-        fs::write(dir.path().join("ignored/secret.rs"), "fn secret() {}\n").unwrap();
-        fs::write(dir.path().join("visible.rs"), "fn visible() {}\n").unwrap();
-        fs::write(dir.path().join("debug.log"), "hidden\n").unwrap();
-
-        let tool = TreeTool::new();
-        let result = tool.tree(TreeParams {
-            path: dir.path().display().to_string(),
-            depth: 2,
-        });
-
-        let text = extract_text(&result);
-        assert!(text.contains("visible.rs"));
-        assert!(!text.contains("ignored"));
-        assert!(!text.contains("debug.log"));
     }
 }

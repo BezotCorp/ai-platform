@@ -1,3 +1,4 @@
+//mod.rs need to have only module declarations and public exports. So review and extract
 #[cfg(feature = "tree-sitter")]
 pub mod analyze;
 #[cfg(feature = "platform-apps")]
@@ -16,13 +17,11 @@ pub mod summon;
 pub mod todo;
 pub mod tom;
 
-use std::collections::HashMap;
-
-use crate::agents::mcp_client::McpClientTrait;
-use crate::session::Session;
-use once_cell::sync::Lazy;
-
+use crate::{agents, config, model_config, scheduler_trait, session};
+use crate::{agents::mcp_client::McpClientTrait, session::Session};
 pub use ext_manager::MANAGE_EXTENSIONS_TOOL_NAME_COMPLETE;
+use once_cell::sync::Lazy;
+use std::collections::HashMap;
 
 // These are used by integration tests in crates/goose/tests/
 #[allow(unused_imports)]
@@ -236,10 +235,9 @@ pub static PLATFORM_EXTENSIONS: Lazy<HashMap<&'static str, PlatformExtensionDef>
 
 #[derive(Clone)]
 pub struct PlatformExtensionContext {
-    pub extension_manager:
-        Option<std::sync::Weak<crate::agents::extension_manager::ExtensionManager>>,
-    pub session_manager: std::sync::Arc<crate::session::SessionManager>,
-    pub scheduler: Option<std::sync::Arc<dyn crate::scheduler_trait::SchedulerTrait>>,
+    pub extension_manager: Option<std::sync::Weak<agents::extension_manager::ExtensionManager>>,
+    pub session_manager: std::sync::Arc<session::SessionManager>,
+    pub scheduler: Option<std::sync::Arc<dyn scheduler_trait::SchedulerTrait>>,
     pub session: Option<std::sync::Arc<Session>>,
     pub use_login_shell_path: bool,
 }
@@ -248,21 +246,21 @@ impl PlatformExtensionContext {
     pub async fn model_config_for_session(
         &self,
         session_id: &str,
-    ) -> Result<goose_providers::model::ModelConfig, String> {
-        if let Ok(session) = self.session_manager.get_session(session_id, false).await {
-            if let Some(model_config) = session.model_config {
-                return Ok(model_config);
-            }
+    ) -> Result<bcaip_provider_types::model::ModelConfig, String> {
+        if let Ok(session) = self.session_manager.get_session(session_id, false).await
+            && let Some(model_config) = session.model_config
+        {
+            return Ok(model_config);
         }
 
-        let config = crate::config::Config::global();
+        let config = config::Config::global();
         let provider_name = config
             .get_goose_provider()
             .map_err(|_| "Could not resolve model config: missing provider".to_string())?;
         let model_name = config
             .get_goose_model()
             .map_err(|_| "Could not resolve model config: missing model".to_string())?;
-        crate::model_config::model_config_from_user_config(&provider_name, &model_name)
+        model_config::model_config_from_user_config(&provider_name, &model_name)
             .map_err(|e| format!("Could not resolve model config: {e}"))
     }
 

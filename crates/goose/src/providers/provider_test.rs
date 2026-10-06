@@ -1,6 +1,7 @@
-use crate::{conversation::message::Message, providers::create};
+use crate::providers::create;
 use anyhow::Result;
 use futures::StreamExt;
+use bcaip_provider_types::conversations::Message;
 use rmcp::model::ToolAnnotations;
 use rmcp::{model::Tool, object};
 

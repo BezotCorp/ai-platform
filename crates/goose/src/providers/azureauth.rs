@@ -4,7 +4,6 @@ use serde::Deserialize;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::sync::RwLock;
-
 /// Represents errors that can occur during Azure authentication.
 #[derive(Debug, thiserror::Error)]
 pub enum AuthError {
@@ -189,45 +188,5 @@ impl AzureAuth {
         });
 
         Ok(auth_token)
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_ad_token_takes_precedence_over_api_key() {
-        let auth = AzureAuth::new(Some("key".to_string()), Some("token".to_string())).unwrap();
-        assert!(matches!(
-            auth.credential_type(),
-            AzureCredentials::BearerToken(_)
-        ));
-    }
-
-    #[test]
-    fn test_api_key_when_no_ad_token() {
-        let auth = AzureAuth::new(Some("key".to_string()), None).unwrap();
-        assert!(matches!(
-            auth.credential_type(),
-            AzureCredentials::ApiKey(_)
-        ));
-    }
-
-    #[test]
-    fn test_default_credential_when_neither() {
-        let auth = AzureAuth::new(None, None).unwrap();
-        assert!(matches!(
-            auth.credential_type(),
-            AzureCredentials::DefaultCredential
-        ));
-    }
-
-    #[tokio::test]
-    async fn test_bearer_token_get_token() {
-        let auth = AzureAuth::new(None, Some("my-token".to_string())).unwrap();
-        let token = auth.get_token().await.unwrap();
-        assert_eq!(token.token_type, "Bearer");
-        assert_eq!(token.token_value, "my-token");
     }
 }

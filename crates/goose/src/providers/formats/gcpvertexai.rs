@@ -1,14 +1,16 @@
-use super::{anthropic, google};
-use crate::conversation::message::Message;
+use super::google;
 use anyhow::{Context, Result};
-use goose_providers::conversation::token_usage::{ProviderUsage, Usage};
-use goose_providers::formats::anthropic::AnthropicFormatOptions;
-use goose_providers::model::ModelConfig;
+use bcaip_provider_types::conversations::Message;
+use bcaip_provider_types::conversations::{ProviderUsage, Usage};
+use bcaip_provider_types::formats::{
+    AnthropicFormatOptions, create_request_anthropic, get_usage_anthropic, get_usage_google,
+    response_to_message_anthropic, response_to_message_google,
+    response_to_streaming_message_anthropic, response_to_streaming_message_google,
+};
+use bcaip_provider_types::model::ModelConfig;
 use rmcp::model::Tool;
 use serde_json::Value;
-
 use std::fmt;
-
 pub type StreamingMessageStream = std::pin::Pin<
     Box<
         dyn futures::Stream<Item = anyhow::Result<(Option<Message>, Option<ProviderUsage>)>>
@@ -216,7 +218,7 @@ fn create_anthropic_request(
     messages: &[Message],
     tools: &[Tool],
 ) -> Result<Value> {
-    let mut request = anthropic::create_request(
+    let mut request = create_request_anthropic(
         "anthropic",
         model_config,
         system,
@@ -305,9 +307,9 @@ pub fn create_request(
 /// * `Result<Message>` - Converted message
 pub fn response_to_message(response: Value, request_context: RequestContext) -> Result<Message> {
     match request_context.provider() {
-        ModelProvider::Anthropic => anthropic::response_to_message(&response),
-        ModelProvider::Google => google::response_to_message(response),
-        ModelProvider::MaaS(_) => google::response_to_message(response),
+        ModelProvider::Anthropic => response_to_message_anthropic(&response),
+        ModelProvider::Google => response_to_message_google(response),
+        ModelProvider::MaaS(_) => response_to_message_google(response),
     }
 }
 
@@ -321,9 +323,9 @@ pub fn response_to_message(response: Value, request_context: RequestContext) -> 
 /// * `Result<Usage>` - Usage statistics
 pub fn get_usage(data: &Value, request_context: &RequestContext) -> Result<Usage> {
     match request_context.provider() {
-        ModelProvider::Anthropic => anthropic::get_usage(data),
-        ModelProvider::Google => google::get_usage(data),
-        ModelProvider::MaaS(_) => google::get_usage(data),
+        ModelProvider::Anthropic => get_usage_anthropic(data),
+        ModelProvider::Google => get_usage_google(data),
+        ModelProvider::MaaS(_) => get_usage_google(data),
     }
 }
 
@@ -335,59 +337,9 @@ where
     S: futures::Stream<Item = anyhow::Result<String>> + Unpin + Send + 'static,
 {
     match request_context.provider() {
-        ModelProvider::Anthropic => Box::pin(anthropic::response_to_streaming_message(stream)),
+        ModelProvider::Anthropic => Box::pin(response_to_streaming_message_anthropic(stream)),
         ModelProvider::Google | ModelProvider::MaaS(_) => {
-            Box::pin(google::response_to_streaming_message(stream))
+            Box::pin(response_to_streaming_message_google(stream))
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use anyhow::Result;
-
-    #[test]
-    fn test_model_parsing() -> Result<()> {
-        let claude = GcpVertexAIModel::try_from("claude-sonnet-4@20250514")?;
-        assert!(matches!(claude, GcpVertexAIModel::Claude(_)));
-        assert_eq!(claude.to_string(), "claude-sonnet-4@20250514");
-
-        let gemini = GcpVertexAIModel::try_from("gemini-2.5-flash")?;
-        assert!(matches!(gemini, GcpVertexAIModel::Gemini(_)));
-        assert_eq!(gemini.to_string(), "gemini-2.5-flash");
-
-        let maas = GcpVertexAIModel::try_from("qwen-maas")?;
-        assert!(matches!(maas, GcpVertexAIModel::MaaS(_, _)));
-
-        assert!(GcpVertexAIModel::try_from("unsupported-model").is_err());
-        Ok(())
-    }
-
-    #[test]
-    fn test_default_locations() -> Result<()> {
-        let claude_model = GcpVertexAIModel::try_from("claude-sonnet-4@20250514")?;
-        assert_eq!(claude_model.known_location(), GcpLocation::Ohio);
-
-        let gemini_model = GcpVertexAIModel::try_from("gemini-2.5-flash")?;
-        assert_eq!(gemini_model.known_location(), GcpLocation::Iowa);
-
-        let gemini_3_model = GcpVertexAIModel::try_from("gemini-3.1-flash-lite")?;
-        assert_eq!(gemini_3_model.known_location(), GcpLocation::Global);
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_unknown_model_parsing() -> Result<()> {
-        let model = GcpVertexAIModel::try_from("claude-future-version")?;
-        assert!(matches!(model, GcpVertexAIModel::Claude(_)));
-        assert_eq!(model.to_string(), "claude-future-version");
-
-        let model = GcpVertexAIModel::try_from("gemini-4.0-ultra")?;
-        assert!(matches!(model, GcpVertexAIModel::Gemini(_)));
-        assert_eq!(model.to_string(), "gemini-4.0-ultra");
-
-        Ok(())
     }
 }

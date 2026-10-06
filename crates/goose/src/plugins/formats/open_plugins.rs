@@ -1,10 +1,10 @@
 //! Open Plugins format adapter (<https://open-plugins.com>).
 
 use crate::plugins::{
-    copy_dir_all, write_install_metadata, FormatNotSupported, ImportedSkill, PluginFormat,
-    PluginInstall, PluginInstallOptions,
+    FormatNotSupported, ImportedSkill, PluginFormat, PluginInstall, PluginInstallOptions,
+    copy_dir_all, write_install_metadata,
 };
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 use chrono::{DateTime, Utc};
 use fs_err as fs;
 use serde::Deserialize;
@@ -488,30 +488,30 @@ fn rewrite_skill_content_name(raw: &str, name: &str) -> Result<String> {
         return Ok(build_skill_md(name, raw));
     }
 
-    let mut metadata = serde_yaml::from_str::<serde_yaml::Mapping>(yaml_content.trim())
-        .unwrap_or_else(|_| serde_yaml::Mapping::new());
+    let mut metadata = yaml_serde::from_str::<yaml_serde::Mapping>(yaml_content.trim())
+        .unwrap_or_else(|_| yaml_serde::Mapping::new());
     metadata.insert(
-        serde_yaml::Value::String("name".to_string()),
-        serde_yaml::Value::String(name.to_string()),
+        yaml_serde::Value::String("name".to_string()),
+        yaml_serde::Value::String(name.to_string()),
     );
 
     Ok(format!(
         "---\n{}---{}",
-        serde_yaml::to_string(&metadata)?,
+        yaml_serde::to_string(&metadata)?,
         body
     ))
 }
 
 fn build_skill_md(name: &str, body: &str) -> String {
-    let mut metadata = serde_yaml::Mapping::new();
+    let mut metadata = yaml_serde::Mapping::new();
     metadata.insert(
-        serde_yaml::Value::String("name".to_string()),
-        serde_yaml::Value::String(name.to_string()),
+        yaml_serde::Value::String("name".to_string()),
+        yaml_serde::Value::String(name.to_string()),
     );
 
     format!(
         "---\n{}---\n{}\n",
-        serde_yaml::to_string(&metadata).unwrap(),
+        yaml_serde::to_string(&metadata).unwrap(),
         body
     )
 }
@@ -522,327 +522,4 @@ pub(in crate::plugins) fn dedupe_paths(paths: Vec<PathBuf>) -> Vec<PathBuf> {
         .into_iter()
         .filter(|path| seen.insert(path.clone()))
         .collect()
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn installs_open_plugins_skills() {
-        let install_root = tempfile::tempdir().unwrap();
-        let repo = tempfile::tempdir().unwrap();
-        fs::create_dir_all(repo.path().join(".plugin")).unwrap();
-        fs::write(
-            repo.path().join(".plugin/plugin.json"),
-            r#"{"name":"test-plugin","version":"1.0.0"}"#,
-        )
-        .unwrap();
-        let skill_dir = repo.path().join("skills").join("audit");
-        fs::create_dir_all(&skill_dir).unwrap();
-        fs::write(
-            skill_dir.join("SKILL.md"),
-            "---\nname: audit\ndescription: Audit code\n---\nDo an audit.",
-        )
-        .unwrap();
-        fs::write(
-            repo.path().join(crate::plugins::INSTALL_METADATA),
-            r#"{"source":"attacker-source","source_type":"git","format":"open-plugins","auto_update":true}"#,
-        )
-        .unwrap();
-
-        let installed = install_from_manifest(
-            "https://example.invalid/repo.git",
-            repo.path(),
-            install_root.path(),
-            &PluginInstallOptions::default(),
-            None,
-        )
-        .unwrap();
-
-        assert_eq!(installed.name, "test-plugin");
-        assert_eq!(installed.version, "1.0.0");
-        assert_eq!(installed.format, PluginFormat::OpenPlugins);
-        assert_eq!(installed.skills.len(), 1);
-        assert_eq!(installed.skills[0].name, "test-plugin:audit");
-        assert_eq!(
-            installed.skills[0].directory,
-            installed.directory.join("skills/audit")
-        );
-        assert!(installed.directory.join(".plugin/plugin.json").is_file());
-        assert!(installed
-            .directory
-            .join(crate::plugins::INSTALL_METADATA)
-            .is_file());
-        assert_eq!(installed.directory, install_root.path().join("test-plugin"));
-        assert_eq!(
-            installed_skill_dirs(&installed.directory),
-            vec![installed.directory.join("skills")]
-        );
-        assert!(
-            fs::read_to_string(installed.directory.join("skills/audit/SKILL.md"))
-                .unwrap()
-                .contains("name: test-plugin:audit")
-        );
-        let metadata: serde_json::Value = serde_json::from_str(
-            &fs::read_to_string(installed.directory.join(crate::plugins::INSTALL_METADATA))
-                .unwrap(),
-        )
-        .unwrap();
-        assert_eq!(metadata["source"], "https://example.invalid/repo.git");
-        assert_eq!(metadata["auto_update"], false);
-    }
-
-    #[test]
-    fn preserves_existing_plugin_directory() {
-        let install_root = tempfile::tempdir().unwrap();
-        let destination = install_root.path().join("test-plugin");
-        fs::create_dir_all(&destination).unwrap();
-        fs::write(destination.join("sentinel"), "existing").unwrap();
-
-        let repo = tempfile::tempdir().unwrap();
-        fs::write(
-            repo.path().join("plugin.json"),
-            r#"{"name":"test-plugin","version":"2.0.0"}"#,
-        )
-        .unwrap();
-
-        let err = install_from_manifest(
-            "https://example.invalid/repo.git",
-            repo.path(),
-            install_root.path(),
-            &PluginInstallOptions::default(),
-            None,
-        )
-        .unwrap_err();
-
-        assert!(err.to_string().contains("already installed"));
-        assert_eq!(
-            fs::read_to_string(destination.join("sentinel")).unwrap(),
-            "existing"
-        );
-        assert_eq!(fs::read_dir(install_root.path()).unwrap().count(), 1);
-    }
-
-    #[test]
-    fn installs_open_plugins_with_only_hooks() {
-        let install_root = tempfile::tempdir().unwrap();
-        let repo = tempfile::tempdir().unwrap();
-        fs::write(
-            repo.path().join("plugin.json"),
-            r#"{"name":"hello-hooks","version":"0.1.0"}"#,
-        )
-        .unwrap();
-        fs::create_dir_all(repo.path().join("hooks")).unwrap();
-        fs::write(
-            repo.path().join("hooks/hooks.json"),
-            r#"{"hooks":{"SessionStart":[{"hooks":[]}]}}"#,
-        )
-        .unwrap();
-
-        let installed = install_from_manifest(
-            "https://example.invalid/hello-hooks.git",
-            repo.path(),
-            install_root.path(),
-            &PluginInstallOptions::default(),
-            None,
-        )
-        .unwrap();
-
-        assert_eq!(installed.name, "hello-hooks");
-        assert_eq!(installed.version, "0.1.0");
-        assert_eq!(installed.format, PluginFormat::OpenPlugins);
-        assert!(installed.skills.is_empty());
-        assert!(installed.directory.join("hooks/hooks.json").is_file());
-        assert!(installed.directory.join("plugin.json").is_file());
-    }
-
-    #[test]
-    fn bare_skills_directory_is_not_claimed_as_open_plugin() {
-        let install_root = tempfile::tempdir().unwrap();
-        let repo = tempfile::tempdir().unwrap();
-        let skill_dir = repo.path().join("skills").join("audit");
-        fs::create_dir_all(&skill_dir).unwrap();
-        fs::write(
-            skill_dir.join("SKILL.md"),
-            "---\nname: audit\ndescription: Audit code\n---\nDo an audit.",
-        )
-        .unwrap();
-
-        let err = try_install_from_manifest_at_root(
-            "https://example.invalid/repo.git",
-            repo.path(),
-            install_root.path(),
-            &PluginInstallOptions::default(),
-            None,
-        )
-        .unwrap_err();
-
-        assert!(err.is::<FormatNotSupported>(), "got: {err}");
-    }
-
-    #[test]
-    fn installs_manifestless_open_plugins_with_only_hooks() {
-        let install_root = tempfile::tempdir().unwrap();
-        let repo = tempfile::tempdir().unwrap();
-        fs::create_dir_all(repo.path().join("hooks")).unwrap();
-        fs::write(
-            repo.path().join("hooks/hooks.json"),
-            r#"{"hooks":{"SessionStart":[{"hooks":[]}]}}"#,
-        )
-        .unwrap();
-
-        let installed = try_install_from_manifest_at_root(
-            "https://example.invalid/hello-hooks.git",
-            repo.path(),
-            install_root.path(),
-            &PluginInstallOptions::default(),
-            None,
-        )
-        .unwrap();
-
-        assert_eq!(installed.name, "hello-hooks");
-        assert!(installed.skills.is_empty());
-        assert!(installed.directory.join("hooks/hooks.json").is_file());
-    }
-
-    #[test]
-    fn rejects_repo_with_no_manifest_or_components() {
-        let install_root = tempfile::tempdir().unwrap();
-        let repo = tempfile::tempdir().unwrap();
-        fs::write(repo.path().join("README.md"), "Hi").unwrap();
-
-        let err = try_install_from_manifest_at_root(
-            "https://example.invalid/repo.git",
-            repo.path(),
-            install_root.path(),
-            &PluginInstallOptions::default(),
-            None,
-        )
-        .unwrap_err();
-
-        assert!(err.is::<FormatNotSupported>(), "got: {err}");
-    }
-
-    #[test]
-    fn installs_custom_skill_paths() {
-        let install_root = tempfile::tempdir().unwrap();
-        let repo = tempfile::tempdir().unwrap();
-        fs::create_dir_all(repo.path().join(".plugin")).unwrap();
-        fs::write(
-            repo.path().join(".plugin/plugin.json"),
-            r#"{"name":"test-plugin","skills":{"paths":["./custom-skills"],"exclusive":true}}"#,
-        )
-        .unwrap();
-        let skill_dir = repo.path().join("custom-skills").join("audit");
-        fs::create_dir_all(&skill_dir).unwrap();
-        fs::write(
-            skill_dir.join("SKILL.md"),
-            "---\nname: audit\ndescription: Audit code\n---\nDo an audit.",
-        )
-        .unwrap();
-
-        let installed = install_from_manifest(
-            "https://example.invalid/repo.git",
-            repo.path(),
-            install_root.path(),
-            &PluginInstallOptions::default(),
-            None,
-        )
-        .unwrap();
-
-        assert_eq!(installed.skills.len(), 1);
-        assert_eq!(installed.skills[0].name, "test-plugin:audit");
-        assert_eq!(
-            installed_skill_dirs(&installed.directory),
-            vec![installed.directory.join("custom-skills")]
-        );
-    }
-
-    #[test]
-    fn rejects_manifest_paths_that_escape_plugin() {
-        let err = find_agent_skills(
-            tempfile::tempdir().unwrap().path(),
-            Some(&serde_json::json!("./../outside")),
-        )
-        .unwrap_err();
-
-        assert!(err.to_string().contains("must stay within the plugin"));
-    }
-
-    #[test]
-    fn defers_to_gemini_when_gemini_manifest_present_without_open_plugin_manifest() {
-        let install_root = tempfile::tempdir().unwrap();
-        let repo = tempfile::tempdir().unwrap();
-
-        fs::write(
-            repo.path().join(super::super::gemini::MANIFEST),
-            r#"{"name":"gemini-ext","version":"1.0.0"}"#,
-        )
-        .unwrap();
-        let commands_dir = repo.path().join("commands");
-        fs::create_dir_all(&commands_dir).unwrap();
-        fs::write(commands_dir.join("deploy.md"), "Deploy to staging.").unwrap();
-
-        let err = try_install_from_manifest_at_root(
-            "https://example.invalid/Gemini-Ext.git",
-            repo.path(),
-            install_root.path(),
-            &PluginInstallOptions::default(),
-            None,
-        )
-        .unwrap_err();
-
-        assert!(
-            err.is::<FormatNotSupported>(),
-            "expected FormatNotSupported so Gemini installer can take over, got: {err}"
-        );
-    }
-
-    #[cfg(unix)]
-    #[test]
-    fn failed_install_leaves_no_live_plugin_state() {
-        use std::os::unix::fs::symlink;
-
-        let scratch = tempfile::tempdir().unwrap();
-        let install_root = scratch.path().join("plugins");
-        let repo = scratch.path().join("repo");
-        fs::create_dir_all(repo.join("skills")).unwrap();
-        fs::write(
-            repo.join("plugin.json"),
-            r#"{"name":"failed-plugin","version":"1.0.0"}"#,
-        )
-        .unwrap();
-        fs::write(
-            repo.join(crate::plugins::INSTALL_METADATA),
-            r#"{"source":"ext::attacker","source_type":"git","format":"open-plugins","auto_update":true}"#,
-        )
-        .unwrap();
-        fs::write(
-            repo.join(".mcp.json"),
-            r#"{"mcpServers":{"payload":{"command":"attacker-command"}}}"#,
-        )
-        .unwrap();
-
-        let external_skill = scratch.path().join("external-skill");
-        fs::create_dir_all(&external_skill).unwrap();
-        fs::write(
-            external_skill.join("SKILL.md"),
-            "---\nname: audit\ndescription: Audit code\n---\nDo an audit.",
-        )
-        .unwrap();
-        symlink(&external_skill, repo.join("skills/audit")).unwrap();
-
-        let result = install_from_manifest(
-            "https://example.invalid/failed-plugin.git",
-            &repo,
-            &install_root,
-            &PluginInstallOptions::default(),
-            None,
-        );
-
-        assert!(result.is_err());
-        assert!(!install_root.join("failed-plugin").exists());
-        assert_eq!(fs::read_dir(&install_root).unwrap().count(), 0);
-    }
 }

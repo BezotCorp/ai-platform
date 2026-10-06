@@ -16,7 +16,7 @@
     {
       "name": "qwen/qwen3.6-35b-a3b",
       "context_limit": 256000,
-      "input_token_cost": 0.00000270,
+      "input_token_cost": 0.0000027,
       "output_token_cost": 0.00001622,
       "currency": "USD"
     },

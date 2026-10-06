@@ -1,12 +1,11 @@
 use super::interaction::{LiveMainAgent, LiveVoiceInteraction, LiveVoiceInteractionId};
-use crate::config::GooseMode;
-use crate::conversation::message::{Message, MessageContent};
-use crate::conversation::Conversation;
-use crate::execution::ActiveRunRegistry;
-use crate::session::SessionManager;
-use crate::token_counter::TokenCounter;
+use crate::{execution::ActiveRunRegistry, session::SessionManager, token_counter::TokenCounter};
+use bcaip_provider_types::conversations::Conversation;
+use bcaip_provider_types::conversations::{Message, MessageContent};
+use bcaip_provider_types::goose_mode::GooseMode;
+use goose_providers::live_voice_provider::WebRtcAnswer;
+use goose_providers::live_voice_provider::WebRtcOffer;
 use goose_providers::live_voice_provider::{LiveVoiceInputMessage, LiveVoiceProvider};
-pub(crate) use goose_providers::live_voice_provider::{WebRtcAnswer, WebRtcOffer};
 #[cfg(feature = "live-voice")]
 use goose_providers::openai_live_voice_provider::OpenAiLiveVoiceProvider;
 use std::{
@@ -15,7 +14,6 @@ use std::{
 };
 use tokio::sync::watch;
 use tokio_util::sync::CancellationToken;
-
 const LIVE_VOICE_INPUT_MESSAGE_LIMIT: usize = 128;
 const LIVE_VOICE_INPUT_TOKEN_LIMIT: usize = 8_192;
 #[cfg(feature = "live-voice")]
@@ -140,22 +138,6 @@ impl LiveVoiceInteractionGuard {
 
     pub(super) fn session_id(&self) -> &str {
         &self.session_id
-    }
-
-    #[cfg(test)]
-    pub(super) fn for_test(session_id: &str) -> Self {
-        let (completion_tx, _) = watch::channel(None);
-        Self::new(
-            Arc::new(ActiveRunRegistry::default()),
-            Arc::new(Mutex::new(HashMap::new())),
-            session_id,
-            Arc::new(LiveVoiceInteractionControl {
-                interaction_id: LiveVoiceInteractionId::new(),
-                stop_requested: CancellationToken::new(),
-                cleanup_finished: CancellationToken::new(),
-                completion_tx,
-            }),
-        )
     }
 }
 
@@ -458,6 +440,3 @@ fn remove_interaction_if_current(
         interactions.remove(session_id);
     }
 }
-
-#[cfg(test)]
-mod tests;

@@ -1,12 +1,20 @@
-use super::*;
+use crate::acp::server::server_informations::{GooseAcpAgent, ResultExt};
+use crate::config::Config;
 #[cfg(feature = "local-inference")]
 use crate::dictation::providers::transcribe_local;
 use crate::dictation::providers::{
-    all_providers, is_configured, transcribe_with_model, transcribe_with_provider,
-    DictationProvider,
+    DictationProvider, all_providers, is_configured, transcribe_with_model,
+    transcribe_with_provider,
 };
 #[cfg(feature = "local-inference")]
 use crate::dictation::whisper;
+use goose_sdk_types::custom_requests::{
+    DictationConfigRequest, DictationConfigResponse, DictationModelCancelRequest,
+    DictationModelDeleteRequest, DictationModelDownloadProgressRequest,
+    DictationModelDownloadProgressResponse, DictationModelDownloadRequest, DictationModelOption,
+    DictationModelsListRequest, DictationModelsListResponse, DictationProviderStatusEntry,
+    DictationTranscribeRequest, DictationTranscribeResponse, EmptyResponse,
+};
 
 const OPENAI_TRANSCRIPTION_MODEL_CONFIG_KEY: &str = "OPENAI_TRANSCRIPTION_MODEL";
 const GROQ_TRANSCRIPTION_MODEL_CONFIG_KEY: &str = "GROQ_TRANSCRIPTION_MODEL";
@@ -20,7 +28,7 @@ impl GooseAcpAgent {
         &self,
         req: DictationTranscribeRequest,
     ) -> Result<DictationTranscribeResponse, agent_client_protocol::Error> {
-        use base64::{engine::general_purpose::STANDARD as BASE64, Engine};
+        use base64::{Engine, engine::general_purpose::STANDARD as BASE64};
         let config = crate::config::Config::global();
 
         #[cfg(not(feature = "local-inference"))]
@@ -145,8 +153,8 @@ impl GooseAcpAgent {
     ) -> Result<DictationModelsListResponse, agent_client_protocol::Error> {
         #[cfg(feature = "local-inference")]
         {
-            use crate::download_manager::{get_download_manager, DownloadStatus};
-
+            use bcaip_download_manager::{DownloadStatus, get_download_manager};
+            use goose_sdk_types::custom_requests::DictationLocalModelStatus;
             let manager = get_download_manager();
             let recommended_id = whisper::recommend_model();
             let models = whisper::available_models()
@@ -178,8 +186,7 @@ impl GooseAcpAgent {
     ) -> Result<EmptyResponse, agent_client_protocol::Error> {
         #[cfg(feature = "local-inference")]
         {
-            use crate::download_manager::get_download_manager;
-
+            use bcaip_download_manager::get_download_manager;
             let model = whisper::get_model(&_req.model_id).ok_or_else(|| {
                 agent_client_protocol::Error::invalid_params().data("Unknown model id")
             })?;
@@ -212,6 +219,7 @@ impl GooseAcpAgent {
                                 whisper::LOCAL_WHISPER_MODEL_CONFIG_KEY,
                                 model_id_for_config.clone(),
                             ) {
+                                use tracing::error;
                                 error!("Failed to save LOCAL_WHISPER_MODEL after download: {}", e);
                             }
                         }
@@ -233,8 +241,8 @@ impl GooseAcpAgent {
     ) -> Result<DictationModelDownloadProgressResponse, agent_client_protocol::Error> {
         #[cfg(feature = "local-inference")]
         {
-            use crate::download_manager::get_download_manager;
-
+            use bcaip_download_manager::get_download_manager;
+            use goose_sdk_types::custom_requests::DictationDownloadProgress;
             let manager = get_download_manager();
             let progress =
                 manager
@@ -263,8 +271,7 @@ impl GooseAcpAgent {
     ) -> Result<EmptyResponse, agent_client_protocol::Error> {
         #[cfg(feature = "local-inference")]
         {
-            use crate::download_manager::get_download_manager;
-
+            use bcaip_download_manager::get_download_manager;
             let manager = get_download_manager();
             manager.cancel_download(&_req.model_id).internal_err()?;
 

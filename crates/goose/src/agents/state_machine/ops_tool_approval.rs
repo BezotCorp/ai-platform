@@ -2,25 +2,26 @@
 
 use std::collections::{HashMap, HashSet};
 
-use anyhow::Result;
-use async_trait::async_trait;
-
+use crate::agents::state_machine::GooseEffect;
 use crate::agents::state_machine::ops_toolcalling::request_was_advertised;
-use crate::agents::state_machine::{
-    applied, messages_since_kickoff, not_applicable, ConversationEffect, Emitter, GooseEffect,
-    Operation, OperationResult,
-};
 use crate::config::permission::PermissionLevel;
-use crate::config::GooseMode;
-use crate::conversation::message::{ActionRequiredData, Message, MessageContent, ToolRequest};
-use crate::conversation::Conversation;
-use crate::permission::Permission;
 use crate::session::Session;
 use crate::tool_inspection::{
-    get_security_finding_id_from_results, InspectionAction, ToolInspectionManager,
+    InspectionAction, ToolInspectionManager, get_security_finding_id_from_results,
 };
+use anyhow::Result;
+use async_trait::async_trait;
+use bcaip_agent::operation::{
+    ConversationEffect, Emitter, Operation, OperationResult, applied, messages_since_kickoff,
+    not_applicable,
+};
+use bcaip_provider_types::conversations::Conversation;
+use bcaip_provider_types::conversations::{
+    ActionRequiredData, Message, MessageContent, ToolRequest,
+};
+use bcaip_provider_types::goose_mode::GooseMode;
+use bcaip_provider_types::permission::Permission;
 use tokio::sync::Mutex;
-
 pub const TOOL_EXECUTABLE_KEY: &str = "goose.executable";
 
 pub struct ToolApprovalOperation<'a> {

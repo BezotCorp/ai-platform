@@ -1,10 +1,9 @@
-use super::{default_inventory_configured, default_inventory_identity, InventoryIdentityInput};
+use super::{InventoryIdentityInput, default_inventory_configured, default_inventory_identity};
 use crate::config::Config;
-use crate::providers::base::ProviderMetadata;
 use anyhow::Result;
+use bcaip_provider_types::base::ProviderMetadata;
 use once_cell::sync::Lazy;
 use std::sync::Arc;
-
 static DEFAULT_INVENTORY_IDENTITY_RESOLVER: Lazy<InventoryIdentityResolver> =
     Lazy::new(|| Arc::new(|| unreachable!("default inventory identity resolver marker")));
 

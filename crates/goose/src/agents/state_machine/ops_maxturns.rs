@@ -1,16 +1,14 @@
 //! Ends the turn when the agent has used its autonomous turn budget.
 
 use crate::agents::state_machine::effects::GooseEffect;
-use crate::agents::state_machine::{
-    assistant_turn_count, messages_since_kickoff, not_applicable, yielded_with, Emitter, Operation,
-    OperationResult,
-};
-use crate::conversation::message::Message;
-use crate::conversation::Conversation;
 use crate::session::Session;
 use anyhow::Result;
 use async_trait::async_trait;
-
+use bcaip_agent::operation::{
+    Emitter, Operation, OperationResult, assistant_turn_count, messages_since_kickoff,
+    not_applicable, yielded_with,
+};
+use bcaip_provider_types::conversations::{Conversation, Message};
 pub const MAX_TURNS_MESSAGE: &str = "I've reached the maximum number of actions I can do without user input. Would you like me to continue?";
 
 pub struct MaxTurnsOperation {

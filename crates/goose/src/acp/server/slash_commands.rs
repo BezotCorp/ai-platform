@@ -1,6 +1,6 @@
-use super::*;
+use crate::acp::server::server_informations::GooseAcpAgent;
+use goose_sdk_types::custom_requests::{ListSlashCommandsRequest, ListSlashCommandsResponse};
 use std::path::PathBuf;
-
 impl GooseAcpAgent {
     pub(super) async fn on_list_slash_commands(
         &self,
@@ -20,7 +20,7 @@ impl GooseAcpAgent {
             .filter(|session_id| !session_id.is_empty())
         {
             Some(
-                self.session_manager
+                self.session_manager()
                     .get_session(session_id, false)
                     .await
                     .map_err(|_| {

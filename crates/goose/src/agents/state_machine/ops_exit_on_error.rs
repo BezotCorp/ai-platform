@@ -1,15 +1,12 @@
 //! Ends the turn when an error remains at the end of the conversation.
-
+use crate::agents::state_machine::effects::GooseEffect;
+use crate::session::Session;
 use anyhow::Result;
 use async_trait::async_trait;
-
-use crate::agents::state_machine::effects::GooseEffect;
-use crate::agents::state_machine::{
-    not_applicable, trailing_error, yielded, Emitter, Operation, OperationResult,
+use bcaip_agent::operation::{
+    Emitter, Operation, OperationResult, not_applicable, trailing_error, yielded,
 };
-use crate::conversation::Conversation;
-use crate::session::Session;
-
+use bcaip_provider_types::conversations::Conversation;
 pub struct ExitOnErrorOperation;
 
 #[async_trait]

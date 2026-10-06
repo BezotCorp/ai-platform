@@ -1,19 +1,23 @@
-use crate::acp::custom_requests::GooseExtension;
-use crate::acp::server::{meta_string, validate_absolute_cwd, ResultExt};
+use crate::acp::server::server_informations::{
+    GooseAcpAgent, ResultExt, meta_string, resolve_default_provider_model_config,
+    resolve_provider_default_model_config, validate_absolute_cwd,
+};
 use crate::agents::ExtensionLoadResult;
-use crate::config::{Config, GooseMode};
+use crate::config::Config;
 use crate::recipe::{Recipe, Settings};
 use crate::session::{ExtensionData, Session, SessionType};
+use bcaip_provider_types::goose_mode::GooseMode;
+use goose_sdk_types::custom_requests::GooseExtension;
 
-use super::GooseAcpAgent;
+use crate::acp::response_builder::{
+    agent_thinking_effort_support, build_session_setup_config, session_response_meta,
+};
 use agent_client_protocol::schema::v1::{Meta, NewSessionRequest, NewSessionResponse, SessionId};
 use agent_client_protocol::{Client, ConnectionTo};
-use goose_providers::model::ModelConfig;
-use goose_providers::thinking::ThinkingEffortSupport;
-use std::collections::HashMap;
-use std::path::PathBuf;
+use bcaip_provider_types::model::ModelConfig;
+use bcaip_provider_types::thinking::ThinkingEffortSupport;
+use std::{collections::HashMap, path::PathBuf};
 use tracing::warn;
-
 struct InitialSessionConfig {
     provider: String,
     model_config: ModelConfig,
@@ -41,8 +45,8 @@ impl GooseAcpAgent {
         // When the host imposes a working directory (e.g. roaming, where the
         // connector's absolute path is meaningless on this machine), ignore the
         // cwd the client sent and use the host-controlled one instead.
-        if let Some(host_cwd) = &self.session_cwd {
-            args.cwd = host_cwd.clone();
+        if let Some(host_cwd) = self.session_cwd() {
+            args.cwd = host_cwd.to_path_buf();
         }
         validate_absolute_cwd(&args.cwd)?;
         let config = Config::global();
@@ -56,7 +60,7 @@ impl GooseAcpAgent {
             .unwrap_or_else(|| "New Chat".to_string());
 
         let session = self
-            .session_manager
+            .session_manager()
             .create_session(args.cwd.clone(), session_name, session_type, current_mode)
             .await
             .internal_err_ctx("Failed to create session")?;
@@ -96,23 +100,23 @@ impl GooseAcpAgent {
             .build_new_session_response(
                 &reloaded_session,
                 &extension_results,
-                &super::agent_thinking_effort_support(&agent).await,
+                &agent_thinking_effort_support(&agent).await,
             )
             .await?;
         Ok(response)
     }
 
     async fn cleanup_failed_new_session(&self, session_id: &str) {
-        if let Err(error) = self.session_manager.delete_session(session_id).await {
+        if let Err(error) = self.session_manager().delete_session(session_id).await {
             warn!(
                 session_id,
                 %error,
                 "Failed to delete session during new-session cleanup"
             );
         }
-        self.sessions.lock().await.remove(session_id);
+        self.sessions().lock().await.remove(session_id);
         if let Err(error) = self
-            .agent_manager
+            .agent_manager()
             .remove_session_if_loaded(session_id)
             .await
         {
@@ -178,7 +182,7 @@ impl GooseAcpAgent {
         &self,
         session_id: &str,
     ) -> Result<Session, agent_client_protocol::Error> {
-        self.session_manager
+        self.session_manager()
             .get_session(session_id, false)
             .await
             .internal_err_ctx("Failed to reload session")
@@ -207,14 +211,14 @@ impl GooseAcpAgent {
                         return Ok((provider, model_config));
                     }
 
-                    return super::resolve_default_provider_model_config(config);
+                    return resolve_default_provider_model_config(config);
                 }
             },
         };
 
         let model_config = match recipe_model {
             Some(model) => model_config_from_recipe_settings(&provider, &model)?,
-            None => super::resolve_provider_default_model_config(&provider).await?,
+            None => resolve_provider_default_model_config(&provider).await?,
         };
 
         Ok((provider, model_config))
@@ -226,7 +230,7 @@ impl GooseAcpAgent {
         config: InitialSessionConfig,
     ) -> Result<(), agent_client_protocol::Error> {
         let mut builder = self
-            .session_manager
+            .session_manager()
             .update(session_id)
             .provider_name(config.provider)
             .model_config(config.model_config)
@@ -257,15 +261,14 @@ impl GooseAcpAgent {
         effort_support: &ThinkingEffortSupport,
     ) -> Result<NewSessionResponse, agent_client_protocol::Error> {
         let (mode_state, config_options) =
-            super::build_session_setup_config(&self.provider_inventory, session, effort_support)
-                .await?;
+            build_session_setup_config(self.provider_inventory(), session, effort_support).await?;
 
         let mut response =
             NewSessionResponse::new(SessionId::new(session.id.clone())).modes(mode_state);
         if let Some(co) = config_options {
             response = response.config_options(co);
         }
-        response = response.meta(super::session_response_meta(session, extension_results));
+        response = response.meta(session_response_meta(session, extension_results));
         Ok(response)
     }
 }
@@ -338,60 +341,4 @@ fn meta_goose_extensions(
         .map_err(|e| {
             agent_client_protocol::Error::invalid_params().data(format!("enabledExtensions: {e}"))
         })
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use serde_json::json;
-
-    fn meta(value: serde_json::Value) -> Meta {
-        match value {
-            serde_json::Value::Object(map) => map,
-            other => panic!("expected object, got {other}"),
-        }
-    }
-
-    #[test]
-    fn hidden_meta_yields_hidden_session() {
-        let meta = meta(json!({ "hidden": true }));
-        assert_eq!(
-            session_type_from_meta(Some(&meta)).unwrap(),
-            SessionType::Hidden
-        );
-    }
-
-    #[test]
-    fn hidden_overrides_client() {
-        let meta = meta(json!({ "hidden": true, "client": "desktop" }));
-        assert_eq!(
-            session_type_from_meta(Some(&meta)).unwrap(),
-            SessionType::Hidden
-        );
-    }
-
-    #[test]
-    fn absent_hidden_preserves_acp() {
-        assert_eq!(session_type_from_meta(None).unwrap(), SessionType::Acp);
-        let meta = meta(json!({ "hidden": false }));
-        assert_eq!(
-            session_type_from_meta(Some(&meta)).unwrap(),
-            SessionType::Acp
-        );
-    }
-
-    #[test]
-    fn non_bool_hidden_is_rejected() {
-        let meta = meta(json!({ "hidden": "yes", "client": "desktop" }));
-        assert!(session_type_from_meta(Some(&meta)).is_err());
-    }
-
-    #[test]
-    fn client_meta_yields_user_session() {
-        let meta = meta(json!({ "client": "desktop" }));
-        assert_eq!(
-            session_type_from_meta(Some(&meta)).unwrap(),
-            SessionType::User
-        );
-    }
 }

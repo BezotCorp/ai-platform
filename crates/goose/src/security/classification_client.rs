@@ -1,9 +1,7 @@
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-use std::time::Duration;
+use std::{collections::HashMap, time::Duration};
 use url::Url;
-
 /// Request format following HuggingFace Inference Text Classification API specification
 #[derive(Debug, Serialize)]
 struct ClassificationRequest {

@@ -1,11 +1,9 @@
+use crate::action_required_manager::ElicitationOutcome;
+use crate::session::SessionManager;
 use anyhow::Result;
+use bcaip_provider_types::conversations::{Message, MessageContent};
 use rmcp::model::ElicitationAction;
 use serde_json::Value;
-
-use crate::action_required_manager::ElicitationOutcome;
-use crate::conversation::message::{Message, MessageContent};
-use crate::session::SessionManager;
-
 fn elicitation_response_user_data(response: &ElicitationOutcome) -> Value {
     match response {
         ElicitationOutcome::Accept(user_data) => user_data.clone(),

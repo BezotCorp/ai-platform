@@ -1,11 +1,9 @@
-use std::collections::HashMap;
-
 use agent_client_protocol::{JsonRpcRequest, JsonRpcResponse};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 use super::EmptyResponse;
-
 fn default_recipe_version() -> String {
     "1.0.0".to_string()
 }

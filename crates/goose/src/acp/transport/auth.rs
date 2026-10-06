@@ -5,7 +5,6 @@ use axum::{
     response::Response,
 };
 use subtle::ConstantTimeEq;
-
 pub fn token_matches(candidate: Option<&str>, expected: &str) -> bool {
     candidate
         .map(|key| bool::from(key.as_bytes().ct_eq(expected.as_bytes())))

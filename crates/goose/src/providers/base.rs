@@ -1,20 +1,12 @@
-use super::api_client::TlsConfig;
 use anyhow::Result;
 use futures::future::BoxFuture;
-pub use goose_providers::conversation::token_usage::{
-    CostSource, DraftStats, ProviderStats, ProviderUsage, Usage,
-};
+use goose_providers::api_client::TlsConfig;
 use serde::{Deserialize, Serialize};
 
-pub use goose_providers::api_client::{
-    DEFAULT_CONNECT_TIMEOUT_SECS, DEFAULT_PROVIDER_TIMEOUT_SECS,
-};
-
 use crate::config::ExtensionConfig;
-
+use bcaip_provider_types::base::Provider;
+use bcaip_provider_types::base::ProviderDescriptor;
 use std::path::PathBuf;
-
-pub use goose_providers::base::*;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ProviderType {

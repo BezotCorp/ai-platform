@@ -1,5 +1,4 @@
 use tree_sitter::Language;
-
 // ── Types ──────────────────────────────────────────────────────────────
 
 pub struct LangInfo {

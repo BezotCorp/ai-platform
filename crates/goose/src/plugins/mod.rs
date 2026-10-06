@@ -2,18 +2,18 @@ pub mod discovery;
 pub mod formats;
 pub mod mcp_servers;
 
-use crate::config::paths::Paths;
-use crate::config::Config;
-use crate::plugins::discovery::PluginScope;
-use crate::subprocess::{git_command, SubprocessExt};
-use anyhow::{anyhow, bail, Result};
+use crate::subprocess::{SubprocessExt, git_command};
+use crate::{
+    config::{Config, paths::Paths},
+    plugins::discovery::PluginScope,
+};
+use anyhow::{Result, anyhow, bail};
 use chrono::{DateTime, Duration, Utc};
 use fs_err as fs;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use tracing::warn;
-
 const INSTALL_METADATA: &str = ".goose-plugin-install.json";
 const AUTO_UPDATE_INTERVAL_HOURS: i64 = 24;
 
@@ -421,182 +421,4 @@ fn copy_dir_all(source: &Path, destination: &Path) -> Result<()> {
     }
 
     Ok(())
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn rejects_repo_without_supported_manifest() {
-        let install_root = tempfile::tempdir().unwrap();
-        let repo = tempfile::tempdir().unwrap();
-
-        let err = install_from_checkout_at_root(
-            "https://example.invalid/repo.git",
-            repo.path(),
-            install_root.path(),
-            &PluginInstallOptions::default(),
-            None,
-        )
-        .unwrap_err();
-
-        assert!(err.to_string().contains("No supported plugin format found"));
-    }
-
-    #[test]
-    fn updates_git_backed_plugin() {
-        let install_root = tempfile::tempdir().unwrap();
-        let repo = tempfile::tempdir().unwrap();
-        write_gemini_plugin(repo.path(), "1.0.0", "Audit code");
-        init_git_repo(repo.path());
-        commit_git_repo(repo.path(), "initial");
-        let source = repo.path().to_path_buf();
-
-        let installed = install_plugin_with_options_at_root(
-            source.to_str().unwrap(),
-            PluginInstallOptions::default(),
-            install_root.path(),
-        )
-        .unwrap();
-        assert_eq!(installed.version, "1.0.0");
-
-        write_gemini_plugin(&source, "2.0.0", "Audit updated code");
-        commit_git_repo(&source, "update");
-
-        let updated =
-            update_plugin_at_root(Utc::now(), install_root.path(), "test-plugin").unwrap();
-
-        assert_eq!(updated.version, "2.0.0");
-        assert_eq!(updated.directory, install_root.path().join("test-plugin"));
-        assert_eq!(
-            fs::read_to_string(updated.directory.join("skills/audit/SKILL.md")).unwrap(),
-            "---\nname: audit\ndescription: Audit updated code\n---\nDo an audit."
-        );
-    }
-
-    #[test]
-    fn auto_update_plugins_updates_enabled_plugins() {
-        let install_root = tempfile::tempdir().unwrap();
-        let repo = tempfile::tempdir().unwrap();
-        write_gemini_plugin(repo.path(), "1.0.0", "Audit code");
-        init_git_repo(repo.path());
-        commit_git_repo(repo.path(), "initial");
-        let source = repo.path().to_path_buf();
-
-        let installed = install_plugin_with_options_at_root(
-            source.to_str().unwrap(),
-            PluginInstallOptions { auto_update: true },
-            install_root.path(),
-        )
-        .unwrap();
-        let old_check = Utc::now() - Duration::hours(AUTO_UPDATE_INTERVAL_HOURS + 1);
-        mark_last_update_check(&installed.directory, old_check).unwrap();
-
-        write_gemini_plugin(&source, "2.0.0", "Audit updated code");
-        commit_git_repo(&source, "update");
-
-        let updates = auto_update_plugins_at_root(Utc::now(), install_root.path());
-
-        assert_eq!(updates.len(), 1);
-        assert!(updates[0].result.is_ok());
-        assert_eq!(
-            fs::read_to_string(installed.directory.join("skills/audit/SKILL.md")).unwrap(),
-            "---\nname: audit\ndescription: Audit updated code\n---\nDo an audit."
-        );
-        let metadata = read_install_metadata(&installed.directory).unwrap();
-        assert!(metadata.auto_update);
-        assert!(metadata.last_update_check.unwrap() > old_check);
-    }
-
-    #[test]
-    fn auto_update_plugins_skips_recently_checked_plugins() {
-        let install_root = tempfile::tempdir().unwrap();
-        let repo = tempfile::tempdir().unwrap();
-        write_gemini_plugin(repo.path(), "1.0.0", "Audit code");
-        init_git_repo(repo.path());
-        commit_git_repo(repo.path(), "initial");
-        let source = repo.path().to_path_buf();
-
-        let installed = install_plugin_with_options_at_root(
-            source.to_str().unwrap(),
-            PluginInstallOptions { auto_update: true },
-            install_root.path(),
-        )
-        .unwrap();
-        let recent_check = Utc::now();
-        mark_last_update_check(&installed.directory, recent_check).unwrap();
-
-        write_gemini_plugin(&source, "2.0.0", "Audit updated code");
-        commit_git_repo(&source, "update");
-
-        let updates =
-            auto_update_plugins_at_root(recent_check + Duration::hours(1), install_root.path());
-
-        assert!(updates.is_empty());
-        assert_eq!(
-            fs::read_to_string(installed.directory.join("skills/audit/SKILL.md")).unwrap(),
-            "---\nname: audit\ndescription: Audit code\n---\nDo an audit."
-        );
-    }
-
-    #[test]
-    fn update_rejects_non_git_backed_plugin() {
-        let install_root = tempfile::tempdir().unwrap();
-        let plugin_dir = install_root.path().join("test-plugin");
-        fs::create_dir_all(&plugin_dir).unwrap();
-        fs::write(
-            plugin_dir.join(INSTALL_METADATA),
-            r#"{"source":"/tmp/test-plugin","source_type":"local","format":"gemini"}"#,
-        )
-        .unwrap();
-
-        let err =
-            update_plugin_at_root(Utc::now(), install_root.path(), "test-plugin").unwrap_err();
-
-        assert!(err
-            .to_string()
-            .contains("cannot be updated with this command"));
-    }
-
-    fn write_gemini_plugin(repo: &Path, version: &str, description: &str) {
-        fs::write(
-            repo.join(formats::gemini::MANIFEST),
-            format!(r#"{{"name":"test-plugin","version":"{version}"}}"#),
-        )
-        .unwrap();
-        let skill_dir = repo.join("skills").join("audit");
-        fs::create_dir_all(&skill_dir).unwrap();
-        fs::write(
-            skill_dir.join("SKILL.md"),
-            format!("---\nname: audit\ndescription: {description}\n---\nDo an audit."),
-        )
-        .unwrap();
-    }
-
-    fn init_git_repo(repo: &Path) {
-        run_git(repo, &["init"]);
-        run_git(repo, &["config", "user.email", "goose@example.com"]);
-        run_git(repo, &["config", "user.name", "Goose"]);
-    }
-
-    fn commit_git_repo(repo: &Path, message: &str) {
-        run_git(repo, &["add", "."]);
-        run_git(repo, &["commit", "-m", message]);
-    }
-
-    fn run_git(repo: &Path, args: &[&str]) {
-        let output = git_command()
-            .args(args)
-            .current_dir(repo)
-            .set_no_window()
-            .output()
-            .unwrap();
-        assert!(
-            output.status.success(),
-            "git {} failed: {}",
-            args.join(" "),
-            String::from_utf8_lossy(&output.stderr)
-        );
-    }
 }

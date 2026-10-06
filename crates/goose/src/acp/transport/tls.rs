@@ -1,8 +1,7 @@
 use crate::config::paths::Paths;
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use rcgen::{CertificateParams, DnType, KeyPair, SanType};
 use std::path::Path;
-
 #[cfg(feature = "rustls-tls")]
 pub type TlsConfig = axum_server::tls_rustls::RustlsConfig;
 
@@ -92,9 +91,7 @@ fn tls_cache_dir() -> std::path::PathBuf {
 fn write_private_key(path: &std::path::Path, contents: &[u8]) {
     #[cfg(unix)]
     {
-        use std::io::Write;
-        use std::os::unix::fs::OpenOptionsExt;
-
+        use std::{io::Write, os::unix::fs::OpenOptionsExt};
         let result = std::fs::OpenOptions::new()
             .write(true)
             .create(true)

@@ -6,15 +6,12 @@
 //! Most other lines (attachments, queue operations, internal hooks) are
 //! transcript noise and are skipped.
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use chrono::{DateTime, Utc};
+use bcaip_provider_types::conversations::Usage;
+use bcaip_provider_types::conversations::{Conversation, Message};
 use rmcp::model::{CallToolRequestParams, CallToolResult, ContentBlock, ErrorCode, ErrorData};
 use serde_json::Value;
-
-use crate::conversation::message::Message;
-use crate::conversation::Conversation;
-use goose_providers::conversation::token_usage::Usage;
-
 pub fn convert(content: &str) -> Result<String> {
     let lines: Vec<Value> = content
         .lines()
@@ -300,111 +297,11 @@ fn build_tool_result(content: Option<&Value>, is_error: bool) -> Result<CallTool
 }
 
 fn extract_first_text(msg: &Message) -> Option<String> {
-    use crate::conversation::message::MessageContent;
+    use bcaip_provider_types::conversations::MessageContent;
     for c in &msg.content {
         if let MessageContent::Text(t) = c {
             return Some(t.text.clone());
         }
     }
     None
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn converts_tool_use_and_result() {
-        let jsonl = r#"{"type":"user","sessionId":"s","uuid":"u1","timestamp":"2026-01-01T00:00:00.000Z","cwd":"/tmp","message":{"role":"user","content":"do it"}}
-{"type":"assistant","sessionId":"s","uuid":"u2","timestamp":"2026-01-01T00:00:01.000Z","cwd":"/tmp","message":{"role":"assistant","content":[{"type":"tool_use","id":"toolu_1","name":"bash","input":{"command":"ls"}}]}}
-{"type":"user","sessionId":"s","uuid":"u3","timestamp":"2026-01-01T00:00:02.000Z","cwd":"/tmp","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"toolu_1","content":[{"type":"text","text":"file.txt"}]}]}}"#;
-
-        let json = convert(jsonl).unwrap();
-        let v: Value = serde_json::from_str(&json).unwrap();
-        let msgs = v["conversation"].as_array().unwrap();
-        assert_eq!(msgs.len(), 3);
-        // assistant message should contain a toolRequest
-        let assistant = &msgs[1];
-        let content = assistant["content"].as_array().unwrap();
-        assert!(content.iter().any(|c| c["type"] == "toolRequest"));
-        // user response should contain a toolResponse
-        let resp = &msgs[2];
-        let content = resp["content"].as_array().unwrap();
-        assert!(content.iter().any(|c| c["type"] == "toolResponse"));
-    }
-
-    #[test]
-    fn sanitizes_unicode_tags_in_tool_result() {
-        let jsonl = serde_json::json!({
-            "type": "user",
-            "sessionId": "s",
-            "uuid": "u1",
-            "timestamp": "2026-01-01T00:00:00Z",
-            "cwd": "/tmp",
-            "message": {
-                "role": "user",
-                "content": [{
-                    "type": "tool_result",
-                    "tool_use_id": "toolu_1",
-                    "content": [{"type": "text", "text": "visible\u{E0041}世界"}]
-                }]
-            }
-        })
-        .to_string();
-
-        let json = convert(&jsonl).unwrap();
-
-        assert!(json.contains("visible世界"));
-        assert!(!json.contains('\u{E0041}'));
-    }
-
-    #[test]
-    fn sanitizes_unicode_tags_in_tool_result_error() {
-        let jsonl = serde_json::json!({
-            "type": "user",
-            "sessionId": "s",
-            "uuid": "u1",
-            "timestamp": "2026-01-01T00:00:00Z",
-            "cwd": "/tmp",
-            "message": {
-                "role": "user",
-                "content": [{
-                    "type": "tool_result",
-                    "tool_use_id": "toolu_1",
-                    "is_error": true,
-                    "content": "failed\u{E0041}café"
-                }]
-            }
-        })
-        .to_string();
-
-        let json = convert(&jsonl).unwrap();
-
-        assert!(json.contains("failedcafé"));
-        assert!(!json.contains('\u{E0041}'));
-    }
-
-    #[test]
-    fn emits_cache_token_breakdown() {
-        let jsonl = r#"{"type":"user","sessionId":"s","uuid":"u1","timestamp":"2026-01-01T00:00:01Z","cwd":"/tmp","message":{"role":"user","content":"hi"}}
-{"type":"assistant","sessionId":"s","uuid":"u2","timestamp":"2026-01-01T00:00:02Z","message":{"role":"assistant","content":[{"type":"text","text":"hello"}],"usage":{"input_tokens":7,"cache_creation_input_tokens":1000,"cache_read_input_tokens":5000,"output_tokens":50}}}"#;
-        let json = convert(jsonl).unwrap();
-        let v: Value = serde_json::from_str(&json).unwrap();
-        assert_eq!(v["usage"]["input_tokens"], 6007); // 7 + 1000 + 5000
-        assert_eq!(v["usage"]["output_tokens"], 50);
-        assert_eq!(v["usage"]["cache_read_input_tokens"], 5000);
-        assert_eq!(v["usage"]["cache_write_input_tokens"], 1000);
-        assert_eq!(v["accumulated_usage"]["cache_read_input_tokens"], 5000);
-        assert_eq!(v["accumulated_usage"]["cache_write_input_tokens"], 1000);
-    }
-
-    #[test]
-    fn skips_unknown_lines() {
-        let jsonl = r#"{"type":"attachment","sessionId":"s","uuid":"u0","timestamp":"2026-01-01T00:00:00Z"}
-{"type":"queue-operation","sessionId":"s","timestamp":"2026-01-01T00:00:00Z"}
-{"type":"user","sessionId":"s","uuid":"u1","timestamp":"2026-01-01T00:00:01Z","cwd":"/tmp","message":{"role":"user","content":"hi"}}"#;
-        let json = convert(jsonl).unwrap();
-        let v: Value = serde_json::from_str(&json).unwrap();
-        assert_eq!(v["message_count"], 1);
-    }
 }

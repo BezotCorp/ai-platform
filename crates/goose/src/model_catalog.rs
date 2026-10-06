@@ -1,7 +1,6 @@
 use crate::config::paths::Paths;
-use goose_providers::canonical::{load_cached_catalog, refresh_remote_catalog};
+use bcaip_provider_types::{load_cached_catalog, refresh_remote_catalog};
 use std::path::PathBuf;
-
 const CATALOG_URL: &str = "https://models.dev/api.json";
 
 fn cache_dir() -> PathBuf {

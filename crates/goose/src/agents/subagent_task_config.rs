@@ -1,10 +1,9 @@
 use crate::agents::ExtensionConfig;
 use crate::config::Config;
-use crate::providers::base::Provider;
+use bcaip_provider_types::base::Provider;
 use std::fmt;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
-
 /// Default maximum number of turns for task execution
 pub const DEFAULT_SUBAGENT_MAX_TURNS: usize = 25;
 
@@ -12,7 +11,7 @@ pub const DEFAULT_SUBAGENT_MAX_TURNS: usize = 25;
 #[derive(Clone)]
 pub struct TaskConfig {
     pub provider: Arc<dyn Provider>,
-    pub model_config: goose_providers::model::ModelConfig,
+    pub model_config: bcaip_provider_types::model::ModelConfig,
     pub parent_session_id: String,
     pub parent_working_dir: PathBuf,
     pub extensions: Vec<ExtensionConfig>,
@@ -34,7 +33,7 @@ impl fmt::Debug for TaskConfig {
 impl TaskConfig {
     pub fn new(
         provider: Arc<dyn Provider>,
-        model_config: goose_providers::model::ModelConfig,
+        model_config: bcaip_provider_types::model::ModelConfig,
         parent_session_id: &str,
         parent_working_dir: &Path,
         extensions: Vec<ExtensionConfig>,

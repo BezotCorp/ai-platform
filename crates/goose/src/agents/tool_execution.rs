@@ -1,20 +1,15 @@
+use crate::config::permission::PermissionLevel;
+use crate::mcp_utils::ToolResult;
 use async_stream::try_stream;
 use futures::stream::{self, BoxStream};
 use futures::{Stream, StreamExt};
+use bcaip_provider_types::conversations::Message;
+use bcaip_provider_types::permission::Permission;
 use rmcp::model::CallToolResult;
-use std::collections::HashMap;
-use std::future::Future;
-use std::pin::Pin;
+use rmcp::model::{ContentBlock, ServerNotification};
+use std::{collections::HashMap, future::Future, path::PathBuf, pin::Pin};
 use tokio::sync::mpsc;
 use tokio_util::sync::CancellationToken;
-
-use std::path::PathBuf;
-
-use crate::config::permission::PermissionLevel;
-use crate::conversation::message::Message;
-use crate::mcp_utils::ToolResult;
-use crate::permission::Permission;
-use rmcp::model::{ContentBlock, ServerNotification};
 
 #[derive(Clone)]
 pub(crate) struct ToolCallNotificationEmitter {
@@ -91,10 +86,9 @@ impl From<ToolResult<rmcp::model::CallToolResult>> for ToolCallResult {
 }
 
 use crate::agents::Agent;
-use crate::conversation::message::ToolRequest;
 use crate::session::Session;
 use crate::tool_inspection::get_security_finding_id_from_results;
-
+use bcaip_provider_types::conversations::ToolRequest;
 pub(super) enum ToolStreamItem<T> {
     ActionRequired(Message),
     Message(ServerNotification),

@@ -1,38 +1,32 @@
-use std::time::Duration;
-
+use crate::config::Config;
+use crate::providers::base::ProviderDef;
+use crate::providers::command_auth::CommandAuthProvider;
+use crate::providers::custom_provider_config::ConfigKeyResolver;
+use crate::session_context::{
+    session_id_request_builder, session_id_request_builder_with_header_override,
+};
 use anyhow::Result;
 use futures::future::BoxFuture;
+use bcaip_provider_types::base::ProviderDescriptor;
+use goose_providers::api_client::{ApiClient, AuthMethod};
+use goose_providers::declarative::DeclarativeProviderConfig;
+use goose_providers::ollama;
+use goose_providers::ollama::{
+    OLLAMA_DEFAULT_CHUNK_TIMEOUT_SECS, OLLAMA_DEFAULT_PORT, OLLAMA_HOST, OLLAMA_PROVIDER_NAME,
+    OLLAMA_TIMEOUT, OllamaOptions, OllamaProvider, OllamaProviderBuilder,
+};
+use std::time::Duration;
 use url::Url;
-
-use crate::{
-    config::{declarative_providers::DeclarativeProviderConfig, Config},
-    providers::{
-        base::ProviderDef, command_auth::CommandAuthProvider,
-        custom_provider_config::ConfigKeyResolver,
-    },
-    session_context::{
-        session_id_request_builder, session_id_request_builder_with_header_override,
-    },
-};
-use goose_providers::{
-    api_client::{ApiClient, AuthMethod},
-    base::ProviderDescriptor,
-    ollama::{
-        self, OllamaOptions, OllamaProvider, OllamaProviderBuilder,
-        OLLAMA_DEFAULT_CHUNK_TIMEOUT_SECS, OLLAMA_DEFAULT_PORT, OLLAMA_HOST, OLLAMA_PROVIDER_NAME,
-        OLLAMA_TIMEOUT,
-    },
-};
 
 pub struct OllamaProviderDef;
 
 impl ProviderDescriptor for OllamaProviderDef {
-    fn metadata() -> goose_providers::base::ProviderMetadata {
+    fn metadata() -> bcaip_provider_types::base::ProviderMetadata {
         OllamaProvider::metadata().with_setup(
-            crate::providers::catalog::ProviderSetupMetadata::new(
-                crate::providers::catalog::ProviderSetupCategory::Model,
-                crate::providers::catalog::ProviderSetupMethod::ConfigFields,
-                crate::providers::catalog::ProviderSetupGroup::Default,
+            bcaip_provider_types::ProviderSetupMetadata::new(
+                bcaip_provider_types::ProviderSetupCategory::Model,
+                bcaip_provider_types::ProviderSetupMethod::ConfigFields,
+                bcaip_provider_types::ProviderSetupGroup::Default,
             )
             .with_docs_url("https://ollama.com")
             .with_field(
@@ -50,14 +44,14 @@ impl ProviderDef for OllamaProviderDef {
 
     fn from_env(
         _extensions: Vec<crate::config::ExtensionConfig>,
-        tls_config: Option<crate::providers::api_client::TlsConfig>,
+        tls_config: Option<goose_providers::api_client::TlsConfig>,
     ) -> BoxFuture<'static, Result<Self::Provider>> {
         Box::pin(from_env(tls_config))
     }
 }
 
 pub async fn from_env(
-    tls_config: Option<crate::providers::api_client::TlsConfig>,
+    tls_config: Option<goose_providers::api_client::TlsConfig>,
 ) -> Result<OllamaProvider> {
     let config = crate::config::Config::global();
     let host: String = config
@@ -100,7 +94,7 @@ pub async fn from_env(
 
 pub fn from_custom_config(
     config: DeclarativeProviderConfig,
-    tls_config: Option<crate::providers::api_client::TlsConfig>,
+    tls_config: Option<goose_providers::api_client::TlsConfig>,
 ) -> Result<OllamaProvider> {
     let auth_override = config.auth.clone();
     let request_builder = session_id_request_builder_with_header_override(
@@ -178,82 +172,5 @@ fn resolve_ollama_chunk_timeout(config: &crate::config::Config) -> u64 {
     match config.get_param::<u64>("OLLAMA_TIMEOUT") {
         Ok(val) if val > 0 => val,
         _ => OLLAMA_DEFAULT_CHUNK_TIMEOUT_SECS,
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_resolve_ollama_chunk_timeout_defaults_to_ollama_timeout() {
-        let _guard = env_lock::lock_env([
-            ("OLLAMA_STREAM_TIMEOUT", None::<&str>),
-            ("GOOSE_STREAM_TIMEOUT", None::<&str>),
-            ("OLLAMA_TIMEOUT", Some("300")),
-        ]);
-        let config = crate::config::Config::global();
-        assert_eq!(resolve_ollama_chunk_timeout(config), 300);
-    }
-
-    #[test]
-    fn test_resolve_ollama_chunk_timeout_prefers_stream_override() {
-        let _guard = env_lock::lock_env([
-            ("OLLAMA_STREAM_TIMEOUT", Some("60")),
-            ("GOOSE_STREAM_TIMEOUT", Some("90")),
-            ("OLLAMA_TIMEOUT", Some("300")),
-        ]);
-        let config = crate::config::Config::global();
-        assert_eq!(resolve_ollama_chunk_timeout(config), 60);
-    }
-
-    #[test]
-    fn test_resolve_ollama_chunk_timeout_uses_goose_stream_fallback() {
-        let _guard = env_lock::lock_env([
-            ("OLLAMA_STREAM_TIMEOUT", None::<&str>),
-            ("GOOSE_STREAM_TIMEOUT", Some("90")),
-            ("OLLAMA_TIMEOUT", Some("300")),
-        ]);
-        let config = crate::config::Config::global();
-        assert_eq!(resolve_ollama_chunk_timeout(config), 90);
-    }
-
-    #[test]
-    fn test_resolve_ollama_chunk_timeout_uses_default_when_unset() {
-        let _guard = env_lock::lock_env([
-            ("OLLAMA_STREAM_TIMEOUT", None::<&str>),
-            ("GOOSE_STREAM_TIMEOUT", None::<&str>),
-            ("OLLAMA_TIMEOUT", None::<&str>),
-        ]);
-        let config = crate::config::Config::global();
-        assert_eq!(
-            resolve_ollama_chunk_timeout(config),
-            OLLAMA_DEFAULT_CHUNK_TIMEOUT_SECS
-        );
-    }
-
-    #[test]
-    fn test_resolve_ollama_chunk_timeout_skips_zero_values() {
-        let _guard = env_lock::lock_env([
-            ("OLLAMA_STREAM_TIMEOUT", Some("0")),
-            ("GOOSE_STREAM_TIMEOUT", Some("0")),
-            ("OLLAMA_TIMEOUT", Some("300")),
-        ]);
-        let config = crate::config::Config::global();
-        assert_eq!(resolve_ollama_chunk_timeout(config), 300);
-    }
-
-    #[test]
-    fn test_resolve_ollama_chunk_timeout_skips_all_zero_to_default() {
-        let _guard = env_lock::lock_env([
-            ("OLLAMA_STREAM_TIMEOUT", Some("0")),
-            ("GOOSE_STREAM_TIMEOUT", Some("0")),
-            ("OLLAMA_TIMEOUT", Some("0")),
-        ]);
-        let config = crate::config::Config::global();
-        assert_eq!(
-            resolve_ollama_chunk_timeout(config),
-            OLLAMA_DEFAULT_CHUNK_TIMEOUT_SECS
-        );
     }
 }

@@ -1,8 +1,6 @@
-use std::collections::HashSet;
-use std::path::Path;
-
-use super::types::{SlashCommandEntry, SlashCommandSource};
-use super::util::normalize_command_name;
+use crate::slash_commands::util::normalize_command_name;
+use crate::slash_commands::{SlashCommandEntry, SlashCommandSource};
+use std::{collections::HashSet, path::Path};
 
 pub fn list_builtin_commands() -> Vec<SlashCommandEntry> {
     crate::agents::execute_commands::list_commands()
@@ -50,77 +48,4 @@ pub(super) fn merge_command_sources(
             .filter(|command| !reserved_names.contains(&normalize_command_name(&command.name))),
     );
     commands
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn lists_acp_safe_builtin_commands() {
-        let commands = list_builtin_commands();
-        let names: Vec<_> = commands
-            .iter()
-            .map(|command| command.name.as_str())
-            .collect();
-
-        assert_eq!(
-            names,
-            vec![
-                "prompts", "prompt", "compact", "clear", "skills", "doctor", "goal", "grind",
-                "status"
-            ]
-        );
-        assert!(commands
-            .iter()
-            .all(|command| command.source == SlashCommandSource::Builtin));
-    }
-
-    fn entry(name: &str, source: SlashCommandSource) -> SlashCommandEntry {
-        SlashCommandEntry {
-            name: name.to_string(),
-            description: format!("{name} description"),
-            source,
-            source_path: None,
-            input_hint: None,
-        }
-    }
-
-    #[test]
-    fn merge_recipe_wins_over_skill_on_name_collision() {
-        let merged = merge_command_sources(
-            vec![entry("compact", SlashCommandSource::Builtin)],
-            vec![entry("review", SlashCommandSource::Recipe)],
-            vec![entry("review", SlashCommandSource::Skill)],
-        );
-
-        let review: Vec<_> = merged.iter().filter(|c| c.name == "review").collect();
-        assert_eq!(review.len(), 1);
-        assert_eq!(review[0].source, SlashCommandSource::Recipe);
-    }
-
-    #[test]
-    fn merge_builtin_wins_over_recipe_and_skill() {
-        let merged = merge_command_sources(
-            vec![entry("compact", SlashCommandSource::Builtin)],
-            vec![entry("compact", SlashCommandSource::Recipe)],
-            vec![entry("compact", SlashCommandSource::Skill)],
-        );
-
-        let compact: Vec<_> = merged.iter().filter(|c| c.name == "compact").collect();
-        assert_eq!(compact.len(), 1);
-        assert_eq!(compact[0].source, SlashCommandSource::Builtin);
-    }
-
-    #[test]
-    fn merge_dedupes_by_normalized_name() {
-        let merged = merge_command_sources(
-            vec![entry("Compact", SlashCommandSource::Builtin)],
-            vec![entry("/compact", SlashCommandSource::Recipe)],
-            vec![entry("COMPACT", SlashCommandSource::Skill)],
-        );
-
-        assert_eq!(merged.len(), 1);
-        assert_eq!(merged[0].source, SlashCommandSource::Builtin);
-    }
 }

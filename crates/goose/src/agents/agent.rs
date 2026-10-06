@@ -1,87 +1,96 @@
-use std::collections::HashMap;
-use std::fmt;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
+use std::{fmt, time};
 
-use anyhow::{anyhow, Context, Result};
-use futures::stream::BoxStream;
-use futures::{stream, FutureExt, StreamExt, TryStreamExt};
-use goose_agent::inference::ends_with_successful_tool_response;
-use tracing_futures::Instrument;
-
-use super::container::Container;
-use super::final_output_tool::FinalOutputTool;
-use super::gen_ai_telemetry;
-use super::mcp_client::GooseMcpHostInfo;
 use super::tool_confirmation_coordinator::{
     ActiveTurnGuard, ConfirmationAnswer, ToolConfirmationCoordinator,
 };
 use super::tool_confirmation_router::ToolConfirmationRouter;
 use super::tool_execution::{
-    tool_stream, ToolCallResult, ToolStream, ToolStreamItem, CHAT_MODE_TOOL_SKIPPED_RESPONSE,
-    DECLINED_RESPONSE,
+    CHAT_MODE_TOOL_SKIPPED_RESPONSE, DECLINED_RESPONSE, ToolCallResult, ToolStream, ToolStreamItem,
+    tool_stream,
+};
+use super::{
+    container::Container, final_output_tool::FinalOutputTool, gen_ai_telemetry,
+    mcp_client::GooseMcpHostInfo,
 };
 use crate::action_required_manager::ElicitationOutcome;
+use crate::agents;
 use crate::agents::extension::{ExtensionConfig, ExtensionResult};
 use crate::agents::extension_manager::{ExtensionManager, ExtensionManagerCapabilities};
 use crate::agents::final_output_tool::{
-    structured_output_unsupported_message, FINAL_OUTPUT_CONTINUATION_MESSAGE,
-    FINAL_OUTPUT_TOOL_NAME,
+    FINAL_OUTPUT_CONTINUATION_MESSAGE, FINAL_OUTPUT_TOOL_NAME,
+    structured_output_unsupported_message,
 };
-use crate::agents::platform_extensions::MANAGE_EXTENSIONS_TOOL_NAME_COMPLETE;
-use crate::agents::prompt_manager::PromptManager;
 use crate::agents::retry::{RetryManager, RetryResult};
 use crate::agents::state_machine::{
-    has_unapplied_tool_confirmation_response, pending_tool_confirmations,
-    persist_tool_confirmation_decision, run_goose, BangShellOperation, CompactionOperation,
-    DoctorOperation, Emitter, EntryHookOperation, ExitOnErrorOperation, GooseEffect,
-    GooseInferenceProvider, GooseInferenceRequestPreparer, InferenceRunner, MaxTurnsOperation,
-    Operation, ProjectOperation, RecipeOperation, RetryOperation, SkillOperation,
-    SlashCommandOperation, StateMachine, StatusOperation, SteerOperation, SteerQueue, Step,
+    BangShellOperation, CompactionOperation, DoctorOperation, EntryHookOperation,
+    ExitOnErrorOperation, GooseEffect, GooseInferenceProvider, GooseInferenceRequestPreparer,
+    MAX_TURNS_MESSAGE, MaxTurnsOperation, ProjectOperation, RecipeOperation, RetryOperation,
+    SkillOperation, SlashCommandOperation, StatusOperation, SteerOperation, SteerQueue,
     StopHookOperation, ToolApprovalOperation, ToolExecutionOperation, ToolPairCompactionOperation,
-    UnknownToolOperation, MAX_TURNS_MESSAGE,
+    UnknownToolOperation, has_unapplied_tool_confirmation_response, pending_tool_confirmations,
+    persist_tool_confirmation_decision, run_goose,
 };
 use crate::agents::types::{
-    SessionConfig, SharedProvider, DEFAULT_ON_FAILURE_TIMEOUT_SECONDS,
-    DEFAULT_RETRY_TIMEOUT_SECONDS,
+    DEFAULT_ON_FAILURE_TIMEOUT_SECONDS, DEFAULT_RETRY_TIMEOUT_SECONDS, SessionConfig,
+    SharedProvider,
 };
-use crate::agents::AgentEvent;
-use crate::config::extensions::name_to_key;
-use crate::config::permission::PermissionManager;
-use crate::config::{Config, GooseMode};
-use crate::context_mgmt::{
-    check_if_compaction_needed, compact_messages, DEFAULT_COMPACTION_THRESHOLD,
+use crate::agents::{large_response_handler, moim, tool_execution};
+use crate::agents::{
+    platform_extensions::MANAGE_EXTENSIONS_TOOL_NAME_COMPLETE, prompt_manager::PromptManager,
 };
-use crate::conversation::message::{
+use crate::config::Config;
+use crate::config::{extensions::name_to_key, permission::PermissionManager};
+use crate::context_mgmt;
+use crate::context_mgmt::{check_if_compaction_needed, compact_messages};
+use crate::permission::{
+    permission_inspector::PermissionInspector, permission_judge::PermissionCheckResult,
+};
+use crate::session::{EnabledExtensionsState, ExtensionState};
+use crate::session::{Session, SessionManager, SessionNameUpdate};
+use crate::{acp, context_limit, hooks, model_config, providers, session_context, sources};
+use crate::{
+    recipe::Response,
+    scheduler_trait::SchedulerTrait,
+    security::{
+        adversary_inspector::AdversaryInspector, egress_inspector::EgressInspector,
+        security_inspector::SecurityInspector,
+    },
+};
+use crate::{
+    tool_inspection::ToolInspectionManager, tool_monitor::RepetitionInspector,
+    utils::is_token_cancelled,
+};
+use anyhow::{Context, Result, anyhow};
+use bcaip_agent::events::AgentEvent;
+use bcaip_agent::inference::InferenceRunner;
+use bcaip_agent::inference::ends_with_successful_tool_response;
+use bcaip_agent::machine::{StateMachine, Step};
+use bcaip_agent::operation::{Emitter, Operation};
+use bcaip_provider_types::base::{PermissionRouting, Provider};
+use bcaip_provider_types::conversations::{
     ActionRequiredData, InferenceMetadata, Message, MessageContent, MessageUsage, ProviderMetadata,
     SystemNotificationType,
 };
-use crate::conversation::{debug_conversation_fix, fix_conversation, Conversation};
-use crate::permission::permission_inspector::PermissionInspector;
-use crate::permission::permission_judge::PermissionCheckResult;
-use crate::permission::{Permission, PermissionConfirmation};
-use crate::providers::base::{PermissionRouting, Provider};
-use crate::recipe::Response;
-use crate::scheduler_trait::SchedulerTrait;
-use crate::security::adversary_inspector::AdversaryInspector;
-use crate::security::egress_inspector::EgressInspector;
-use crate::security::security_inspector::SecurityInspector;
-use crate::session::extension_data::{EnabledExtensionsState, ExtensionState};
-use crate::session::{Session, SessionManager, SessionNameUpdate};
-use crate::tool_inspection::ToolInspectionManager;
-use crate::tool_monitor::RepetitionInspector;
-use crate::utils::is_token_cancelled;
-use goose_providers::conversation::token_usage::{ProviderUsage, Usage};
-use goose_providers::errors::ProviderError;
-use goose_providers::thinking::{ThinkingEffort, ThinkingEffortSupport};
+use bcaip_provider_types::conversations::{Conversation, debug_conversation_fix, fix_conversation};
+use bcaip_provider_types::conversations::{ProviderUsage, Usage};
+use bcaip_provider_types::errors::ProviderError;
+use bcaip_provider_types::goose_mode::GooseMode;
+use bcaip_provider_types::permission::{Permission, PermissionConfirmation};
+use bcaip_provider_types::thinking::{ThinkingEffort, ThinkingEffortSupport};
+use futures::stream::BoxStream;
+use futures::{FutureExt, StreamExt, TryStreamExt, stream};
+use goose_context_management::DEFAULT_COMPACTION_THRESHOLD;
 use rmcp::model::{
     CallToolRequestParams, CallToolResult, ContentBlock, ElicitationAction, ErrorCode, ErrorData,
     GetPromptResult, Prompt, Tool,
 };
 use serde_json::Value;
-use tokio::sync::{mpsc, Mutex};
+use tokio::sync::{Mutex, mpsc};
 use tokio_util::sync::CancellationToken;
 use tracing::{debug, error, info, instrument, warn};
+use tracing_futures::Instrument;
 
 const DEFAULT_MAX_TURNS: u32 = 1000;
 const DEFAULT_STOP_HOOK_BLOCK_CAP: u32 = 8;
@@ -96,9 +105,9 @@ fn provider_creation_error(error: anyhow::Error, context: impl fmt::Display) -> 
 }
 
 fn normalize_legacy_provider_thinking_effort(
-    mut model_config: goose_providers::model::ModelConfig,
+    mut model_config: bcaip_provider_types::model::ModelConfig,
     effort_support: &ThinkingEffortSupport,
-) -> goose_providers::model::ModelConfig {
+) -> bcaip_provider_types::model::ModelConfig {
     let has_raw_effort = model_config
         .request_params
         .as_ref()
@@ -137,10 +146,10 @@ fn categorize_tool(tool_name: &str) -> ToolCategory {
 fn extract_string_arg(input: &Value, keys: &[&str]) -> Option<String> {
     let obj = input.as_object()?;
     for k in keys {
-        if let Some(s) = obj.get(*k).and_then(|v| v.as_str()) {
-            if !s.is_empty() {
-                return Some(s.to_string());
-            }
+        if let Some(s) = obj.get(*k).and_then(|v| v.as_str())
+            && !s.is_empty()
+        {
+            return Some(s.to_string());
         }
     }
     None
@@ -183,7 +192,7 @@ pub struct ReplyContext {
     pub system_prompt: String,
     pub goose_mode: GooseMode,
     pub tool_call_cut_off: usize,
-    pub model_config: goose_providers::model::ModelConfig,
+    pub model_config: bcaip_provider_types::model::ModelConfig,
 }
 
 #[derive(Debug, Clone, serde::Serialize)]
@@ -218,7 +227,7 @@ pub struct AgentConfig {
     pub disable_session_naming: bool,
     pub goose_platform: GoosePlatform,
     pub mcp_host_info: Option<GooseMcpHostInfo>,
-    pub elicitation_handler: Option<crate::agents::mcp_client::ElicitationHandler>,
+    pub elicitation_handler: Option<agents::mcp_client::ElicitationHandler>,
     pub mcp_protocol_version: Option<rmcp::model::ProtocolVersion>,
     pub session_name_update_tx: Option<mpsc::UnboundedSender<SessionNameUpdate>>,
     pub use_login_shell_path: Option<bool>,
@@ -293,8 +302,6 @@ pub struct Agent {
     pub(super) tool_inspection_manager: ToolInspectionManager,
     pub(super) hook_manager: crate::hooks::HookManager,
     session_start_emitted: AtomicBool,
-    #[cfg(test)]
-    pub(super) stop_hook_block_cap_override: Option<u32>,
     container: Mutex<Option<Container>>,
     pub(super) goal: Mutex<Option<String>>,
     pub(super) grind: Mutex<Option<String>>,
@@ -453,16 +460,14 @@ impl Agent {
                 inspection_session_manager,
             ),
             hook_manager: if is_subagent {
-                crate::hooks::HookManager::default()
+                hooks::HookManager::default()
             } else {
-                crate::hooks::HookManager::load(
+                hooks::HookManager::load(
                     std::env::current_dir().ok().as_deref(),
                     use_login_shell_path,
                 )
             },
             session_start_emitted: AtomicBool::new(false),
-            #[cfg(test)]
-            stop_hook_block_cap_override: None,
             container: Mutex::new(None),
             goal: Mutex::new(None),
             grind: Mutex::new(None),
@@ -470,51 +475,35 @@ impl Agent {
         }
     }
 
-    /// Emit a lifecycle hook event with no extra context. Useful for events
-    /// that have no matcher (e.g. `SessionStart`, `SessionEnd`).
-    #[cfg(test)]
-    pub(crate) fn set_hook_manager_for_test(&mut self, hook_manager: crate::hooks::HookManager) {
-        self.hook_manager = hook_manager;
-    }
-
-    #[cfg(test)]
-    pub(crate) fn set_stop_hook_block_cap_for_test(&mut self, cap: u32) {
-        self.stop_hook_block_cap_override = Some(cap);
-    }
-
+    /// Emit a lifecycle hook event with no extra context. Useful for events that have no matcher (e.g. `SessionStart`, `SessionEnd`).
     pub(crate) fn stop_hook_block_cap(&self) -> u32 {
-        #[cfg(test)]
-        if let Some(cap) = self.stop_hook_block_cap_override {
-            return cap;
-        }
-
         Config::global()
             .get_param::<u32>("GOOSE_STOP_HOOK_BLOCK_CAP")
             .unwrap_or(DEFAULT_STOP_HOOK_BLOCK_CAP)
     }
 
-    pub async fn emit_hook(&self, event: crate::hooks::HookEvent, session_id: &str) {
+    pub async fn emit_hook(&self, event: hooks::HookEvent, session_id: &str) {
         if !self.hook_manager.has_hooks(event) {
             return;
         }
         self.hook_manager
-            .emit(event, crate::hooks::HookContext::new(event, session_id))
+            .emit(event, hooks::HookContext::new(event, session_id))
             .await;
     }
 
     pub async fn emit_hook_with_banners(
         &self,
-        event: crate::hooks::HookEvent,
+        event: hooks::HookEvent,
         session_id: &str,
     ) -> Vec<String> {
-        if event == crate::hooks::HookEvent::SessionStart {
+        if event == hooks::HookEvent::SessionStart {
             self.session_start_emitted.store(true, Ordering::Release);
         }
         if !self.hook_manager.has_hooks(event) {
             return Vec::new();
         }
         self.hook_manager
-            .emit_collecting_banners(event, crate::hooks::HookContext::new(event, session_id))
+            .emit_collecting_banners(event, hooks::HookContext::new(event, session_id))
             .await
     }
 
@@ -522,8 +511,8 @@ impl Agent {
         session_id: &str,
         last_assistant_message: &str,
         working_dir: &str,
-    ) -> crate::hooks::HookContext {
-        crate::hooks::HookContext::new(crate::hooks::HookEvent::Stop, session_id)
+    ) -> hooks::HookContext {
+        hooks::HookContext::new(hooks::HookEvent::Stop, session_id)
             .with_last_assistant_message(last_assistant_message.to_string())
             .with_working_dir(working_dir.to_string())
     }
@@ -534,12 +523,12 @@ impl Agent {
         last_assistant_message: &str,
         working_dir: &str,
     ) {
-        if !self.hook_manager.has_hooks(crate::hooks::HookEvent::Stop) {
+        if !self.hook_manager.has_hooks(hooks::HookEvent::Stop) {
             return;
         }
         self.hook_manager
             .emit(
-                crate::hooks::HookEvent::Stop,
+                hooks::HookEvent::Stop,
                 Self::stop_hook_context(session_id, last_assistant_message, working_dir),
             )
             .await;
@@ -553,7 +542,7 @@ impl Agent {
     ) -> crate::hooks::HookDecision {
         self.hook_manager
             .emit_blocking(
-                crate::hooks::HookEvent::Stop,
+                hooks::HookEvent::Stop,
                 Self::stop_hook_context(session_id, last_assistant_message, working_dir),
             )
             .await
@@ -612,7 +601,7 @@ impl Agent {
             ToolCategory::Shell => {
                 if let Some(cmd) = tool_input.and_then(|v| extract_string_arg(v, &["command"])) {
                     self.emit_with_matcher(
-                        crate::hooks::HookEvent::BeforeShellExecution,
+                        hooks::HookEvent::BeforeShellExecution,
                         &session.id,
                         &cmd,
                         tool_name,
@@ -627,7 +616,7 @@ impl Agent {
                     tool_input.and_then(|v| extract_string_arg(v, &["path", "file", "file_path"]))
                 {
                     self.emit_with_matcher(
-                        crate::hooks::HookEvent::BeforeReadFile,
+                        hooks::HookEvent::BeforeReadFile,
                         &session.id,
                         &path,
                         tool_name,
@@ -643,7 +632,7 @@ impl Agent {
 
     async fn emit_with_matcher(
         &self,
-        event: crate::hooks::HookEvent,
+        event: hooks::HookEvent,
         session_id: &str,
         matcher_context: &str,
         tool_name: &str,
@@ -668,20 +657,19 @@ impl Agent {
         tool_call_id: &str,
         tool_name: &str,
         tool_input: Option<&Value>,
-        outcome: &crate::hooks::HookChainOutcome,
+        outcome: &hooks::HookChainOutcome,
     ) {
         if !self
             .hook_manager
-            .has_hooks(crate::hooks::HookEvent::PreToolUseResult)
+            .has_hooks(hooks::HookEvent::PreToolUseResult)
         {
             return;
         }
-        let ctx =
-            crate::hooks::HookContext::new(crate::hooks::HookEvent::PreToolUseResult, &session.id)
-                .with_tool(tool_name.to_string(), tool_input.cloned())
-                .with_tool_call_id(tool_call_id)
-                .with_working_dir(session.working_dir.to_string_lossy().to_string())
-                .with_pre_tool_use_outcome(outcome);
+        let ctx = hooks::HookContext::new(hooks::HookEvent::PreToolUseResult, &session.id)
+            .with_tool(tool_name.to_string(), tool_input.cloned())
+            .with_tool_call_id(tool_call_id)
+            .with_working_dir(session.working_dir.to_string_lossy().to_string())
+            .with_pre_tool_use_outcome(outcome);
         self.hook_manager.emit_pre_tool_use_result(ctx).await;
     }
 
@@ -707,7 +695,7 @@ impl Agent {
 
         let fut = async move {
             let processed_result =
-                super::large_response_handler::process_tool_response(result.result.await);
+                large_response_handler::process_tool_response(result.result.await);
             if capture_message_content {
                 let output = gen_ai_telemetry::tool_result_json(&processed_result);
                 span.record("output", output.as_str());
@@ -715,9 +703,9 @@ impl Agent {
             gen_ai_telemetry::record_tool_result(&span, &processed_result);
             let event = match &processed_result {
                 Ok(call_result) if call_result.is_error != Some(true) => {
-                    crate::hooks::HookEvent::PostToolUse
+                    hooks::HookEvent::PostToolUse
                 }
-                _ => crate::hooks::HookEvent::PostToolUseFailure,
+                _ => hooks::HookEvent::PostToolUseFailure,
             };
 
             if hook_manager.has_hooks(event) {
@@ -728,30 +716,30 @@ impl Agent {
                 hook_manager.emit(event, ctx).await;
             }
 
-            if event == crate::hooks::HookEvent::PostToolUse {
+            if event == hooks::HookEvent::PostToolUse {
                 let extended = match category {
                     ToolCategory::Shell => Some((
-                        crate::hooks::HookEvent::AfterShellExecution,
+                        hooks::HookEvent::AfterShellExecution,
                         tool_input
                             .as_ref()
                             .and_then(|v| extract_string_arg(v, &["command"])),
                     )),
                     ToolCategory::Write => Some((
-                        crate::hooks::HookEvent::AfterFileEdit,
+                        hooks::HookEvent::AfterFileEdit,
                         tool_input
                             .as_ref()
                             .and_then(|v| extract_string_arg(v, &["path", "file", "file_path"])),
                     )),
                     _ => None,
                 };
-                if let Some((ext_event, Some(matcher))) = extended {
-                    if hook_manager.has_hooks(ext_event) {
-                        let mut ctx = crate::hooks::HookContext::new(ext_event, &session_id)
-                            .with_tool(tool_name, tool_input)
-                            .with_working_dir(working_dir);
-                        ctx.matcher_context = Some(matcher);
-                        hook_manager.emit(ext_event, ctx).await;
-                    }
+                if let Some((ext_event, Some(matcher))) = extended
+                    && hook_manager.has_hooks(ext_event)
+                {
+                    let mut ctx = hooks::HookContext::new(ext_event, &session_id)
+                        .with_tool(tool_name, tool_input)
+                        .with_working_dir(working_dir);
+                    ctx.matcher_context = Some(matcher);
+                    hook_manager.emit(ext_event, ctx).await;
                 }
             }
 
@@ -821,16 +809,16 @@ impl Agent {
             .retry_manager
             .handle_retry_logic(messages, session_config, initial_messages)
             .await?;
-        if matches!(result, RetryResult::Retried) {
-            if let Some(tool) = self.final_output_tool.lock().await.as_mut() {
-                tool.final_output = None;
-            }
+        if matches!(result, RetryResult::Retried)
+            && let Some(tool) = self.final_output_tool.lock().await.as_mut()
+        {
+            tool.final_output = None;
         }
         Ok(result)
     }
     async fn load_project_instructions(&self, session: &Session) -> Option<String> {
         let project_id = session.project_id.as_deref()?;
-        let entry = crate::sources::read_project(project_id).ok()?;
+        let entry = sources::read_project(project_id).ok()?;
         let mut parts = Vec::new();
         parts.push(format!("# Project: {}", entry.name));
         if !entry.description.is_empty() {
@@ -871,18 +859,18 @@ impl Agent {
             Ok(v) => v,
             Err(_) => {
                 let context_limit = match self.provider().await {
-                    Ok(provider) => crate::context_limit::get_context_limit(
+                    Ok(provider) => context_limit::get_context_limit(
                         provider.as_ref(),
                         &model_config.model_name,
                     )
                     .await
-                    .unwrap_or(goose_providers::model::DEFAULT_CONTEXT_LIMIT),
-                    Err(_) => goose_providers::model::DEFAULT_CONTEXT_LIMIT,
+                    .unwrap_or(bcaip_provider_types::model::DEFAULT_CONTEXT_LIMIT),
+                    Err(_) => bcaip_provider_types::model::DEFAULT_CONTEXT_LIMIT,
                 };
                 let compaction_threshold = Config::global()
                     .get_param::<f64>("GOOSE_AUTO_COMPACT_THRESHOLD")
-                    .unwrap_or(crate::context_mgmt::DEFAULT_COMPACTION_THRESHOLD);
-                crate::context_mgmt::compute_tool_call_cutoff(context_limit, compaction_threshold)
+                    .unwrap_or(goose_context_management::DEFAULT_COMPACTION_THRESHOLD);
+                context_mgmt::compute_tool_call_cutoff(context_limit, compaction_threshold)
             }
         };
 
@@ -978,16 +966,15 @@ impl Agent {
     pub async fn model_config_for_session(
         &self,
         session_id: &str,
-    ) -> Result<goose_providers::model::ModelConfig> {
+    ) -> Result<bcaip_provider_types::model::ModelConfig> {
         if let Ok(session) = self
             .config
             .session_manager
             .get_session(session_id, false)
             .await
+            && let Some(model_config) = session.model_config
         {
-            if let Some(model_config) = session.model_config {
-                return Ok(model_config);
-            }
+            return Ok(model_config);
         }
 
         let config = Config::global();
@@ -997,17 +984,17 @@ impl Agent {
         let model_name = config
             .get_goose_model()
             .map_err(|_| anyhow!("Could not resolve model config: missing model"))?;
-        crate::model_config::model_config_from_user_config(&provider_name, &model_name)
+        model_config::model_config_from_user_config(&provider_name, &model_name)
             .map_err(|e| anyhow!("Could not resolve model config: {e}"))
     }
 
     pub(super) async fn effective_model_config_for_session(
         &self,
         session_id: &str,
-    ) -> Result<goose_providers::model::ModelConfig> {
+    ) -> Result<bcaip_provider_types::model::ModelConfig> {
         let model_config = self.model_config_for_session(session_id).await?;
         let provider_name = self.provider().await?.get_name().to_string();
-        match crate::providers::get_from_registry(&provider_name).await {
+        match providers::get_from_registry(&provider_name).await {
             Ok(entry) => Ok(entry
                 .normalize_model_config(model_config.clone())
                 .unwrap_or(model_config)),
@@ -1040,10 +1027,8 @@ impl Agent {
         response: Option<Response>,
         include_final_output: bool,
     ) -> Result<()> {
-        if include_final_output {
-            if let Some(response) = response {
-                self.add_final_output_tool(response).await?;
-            }
+        if include_final_output && let Some(response) = response {
+            self.add_final_output_tool(response).await?;
         }
         Ok(())
     }
@@ -1090,17 +1075,13 @@ impl Agent {
             .as_ref()
             .map(|a| serde_json::Value::Object(a.clone()));
 
-        let pre_tool_outcome = if self
-            .hook_manager
-            .has_hooks(crate::hooks::HookEvent::PreToolUse)
-        {
-            let ctx =
-                crate::hooks::HookContext::new(crate::hooks::HookEvent::PreToolUse, &session.id)
-                    .with_tool(tool_call.name.to_string(), tool_input_for_hooks.clone())
-                    .with_tool_call_id(request_id.as_str())
-                    .with_working_dir(session.working_dir.to_string_lossy().to_string());
+        let pre_tool_outcome = if self.hook_manager.has_hooks(hooks::HookEvent::PreToolUse) {
+            let ctx = hooks::HookContext::new(hooks::HookEvent::PreToolUse, &session.id)
+                .with_tool(tool_call.name.to_string(), tool_input_for_hooks.clone())
+                .with_tool_call_id(request_id.as_str())
+                .with_working_dir(session.working_dir.to_string_lossy().to_string());
             self.hook_manager
-                .emit_blocking_with_outcome(crate::hooks::HookEvent::PreToolUse, ctx)
+                .emit_blocking_with_outcome(hooks::HookEvent::PreToolUse, ctx)
                 .await
         } else {
             crate::hooks::HookChainOutcome::allow(false)
@@ -1147,9 +1128,9 @@ impl Agent {
                     "Final output tool not defined".to_string(),
                     None,
                 );
-                let failure = crate::hooks::HookEvent::PostToolUseFailure;
+                let failure = hooks::HookEvent::PostToolUseFailure;
                 if self.hook_manager.has_hooks(failure) {
-                    let ctx = crate::hooks::HookContext::new(failure, &session.id)
+                    let ctx = hooks::HookContext::new(failure, &session.id)
                         .with_tool(tool_call.name.to_string(), tool_input_for_hooks.clone())
                         .with_tool_call_id(request_id.as_str())
                         .with_working_dir(session.working_dir.to_string_lossy().to_string());
@@ -1159,7 +1140,7 @@ impl Agent {
             };
         }
 
-        let ctx = super::tool_execution::ToolCallContext::new(
+        let ctx = tool_execution::ToolCallContext::new(
             session.id.clone(),
             Some(session.working_dir.clone()),
             Some(request_id.clone()),
@@ -1330,10 +1311,11 @@ impl Agent {
 
         let results = futures::future::join_all(extension_futures).await;
 
-        if results.iter().any(|r| r.success) && skipped_configs.is_empty() {
-            if let Err(e) = self.persist_extension_state(&session_id).await {
-                warn!("Failed to persist extension state after bulk load: {}", e);
-            }
+        if results.iter().any(|r| r.success)
+            && skipped_configs.is_empty()
+            && let Err(e) = self.persist_extension_state(&session_id).await
+        {
+            warn!("Failed to persist extension state after bulk load: {}", e);
         }
 
         results
@@ -1351,7 +1333,7 @@ impl Agent {
             .await
             .map_err(|e| {
                 error!("Failed to persist extension state: {}", e);
-                crate::agents::extension::ExtensionError::SetupError(format!(
+                agents::extension::ExtensionError::SetupError(format!(
                     "Failed to persist extension state: {}",
                     e
                 ))
@@ -1439,7 +1421,7 @@ impl Agent {
             .get_session(session_id, false)
             .await
             .map_err(|e| {
-                crate::agents::extension::ExtensionError::SetupError(format!(
+                agents::extension::ExtensionError::SetupError(format!(
                     "Failed to get session '{}': {}",
                     session_id, e
                 ))
@@ -1462,10 +1444,10 @@ impl Agent {
             .await
             .unwrap_or_default();
 
-        if include_final_output {
-            if let Some(final_output_tool) = self.final_output_tool.lock().await.as_ref() {
-                prefixed_tools.push(final_output_tool.tool());
-            }
+        if include_final_output
+            && let Some(final_output_tool) = self.final_output_tool.lock().await.as_ref()
+        {
+            prefixed_tools.push(final_output_tool.tool());
         }
 
         prefixed_tools
@@ -1551,7 +1533,7 @@ impl Agent {
         }
 
         let confirmation = PermissionConfirmation {
-            principal_type: crate::permission::permission_confirmation::PrincipalType::Tool,
+            principal_type: bcaip_provider_types::permission::PrincipalType::Tool,
             permission: permission.clone(),
         };
         if self
@@ -1601,14 +1583,13 @@ impl Agent {
         confirmation: &PermissionConfirmation,
     ) -> bool {
         let provider = self.provider.lock().await.clone();
-        if let Some(provider) = provider.as_ref() {
-            if provider.permission_routing() == PermissionRouting::ActionRequired
-                && provider
-                    .handle_permission_confirmation(request_id, confirmation)
-                    .await
-            {
-                return true;
-            }
+        if let Some(provider) = provider.as_ref()
+            && provider.permission_routing() == PermissionRouting::ActionRequired
+            && provider
+                .handle_permission_confirmation(request_id, confirmation)
+                .await
+        {
+            return true;
         }
         false
     }
@@ -1644,7 +1625,7 @@ impl Agent {
     pub(super) fn create_state_machine(
         &self,
         provider: Arc<dyn Provider>,
-        model_config: goose_providers::model::ModelConfig,
+        model_config: bcaip_provider_types::model::ModelConfig,
         context_limit: usize,
         max_turns: Option<u32>,
         cancel: CancellationToken,
@@ -1661,13 +1642,6 @@ impl Agent {
         let on_failure_timeout = Config::global()
             .get_param::<u64>("GOOSE_RECIPE_ON_FAILURE_TIMEOUT_SECONDS")
             .unwrap_or(DEFAULT_ON_FAILURE_TIMEOUT_SECONDS);
-        #[cfg(test)]
-        let stop_hook_block_cap = self.stop_hook_block_cap_override.unwrap_or_else(|| {
-            Config::global()
-                .get_param::<u32>("GOOSE_STOP_HOOK_BLOCK_CAP")
-                .unwrap_or(DEFAULT_STOP_HOOK_BLOCK_CAP)
-        });
-        #[cfg(not(test))]
         let stop_hook_block_cap = Config::global()
             .get_param::<u32>("GOOSE_STOP_HOOK_BLOCK_CAP")
             .unwrap_or(DEFAULT_STOP_HOOK_BLOCK_CAP);
@@ -1677,11 +1651,11 @@ impl Agent {
         let tool_call_cutoff = Config::global()
             .get_param::<usize>("GOOSE_TOOL_CALL_CUTOFF")
             .unwrap_or_else(|_| {
-                crate::context_mgmt::compute_tool_call_cutoff(context_limit, compaction_threshold)
+                context_mgmt::compute_tool_call_cutoff(context_limit, compaction_threshold)
             });
         let manages_own_context = provider.manages_own_context();
         let tool_pair_compaction_enabled =
-            crate::context_mgmt::tool_pair_summarization_enabled() && !manages_own_context;
+            context_mgmt::tool_pair_summarization_enabled() && !manages_own_context;
 
         let mut operations: Vec<Arc<dyn Operation<Session, GooseEffect> + '_>> = vec![
             Arc::new(SteerOperation::new(steer_queue, self.hook_manager.clone())),
@@ -1824,10 +1798,10 @@ impl Agent {
             tokio::spawn(async move {
                 match manager.maybe_update_name(&id, provider).await {
                     Ok(Some(update)) => {
-                        if let Some(tx) = tx {
-                            if tx.send(update).is_err() {
-                                tracing::warn!("Failed to publish generated session name");
-                            }
+                        if let Some(tx) = tx
+                            && tx.send(update).is_err()
+                        {
+                            tracing::warn!("Failed to publish generated session name");
                         }
                     }
                     Ok(None) => {}
@@ -1856,13 +1830,12 @@ impl Agent {
         cancel: CancellationToken,
     ) -> Result<Option<BoxStream<'static, Result<AgentEvent>>>> {
         let session_id = session_config.id.clone();
-        let stream = crate::session_context::with_session_id(
+        let stream = session_context::with_session_id(
             Some(session_id.clone()),
             self.resume_state_machine_turn_inner(session_config, cancel),
         )
         .await?;
-        Ok(stream
-            .map(|stream| crate::session_context::with_session_id_stream(Some(session_id), stream)))
+        Ok(stream.map(|stream| session_context::with_session_id_stream(Some(session_id), stream)))
     }
 
     async fn resume_state_machine_turn_inner(
@@ -2006,8 +1979,7 @@ impl Agent {
         let model_config = self.effective_model_config_for_session(&session_id).await?;
 
         let context_limit =
-            crate::context_limit::get_context_limit(provider.as_ref(), &model_config.model_name)
-                .await?;
+            context_limit::get_context_limit(provider.as_ref(), &model_config.model_name).await?;
         let steer_queue = self.steer_queue(&session_id).await;
         let machine = self.create_state_machine(
             provider,
@@ -2024,7 +1996,7 @@ impl Agent {
                 let (tx, mut rx) = mpsc::channel::<AgentEvent>(32);
                 let emit = Emitter::new(tx, cancel.clone());
                 let result = {
-                    let run = crate::session_context::with_session_id(
+                    let run = session_context::with_session_id(
                         Some(session_id.clone()),
                         run_goose(&machine, session_manager.as_ref(), &session_id, &emit),
                     );
@@ -2085,7 +2057,7 @@ impl Agent {
     ) -> Result<BoxStream<'_, Result<AgentEvent>>> {
         let reply_span = tracing::Span::current();
         let session_id = session_config.id.clone();
-        let events = crate::session_context::with_session_id(
+        let events = session_context::with_session_id(
             Some(session_id.clone()),
             self.reply_impl(
                 user_message,
@@ -2095,7 +2067,7 @@ impl Agent {
             ),
         )
         .await?;
-        let events = crate::session_context::with_session_id_stream(Some(session_id), events);
+        let events = session_context::with_session_id_stream(Some(session_id), events);
 
         // This is the single live-event identity boundary. Callers that intentionally stream
         // multiple events for one logical message must assign their shared ID before this point.
@@ -2127,39 +2099,38 @@ impl Agent {
         }
 
         for content in &user_message.content {
-            if let MessageContent::ActionRequired(action_required) = content {
-                if let ActionRequiredData::ElicitationResponse {
+            if let MessageContent::ActionRequired(action_required) = content
+                && let ActionRequiredData::ElicitationResponse {
                     id,
                     user_data,
                     action,
                 } = &action_required.data
-                {
-                    // Surface stale/cancelled/timed-out elicitations as a hard
-                    // error so callers (e.g. the HTTP handler) can propagate
-                    // failure to the client instead of silently reporting
-                    // success while the blocked tool call stays unblocked.
-                    // The success path returns an empty stream after the MCP
-                    // server receives the user's accept/decline/cancel action.
-                    let response = match action {
-                        ElicitationAction::Accept => ElicitationOutcome::Accept(user_data.clone()),
-                        ElicitationAction::Decline => ElicitationOutcome::Decline,
-                        ElicitationAction::Cancel => ElicitationOutcome::Cancel,
-                        _ => ElicitationOutcome::Cancel,
-                    };
-                    crate::elicitation::complete_elicitation_with_message(
-                        &session_manager,
-                        &session_config.id,
-                        id,
-                        response,
-                        &user_message,
-                    )
-                    .await
-                    .map_err(|e| {
-                        error!("Failed to submit elicitation response: {}", e);
-                        anyhow!("Failed to submit elicitation response: {}", e)
-                    })?;
-                    return Ok(Box::pin(futures::stream::empty()));
-                }
+            {
+                // Surface stale/cancelled/timed-out elicitations as a hard
+                // error so callers (e.g. the HTTP handler) can propagate
+                // failure to the client instead of silently reporting
+                // success while the blocked tool call stays unblocked.
+                // The success path returns an empty stream after the MCP
+                // server receives the user's accept/decline/cancel action.
+                let response = match action {
+                    ElicitationAction::Accept => ElicitationOutcome::Accept(user_data.clone()),
+                    ElicitationAction::Decline => ElicitationOutcome::Decline,
+                    ElicitationAction::Cancel => ElicitationOutcome::Cancel,
+                    _ => ElicitationOutcome::Cancel,
+                };
+                crate::elicitation::complete_elicitation_with_message(
+                    &session_manager,
+                    &session_config.id,
+                    id,
+                    response,
+                    &user_message,
+                )
+                .await
+                .map_err(|e| {
+                    error!("Failed to submit elicitation response: {}", e);
+                    anyhow!("Failed to submit elicitation response: {}", e)
+                })?;
+                return Ok(Box::pin(futures::stream::empty()));
             }
         }
 
@@ -2200,21 +2171,19 @@ impl Agent {
         }
 
         if is_first_agent_turn && !self.session_start_emitted.swap(true, Ordering::AcqRel) {
-            self.emit_hook(crate::hooks::HookEvent::SessionStart, &session_config.id)
+            self.emit_hook(hooks::HookEvent::SessionStart, &session_config.id)
                 .await;
         }
 
         if self
             .hook_manager
-            .has_hooks(crate::hooks::HookEvent::UserPromptSubmit)
+            .has_hooks(hooks::HookEvent::UserPromptSubmit)
         {
-            let ctx = crate::hooks::HookContext::new(
-                crate::hooks::HookEvent::UserPromptSubmit,
-                &session_config.id,
-            )
-            .with_message(message_text.clone());
+            let ctx =
+                hooks::HookContext::new(hooks::HookEvent::UserPromptSubmit, &session_config.id)
+                    .with_message(message_text.clone());
             self.hook_manager
-                .emit(crate::hooks::HookEvent::UserPromptSubmit, ctx)
+                .emit(hooks::HookEvent::UserPromptSubmit, ctx)
                 .await;
         }
 
@@ -2235,7 +2204,7 @@ impl Agent {
             }
             Ok(Some(response))
                 if response.role == rmcp::model::Role::Assistant
-                    && crate::agents::execute_commands::command_starts_turn(&message_text) =>
+                    && agents::execute_commands::command_starts_turn(&message_text) =>
             {
                 let response = response.with_generated_id_if_missing();
 
@@ -2256,7 +2225,7 @@ impl Agent {
                         &response.clone().with_visibility(true, false),
                     )
                     .await?;
-                let goal_text = crate::agents::execute_commands::parse_slash_command(&message_text)
+                let goal_text = agents::execute_commands::parse_slash_command(&message_text)
                     .map(|parsed| parsed.params_str.to_string())
                     .unwrap_or_default();
                 let kickoff = Message::user()
@@ -2290,7 +2259,7 @@ impl Agent {
                     .await?;
 
                 // Check if this was a command that modifies conversation history
-                let modifies_history = crate::agents::execute_commands::COMPACT_TRIGGERS
+                let modifies_history = agents::execute_commands::COMPACT_TRIGGERS
                     .contains(&message_text.trim())
                     || message_text.trim() == "/clear";
 
@@ -2483,14 +2452,14 @@ impl Agent {
         let provider_name = provider.get_name().to_string();
         let saved_provider_session_id =
             super::latest_provider_session_id(conversation.messages(), &provider_name);
-        if let Some(saved_provider_session_id) = saved_provider_session_id {
-            if let Err(error) = provider.resume(saved_provider_session_id).await {
-                warn!(
-                    provider = provider_name,
-                    %error,
-                    "Could not resume provider session; continuing with a handoff"
-                );
-            }
+        if let Some(saved_provider_session_id) = saved_provider_session_id
+            && let Err(error) = provider.resume(saved_provider_session_id).await
+        {
+            warn!(
+                provider = provider_name,
+                %error,
+                "Could not resume provider session; continuing with a handoff"
+            );
         }
 
         let requested_model = model_config.model_name.clone();
@@ -2518,10 +2487,10 @@ impl Agent {
                     .await
                 {
                     Ok(Some(update)) => {
-                        if let Some(tx) = session_name_update_tx {
-                            if tx.send(update).is_err() {
-                                warn!("Failed to publish generated session name");
-                            }
+                        if let Some(tx) = session_name_update_tx
+                            && tx.send(update).is_err()
+                        {
+                            warn!("Failed to publish generated session name");
                         }
                     }
                     Ok(None) => {}
@@ -2545,8 +2514,8 @@ impl Agent {
             "reply_stream",
             trace_output = tracing::field::Empty,
             session.id = %session_config.id,
-            session.user = %crate::session_context::session_user(),
-            session.host = %crate::session_context::session_host(),
+            session.user = %session_context::session_user(),
+            session.host = %session_context::session_host(),
             session.agent_type = "goose",
             gen_ai.operation.name = "invoke_agent",
             gen_ai.agent.name = tracing::field::Empty,
@@ -2564,18 +2533,17 @@ impl Agent {
         );
         gen_ai_telemetry::record_request_params(&reply_stream_span, &model_config);
         reply_stream_span.record("gen_ai.agent.name", gen_ai_telemetry::agent_name(&session));
-        if gen_ai_telemetry::capture_message_content() {
-            if let Some(last_user_msg) = conversation
+        if gen_ai_telemetry::capture_message_content()
+            && let Some(last_user_msg) = conversation
                 .messages()
                 .iter()
                 .rev()
                 .find(|m| m.role == rmcp::model::Role::User)
-            {
-                reply_stream_span.record(
-                    "gen_ai.input.messages",
-                    gen_ai_telemetry::simple_input_json(&last_user_msg.as_concat_text()).as_str(),
-                );
-            }
+        {
+            reply_stream_span.record(
+                "gen_ai.input.messages",
+                gen_ai_telemetry::simple_input_json(&last_user_msg.as_concat_text()).as_str(),
+            );
         }
         let inner = Box::pin(async_stream::try_stream! {
             let mut turns_taken = 0u32;
@@ -2598,10 +2566,10 @@ impl Agent {
             let mut can_drain_pending_steers = false;
             let turn_start = chrono::Local::now();
             let turn_start_compaction_info =
-                super::moim::compute_compaction_info(&session_config.id, &self.extension_manager)
+                moim::compute_compaction_info(&session_config.id, &self.extension_manager)
                     .await;
 
-            if let Some(turn_context) = super::moim::turn_context_message(
+            if let Some(turn_context) = moim::turn_context_message(
                 &session_config.id,
                 &self.extension_manager,
                 turns_taken,
@@ -2632,15 +2600,15 @@ impl Agent {
                         let message_text = agent_visible_message_text(&message);
                         if self
                             .hook_manager
-                            .has_hooks(crate::hooks::HookEvent::UserPromptSubmit)
+                            .has_hooks(hooks::HookEvent::UserPromptSubmit)
                         {
-                            let ctx = crate::hooks::HookContext::new(
-                                crate::hooks::HookEvent::UserPromptSubmit,
+                            let ctx = hooks::HookContext::new(
+                                hooks::HookEvent::UserPromptSubmit,
                                 &session_config.id,
                             )
                             .with_message(message_text);
                             self.hook_manager
-                                .emit(crate::hooks::HookEvent::UserPromptSubmit, ctx)
+                                .emit(hooks::HookEvent::UserPromptSubmit, ctx)
                                 .await;
                         }
                         let message = persist_and_push_message_with_id(
@@ -2671,11 +2639,11 @@ impl Agent {
                         .emit_stop_hook_blocking(&session_config.id, &last_assistant_text, &session.working_dir.to_string_lossy())
                         .await
                     {
-                        crate::hooks::HookDecision::Allow => {
+                        hooks::HookDecision::Allow => {
                             stop_hook_handled_for_exit = true;
                             break;
                         }
-                        crate::hooks::HookDecision::Deny { reason, plugin } => {
+                        hooks::HookDecision::Deny { reason, plugin } => {
                             consecutive_stop_hook_blocks += 1;
                             if consecutive_stop_hook_blocks > stop_hook_block_cap {
                                 let message = persist_message_with_id(
@@ -2715,7 +2683,7 @@ impl Agent {
                     break;
                 }
 
-                let mut stream = crate::agents::reply_parts::stream_response_from_provider(
+                let mut stream = agents::reply_parts::stream_response_from_provider(
                     self.provider().await?,
                     model_config.clone(),
                     &session_config.id,
@@ -2735,7 +2703,7 @@ impl Agent {
                 let tool_pair_summarization_task = if tool_pair_summarization_done {
                     None
                 } else {
-                    crate::context_mgmt::maybe_summarize_tool_pairs(
+                    context_mgmt::maybe_summarize_tool_pairs(
                         self.provider().await?,
                         model_config.clone(),
                         session_config.id.clone(),
@@ -2927,11 +2895,10 @@ impl Agent {
                                     // Track extension requests
                                     let mut enable_extension_request_ids = vec![];
                                     for request in &tool_requests {
-                                        if let Ok(tool_call) = &request.tool_call {
-                                            if tool_call.name == MANAGE_EXTENSIONS_TOOL_NAME_COMPLETE {
+                                        if let Ok(tool_call) = &request.tool_call
+                                            && tool_call.name == MANAGE_EXTENSIONS_TOOL_NAME_COMPLETE {
                                                 enable_extension_request_ids.push(request.id.clone());
                                             }
-                                        }
                                     }
 
                                     let mut tool_futures = self.handle_approved_and_denied_tools(
@@ -2986,10 +2953,10 @@ impl Agent {
                                                                 yield AgentEvent::Message(msg);
                                                             }
                                                             ToolStreamItem::Result(output) => {
-                                                                if let Ok(ref call_result) = output {
-                                                                    if let Some(ref meta) = call_result.meta {
-                                                                        if let Some(notification_data) = meta.0.get("platform_notification") {
-                                                                            if let Some(method) = notification_data.get("method").and_then(|v| v.as_str()) {
+                                                                if let Ok(ref call_result) = output
+                                                                    && let Some(ref meta) = call_result.meta
+                                                                        && let Some(notification_data) = meta.0.get("platform_notification")
+                                                                            && let Some(method) = notification_data.get("method").and_then(|v| v.as_str()) {
                                                                                 let params = notification_data.get("params").cloned();
                                                                                 let custom_notification = rmcp::model::CustomNotification::new(
                                                                                     method.to_string(),
@@ -2999,9 +2966,6 @@ impl Agent {
                                                                                 let server_notification = rmcp::model::ServerNotification::CustomNotification(custom_notification);
                                                                                 yield AgentEvent::McpNotification((request_id.clone(), server_notification));
                                                                             }
-                                                                        }
-                                                                    }
-                                                                }
 
                                                                 if enable_extension_request_ids.contains(&request_id)
                                                                     && output.is_err()
@@ -3022,7 +2986,7 @@ impl Agent {
                                                 }
                                             }
 
-                                            _ = tokio::time::sleep(std::time::Duration::from_millis(100)) => {}
+                                            _ = tokio::time::sleep(time::Duration::from_millis(100)) => {}
                                         }
                                     }
 
@@ -3470,11 +3434,10 @@ impl Agent {
                     }
                 }
 
-                if is_token_cancelled(&cancel_token) {
-                    if let Some(ref task) = tool_pair_summarization_task {
+                if is_token_cancelled(&cancel_token)
+                    && let Some(ref task) = tool_pair_summarization_task {
                         task.abort();
                     }
-                }
 
                 if let Some(task) = tool_pair_summarization_task {
                     tool_pair_summarization_done = true;
@@ -3527,15 +3490,14 @@ impl Agent {
                     messages_to_add
                 };
 
-                if let Some(usage) = pending_turn_usage.take() {
-                    if let Some((message_id, usage)) = attach_turn_usage(
+                if let Some(usage) = pending_turn_usage.take()
+                    && let Some((message_id, usage)) = attach_turn_usage(
                         &mut messages_to_add,
                         &usage,
                         preferred_turn_usage_message_id.as_deref(),
                     ) {
                         yield AgentEvent::MessageUsage { message_id, usage };
                     }
-                }
 
                 for msg in &messages_to_add {
                     session_manager.add_message(&session_config.id, msg).await?;
@@ -3551,11 +3513,11 @@ impl Agent {
                         .emit_stop_hook_blocking(&session_config.id, &last_assistant_text, &session.working_dir.to_string_lossy())
                         .await
                     {
-                        crate::hooks::HookDecision::Allow => {
+                        hooks::HookDecision::Allow => {
                             stop_hook_handled_for_exit = true;
                             break;
                         }
-                        crate::hooks::HookDecision::Deny { reason, plugin } => {
+                        hooks::HookDecision::Deny { reason, plugin } => {
                             consecutive_stop_hook_blocks += 1;
                             if consecutive_stop_hook_blocks > stop_hook_block_cap {
                                 let message = persist_message_with_id(
@@ -3631,16 +3593,14 @@ impl Agent {
     pub async fn update_provider(
         &self,
         provider: Arc<dyn Provider>,
-        model_config: goose_providers::model::ModelConfig,
+        model_config: bcaip_provider_types::model::ModelConfig,
         session_id: &str,
     ) -> Result<()> {
         let provider_name = provider.get_name().to_string();
-        let registry_entry = crate::providers::get_from_registry(&provider_name)
-            .await
-            .ok();
+        let registry_entry = providers::get_from_registry(&provider_name).await.ok();
 
         let model_config = if registry_entry.is_some() {
-            crate::model_config::materialize_model_config(&provider_name, model_config.clone())
+            model_config::materialize_model_config(&provider_name, model_config.clone())
                 .unwrap_or(model_config)
         } else {
             model_config
@@ -3707,7 +3667,7 @@ impl Agent {
         &self,
         session_id: &str,
         provider_name: &str,
-        model_config: goose_providers::model::ModelConfig,
+        model_config: bcaip_provider_types::model::ModelConfig,
     ) -> Result<()> {
         let session = self
             .config
@@ -3721,7 +3681,7 @@ impl Agent {
             Config::global(),
         );
 
-        let provider = crate::providers::create_with_working_dir(
+        let provider = providers::create_with_working_dir(
             provider_name,
             extensions,
             session.working_dir.clone(),
@@ -3803,71 +3763,70 @@ impl Agent {
                     .get_goose_model()
                     .ok()
                     .ok_or_else(|| anyhow!("Could not configure agent: missing model"))?;
-                crate::model_config::model_config_from_user_config(&provider_name, &model_name)
+                model_config::model_config_from_user_config(&provider_name, &model_name)
                     .map_err(|e| anyhow!("Could not configure agent: invalid model {}", e))?
             }
         };
 
         // if the saved model is the ACP sentinel "current", only preserve this if the provider
         // uses this sentinel to indicate it's an ACP provider that manages its model
-        if model_config.model_name == crate::acp::ACP_CURRENT_MODEL {
-            if let Ok(entry) = crate::providers::get_from_registry(&provider_name).await {
-                if entry.metadata().default_model != crate::acp::ACP_CURRENT_MODEL {
-                    model_config = crate::model_config::model_config_from_user_config(
-                        &provider_name,
-                        &entry.metadata().default_model,
-                    )
-                    .map_err(|e| anyhow!("Could not resolve default model: {}", e))?;
-                }
-            }
+        if model_config.model_name == acp::ACP_CURRENT_MODEL
+            && let Ok(entry) = providers::get_from_registry(&provider_name).await
+            && entry.metadata().default_model != acp::ACP_CURRENT_MODEL
+        {
+            model_config = model_config::model_config_from_user_config(
+                &provider_name,
+                &entry.metadata().default_model,
+            )
+            .map_err(|e| anyhow!("Could not resolve default model: {}", e))?;
         }
 
         let extensions =
             EnabledExtensionsState::extensions_or_default(Some(&session.extension_data), config);
 
-        let (provider, active_model_config, provider_changed) =
-            if crate::providers::get_from_registry(&provider_name)
-                .await
-                .is_ok()
-            {
-                let p = crate::providers::create_with_working_dir(
-                    &provider_name,
-                    extensions,
-                    session.working_dir.clone(),
-                )
-                .await
-                .map_err(|error| provider_creation_error(error, "Could not create provider"))?;
-                (p, model_config, false)
-            } else {
-                let fallback_provider_name = config
-                    .get_goose_provider()
-                    .ok()
-                    .filter(|name| name != &provider_name)
-                    .ok_or_else(|| {
-                        anyhow!(
-                            "Could not create provider: provider '{}' not found",
-                            provider_name
-                        )
-                    })?;
-
-                tracing::warn!(
-                    "Session provider '{}' unavailable, falling back to '{}'",
-                    provider_name,
-                    fallback_provider_name
-                );
-
-                let fallback_model_name = config.get_goose_model().ok().ok_or_else(|| {
-                    anyhow!("Could not configure fallback provider: missing model")
-                })?;
-                let fallback_model_config = crate::model_config::model_config_from_user_config(
-                    &fallback_provider_name,
-                    &fallback_model_name,
-                )
-                .map_err(|e| {
-                    anyhow!("Could not configure fallback provider: invalid model {}", e)
+        let (provider, active_model_config, provider_changed) = if providers::get_from_registry(
+            &provider_name,
+        )
+        .await
+        .is_ok()
+        {
+            let p = providers::create_with_working_dir(
+                &provider_name,
+                extensions,
+                session.working_dir.clone(),
+            )
+            .await
+            .map_err(|error| provider_creation_error(error, "Could not create provider"))?;
+            (p, model_config, false)
+        } else {
+            let fallback_provider_name = config
+                .get_goose_provider()
+                .ok()
+                .filter(|name| name != &provider_name)
+                .ok_or_else(|| {
+                    anyhow!(
+                        "Could not create provider: provider '{}' not found",
+                        provider_name
+                    )
                 })?;
 
-                let fallback_provider = crate::providers::create_with_working_dir(
+            tracing::warn!(
+                "Session provider '{}' unavailable, falling back to '{}'",
+                provider_name,
+                fallback_provider_name
+            );
+
+            let fallback_model_name = config
+                .get_goose_model()
+                .ok()
+                .ok_or_else(|| anyhow!("Could not configure fallback provider: missing model"))?;
+            let fallback_model_config = model_config::model_config_from_user_config(
+                &fallback_provider_name,
+                &fallback_model_name,
+            )
+            .map_err(|e| anyhow!("Could not configure fallback provider: invalid model {}", e))?;
+
+            let fallback_provider = providers::create_with_working_dir(
                     &fallback_provider_name,
                     extensions,
                     session.working_dir.clone(),
@@ -3882,20 +3841,20 @@ impl Agent {
                     )
                 })?;
 
-                if let Err(e) = self
-                    .config
-                    .session_manager
-                    .update(&session.id)
-                    .provider_name(&fallback_provider_name)
-                    .model_config(fallback_model_config.clone())
-                    .apply()
-                    .await
-                {
-                    tracing::warn!("Failed to update session provider: {}", e);
-                }
+            if let Err(e) = self
+                .config
+                .session_manager
+                .update(&session.id)
+                .provider_name(&fallback_provider_name)
+                .model_config(fallback_model_config.clone())
+                .apply()
+                .await
+            {
+                tracing::warn!("Failed to update session provider: {}", e);
+            }
 
-                (fallback_provider, fallback_model_config, true)
-            };
+            (fallback_provider, fallback_model_config, true)
+        };
 
         self.update_provider(provider, active_model_config, &session.id)
             .await?;
@@ -3960,2423 +3919,5 @@ impl Agent {
         }
 
         Err(anyhow!("Prompt '{}' not found", name))
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::agents::gen_ai_telemetry::{self, test_support::SpanFieldCapture};
-    use crate::plugins::discovery::{DiscoveredPlugin, PluginScope};
-    use crate::providers::base::{
-        stream_from_single_message, MessageStream, ModelInfo, PermissionRouting,
-    };
-    use crate::recipe::Response;
-    use crate::session::session_manager::SessionType;
-    use goose_providers::conversation::token_usage::{ProviderUsage, Usage};
-    use rmcp::model::{Annotations, Role, TextContent, Tool};
-    use std::path::PathBuf;
-    use std::sync::atomic::{AtomicUsize, Ordering};
-    use tempfile::TempDir;
-
-    fn persisted_builtin(name: &str) -> ExtensionConfig {
-        ExtensionConfig::Builtin {
-            name: name.to_string(),
-            description: String::new(),
-            display_name: None,
-            timeout: None,
-            bundled: None,
-            available_tools: Vec::new(),
-        }
-    }
-
-    #[test]
-    fn persisted_extension_identity_must_be_unique_before_removal() {
-        let session_extension = persisted_builtin("session-only");
-        assert!(has_unique_persisted_extension(&[session_extension], "session-only").unwrap());
-        assert!(!has_unique_persisted_extension(&[], "missing").unwrap());
-
-        let duplicate_result = has_unique_persisted_extension(
-            &[persisted_builtin("a.b"), persisted_builtin("a/b")],
-            "a_b",
-        );
-        assert_eq!(
-            duplicate_result.unwrap_err().to_string(),
-            "Duplicate session extension key 'a_b'"
-        );
-    }
-
-    #[test]
-    fn provider_creation_context_preserves_acp_error_code() {
-        let source = anyhow::Error::new(agent_client_protocol::Error::auth_required())
-            .context("ACP session/new failed: Authentication required");
-
-        let error = provider_creation_error(source, "Could not create provider");
-
-        assert_eq!(
-            error.to_string(),
-            "Could not create provider: ACP session/new failed: Authentication required"
-        );
-        assert!(error.chain().any(|source| {
-            source
-                .downcast_ref::<agent_client_protocol::Error>()
-                .is_some_and(|error| {
-                    error.code == agent_client_protocol::schema::v1::ErrorCode::AuthRequired
-                })
-        }));
-    }
-
-    #[test]
-    fn provider_session_id_comes_from_latest_inference() {
-        let messages = vec![
-            Message::assistant().with_inference(InferenceMetadata {
-                provider: "codex-acp".to_string(),
-                requested_model: "current".to_string(),
-                resolved_model: None,
-                provider_session_id: Some("codex-session".to_string()),
-            }),
-            Message::assistant().with_inference(InferenceMetadata {
-                provider: "claude-acp".to_string(),
-                requested_model: "current".to_string(),
-                resolved_model: None,
-                provider_session_id: Some("claude-session".to_string()),
-            }),
-        ];
-
-        assert_eq!(
-            super::super::latest_provider_session_id(&messages, "claude-acp"),
-            Some("claude-session")
-        );
-        assert_eq!(
-            super::super::latest_provider_session_id(&messages, "codex-acp"),
-            None
-        );
-    }
-
-    #[derive(Debug, Default)]
-    struct SessionContextProvider {
-        calls: std::sync::Mutex<Vec<(&'static str, Option<String>)>>,
-    }
-
-    impl SessionContextProvider {
-        fn record(&self, operation: &'static str) {
-            self.calls
-                .lock()
-                .unwrap()
-                .push((operation, crate::session_context::current_session_id()));
-        }
-
-        fn calls(&self) -> Vec<(&'static str, Option<String>)> {
-            self.calls.lock().unwrap().clone()
-        }
-    }
-
-    #[async_trait::async_trait]
-    impl crate::providers::base::Provider for SessionContextProvider {
-        fn get_name(&self) -> &str {
-            "session-context"
-        }
-
-        async fn resume(&self, _session_id: &str) -> Result<(), ProviderError> {
-            self.record("resume");
-            Ok(())
-        }
-
-        async fn fetch_model_info(&self, model_name: &str) -> Result<ModelInfo, ProviderError> {
-            self.record("fetch_model_info");
-            Ok(ModelInfo::new(model_name).with_context_limit(32_000))
-        }
-
-        async fn get_context_limit(&self, _model: &str, _override_limit: Option<usize>) -> usize {
-            self.record("get_context_limit");
-            32_000
-        }
-
-        async fn stream(
-            &self,
-            _model_config: &goose_providers::model::ModelConfig,
-            _system_prompt: &str,
-            _messages: &[Message],
-            _tools: &[Tool],
-        ) -> Result<MessageStream, ProviderError> {
-            self.record("stream");
-            Ok(stream_from_single_message(
-                Message::assistant().with_text("done"),
-                ProviderUsage::new("mock-model".to_string(), Usage::default()),
-            ))
-        }
-    }
-
-    async fn session_context_agent() -> (Agent, Arc<SessionContextProvider>, SessionConfig, TempDir)
-    {
-        let temp_dir = TempDir::new().unwrap();
-        let session_manager = Arc::new(SessionManager::new(temp_dir.path().to_path_buf()));
-        let agent = Agent::with_config(AgentConfig::new(
-            Arc::clone(&session_manager),
-            Arc::new(PermissionManager::new(temp_dir.path().join("permissions"))),
-            None,
-            GooseMode::default(),
-            true,
-            GoosePlatform::GooseCli,
-        ));
-        let session = session_manager
-            .create_session(
-                temp_dir.path().to_path_buf(),
-                "session-context".to_string(),
-                SessionType::Hidden,
-                GooseMode::default(),
-            )
-            .await
-            .unwrap();
-        let provider = Arc::new(SessionContextProvider::default());
-        agent
-            .update_provider(
-                provider.clone(),
-                goose_providers::model::ModelConfig::new("mock-model"),
-                &session.id,
-            )
-            .await
-            .unwrap();
-        session_manager
-            .add_message(&session.id, &Message::user().with_text("initial request"))
-            .await
-            .unwrap();
-        session_manager
-            .add_message(
-                &session.id,
-                &Message::assistant()
-                    .with_text("previous response")
-                    .with_inference(InferenceMetadata {
-                        provider: provider.get_name().to_string(),
-                        requested_model: "mock-model".to_string(),
-                        resolved_model: None,
-                        provider_session_id: Some("saved-provider-session".to_string()),
-                    }),
-            )
-            .await
-            .unwrap();
-
-        let session_config = SessionConfig {
-            id: session.id.clone(),
-            schedule_id: None,
-            max_turns: Some(1),
-            retry_config: None,
-        };
-
-        (agent, provider, session_config, temp_dir)
-    }
-
-    fn assert_session_context_calls(
-        provider: &SessionContextProvider,
-        session_id: &str,
-        operations: &[&'static str],
-    ) {
-        let calls = provider.calls();
-        for operation in operations {
-            assert!(
-                calls
-                    .iter()
-                    .any(|call| call == &(*operation, Some(session_id.to_string()))),
-                "{operation} was not scoped to session {session_id}: {calls:?}"
-            );
-        }
-        assert_eq!(crate::session_context::current_session_id(), None);
-    }
-
-    #[tokio::test]
-    async fn reply_scopes_resume_model_info_and_stream_to_session() {
-        let (agent, provider, session_config, _temp_dir) = session_context_agent().await;
-        let session_id = session_config.id.clone();
-        let mut events = agent
-            .reply(
-                Message::user().with_text("continue"),
-                session_config,
-                false,
-                None,
-            )
-            .await
-            .unwrap();
-        while let Some(event) = events.next().await {
-            event.unwrap();
-        }
-
-        assert_session_context_calls(
-            provider.as_ref(),
-            &session_id,
-            &["resume", "fetch_model_info", "stream"],
-        );
-    }
-
-    #[tokio::test]
-    async fn live_delegation_scopes_state_machine_setup_and_stream_to_session() {
-        let (agent, provider, mut session_config, _temp_dir) = session_context_agent().await;
-        session_config.max_turns = Some(2);
-        let session_id = session_config.id.clone();
-        let mut events = agent
-            .reply_live_delegation(
-                Message::user().with_text("continue"),
-                session_config,
-                CancellationToken::new(),
-            )
-            .await
-            .unwrap();
-        while let Some(event) = events.next().await {
-            event.unwrap();
-        }
-
-        assert_session_context_calls(
-            provider.as_ref(),
-            &session_id,
-            &["get_context_limit", "stream"],
-        );
-    }
-
-    async fn tracing_test_agent_and_session() -> (Agent, Session, TempDir) {
-        let data_dir = TempDir::new().unwrap();
-        let data_path = data_dir.path().to_path_buf();
-        let session_manager = Arc::new(SessionManager::new(data_path.clone()));
-        let agent = Agent::with_config(AgentConfig::new(
-            Arc::clone(&session_manager),
-            Arc::new(PermissionManager::new(data_path)),
-            None,
-            GooseMode::default(),
-            false,
-            GoosePlatform::GooseCli,
-        ));
-        let session = session_manager
-            .create_session(
-                std::env::current_dir().unwrap(),
-                "otel-tool-span".to_string(),
-                SessionType::Hidden,
-                GooseMode::default(),
-            )
-            .await
-            .unwrap();
-        (agent, session, data_dir)
-    }
-
-    async fn capture_tool_dispatch_fields(
-        capture_setting: Option<&'static str>,
-    ) -> serde_json::Map<String, Value> {
-        use goose_test_support::otel::clear_otel_env;
-        use rmcp::object;
-
-        let _env = match capture_setting {
-            Some(value) => {
-                clear_otel_env(&[(gen_ai_telemetry::CAPTURE_MESSAGE_CONTENT_ENV, value)])
-            }
-            None => clear_otel_env(&[]),
-        };
-        let capture = SpanFieldCapture::new("dispatch_tool_call");
-        let _subscriber = capture.clone().set_default();
-        let (agent, session, _data_dir) = tracing_test_agent_and_session().await;
-        let tool_call = CallToolRequestParams::new(
-            crate::agents::platform_extensions::scheduler::MANAGE_SCHEDULE_TOOL_NAME_COMPLETE,
-        )
-        .with_arguments(object!({
-            "action": "list",
-            "api_key": "tool-input-super-secret-token",
-        }));
-
-        let (_, result) = agent
-            .dispatch_tool_call(tool_call, "call-secret".to_string(), None, &session)
-            .await;
-        let _ = result.unwrap().result.await;
-        capture.fields()
-    }
-
-    #[tokio::test]
-    async fn tool_arguments_are_not_traced_without_content_capture() {
-        for capture_setting in [None, Some("false")] {
-            let fields = capture_tool_dispatch_fields(capture_setting).await;
-            let recorded = serde_json::to_string(&fields).unwrap();
-
-            assert!(!recorded.contains("tool-input-super-secret-token"));
-            assert!(!fields.contains_key("input"));
-            assert!(!fields.contains_key("gen_ai.tool.call.arguments"));
-            assert_eq!(fields["gen_ai.operation.name"], "execute_tool");
-            assert_eq!(fields["gen_ai.tool.call.id"], "call-secret");
-        }
-    }
-
-    #[tokio::test]
-    async fn tool_dispatch_records_gen_ai_span_attributes() {
-        use goose_test_support::otel::clear_otel_env;
-        use rmcp::object;
-
-        let _env = clear_otel_env(&[(gen_ai_telemetry::CAPTURE_MESSAGE_CONTENT_ENV, "true")]);
-        let capture = SpanFieldCapture::new("dispatch_tool_call");
-        let _subscriber = capture.clone().set_default();
-        let (agent, session, _data_dir) = tracing_test_agent_and_session().await;
-        let tool_name =
-            crate::agents::platform_extensions::scheduler::MANAGE_SCHEDULE_TOOL_NAME_COMPLETE;
-        let tool_call =
-            CallToolRequestParams::new(tool_name).with_arguments(object!({ "action": "list" }));
-
-        let (request_id, result) = agent
-            .dispatch_tool_call(
-                tool_call,
-                "call-42".to_string(),
-                Some(CancellationToken::new()),
-                &session,
-            )
-            .await;
-        assert_eq!(request_id, "call-42");
-        let result = result.unwrap();
-        assert!(result.result.await.is_err());
-
-        let fields = capture.fields();
-        assert_eq!(fields["gen_ai.operation.name"], "execute_tool");
-        assert_eq!(fields["gen_ai.tool.name"], tool_name);
-        assert_eq!(fields["gen_ai.tool.call.id"], "call-42");
-        assert_eq!(fields["gen_ai.conversation.id"], session.id);
-        let input: Value = serde_json::from_str(fields["input"].as_str().unwrap()).unwrap();
-        assert_eq!(input["arguments"]["action"], "list");
-        let arguments: Value =
-            serde_json::from_str(fields["gen_ai.tool.call.arguments"].as_str().unwrap()).unwrap();
-        assert_eq!(arguments["action"], "list");
-        let output: Value = serde_json::from_str(fields["output"].as_str().unwrap()).unwrap();
-        assert_eq!(output["status"], "error");
-        assert!(!fields.contains_key("gen_ai.tool.call.result"));
-    }
-
-    #[tokio::test]
-    async fn successful_tool_result_is_recorded_after_execution() {
-        use goose_test_support::otel::clear_otel_env;
-        use rmcp::model::ContentBlock;
-
-        let _env = clear_otel_env(&[(gen_ai_telemetry::CAPTURE_MESSAGE_CONTENT_ENV, "true")]);
-        let capture = SpanFieldCapture::new("successful_tool");
-        let _subscriber = capture.clone().set_default();
-        let (agent, session, _data_dir) = tracing_test_agent_and_session().await;
-        let tool_call = CallToolRequestParams::new("test_tool");
-        let span = tracing::info_span!(
-            "successful_tool",
-            output = tracing::field::Empty,
-            gen_ai.tool.call.result = tracing::field::Empty,
-        );
-        let entered = span.enter();
-        let result = agent.with_post_tool_hook(
-            ToolCallResult::from(Ok(CallToolResult::success(vec![ContentBlock::text(
-                "done",
-            )]))),
-            &tool_call,
-            &session,
-            "call-post-hook",
-        );
-        drop(entered);
-        drop(span);
-
-        assert!(result.result.await.is_ok());
-        let fields = capture.fields();
-        let result: Value =
-            serde_json::from_str(fields["gen_ai.tool.call.result"].as_str().unwrap()).unwrap();
-        assert_eq!(result["content"][0]["text"], "done");
-        let output: Value = serde_json::from_str(fields["output"].as_str().unwrap()).unwrap();
-        assert_eq!(output["status"], "success");
-    }
-
-    #[test]
-    fn ensure_message_event_id_assigns_missing_ids_and_preserves_existing_ids() {
-        let generated =
-            ensure_message_event_id(AgentEvent::Message(Message::assistant().with_text("hello")));
-        let AgentEvent::Message(generated_message) = generated else {
-            panic!("expected message event");
-        };
-        let generated_id = generated_message
-            .id
-            .as_deref()
-            .expect("generated message id");
-        assert!(generated_id.starts_with("msg_"));
-
-        let preserved = ensure_message_event_id(AgentEvent::Message(
-            Message::assistant()
-                .with_id("provider-message-id")
-                .with_text("hello"),
-        ));
-        let AgentEvent::Message(preserved_message) = preserved else {
-            panic!("expected message event");
-        };
-        assert_eq!(preserved_message.id.as_deref(), Some("provider-message-id"));
-
-        let non_message =
-            ensure_message_event_id(AgentEvent::HistoryReplaced(Conversation::empty()));
-        assert!(matches!(non_message, AgentEvent::HistoryReplaced(_)));
-    }
-
-    #[test]
-    fn resolve_use_login_shell_path_defaults_by_platform() {
-        assert!(resolve_use_login_shell_path(
-            None,
-            &GoosePlatform::GooseDesktop
-        ));
-        assert!(!resolve_use_login_shell_path(
-            None,
-            &GoosePlatform::GooseCli
-        ));
-    }
-
-    #[test]
-    fn resolve_use_login_shell_path_explicit_overrides_platform() {
-        assert!(resolve_use_login_shell_path(
-            Some(true),
-            &GoosePlatform::GooseCli
-        ));
-        assert!(!resolve_use_login_shell_path(
-            Some(false),
-            &GoosePlatform::GooseDesktop
-        ));
-    }
-
-    #[test]
-    fn user_event_projection_preserves_hidden_tool_response_wrapper() {
-        use rmcp::model::{Annotations, ContentBlock, Role, TextContent};
-
-        let hidden_only = Message::user().with_tool_response(
-            "tool-1",
-            Ok(CallToolResult::success(vec![ContentBlock::Text(
-                TextContent::new("provider-only")
-                    .with_annotations(Annotations::default().with_audience(vec![Role::Assistant])),
-            )])),
-        );
-
-        let projected = project_message_for_user_event(&hidden_only);
-        let result = projected.content[0]
-            .as_tool_response()
-            .expect("hidden tool response wrapper")
-            .tool_result
-            .as_ref()
-            .expect("successful hidden tool result");
-        assert!(result.content.is_empty());
-    }
-
-    #[test]
-    fn agent_visible_message_text_excludes_user_only_blocks() {
-        use rmcp::model::{Annotations, Role, TextContent};
-
-        let user_only = TextContent::new("SECRET_USER_ONLY")
-            .with_annotations(Annotations::default().with_audience(vec![Role::User]));
-        let message = Message::user()
-            .with_text("/goal visible objective")
-            .with_content(MessageContent::Text(user_only));
-
-        assert_eq!(
-            agent_visible_message_text(&message),
-            "/goal visible objective"
-        );
-    }
-
-    struct ActionRequiredProvider {
-        handled: tokio::sync::Mutex<Vec<(String, PermissionConfirmation)>>,
-    }
-
-    impl ActionRequiredProvider {
-        fn new() -> Self {
-            Self {
-                handled: tokio::sync::Mutex::new(Vec::new()),
-            }
-        }
-    }
-
-    impl std::fmt::Debug for ActionRequiredProvider {
-        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-            f.debug_struct("ActionRequiredProvider").finish()
-        }
-    }
-
-    #[async_trait::async_trait]
-    impl crate::providers::base::Provider for ActionRequiredProvider {
-        fn get_name(&self) -> &str {
-            "test-action-required"
-        }
-        async fn stream(
-            &self,
-            _: &goose_providers::model::ModelConfig,
-            _: &str,
-            _: &[crate::conversation::message::Message],
-            _: &[rmcp::model::Tool],
-        ) -> Result<crate::providers::base::MessageStream, ProviderError> {
-            unimplemented!()
-        }
-        fn permission_routing(&self) -> PermissionRouting {
-            PermissionRouting::ActionRequired
-        }
-        async fn handle_permission_confirmation(
-            &self,
-            request_id: &str,
-            confirmation: &PermissionConfirmation,
-        ) -> bool {
-            self.handled
-                .lock()
-                .await
-                .push((request_id.to_string(), confirmation.clone()));
-            request_id == "known"
-        }
-    }
-
-    #[tokio::test]
-    async fn test_submit_tool_confirmation_routes_to_provider() {
-        let (agent, session, _data_dir) = tracing_test_agent_and_session().await;
-        let provider = Arc::new(ActionRequiredProvider::new());
-        *agent.provider.lock().await =
-            Some(provider.clone() as Arc<dyn crate::providers::base::Provider>);
-
-        // Known request_id → provider handles it, confirmation_router NOT called
-        agent
-            .submit_tool_confirmation(
-                &session.id,
-                "known",
-                crate::permission::Permission::AllowOnce,
-            )
-            .await
-            .unwrap();
-        assert_eq!(provider.handled.lock().await.len(), 1);
-
-        // Unknown request_id → provider returns false, falls through to confirmation_router
-        // Register first so deliver() has somewhere to send
-        let rx = agent
-            .tool_confirmation_router
-            .register(session.id.clone(), "unknown".to_string())
-            .await;
-        agent
-            .submit_tool_confirmation(
-                &session.id,
-                "unknown",
-                crate::permission::Permission::DenyOnce,
-            )
-            .await
-            .unwrap();
-        assert_eq!(provider.handled.lock().await.len(), 2);
-        // Verify the fallthrough went to confirmation_router
-        let conf = rx.await.unwrap();
-        assert_eq!(conf.permission, crate::permission::Permission::DenyOnce);
-    }
-
-    #[tokio::test]
-    async fn test_submit_tool_confirmation_routes_to_legacy() {
-        let (agent, session, _data_dir) = tracing_test_agent_and_session().await;
-        // No provider set → Noop routing, goes straight to confirmation_router
-        // Register first so deliver() has somewhere to send
-        let rx = agent
-            .tool_confirmation_router
-            .register(session.id.clone(), "any".to_string())
-            .await;
-        agent
-            .submit_tool_confirmation(&session.id, "any", crate::permission::Permission::AllowOnce)
-            .await
-            .unwrap();
-
-        let conf = rx.await.unwrap();
-        assert_eq!(conf.permission, crate::permission::Permission::AllowOnce);
-    }
-
-    enum EffortOutcome {
-        Applied,
-        Unhandled,
-        Rejected,
-    }
-
-    #[derive(Debug)]
-    struct EffortProvider {
-        applies_effort: bool,
-        rejects_effort: bool,
-        effort_calls: std::sync::Mutex<Vec<String>>,
-        model_selections: std::sync::Mutex<Vec<String>>,
-    }
-
-    impl EffortProvider {
-        fn new(outcome: EffortOutcome) -> Self {
-            Self {
-                applies_effort: matches!(outcome, EffortOutcome::Applied),
-                rejects_effort: matches!(outcome, EffortOutcome::Rejected),
-                effort_calls: std::sync::Mutex::new(Vec::new()),
-                model_selections: std::sync::Mutex::new(Vec::new()),
-            }
-        }
-
-        fn effort_calls(&self) -> Vec<String> {
-            self.effort_calls.lock().unwrap().clone()
-        }
-
-        fn model_selections(&self) -> Vec<String> {
-            self.model_selections.lock().unwrap().clone()
-        }
-    }
-
-    #[async_trait::async_trait]
-    impl crate::providers::base::Provider for EffortProvider {
-        fn get_name(&self) -> &str {
-            "test-effort"
-        }
-        fn thinking_effort_support(&self) -> ThinkingEffortSupport {
-            if self.applies_effort {
-                ThinkingEffortSupport::Options(
-                    goose_providers::thinking::ThinkingEffortCapability {
-                        option_id: "effort".to_string(),
-                        values: vec![goose_providers::thinking::ThinkingEffortOption {
-                            value: "default".to_string(),
-                            label: "Default".to_string(),
-                        }],
-                        current: Some("default".to_string()),
-                    },
-                )
-            } else {
-                ThinkingEffortSupport::Unspecified
-            }
-        }
-        async fn stream(
-            &self,
-            _: &goose_providers::model::ModelConfig,
-            _: &str,
-            _: &[crate::conversation::message::Message],
-            _: &[rmcp::model::Tool],
-        ) -> Result<crate::providers::base::MessageStream, ProviderError> {
-            unimplemented!()
-        }
-        async fn set_thinking_effort(
-            &self,
-            _session_id: &str,
-            value: &str,
-        ) -> Result<bool, ProviderError> {
-            self.effort_calls.lock().unwrap().push(value.to_string());
-            if self.rejects_effort {
-                return Err(ProviderError::RequestFailed("no such effort".to_string()));
-            }
-            Ok(self.applies_effort)
-        }
-        async fn apply_model_selection(
-            &self,
-            model_config: &goose_providers::model::ModelConfig,
-        ) -> Result<(), ProviderError> {
-            self.model_selections
-                .lock()
-                .unwrap()
-                .push(model_config.model_name.clone());
-            Ok(())
-        }
-    }
-
-    async fn effort_test_agent(
-        outcome: EffortOutcome,
-    ) -> (Agent, String, Arc<EffortProvider>, TempDir) {
-        let (agent, session, data_dir) = tracing_test_agent_and_session().await;
-        let provider = Arc::new(EffortProvider::new(outcome));
-        agent
-            .update_provider(
-                provider.clone(),
-                goose_providers::model::ModelConfig::new("mock-model"),
-                &session.id,
-            )
-            .await
-            .unwrap();
-        (agent, session.id, provider, data_dir)
-    }
-
-    async fn persisted_thinking_effort(agent: &Agent, session_id: &str) -> Option<String> {
-        agent
-            .model_config_for_session(session_id)
-            .await
-            .unwrap()
-            .request_param::<String>("thinking_effort")
-    }
-
-    #[tokio::test]
-    async fn update_provider_applies_the_model_selection() {
-        let (_agent, _session_id, provider, _data_dir) =
-            effort_test_agent(EffortOutcome::Applied).await;
-
-        assert_eq!(provider.model_selections(), ["mock-model"]);
-    }
-
-    #[tokio::test]
-    async fn provider_toolshim_is_effective_without_being_persisted() {
-        let (agent, session, _data_dir) = tracing_test_agent_and_session().await;
-        let provider_root = TempDir::new().unwrap();
-        let provider_root_path = provider_root.path().display().to_string();
-        let _guard = env_lock::lock_env([
-            ("GOOSE_PATH_ROOT", Some(provider_root_path.as_str())),
-            ("GOOSE_TOOLSHIM", None),
-        ]);
-
-        let config = crate::config::declarative_providers::create_custom_provider(
-            crate::config::declarative_providers::CreateCustomProviderParams {
-                engine: "openai".to_string(),
-                display_name: "Sticky Toolshim".to_string(),
-                api_url: "https://example.invalid/v1".to_string(),
-                api_key: None,
-                models: vec![crate::providers::base::ModelInfo::new("test-model")],
-                supports_streaming: Some(true),
-                headers: None,
-                requires_auth: false,
-                catalog_provider_id: None,
-                base_path: None,
-                toolshim: true,
-                preserves_thinking: None,
-                auth: None,
-            },
-        )
-        .unwrap();
-        crate::providers::refresh_custom_providers().await.unwrap();
-
-        let provider = crate::providers::create(&config.name, Vec::new())
-            .await
-            .unwrap();
-        agent
-            .update_provider(
-                provider,
-                goose_providers::model::ModelConfig::new("test-model"),
-                &session.id,
-            )
-            .await
-            .unwrap();
-
-        assert!(
-            !agent
-                .model_config_for_session(&session.id)
-                .await
-                .unwrap()
-                .toolshim
-        );
-        assert!(
-            agent
-                .effective_model_config_for_session(&session.id)
-                .await
-                .unwrap()
-                .toolshim
-        );
-
-        crate::config::declarative_providers::update_custom_provider(
-            crate::config::declarative_providers::UpdateCustomProviderParams {
-                id: config.name.clone(),
-                engine: "openai".to_string(),
-                display_name: config.display_name,
-                api_url: config.base_url,
-                api_key: None,
-                models: config.models,
-                supports_streaming: config.supports_streaming,
-                headers: config.headers,
-                requires_auth: false,
-                catalog_provider_id: None,
-                base_path: None,
-                toolshim: false,
-                preserves_thinking: None,
-                auth: None,
-            },
-        )
-        .unwrap();
-        crate::providers::refresh_custom_providers().await.unwrap();
-
-        assert!(
-            !agent
-                .effective_model_config_for_session(&session.id)
-                .await
-                .unwrap()
-                .toolshim
-        );
-
-        crate::config::declarative_providers::remove_custom_provider(&config.name).unwrap();
-        crate::providers::refresh_custom_providers().await.unwrap();
-    }
-
-    #[tokio::test]
-    async fn update_provider_replaces_harness_only_effort_for_legacy_provider() {
-        let _guard = env_lock::lock_env([("GOOSE_THINKING_EFFORT", Some("high"))]);
-        let (agent, session, _data_dir) = tracing_test_agent_and_session().await;
-        let provider = Arc::new(EffortProvider::new(EffortOutcome::Unhandled));
-        let model_config =
-            goose_providers::model::ModelConfig::new("mock-model").with_merged_request_params(
-                HashMap::from([("thinking_effort".to_string(), serde_json::json!("default"))]),
-            );
-
-        agent
-            .update_provider(provider, model_config, &session.id)
-            .await
-            .unwrap();
-
-        assert_eq!(
-            persisted_thinking_effort(&agent, &session.id)
-                .await
-                .as_deref(),
-            Some("high")
-        );
-    }
-
-    #[tokio::test]
-    async fn update_provider_preserves_harness_only_effort_for_managed_provider() {
-        let _guard = env_lock::lock_env([("GOOSE_THINKING_EFFORT", Some("high"))]);
-        let (agent, session, _data_dir) = tracing_test_agent_and_session().await;
-        let provider = Arc::new(EffortProvider::new(EffortOutcome::Applied));
-        let model_config =
-            goose_providers::model::ModelConfig::new("mock-model").with_merged_request_params(
-                HashMap::from([("thinking_effort".to_string(), serde_json::json!("default"))]),
-            );
-
-        agent
-            .update_provider(provider, model_config, &session.id)
-            .await
-            .unwrap();
-
-        assert_eq!(
-            persisted_thinking_effort(&agent, &session.id)
-                .await
-                .as_deref(),
-            Some("default")
-        );
-    }
-
-    #[tokio::test]
-    async fn update_thinking_effort_persists_the_raw_value_when_the_provider_applies_it() {
-        let (agent, session_id, provider, _data_dir) =
-            effort_test_agent(EffortOutcome::Applied).await;
-
-        // "xhigh" is a harness value, not a ThinkingEffort member spelling.
-        agent
-            .update_thinking_effort(&session_id, "xhigh")
-            .await
-            .unwrap();
-
-        assert_eq!(provider.effort_calls(), ["xhigh"]);
-        assert_eq!(
-            persisted_thinking_effort(&agent, &session_id)
-                .await
-                .as_deref(),
-            Some("xhigh")
-        );
-        // The unregistered test provider was not respawned.
-        assert_eq!(agent.provider().await.unwrap().get_name(), "test-effort");
-    }
-
-    #[tokio::test]
-    async fn update_thinking_effort_rejects_an_unparseable_value_on_the_legacy_path() {
-        let (agent, session_id, provider, _data_dir) =
-            effort_test_agent(EffortOutcome::Unhandled).await;
-
-        let err = agent
-            .update_thinking_effort(&session_id, "bogus")
-            .await
-            .unwrap_err();
-
-        assert!(matches!(
-            err.downcast_ref::<ProviderError>(),
-            Some(ProviderError::InvalidValue(_))
-        ));
-        assert!(err.to_string().contains("Invalid thinking effort"));
-        assert_eq!(provider.effort_calls(), ["bogus"]);
-        assert!(persisted_thinking_effort(&agent, &session_id)
-            .await
-            .is_none());
-    }
-
-    #[tokio::test]
-    async fn update_thinking_effort_surfaces_a_provider_rejection() {
-        let (agent, session_id, _provider, _data_dir) =
-            effort_test_agent(EffortOutcome::Rejected).await;
-
-        let err = agent
-            .update_thinking_effort(&session_id, "high")
-            .await
-            .unwrap_err();
-
-        assert!(err.to_string().contains("Provider rejected"));
-        // The caller classifies the failure by variant, so the provider's typed
-        // error has to survive the trip up.
-        assert!(matches!(
-            err.downcast_ref::<ProviderError>(),
-            Some(ProviderError::RequestFailed(_))
-        ));
-        assert!(persisted_thinking_effort(&agent, &session_id)
-            .await
-            .is_none());
-    }
-
-    const ALWAYS_BLOCK_SCRIPT: &str = r#"#!/bin/sh
-echo blocked >> "$PLUGIN_ROOT/hook.log"
-echo "always block" >&2
-exit 2
-"#;
-
-    const ALTERNATE_BLOCK_ALLOW_SCRIPT: &str = r#"#!/bin/sh
-count_file="$PLUGIN_ROOT/count"
-count=0
-if [ -f "$count_file" ]; then
-  count=$(cat "$count_file")
-fi
-count=$((count + 1))
-echo "$count" > "$count_file"
-echo "$count" >> "$PLUGIN_ROOT/hook.log"
-if [ $((count % 2)) -eq 1 ]; then
-  echo "block $count" >&2
-  exit 2
-fi
-exit 0
-"#;
-
-    const RECORD_PAYLOAD_SCRIPT: &str = r#"#!/bin/sh
-cat > "$PLUGIN_ROOT/payload.json"
-exit 0
-"#;
-
-    struct StopHookTestEnv {
-        temp_dir: TempDir,
-        hook_log: PathBuf,
-        payload_path: PathBuf,
-    }
-
-    impl StopHookTestEnv {
-        fn new(script: &str) -> Result<Self> {
-            let temp_dir = tempfile::tempdir()?;
-            let plugin_dir = temp_dir.path().join("stop-blocker");
-            std::fs::create_dir_all(plugin_dir.join("hooks"))?;
-            std::fs::write(
-                plugin_dir.join("hooks/hooks.json"),
-                r#"{
-  "hooks": {
-    "Stop": [
-      {
-        "hooks": [
-          { "type": "command", "command": "sh ${PLUGIN_ROOT}/block.sh" }
-        ]
-      }
-    ]
-  }
-}
-"#,
-            )?;
-            std::fs::write(plugin_dir.join("block.sh"), script)?;
-
-            Ok(Self {
-                temp_dir,
-                hook_log: plugin_dir.join("hook.log"),
-                payload_path: plugin_dir.join("payload.json"),
-            })
-        }
-
-        fn hook_manager(&self) -> crate::hooks::HookManager {
-            crate::hooks::HookManager::from_plugins_for_test(vec![DiscoveredPlugin {
-                name: "stop-blocker".into(),
-                root: self.temp_dir.path().join("stop-blocker"),
-                scope: PluginScope::Project,
-            }])
-        }
-
-        fn data_dir(&self) -> PathBuf {
-            self.temp_dir.path().join("data")
-        }
-
-        fn hook_invocations(&self) -> usize {
-            std::fs::read_to_string(&self.hook_log)
-                .unwrap_or_default()
-                .lines()
-                .count()
-        }
-
-        fn stop_payload(&self) -> Result<Value> {
-            let payload = std::fs::read_to_string(&self.payload_path)?;
-            Ok(serde_json::from_str(&payload)?)
-        }
-    }
-
-    struct SessionStartHookTestEnv {
-        temp_dir: TempDir,
-        hook_log: PathBuf,
-    }
-
-    impl SessionStartHookTestEnv {
-        fn new() -> Result<Self> {
-            let temp_dir = tempfile::tempdir()?;
-            let plugin_dir = temp_dir.path().join("session-start");
-            std::fs::create_dir_all(plugin_dir.join("hooks"))?;
-            std::fs::write(
-                plugin_dir.join("hooks/hooks.json"),
-                r#"{
-  "hooks": {
-    "SessionStart": [
-      {
-        "hooks": [
-          { "type": "command", "command": "sh ${PLUGIN_ROOT}/start.sh" }
-        ]
-      }
-    ]
-  }
-}
-"#,
-            )?;
-            std::fs::write(
-                plugin_dir.join("start.sh"),
-                r#"#!/bin/sh
-echo start >> "$PLUGIN_ROOT/hook.log"
-"#,
-            )?;
-
-            Ok(Self {
-                temp_dir,
-                hook_log: plugin_dir.join("hook.log"),
-            })
-        }
-
-        fn hook_manager(&self) -> crate::hooks::HookManager {
-            crate::hooks::HookManager::from_plugins_for_test(vec![DiscoveredPlugin {
-                name: "session-start".into(),
-                root: self.temp_dir.path().join("session-start"),
-                scope: PluginScope::Project,
-            }])
-        }
-
-        fn data_dir(&self) -> PathBuf {
-            self.temp_dir.path().join("data")
-        }
-
-        fn hook_invocations(&self) -> usize {
-            std::fs::read_to_string(&self.hook_log)
-                .unwrap_or_default()
-                .lines()
-                .count()
-        }
-    }
-
-    struct CountingTextProvider {
-        call_count: AtomicUsize,
-    }
-
-    impl CountingTextProvider {
-        fn new() -> Self {
-            Self {
-                call_count: AtomicUsize::new(0),
-            }
-        }
-
-        fn call_count(&self) -> usize {
-            self.call_count.load(Ordering::SeqCst)
-        }
-    }
-
-    #[async_trait::async_trait]
-    impl crate::providers::base::Provider for CountingTextProvider {
-        async fn stream(
-            &self,
-            _model_config: &goose_providers::model::ModelConfig,
-            _system_prompt: &str,
-            _messages: &[Message],
-            _tools: &[Tool],
-        ) -> Result<MessageStream, ProviderError> {
-            let call = self.call_count.fetch_add(1, Ordering::SeqCst);
-            let message = Message::assistant().with_text(format!("provider response {call}"));
-            let usage = ProviderUsage::new("mock-model".to_string(), Usage::default());
-            Ok(stream_from_single_message(message, usage))
-        }
-
-        fn get_name(&self) -> &str {
-            "counting-text"
-        }
-    }
-
-    struct ChunkedTextProvider;
-
-    #[async_trait::async_trait]
-    impl crate::providers::base::Provider for ChunkedTextProvider {
-        async fn stream(
-            &self,
-            _model_config: &goose_providers::model::ModelConfig,
-            _system_prompt: &str,
-            _messages: &[Message],
-            _tools: &[Tool],
-        ) -> Result<MessageStream, ProviderError> {
-            let usage = ProviderUsage::new("mock-model".to_string(), Usage::default());
-            Ok(Box::pin(futures::stream::iter(vec![
-                Ok((Some(Message::assistant().with_text("streamed ")), None)),
-                Ok((
-                    Some(Message::assistant().with_text("assistant reply")),
-                    Some(usage),
-                )),
-            ])))
-        }
-
-        fn get_name(&self) -> &str {
-            "chunked-text"
-        }
-    }
-
-    struct VisibilityTextProvider;
-
-    #[async_trait::async_trait]
-    impl crate::providers::base::Provider for VisibilityTextProvider {
-        async fn stream(
-            &self,
-            _model_config: &goose_providers::model::ModelConfig,
-            _system_prompt: &str,
-            _messages: &[Message],
-            _tools: &[Tool],
-        ) -> Result<MessageStream, ProviderError> {
-            let usage = ProviderUsage::new("mock-model".to_string(), Usage::default());
-            let mixed_audience = Message::assistant()
-                .with_content(MessageContent::Text(
-                    TextContent::new("assistant-only block ").with_annotations(
-                        Annotations::default().with_audience(vec![Role::Assistant]),
-                    ),
-                ))
-                .with_content(MessageContent::Text(
-                    TextContent::new("visible last")
-                        .with_annotations(Annotations::default().with_audience(vec![Role::User])),
-                ));
-
-            Ok(Box::pin(futures::stream::iter(vec![
-                Ok((Some(Message::assistant().with_text("visible first ")), None)),
-                Ok((
-                    Some(
-                        Message::assistant()
-                            .with_text("internal message ")
-                            .agent_only(),
-                    ),
-                    None,
-                )),
-                Ok((Some(mixed_audience), Some(usage))),
-            ])))
-        }
-
-        fn get_name(&self) -> &str {
-            "visibility-text"
-        }
-    }
-
-    struct OutputLimitMarkerProvider {
-        include_content: bool,
-        call_count: AtomicUsize,
-    }
-
-    impl OutputLimitMarkerProvider {
-        fn new(include_content: bool) -> Self {
-            Self {
-                include_content,
-                call_count: AtomicUsize::new(0),
-            }
-        }
-
-        fn call_count(&self) -> usize {
-            self.call_count.load(Ordering::SeqCst)
-        }
-    }
-
-    #[async_trait::async_trait]
-    impl crate::providers::base::Provider for OutputLimitMarkerProvider {
-        async fn stream(
-            &self,
-            _model_config: &goose_providers::model::ModelConfig,
-            _system_prompt: &str,
-            _messages: &[Message],
-            _tools: &[Tool],
-        ) -> Result<MessageStream, ProviderError> {
-            self.call_count.fetch_add(1, Ordering::SeqCst);
-            let message_id = "provider-output-limit";
-            let content = Message::assistant()
-                .with_text("Partial answer")
-                .with_id(message_id);
-            let mut marker = Message::assistant().with_id(message_id);
-            marker.metadata.output_token_limit_reached = true;
-            let usage = ProviderUsage::new("mock-model".to_string(), Usage::default());
-
-            let mut events = Vec::new();
-            if self.include_content {
-                events.push(Ok((Some(content), None)));
-            }
-            events.push(Ok((Some(marker), Some(usage))));
-            Ok(Box::pin(futures::stream::iter(events)))
-        }
-
-        fn get_name(&self) -> &str {
-            "output-limit-marker"
-        }
-    }
-
-    struct RefusingProvider {
-        call_count: AtomicUsize,
-    }
-
-    #[async_trait::async_trait]
-    impl crate::providers::base::Provider for RefusingProvider {
-        async fn stream(
-            &self,
-            _model_config: &goose_providers::model::ModelConfig,
-            _system_prompt: &str,
-            _messages: &[Message],
-            _tools: &[Tool],
-        ) -> Result<MessageStream, ProviderError> {
-            self.call_count.fetch_add(1, Ordering::SeqCst);
-            Ok(Box::pin(futures::stream::once(async {
-                Err(ProviderError::Refusal {
-                    details: "This request was declined.".to_string(),
-                    category: Some("cyber".to_string()),
-                })
-            })))
-        }
-
-        fn get_name(&self) -> &str {
-            "refusing"
-        }
-    }
-
-    #[tokio::test]
-    async fn refusal_exits_turn_without_recipe_retry() -> Result<()> {
-        let temp_dir = tempfile::tempdir()?;
-        let provider = Arc::new(RefusingProvider {
-            call_count: AtomicUsize::new(0),
-        });
-        let hook_manager = crate::hooks::HookManager::from_plugins_for_test(vec![]);
-        let (agent, session_id) =
-            create_test_agent(temp_dir.path().join("data"), hook_manager, provider.clone()).await?;
-
-        let session_config = SessionConfig {
-            id: session_id,
-            schedule_id: None,
-            max_turns: Some(10),
-            retry_config: Some(crate::agents::types::RetryConfig {
-                max_retries: 3,
-                checks: vec![crate::agents::types::SuccessCheck::Shell {
-                    command: "false".to_string(),
-                }],
-                on_failure: None,
-                timeout_seconds: None,
-                on_failure_timeout_seconds: None,
-            }),
-        };
-
-        let reply_stream = agent
-            .reply(
-                Message::user().with_text("hi"),
-                session_config,
-                crate::agents::state_machine::enabled(),
-                None,
-            )
-            .await?;
-        tokio::pin!(reply_stream);
-        let mut emitted_refusal_id = None;
-        while let Some(event) = reply_stream.next().await {
-            if let AgentEvent::Message(message) = event? {
-                if message.as_concat_text().contains("provider refused") {
-                    emitted_refusal_id = message.id;
-                }
-            }
-        }
-
-        assert_eq!(
-            provider.call_count.load(Ordering::SeqCst),
-            1,
-            "a refused request must not be resent"
-        );
-        let emitted_refusal_id =
-            emitted_refusal_id.expect("refusal message should be emitted with an ID");
-        assert!(emitted_refusal_id.starts_with("msg_"));
-        Ok(())
-    }
-
-    async fn create_test_agent(
-        data_dir: PathBuf,
-        hook_manager: crate::hooks::HookManager,
-        provider: Arc<dyn crate::providers::base::Provider>,
-    ) -> Result<(Agent, String)> {
-        let session_manager = Arc::new(SessionManager::new(data_dir.clone()));
-        let permission_manager = Arc::new(PermissionManager::new(data_dir));
-        let config = AgentConfig::new(
-            session_manager.clone(),
-            permission_manager,
-            None,
-            GooseMode::Auto,
-            true,
-            GoosePlatform::GooseCli,
-        );
-        let mut agent = Agent::with_config(config);
-        agent.set_hook_manager_for_test(hook_manager);
-        let session = session_manager
-            .create_session(
-                PathBuf::default(),
-                "test".to_string(),
-                SessionType::Hidden,
-                GooseMode::Auto,
-            )
-            .await?;
-        agent
-            .update_provider(
-                provider,
-                goose_providers::model::ModelConfig::new("mock-model"),
-                &session.id,
-            )
-            .await?;
-        Ok((agent, session.id))
-    }
-
-    struct TraceContentProvider;
-
-    #[async_trait::async_trait]
-    impl crate::providers::base::Provider for TraceContentProvider {
-        async fn stream(
-            &self,
-            _model_config: &goose_providers::model::ModelConfig,
-            _system_prompt: &str,
-            _messages: &[Message],
-            _tools: &[Tool],
-        ) -> Result<MessageStream, ProviderError> {
-            let message = Message::assistant().with_text("output-super-secret-token");
-            let usage = ProviderUsage::new("mock-model".to_string(), Usage::default());
-            Ok(stream_from_single_message(message, usage))
-        }
-
-        fn get_name(&self) -> &str {
-            "trace-content"
-        }
-    }
-
-    async fn capture_legacy_reply_fields(
-        span_name: &'static str,
-        capture_setting: Option<&'static str>,
-    ) -> Result<serde_json::Map<String, Value>> {
-        use goose_test_support::otel::clear_otel_env;
-
-        let mut overrides = vec![("GOOSE_STATE_MACHINE", "0")];
-        if let Some(value) = capture_setting {
-            overrides.push((gen_ai_telemetry::CAPTURE_MESSAGE_CONTENT_ENV, value));
-        }
-        let _env = clear_otel_env(&overrides);
-        let capture = SpanFieldCapture::new(span_name);
-        let _subscriber = capture.clone().set_default();
-        let temp_dir = tempfile::tempdir()?;
-        let hook_manager = crate::hooks::HookManager::from_plugins_for_test(vec![]);
-        let (agent, session_id) = create_test_agent(
-            temp_dir.path().join("data"),
-            hook_manager,
-            Arc::new(TraceContentProvider),
-        )
-        .await?;
-        let session_config = SessionConfig {
-            id: session_id,
-            schedule_id: None,
-            max_turns: Some(1),
-            retry_config: None,
-        };
-        let reply_stream = agent
-            .reply(
-                Message::user().with_text("input-super-secret-token"),
-                session_config,
-                false,
-                None,
-            )
-            .await?;
-        tokio::pin!(reply_stream);
-        while let Some(event) = reply_stream.next().await {
-            event?;
-        }
-
-        Ok(capture.fields())
-    }
-
-    #[tokio::test]
-    async fn legacy_reply_trace_omits_content_without_capture() -> Result<()> {
-        for capture_setting in [None, Some("false")] {
-            let reply_fields = capture_legacy_reply_fields("reply", capture_setting).await?;
-            let reply_json = serde_json::to_string(&reply_fields)?;
-            assert!(!reply_json.contains("super-secret-token"));
-            assert!(!reply_fields.contains_key("user_message"));
-            assert!(!reply_fields.contains_key("trace_input"));
-            assert!(!reply_fields.contains_key("gen_ai.input.messages"));
-            assert!(!reply_fields.contains_key("gen_ai.output.messages"));
-
-            let stream_fields =
-                capture_legacy_reply_fields("reply_stream", capture_setting).await?;
-            let stream_json = serde_json::to_string(&stream_fields)?;
-            assert!(!stream_json.contains("super-secret-token"));
-            assert!(!stream_fields.contains_key("trace_output"));
-            assert!(!stream_fields.contains_key("gen_ai.input.messages"));
-            assert!(!stream_fields.contains_key("gen_ai.output.messages"));
-        }
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn legacy_reply_trace_retains_content_with_capture() -> Result<()> {
-        let reply_fields = capture_legacy_reply_fields("reply", Some("true")).await?;
-        assert_eq!(reply_fields["user_message"], "input-super-secret-token");
-        assert_eq!(reply_fields["trace_input"], "input-super-secret-token");
-        assert!(reply_fields["gen_ai.input.messages"]
-            .as_str()
-            .unwrap()
-            .contains("input-super-secret-token"));
-        assert!(reply_fields["gen_ai.output.messages"]
-            .as_str()
-            .unwrap()
-            .contains("output-super-secret-token"));
-
-        let stream_fields = capture_legacy_reply_fields("reply_stream", Some("true")).await?;
-        assert_eq!(stream_fields["trace_output"], "output-super-secret-token");
-        assert!(stream_fields["gen_ai.input.messages"]
-            .as_str()
-            .unwrap()
-            .contains("input-super-secret-token"));
-        assert!(stream_fields["gen_ai.output.messages"]
-            .as_str()
-            .unwrap()
-            .contains("output-super-secret-token"));
-        Ok(())
-    }
-
-    async fn create_stop_hook_test_agent(
-        env: &StopHookTestEnv,
-        stop_hook_block_cap: u32,
-    ) -> Result<(Agent, String, Arc<CountingTextProvider>)> {
-        let provider = Arc::new(CountingTextProvider::new());
-        let (mut agent, session_id) =
-            create_test_agent(env.data_dir(), env.hook_manager(), provider.clone()).await?;
-        agent.set_stop_hook_block_cap_for_test(stop_hook_block_cap);
-        Ok((agent, session_id, provider))
-    }
-
-    async fn run_stop_hook_test_turn(
-        agent: &Agent,
-        session_id: &str,
-        text: &str,
-    ) -> Result<Vec<Message>> {
-        let session_config = SessionConfig {
-            id: session_id.to_string(),
-            schedule_id: None,
-            max_turns: Some(10),
-            retry_config: None,
-        };
-        let reply_stream = agent
-            .reply(
-                Message::user().with_text(text),
-                session_config,
-                crate::agents::state_machine::enabled(),
-                None,
-            )
-            .await?;
-        tokio::pin!(reply_stream);
-
-        let mut messages = Vec::new();
-        while let Some(event) = reply_stream.next().await {
-            match event? {
-                AgentEvent::Message(message) => messages.push(message),
-                AgentEvent::McpNotification(_)
-                | AgentEvent::HistoryReplaced(_)
-                | AgentEvent::Usage(_)
-                | AgentEvent::MessageUsage { .. } => {}
-            }
-        }
-        Ok(messages)
-    }
-
-    fn visible_texts(messages: &[Message]) -> Vec<String> {
-        messages
-            .iter()
-            .map(Message::as_concat_text)
-            .filter(|text| !text.is_empty())
-            .collect()
-    }
-
-    #[tokio::test]
-    async fn output_limit_marker_is_emitted_and_persisted() -> Result<()> {
-        let temp_dir = tempfile::tempdir()?;
-        let hook_manager = crate::hooks::HookManager::from_plugins_for_test(vec![]);
-        let provider = Arc::new(OutputLimitMarkerProvider::new(true));
-        let (agent, session_id) =
-            create_test_agent(temp_dir.path().join("data"), hook_manager, provider).await?;
-
-        let messages = run_stop_hook_test_turn(&agent, &session_id, "hello").await?;
-        let marker = messages
-            .iter()
-            .find(|message| message.metadata.output_token_limit_reached)
-            .expect("output-limit marker should be emitted");
-        assert!(marker.content.is_empty());
-        assert_eq!(marker.id.as_deref(), Some("provider-output-limit"));
-
-        let session = agent
-            .config
-            .session_manager
-            .get_session(&session_id, true)
-            .await?;
-        let conversation = session
-            .conversation
-            .expect("session should have a conversation");
-        let persisted = conversation
-            .messages()
-            .iter()
-            .find(|message| message.id.as_deref() == Some("provider-output-limit"))
-            .expect("provider response should be persisted");
-        assert_eq!(persisted.as_concat_text(), "Partial answer");
-        assert!(persisted.metadata.output_token_limit_reached);
-        assert!(persisted.metadata.usage.is_some());
-
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn zero_content_output_limit_is_persisted_without_empty_response_retry() -> Result<()> {
-        let temp_dir = tempfile::tempdir()?;
-        let hook_manager = crate::hooks::HookManager::from_plugins_for_test(vec![]);
-        let provider = Arc::new(OutputLimitMarkerProvider::new(false));
-        let (agent, session_id) =
-            create_test_agent(temp_dir.path().join("data"), hook_manager, provider.clone()).await?;
-
-        run_stop_hook_test_turn(&agent, &session_id, "hello").await?;
-
-        assert_eq!(provider.call_count(), 1);
-        let session = agent
-            .config
-            .session_manager
-            .get_session(&session_id, true)
-            .await?;
-        let conversation = session
-            .conversation
-            .expect("session should have a conversation");
-        let persisted = conversation
-            .messages()
-            .iter()
-            .find(|message| message.id.as_deref() == Some("provider-output-limit"))
-            .expect("zero-content output-limit marker should be persisted");
-        assert!(persisted.content.is_empty());
-        assert!(persisted.metadata.user_visible);
-        assert!(!persisted.metadata.agent_visible);
-        assert!(persisted.metadata.output_token_limit_reached);
-        assert!(conversation
-            .agent_visible_messages()
-            .iter()
-            .all(|message| message.id.as_deref() != Some("provider-output-limit")));
-
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn session_start_hook_emits_once_for_first_reply_turn() -> Result<()> {
-        let env = SessionStartHookTestEnv::new()?;
-        let provider = Arc::new(CountingTextProvider::new());
-        let (agent, session_id) =
-            create_test_agent(env.data_dir(), env.hook_manager(), provider.clone()).await?;
-
-        run_stop_hook_test_turn(&agent, &session_id, "first").await?;
-        run_stop_hook_test_turn(&agent, &session_id, "second").await?;
-
-        assert_eq!(env.hook_invocations(), 1);
-        assert_eq!(provider.call_count(), 2);
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn skipped_user_message_does_not_enter_empty_response_retry_loop() -> Result<()> {
-        use rmcp::model::{Annotations, Role, TextContent};
-
-        let env = SessionStartHookTestEnv::new()?;
-        let provider = Arc::new(CountingTextProvider::new());
-        let hook_manager = env.hook_manager();
-        let (agent, session_id) =
-            create_test_agent(env.data_dir(), hook_manager, provider.clone()).await?;
-        let session_config = SessionConfig {
-            id: session_id.clone(),
-            schedule_id: None,
-            max_turns: Some(10),
-            retry_config: None,
-        };
-        let user_only_content = MessageContent::Text(
-            TextContent::new("user-only")
-                .with_annotations(Annotations::default().with_audience(vec![Role::User])),
-        );
-
-        let mut stream = agent
-            .reply(
-                Message::user().with_content(user_only_content),
-                session_config,
-                crate::agents::state_machine::enabled(),
-                None,
-            )
-            .await?;
-
-        assert!(stream.next().await.is_none());
-        assert_eq!(provider.call_count.load(Ordering::SeqCst), 0);
-        assert_eq!(env.hook_invocations(), 0);
-        let session = agent
-            .config
-            .session_manager
-            .get_session(&session_id, true)
-            .await?;
-        let conversation = session.conversation.unwrap();
-        assert_eq!(conversation.messages().len(), 1);
-        assert!(!conversation.messages()[0].is_agent_visible());
-
-        let visible_session_config = SessionConfig {
-            id: session_id.clone(),
-            schedule_id: None,
-            max_turns: Some(10),
-            retry_config: None,
-        };
-        let mut visible_stream = agent
-            .reply(
-                Message::user().with_text("agent-visible"),
-                visible_session_config,
-                crate::agents::state_machine::enabled(),
-                None,
-            )
-            .await?;
-        while let Some(event) = visible_stream.next().await {
-            event?;
-        }
-        assert_eq!(provider.call_count.load(Ordering::SeqCst), 1);
-        assert_eq!(env.hook_invocations(), 1);
-
-        let final_session_config = SessionConfig {
-            id: session_id,
-            schedule_id: None,
-            max_turns: Some(10),
-            retry_config: None,
-        };
-        let mut final_stream = agent
-            .reply(
-                Message::user().with_text("second-agent-visible"),
-                final_session_config,
-                crate::agents::state_machine::enabled(),
-                None,
-            )
-            .await?;
-        while let Some(event) = final_stream.next().await {
-            event?;
-        }
-        assert_eq!(provider.call_count.load(Ordering::SeqCst), 2);
-        assert_eq!(env.hook_invocations(), 1);
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn stop_hook_block_cap_allows_configured_consecutive_blocks_then_overrides() -> Result<()>
-    {
-        let env = StopHookTestEnv::new(ALWAYS_BLOCK_SCRIPT)?;
-        let (agent, session_id, provider) = create_stop_hook_test_agent(&env, 2).await?;
-
-        let messages = run_stop_hook_test_turn(&agent, &session_id, "hello").await?;
-        let texts = visible_texts(&messages);
-
-        assert_eq!(
-            provider.call_count(),
-            3,
-            "cap=2 should allow two blocked retries, then override on the third block"
-        );
-        assert_eq!(
-            env.hook_invocations(),
-            3,
-            "Stop hook should run for the initial response plus the two honored retries"
-        );
-        assert!(texts.iter().any(|text| text == "provider response 0"));
-        assert!(texts.iter().any(|text| text == "provider response 1"));
-        assert!(texts.iter().any(|text| text == "provider response 2"));
-        assert!(messages.iter().any(|message| {
-            message.content.iter().any(|content| {
-                matches!(
-                    content,
-                    MessageContent::SystemNotification(notification)
-                        if notification.msg.contains("more than 2 consecutive times")
-                            && notification.msg.contains("GOOSE_STOP_HOOK_BLOCK_CAP")
-                )
-            })
-        }));
-
-        let stored_session = agent
-            .config
-            .session_manager
-            .get_session(&session_id, true)
-            .await?;
-        let stored_messages = stored_session
-            .conversation
-            .expect("session should have stored conversation");
-        let stop_hook_context_messages = stored_messages
-            .messages()
-            .iter()
-            .filter(|message| {
-                message.role == rmcp::model::Role::User
-                    && !message.is_user_visible()
-                    && message.is_agent_visible()
-                    && message
-                        .as_concat_text()
-                        .contains("Address this policy hook denial")
-            })
-            .collect::<Vec<_>>();
-        assert_eq!(stop_hook_context_messages.len(), 2);
-        assert!(stop_hook_context_messages.iter().all(|message| {
-            message
-                .id
-                .as_deref()
-                .is_some_and(|id| id.starts_with("msg_"))
-        }));
-
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn stop_hook_block_cap_counts_only_consecutive_blocks() -> Result<()> {
-        let env = StopHookTestEnv::new(ALTERNATE_BLOCK_ALLOW_SCRIPT)?;
-        let (agent, session_id, provider) = create_stop_hook_test_agent(&env, 1).await?;
-
-        let first_turn = run_stop_hook_test_turn(&agent, &session_id, "first").await?;
-        let second_turn = run_stop_hook_test_turn(&agent, &session_id, "second").await?;
-        let mut texts = visible_texts(&first_turn);
-        texts.extend(visible_texts(&second_turn));
-
-        assert_eq!(
-            provider.call_count(),
-            4,
-            "each turn should honor one block, retry, then stop when the next Stop hook allows"
-        );
-        assert_eq!(env.hook_invocations(), 4);
-        assert!(texts.iter().any(|text| text == "provider response 0"));
-        assert!(texts.iter().any(|text| text == "provider response 1"));
-        assert!(texts.iter().any(|text| text == "provider response 2"));
-        assert!(texts.iter().any(|text| text == "provider response 3"));
-        assert!(
-            !texts
-                .iter()
-                .any(|text| text.contains("overriding and ending turn")),
-            "non-consecutive Stop hook blocks should not trip the cap warning"
-        );
-
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn stop_hook_payload_includes_streamed_assistant_reply_text() -> Result<()> {
-        let env = StopHookTestEnv::new(RECORD_PAYLOAD_SCRIPT)?;
-        let provider = Arc::new(ChunkedTextProvider);
-        let (agent, session_id) =
-            create_test_agent(env.data_dir(), env.hook_manager(), provider).await?;
-
-        let messages = run_stop_hook_test_turn(&agent, &session_id, "hello").await?;
-        let texts = visible_texts(&messages);
-        assert_eq!(texts.join(""), "streamed assistant reply");
-
-        let payload = env.stop_payload()?;
-        assert_eq!(payload.get("event").and_then(Value::as_str), Some("Stop"));
-        assert_eq!(
-            payload.get("session_id").and_then(Value::as_str),
-            Some(session_id.as_str())
-        );
-        assert_eq!(
-            payload
-                .get("last_assistant_message")
-                .and_then(Value::as_str),
-            Some("streamed assistant reply")
-        );
-        assert!(payload.get("message").is_none());
-
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn stop_hook_payload_excludes_non_user_visible_assistant_content() -> Result<()> {
-        let env = StopHookTestEnv::new(RECORD_PAYLOAD_SCRIPT)?;
-        let provider = Arc::new(VisibilityTextProvider);
-        let (agent, session_id) =
-            create_test_agent(env.data_dir(), env.hook_manager(), provider).await?;
-
-        run_stop_hook_test_turn(&agent, &session_id, "hello").await?;
-
-        let payload = env.stop_payload()?;
-        assert_eq!(
-            payload
-                .get("last_assistant_message")
-                .and_then(Value::as_str),
-            Some("visible first visible last")
-        );
-
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn test_add_final_output_tool() -> Result<()> {
-        let agent = Agent::new();
-
-        let response = Response {
-            json_schema: Some(serde_json::json!({
-                "type": "object",
-                "properties": {
-                    "result": {"type": "string"}
-                }
-            })),
-        };
-
-        agent.add_final_output_tool(response).await?;
-
-        let tools = agent.list_tools("test-session-id", None).await;
-        let final_output_tool = tools
-            .iter()
-            .find(|tool| tool.name == FINAL_OUTPUT_TOOL_NAME);
-
-        assert!(
-            final_output_tool.is_some(),
-            "Final output tool should be present after adding"
-        );
-
-        let prompt_manager = agent.prompt_manager.lock().await;
-        let system_prompt = prompt_manager
-            .builder()
-            .with_goose_mode(GooseMode::default())
-            .build();
-
-        let final_output_tool_ref = agent.final_output_tool.lock().await;
-        let final_output_tool_system_prompt =
-            final_output_tool_ref.as_ref().unwrap().system_prompt();
-        assert!(system_prompt.contains(&final_output_tool_system_prompt));
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn boolean_final_output_schema_returns_error() {
-        let agent = Agent::new();
-
-        let error = agent
-            .apply_recipe_components(
-                Some(Response {
-                    json_schema: Some(serde_json::json!(true)),
-                }),
-                true,
-            )
-            .await
-            .unwrap_err();
-
-        assert_eq!(error.to_string(), "json_schema must be an object");
-        assert!(agent.final_output_tool.lock().await.is_none());
-    }
-
-    #[tokio::test]
-    async fn test_tool_inspection_manager_has_all_inspectors() -> Result<()> {
-        let agent = Agent::new();
-
-        // Verify that the tool inspection manager has all expected inspectors
-        let inspector_names = agent.tool_inspection_manager.inspector_names();
-
-        assert!(
-            inspector_names.contains(&"repetition"),
-            "Tool inspection manager should contain repetition inspector"
-        );
-        assert!(
-            inspector_names.contains(&"permission"),
-            "Tool inspection manager should contain permission inspector"
-        );
-        assert!(
-            inspector_names.contains(&"security"),
-            "Tool inspection manager should contain security inspector"
-        );
-        assert!(
-            inspector_names.contains(&"adversary"),
-            "Tool inspection manager should contain adversary inspector"
-        );
-
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn discard_pending_steers_clears_queued_messages() {
-        let agent = Agent::new();
-        let session_id = "session-discard";
-
-        agent
-            .steer(session_id, Message::user().with_text("queued steer"))
-            .await;
-        assert!(agent.has_pending_steers(session_id).await);
-
-        agent.discard_pending_steers(session_id).await;
-
-        assert!(
-            !agent.has_pending_steers(session_id).await,
-            "discarding must drop steers orphaned by a cancelled run so they cannot leak into a later prompt"
-        );
-        assert!(agent.drain_pending_steers(session_id).await.is_empty());
-    }
-
-    #[test]
-    fn categorize_tool_recognizes_conventional_names() {
-        assert_eq!(categorize_tool("developer__shell"), ToolCategory::Shell);
-        assert_eq!(categorize_tool("filesystem__write"), ToolCategory::Write);
-        assert_eq!(categorize_tool("filesystem__edit"), ToolCategory::Write);
-        assert_eq!(categorize_tool("filesystem__read"), ToolCategory::Read);
-        assert_eq!(categorize_tool("filesystem__view"), ToolCategory::Read);
-        assert_eq!(categorize_tool("filesystem__cat"), ToolCategory::Read);
-        assert_eq!(categorize_tool("scheduler__list"), ToolCategory::Other);
-        assert_eq!(categorize_tool("shell"), ToolCategory::Shell);
-    }
-
-    #[test]
-    fn extract_string_arg_picks_first_present_key() {
-        let input = serde_json::json!({ "file_path": "/tmp/a.txt", "path": "/tmp/b.txt" });
-        assert_eq!(
-            extract_string_arg(&input, &["path", "file", "file_path"]).as_deref(),
-            Some("/tmp/b.txt")
-        );
-        let input = serde_json::json!({ "file_path": "/tmp/a.txt" });
-        assert_eq!(
-            extract_string_arg(&input, &["path", "file", "file_path"]).as_deref(),
-            Some("/tmp/a.txt")
-        );
-        let input = serde_json::json!({ "other": 1 });
-        assert!(extract_string_arg(&input, &["path"]).is_none());
-        let input = serde_json::json!({ "path": "" });
-        assert!(extract_string_arg(&input, &["path"]).is_none());
-    }
-
-    #[test]
-    fn attach_turn_usage_targets_last_assistant_message() {
-        let usage = ProviderUsage::new(
-            "test-model".to_string(),
-            Usage::new(Some(1200), Some(340), None),
-        );
-        let mut conversation = Conversation::new_unvalidated([
-            Message::user().with_text("hi"),
-            Message::assistant().with_id("a1").with_text("first"),
-            Message::user().with_text("again"),
-            Message::assistant().with_id("a2").with_text("second"),
-        ]);
-
-        let (message_id, attached) =
-            attach_turn_usage(&mut conversation, &usage, None).expect("usage should attach");
-
-        assert_eq!(message_id.as_deref(), Some("a2"));
-        assert_eq!(attached.input_tokens, Some(1200));
-        assert_eq!(attached.output_tokens, Some(340));
-        assert!(!attached.is_compaction, "turn usage is not a compaction");
-
-        let messages = conversation.messages();
-        let stored = messages[3]
-            .metadata
-            .usage
-            .as_deref()
-            .expect("usage must be stored on the last assistant message");
-        assert_eq!(*stored, attached);
-        assert!(
-            messages[1].metadata.usage.is_none(),
-            "earlier assistant message must not receive the usage"
-        );
-    }
-
-    #[test]
-    fn attach_turn_usage_returns_none_without_assistant_message() {
-        let usage = ProviderUsage::new("test-model".to_string(), Usage::default());
-        let mut conversation = Conversation::new_unvalidated([Message::user().with_text("hi")]);
-
-        assert!(attach_turn_usage(&mut conversation, &usage, None).is_none());
-        assert!(
-            conversation.messages()[0].metadata.usage.is_none(),
-            "user message must stay untouched"
-        );
-    }
-
-    #[test]
-    fn attach_turn_usage_suppresses_notification_for_assistant_only_message() {
-        use rmcp::model::{Annotations, Role, TextContent};
-
-        let usage = ProviderUsage::new(
-            "test-model".to_string(),
-            Usage::new(Some(1200), Some(340), None),
-        );
-        let assistant_only = TextContent::new("provider-only state")
-            .with_annotations(Annotations::default().with_audience(vec![Role::Assistant]));
-        let mut conversation = Conversation::new_unvalidated([
-            Message::user().with_text("hi"),
-            Message::assistant()
-                .with_id("hidden")
-                .with_content(MessageContent::Text(assistant_only)),
-        ]);
-
-        assert!(attach_turn_usage(&mut conversation, &usage, None).is_none());
-
-        let stored = conversation.messages()[1]
-            .metadata
-            .usage
-            .as_deref()
-            .expect("usage must remain stored on the hidden assistant message");
-        assert_eq!(stored.input_tokens, Some(1200));
-        assert_eq!(stored.output_tokens, Some(340));
-    }
-
-    /// Plugin fixture that can register several events at once, each with its
-    /// own matcher and script, and read back the JSON payloads a script recorded.
-    struct RecordingHookEnv {
-        _temp_dir: TempDir,
-        plugin_dir: PathBuf,
-    }
-
-    /// (event name, matcher or "" for none, script file name, script body)
-    type HookSpec<'a> = (&'a str, &'a str, &'a str, &'a str);
-
-    impl RecordingHookEnv {
-        fn new(specs: &[HookSpec<'_>]) -> Self {
-            Self::with_on_failure(specs, "")
-        }
-
-        fn blocking_on_failure(specs: &[HookSpec<'_>]) -> Self {
-            Self::with_on_failure(specs, r#", "on_failure": "block""#)
-        }
-
-        fn with_on_failure(specs: &[HookSpec<'_>], on_failure: &str) -> Self {
-            let temp_dir = tempfile::tempdir().unwrap();
-            let plugin_dir = temp_dir.path().join("test-plugin");
-            std::fs::create_dir_all(plugin_dir.join("hooks")).unwrap();
-            let entries: Vec<String> = specs
-                .iter()
-                .map(|(event, matcher, script, _)| {
-                    let matcher = if matcher.is_empty() {
-                        String::new()
-                    } else {
-                        format!(r#""matcher": "{matcher}", "#)
-                    };
-                    format!(
-                        r#""{event}": [{{{matcher}"hooks": [{{"type": "command", "command": "sh ${{PLUGIN_ROOT}}/{script}"{on_failure}}}]}}]"#
-                    )
-                })
-                .collect();
-            std::fs::write(
-                plugin_dir.join("hooks/hooks.json"),
-                format!(r#"{{"hooks": {{{}}}}}"#, entries.join(", ")),
-            )
-            .unwrap();
-            for (_, _, script, script_body) in specs {
-                std::fs::write(plugin_dir.join(script), script_body).unwrap();
-            }
-            Self {
-                _temp_dir: temp_dir,
-                plugin_dir,
-            }
-        }
-
-        fn hook_manager(&self) -> crate::hooks::HookManager {
-            crate::hooks::HookManager::from_plugins_for_test(vec![DiscoveredPlugin {
-                name: "test-plugin".into(),
-                root: self.plugin_dir.clone(),
-                scope: PluginScope::Project,
-            }])
-        }
-
-        fn payloads(&self, log: &str) -> Vec<Value> {
-            std::fs::read_to_string(self.plugin_dir.join(log))
-                .unwrap_or_default()
-                .lines()
-                .filter(|line| !line.trim().is_empty())
-                .map(|line| serde_json::from_str(line).unwrap())
-                .collect()
-        }
-    }
-
-    const RECORD_PRE_SCRIPT: &str = "#!/bin/sh\ncat >> \"$PLUGIN_ROOT/pre.log\"\nprintf '\\n' >> \"$PLUGIN_ROOT/pre.log\"\nexit 0\n";
-    const RECORD_RESULT_SCRIPT: &str = "#!/bin/sh\ncat >> \"$PLUGIN_ROOT/result.log\"\nprintf '\\n' >> \"$PLUGIN_ROOT/result.log\"\nexit 0\n";
-    const RECORD_POST_SCRIPT: &str = "#!/bin/sh\ncat >> \"$PLUGIN_ROOT/post.log\"\nprintf '\\n' >> \"$PLUGIN_ROOT/post.log\"\nexit 0\n";
-    const RECORD_POST_FAILURE_SCRIPT: &str = "#!/bin/sh\ncat >> \"$PLUGIN_ROOT/postfail.log\"\nprintf '\\n' >> \"$PLUGIN_ROOT/postfail.log\"\nexit 0\n";
-    const DENY_AND_RECORD_SCRIPT: &str = "#!/bin/sh\ncat >> \"$PLUGIN_ROOT/pre.log\"\nprintf '\\n' >> \"$PLUGIN_ROOT/pre.log\"\necho \"blocked by test policy\" >&2\nexit 2\n";
-    /// Logs its stdin like the others, writes nothing to stdout, and exits
-    /// non-zero. That is a hook that ran but never returned a decision.
-    const ABNORMAL_EXIT_AND_RECORD_SCRIPT: &str =
-        "#!/bin/sh\ncat >> \"$PLUGIN_ROOT/pre.log\"\nprintf '\\n' >> \"$PLUGIN_ROOT/pre.log\"\necho boom >&2\nexit 3\n";
-    const HOOK_FAILURE_REFUSAL: &str =
-        "Tool call blocked because policy hook `test-plugin` could not complete: \
-         the hook exited with status 3 and no usable decision. \
-         That hook is configured to block on failure.";
-
-    async fn agent_with_hooks(
-        hook_manager: crate::hooks::HookManager,
-    ) -> (Agent, Session, TempDir) {
-        let data_dir = TempDir::new().unwrap();
-        let data_path = data_dir.path().to_path_buf();
-        let session_manager = Arc::new(SessionManager::new(data_path.clone()));
-        let mut agent = Agent::with_config(AgentConfig::new(
-            Arc::clone(&session_manager),
-            Arc::new(PermissionManager::new(data_path)),
-            None,
-            GooseMode::default(),
-            false,
-            GoosePlatform::GooseCli,
-        ));
-        agent.set_hook_manager_for_test(hook_manager);
-        let session = session_manager
-            .create_session(
-                std::env::current_dir().unwrap(),
-                "pre-tool-use-result".to_string(),
-                SessionType::Hidden,
-                GooseMode::default(),
-            )
-            .await
-            .unwrap();
-        (agent, session, data_dir)
-    }
-
-    fn shell_call() -> CallToolRequestParams {
-        use rmcp::object;
-        CallToolRequestParams::new("developer__shell")
-            .with_arguments(object!({ "command": "echo hi" }))
-    }
-
-    /// deny-invisible: the tool never dispatches, neither post event fires, and a
-    /// PreToolUseResult subscriber still sees the denial with blocked_by and reason.
-    #[tokio::test]
-    async fn pre_tool_use_result_observes_denial_that_post_hooks_never_see() {
-        let env = RecordingHookEnv::new(&[
-            ("PreToolUse", "", "pre.sh", DENY_AND_RECORD_SCRIPT),
-            ("PreToolUseResult", "", "result.sh", RECORD_RESULT_SCRIPT),
-            ("PostToolUse", "", "post.sh", RECORD_POST_SCRIPT),
-            (
-                "PostToolUseFailure",
-                "",
-                "postfail.sh",
-                RECORD_POST_FAILURE_SCRIPT,
-            ),
-        ]);
-        let (agent, session, _data_dir) = agent_with_hooks(env.hook_manager()).await;
-
-        let (request_id, result) = agent
-            .dispatch_tool_call(shell_call(), "call-deny-1".to_string(), None, &session)
-            .await;
-
-        assert_eq!(request_id, "call-deny-1");
-        let Err(error) = result else {
-            panic!("a denied call must not dispatch");
-        };
-        assert!(error.message.contains("denied by policy hook"));
-
-        assert!(
-            env.payloads("post.log").is_empty(),
-            "PostToolUse must not fire for a denied call"
-        );
-        assert!(
-            env.payloads("postfail.log").is_empty(),
-            "PostToolUseFailure must not fire for a denied call"
-        );
-
-        let results = env.payloads("result.log");
-        assert_eq!(results.len(), 1);
-        assert_eq!(results[0]["event"], "PreToolUseResult");
-        assert_eq!(results[0]["decision"], "deny");
-        assert_eq!(results[0]["policy_evaluated"], true);
-        assert_eq!(results[0]["blocked_by"], "test-plugin");
-        assert_eq!(results[0]["reason"], "blocked by test policy");
-        assert_eq!(results[0]["tool_call_id"], "call-deny-1");
-    }
-
-    /// repeated identical calls: two calls with the same name and input in one
-    /// session correlate to their outcomes by tool_call_id, not by name plus input.
-    #[tokio::test]
-    async fn repeated_identical_calls_correlate_by_tool_call_id() {
-        let env = RecordingHookEnv::new(&[
-            ("PreToolUse", "", "pre.sh", RECORD_PRE_SCRIPT),
-            ("PreToolUseResult", "", "result.sh", RECORD_RESULT_SCRIPT),
-            ("PostToolUse", "", "post.sh", RECORD_POST_SCRIPT),
-            (
-                "PostToolUseFailure",
-                "",
-                "postfail.sh",
-                RECORD_POST_FAILURE_SCRIPT,
-            ),
-        ]);
-        let (agent, session, _data_dir) = agent_with_hooks(env.hook_manager()).await;
-
-        for id in ["call-1", "call-2"] {
-            let (_, result) = agent
-                .dispatch_tool_call(shell_call(), id.to_string(), None, &session)
-                .await;
-            let Ok(handle) = result else {
-                panic!("dispatch must return a result handle");
-            };
-            let _ = handle.result.await;
-        }
-
-        let pres = env.payloads("pre.log");
-        let results = env.payloads("result.log");
-        let outcomes = env.payloads("postfail.log");
-        assert_eq!(pres.len(), 2);
-        assert_eq!(results.len(), 2);
-        assert_eq!(outcomes.len(), 2);
-
-        for payloads in [&pres, &results, &outcomes] {
-            assert_eq!(payloads[0]["tool_name"], payloads[1]["tool_name"]);
-            assert_eq!(payloads[0]["tool_input"], payloads[1]["tool_input"]);
-        }
-
-        let ids: Vec<&str> = results
-            .iter()
-            .map(|payload| payload["tool_call_id"].as_str().unwrap())
-            .collect();
-        assert_eq!(ids, vec!["call-1", "call-2"]);
-        assert_ne!(
-            ids[0], ids[1],
-            "identical name and input must still carry distinct ids"
-        );
-
-        for (index, id) in ids.iter().enumerate() {
-            assert_eq!(
-                pres[index]["tool_call_id"], results[index]["tool_call_id"],
-                "PreToolUse and PreToolUseResult must carry one id per call"
-            );
-            assert_eq!(
-                outcomes
-                    .iter()
-                    .filter(|payload| payload["tool_call_id"] == *id)
-                    .count(),
-                1,
-                "each call must pair with exactly one outcome by id"
-            );
-        }
-    }
-
-    /// no matching hook: a PreToolUse rule is registered but its matcher does not
-    /// match, so nothing runs and the event reports allow with policy_evaluated false.
-    #[tokio::test]
-    async fn pre_tool_use_result_reports_allow_and_unevaluated_when_no_hook_matches() {
-        let env = RecordingHookEnv::new(&[
-            (
-                "PreToolUse",
-                "a_tool_name_that_never_matches",
-                "pre.sh",
-                DENY_AND_RECORD_SCRIPT,
-            ),
-            ("PreToolUseResult", "", "result.sh", RECORD_RESULT_SCRIPT),
-        ]);
-        let (agent, session, _data_dir) = agent_with_hooks(env.hook_manager()).await;
-
-        let (_, result) = agent
-            .dispatch_tool_call(shell_call(), "call-allow-1".to_string(), None, &session)
-            .await;
-        let Ok(handle) = result else {
-            panic!("dispatch must return a result handle");
-        };
-        let _ = handle.result.await;
-
-        assert!(
-            env.payloads("pre.log").is_empty(),
-            "the non-matching rule must not run"
-        );
-        let results = env.payloads("result.log");
-        assert_eq!(results.len(), 1);
-        assert_eq!(results[0]["decision"], "allow");
-        assert_eq!(results[0]["policy_evaluated"], false);
-        assert!(results[0].get("blocked_by").is_none());
-        assert!(results[0].get("reason").is_none());
-        assert_eq!(results[0]["tool_call_id"], "call-allow-1");
-    }
-
-    /// sole abnormal hook: the only matching PreToolUse hook runs, writes nothing
-    /// to stdout and exits non-zero, so it never returned a decision. Execution
-    /// stays fail-open and the event reports allow with policy_evaluated false.
-    #[tokio::test]
-    async fn pre_tool_use_result_reports_unevaluated_when_the_only_hook_exits_without_a_decision() {
-        let env = RecordingHookEnv::new(&[
-            ("PreToolUse", "", "pre.sh", ABNORMAL_EXIT_AND_RECORD_SCRIPT),
-            ("PreToolUseResult", "", "result.sh", RECORD_RESULT_SCRIPT),
-        ]);
-        let (agent, session, _data_dir) = agent_with_hooks(env.hook_manager()).await;
-
-        let (_, result) = agent
-            .dispatch_tool_call(shell_call(), "call-abnormal-1".to_string(), None, &session)
-            .await;
-        let Ok(handle) = result else {
-            panic!("dispatch must stay fail-open and return a result handle");
-        };
-        let _ = handle.result.await;
-
-        assert_eq!(
-            env.payloads("pre.log").len(),
-            1,
-            "the matching hook must still run",
-        );
-        let results = env.payloads("result.log");
-        assert_eq!(results.len(), 1);
-        assert_eq!(results[0]["decision"], "allow");
-        assert_eq!(results[0]["policy_evaluated"], false);
-        assert_eq!(results[0]["tool_call_id"], "call-abnormal-1");
-    }
-
-    /// inactive final output: the tool is not installed, so nothing executes. The
-    /// outer error stays the one this method has always returned, and the failure
-    /// is still observed exactly once, carrying the request id.
-    #[tokio::test]
-    async fn inactive_final_output_keeps_the_outer_error_and_emits_one_failure_event() {
-        use rmcp::object;
-
-        let env = RecordingHookEnv::new(&[
-            ("PreToolUseResult", "", "result.sh", RECORD_RESULT_SCRIPT),
-            ("PostToolUse", "", "post.sh", RECORD_POST_SCRIPT),
-            (
-                "PostToolUseFailure",
-                "",
-                "postfail.sh",
-                RECORD_POST_FAILURE_SCRIPT,
-            ),
-        ]);
-        // agent_with_hooks builds the agent through Agent::with_config, which
-        // leaves final_output_tool as None, so the tool is inactive here without
-        // any extra setup.
-        let (agent, session, _data_dir) = agent_with_hooks(env.hook_manager()).await;
-
-        let call = CallToolRequestParams::new(FINAL_OUTPUT_TOOL_NAME)
-            .with_arguments(object!({ "answer": "unused" }));
-        let (_, result) = agent
-            .dispatch_tool_call(call, "call-inactive-1".to_string(), None, &session)
-            .await;
-
-        let Err(error) = result else {
-            panic!("an inactive final-output tool must report the outer error");
-        };
-        assert_eq!(error.message, "Final output tool not defined");
-        assert_eq!(error.code, ErrorCode::INTERNAL_ERROR);
-
-        let failures = env.payloads("postfail.log");
-        assert_eq!(
-            failures.len(),
-            1,
-            "the failure must be observed exactly once",
-        );
-        assert_eq!(failures[0]["tool_call_id"], "call-inactive-1");
-        assert_eq!(failures[0]["tool_name"], FINAL_OUTPUT_TOOL_NAME);
-        assert!(
-            env.payloads("post.log").is_empty(),
-            "PostToolUse must not fire for a tool that never ran",
-        );
-    }
-
-    #[tokio::test]
-    async fn pre_tool_use_hook_failure_allows_by_default() {
-        let env = RecordingHookEnv::new(&[
-            ("PreToolUse", "", "pre.sh", ABNORMAL_EXIT_AND_RECORD_SCRIPT),
-            ("PreToolUseResult", "", "result.sh", RECORD_RESULT_SCRIPT),
-        ]);
-        let (agent, session, _data_dir) = agent_with_hooks(env.hook_manager()).await;
-
-        let (_, result) = agent
-            .dispatch_tool_call(shell_call(), "call-open-1".to_string(), None, &session)
-            .await;
-        assert!(result.is_ok(), "a broken hook must not block the call");
-
-        assert_eq!(env.payloads("pre.log").len(), 1);
-        let results = env.payloads("result.log");
-        assert_eq!(results.len(), 1);
-        assert_eq!(results[0]["decision"], "allow");
-        assert_eq!(results[0]["cause"], "hook_failure");
-        assert_eq!(results[0]["policy_evaluated"], false);
-    }
-
-    #[tokio::test]
-    async fn pre_tool_use_hook_failure_blocks_when_configured() {
-        let env = RecordingHookEnv::blocking_on_failure(&[
-            ("PreToolUse", "", "pre.sh", ABNORMAL_EXIT_AND_RECORD_SCRIPT),
-            ("PreToolUseResult", "", "result.sh", RECORD_RESULT_SCRIPT),
-            ("PostToolUse", "", "post.sh", RECORD_POST_SCRIPT),
-        ]);
-        let (agent, session, _data_dir) = agent_with_hooks(env.hook_manager()).await;
-
-        let (_, result) = agent
-            .dispatch_tool_call(shell_call(), "call-closed-1".to_string(), None, &session)
-            .await;
-
-        let Err(error) = result else {
-            panic!("a fail-closed hook failure must not dispatch");
-        };
-        assert_eq!(error.message, HOOK_FAILURE_REFUSAL);
-        assert!(
-            env.payloads("post.log").is_empty(),
-            "PostToolUse must not fire for a blocked call"
-        );
-
-        let results = env.payloads("result.log");
-        assert_eq!(results.len(), 1);
-        assert_eq!(results[0]["decision"], "deny");
-        assert_eq!(results[0]["cause"], "hook_failure");
-        assert_eq!(results[0]["policy_evaluated"], false);
-        assert_eq!(results[0]["blocked_by"], "test-plugin");
-        assert_eq!(results[0]["tool_call_id"], "call-closed-1");
     }
 }

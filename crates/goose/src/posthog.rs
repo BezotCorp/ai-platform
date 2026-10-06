@@ -1,18 +1,14 @@
 use crate::config::paths::Paths;
-use crate::config::{get_enabled_extensions, Config};
-use crate::session::session_manager::CURRENT_SCHEMA_VERSION;
-use crate::session::SessionManager;
+use crate::config::{Config, get_enabled_extensions};
+use crate::session::{CURRENT_SCHEMA_VERSION, SessionManager};
 #[cfg(target_os = "windows")]
 use crate::subprocess::SubprocessExt;
 use chrono::{DateTime, Utc};
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-use std::fs;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::Mutex;
+use std::{collections::HashMap, fs, sync::Mutex};
 use uuid::Uuid;
-
 const POSTHOG_API_KEY: &str = "phc_RyX5CaY01VtZJCQyhSR5KFh6qimUy81YwxsEpotAftT";
 const POSTHOG_CAPTURE_URL: &str = "https://us.i.posthog.com/capture/";
 
@@ -509,7 +505,6 @@ pub fn classify_error(error: &str) -> &'static str {
 
 use regex::Regex;
 use std::sync::LazyLock;
-
 static SENSITIVE_PATTERNS: LazyLock<Vec<Regex>> = LazyLock::new(|| {
     vec![
         Regex::new(r"/Users/[^/\s]+").unwrap(),

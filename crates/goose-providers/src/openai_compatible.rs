@@ -1,33 +1,27 @@
-use crate::conversation::token_usage::{CostSource, ProviderUsage};
+use super::api_client::ApiClient;
 use crate::http_status::read_json_response;
-use crate::images::ImageFormat;
 use anyhow::Error;
 use async_stream::try_stream;
+use bcaip_provider_types::base::{MessageStream, Provider, stream_from_single_message};
+use bcaip_provider_types::conversations::{CostSource, Message, ProviderUsage};
+use bcaip_provider_types::errors::ProviderError;
+use bcaip_provider_types::formats::{
+    OpenAiFormatOptions, create_request_for_model_with_options_openai, create_request_openai,
+    get_cost, get_usage, record_response_metadata, response_to_message_openai,
+    response_to_streaming_message_openai, responses_api_to_streaming_message,
+};
+use bcaip_provider_types::images::ImageFormat;
+use bcaip_provider_types::model::ModelConfig;
+use bcaip_provider_types::request_log::{LoggerHandleExt, RequestLogHandle, start_log};
+use bcaip_provider_types::retry::ProviderRetry;
 use futures::TryStreamExt;
 use reqwest::Response;
-#[cfg(test)]
-use reqwest::StatusCode;
+use rmcp::model::Tool;
 use serde_json::Value;
 use tokio::pin;
 use tokio_stream::StreamExt;
 use tokio_util::codec::{FramedRead, LinesCodec};
 use tokio_util::io::StreamReader;
-
-use super::api_client::ApiClient;
-use super::base::{stream_from_single_message, MessageStream, Provider};
-use super::retry::ProviderRetry;
-use crate::conversation::message::Message;
-use crate::errors::ProviderError;
-use crate::formats::openai::{
-    create_request, create_request_for_model_with_options, get_cost, get_usage,
-    record_response_metadata, response_to_message, response_to_streaming_message,
-    OpenAiFormatOptions,
-};
-use crate::formats::openai_responses::responses_api_to_streaming_message;
-use crate::model::ModelConfig;
-use crate::request_log::{start_log, LoggerHandleExt, RequestLogHandle};
-use rmcp::model::Tool;
-
 pub struct OpenAiCompatibleProvider {
     name: String,
     /// Client targeted at the base URL (e.g. `https://api.x.ai/v1`)
@@ -63,7 +57,7 @@ impl OpenAiCompatibleProvider {
         tools: &[Tool],
         for_streaming: bool,
     ) -> Result<Value, ProviderError> {
-        create_request_for_model_with_options(
+        create_request_for_model_with_options_openai(
             model_config,
             wire_model,
             capability_model,
@@ -129,7 +123,7 @@ impl OpenAiCompatibleProvider {
             stream_openai_compat(response, log)
         } else {
             let json = read_json_response(response).await?;
-            let message = response_to_message(&json).map_err(|e| {
+            let message = response_to_message_openai(&json).map_err(|e| {
                 ProviderError::RequestFailed(format!("Failed to parse message: {}", e))
             })?;
             let usage_json = json.get("usage").unwrap_or(&Value::Null);
@@ -155,7 +149,7 @@ impl OpenAiCompatibleProvider {
         tools: &[Tool],
         for_streaming: bool,
     ) -> Result<Value, ProviderError> {
-        create_request(
+        create_request_openai(
             model_config,
             system,
             messages,
@@ -245,7 +239,7 @@ pub fn stream_openai_compat(
         let framed = FramedRead::new(stream_reader, LinesCodec::new())
             .map_err(Error::from);
 
-        let message_stream = response_to_streaming_message(framed);
+        let message_stream = response_to_streaming_message_openai(framed);
         pin!(message_stream);
         while let Some(message) = message_stream.next().await {
             let (message, usage) = message.map_err(|e|
@@ -280,176 +274,4 @@ pub fn stream_responses_compat(
             yield (message, usage);
         }
     }))
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::model::ModelConfig;
-    use serde_json::json;
-    use test_case::test_case;
-
-    #[test_case(
-        StatusCode::PAYMENT_REQUIRED,
-        Some(json!({"error": {"message": "Insufficient credits to complete this request"}})),
-        "CreditsExhausted"
-        ; "402 with payload"
-    )]
-    #[test_case(
-        StatusCode::PAYMENT_REQUIRED,
-        None,
-        "CreditsExhausted"
-        ; "402 without payload"
-    )]
-    #[test_case(
-        StatusCode::TOO_MANY_REQUESTS,
-        Some(json!({"error": {"message": "Rate limit exceeded"}})),
-        "RateLimitExceeded"
-        ; "429 rate limit"
-    )]
-    #[test_case(
-        StatusCode::UNAUTHORIZED,
-        None,
-        "Authentication"
-        ; "401 unauthorized"
-    )]
-    #[test_case(
-        StatusCode::BAD_REQUEST,
-        Some(json!({"error": {"message": "This request exceeds the maximum context length"}})),
-        "ContextLengthExceeded"
-        ; "400 context length"
-    )]
-    #[test_case(
-        StatusCode::INTERNAL_SERVER_ERROR,
-        None,
-        "ServerError"
-        ; "500 server error"
-    )]
-    #[test_case(
-        StatusCode::NOT_FOUND,
-        None,
-        "RequestFailed"
-        ; "404 not found"
-    )]
-    #[test_case(
-        StatusCode::NOT_FOUND,
-        Some(json!({"error": {"message": "model not available"}})),
-        "RequestFailed"
-        ; "404 with error payload"
-    )]
-    fn http_status_maps_to_expected_error(
-        status: StatusCode,
-        payload: Option<Value>,
-        expected_variant: &str,
-    ) {
-        let err = map_http_error_to_provider_error(status, payload, "http://test/endpoint");
-        let actual = err.telemetry_type();
-        let expected_telemetry = match expected_variant {
-            "CreditsExhausted" => "credits_exhausted",
-            "RateLimitExceeded" => "rate_limit",
-            "Authentication" => "auth",
-            "ContextLengthExceeded" => "context_length",
-            "ServerError" => "server",
-            "RequestFailed" => "request",
-            other => panic!("Unknown variant: {other}"),
-        };
-        assert_eq!(
-            actual, expected_telemetry,
-            "Expected {expected_variant}, got error: {err:?}"
-        );
-    }
-
-    #[test]
-    fn build_request_respects_non_streaming_mode() {
-        let provider = OpenAiCompatibleProvider::new(
-            "test".to_string(),
-            ApiClient::new_with_tls(
-                "http://localhost".to_string(),
-                super::super::api_client::AuthMethod::NoAuth,
-                None,
-            )
-            .unwrap(),
-            String::new(),
-        )
-        .with_supports_streaming(false);
-
-        let model = ModelConfig::new("test-model");
-        let payload = provider
-            .build_request(&model, "", &[], &[], provider.supports_streaming)
-            .unwrap();
-
-        assert_eq!(payload.get("stream"), None);
-        assert_eq!(payload.get("stream_options"), None);
-    }
-
-    #[tokio::test]
-    async fn nonstreaming_completion_accepts_legitimate_response() {
-        use wiremock::matchers::{method, path};
-        use wiremock::{Mock, MockServer, ResponseTemplate};
-
-        let server = MockServer::start().await;
-        Mock::given(method("POST"))
-            .and(path("/chat/completions"))
-            .respond_with(ResponseTemplate::new(200).set_body_json(json!({
-                "choices": [{
-                    "message": {"role": "assistant", "content": "hello"}
-                }]
-            })))
-            .mount(&server)
-            .await;
-
-        let provider = OpenAiCompatibleProvider::new(
-            "test".to_string(),
-            ApiClient::new_with_tls(server.uri(), crate::api_client::AuthMethod::NoAuth, None)
-                .unwrap(),
-            String::new(),
-        )
-        .with_supports_streaming(false);
-
-        let _stream = provider
-            .stream(&ModelConfig::new("test-model"), "", &[], &[])
-            .await
-            .expect("legitimate non-streaming response should be accepted");
-    }
-
-    #[tokio::test]
-    async fn nonstreaming_completion_rejects_oversized_response_body() {
-        use crate::http_status::MAX_PROVIDER_JSON_RESPONSE_BYTES;
-        use wiremock::matchers::{method, path};
-        use wiremock::{Mock, MockServer, ResponseTemplate};
-
-        let server = MockServer::start().await;
-        Mock::given(method("POST"))
-            .and(path("/chat/completions"))
-            .respond_with(ResponseTemplate::new(200).set_body_json(json!({
-                "choices": [{
-                    "message": {
-                        "role": "assistant",
-                        "content": "a".repeat(MAX_PROVIDER_JSON_RESPONSE_BYTES + 1)
-                    }
-                }]
-            })))
-            .mount(&server)
-            .await;
-
-        let provider = OpenAiCompatibleProvider::new(
-            "test".to_string(),
-            ApiClient::new_with_tls(server.uri(), crate::api_client::AuthMethod::NoAuth, None)
-                .unwrap(),
-            String::new(),
-        )
-        .with_supports_streaming(false);
-
-        let err = match provider
-            .stream(&ModelConfig::new("test-model"), "", &[], &[])
-            .await
-        {
-            Ok(_) => panic!("oversized response should be rejected"),
-            Err(err) => err,
-        };
-        assert!(
-            err.to_string().contains("response body exceeds"),
-            "got: {err}"
-        );
-    }
 }

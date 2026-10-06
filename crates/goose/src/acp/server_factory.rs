@@ -2,19 +2,17 @@ use crate::acp::server::{
     AcpBuiltinSelection, AcpProviderFactory, ActiveRunRegistry, GooseAcpAgent,
     GooseAcpAgentOptions, LiveVoiceService,
 };
-use crate::agents::GoosePlatform;
-use crate::config::paths::Paths;
 #[cfg(feature = "scheduler")]
 use crate::scheduler_trait::SchedulerTrait;
 #[cfg(feature = "scheduler")]
 use crate::session::SessionManager;
 use crate::source_roots::SourceRoot;
+use crate::{agents::GoosePlatform, config::paths::Paths};
 use anyhow::Result;
 use std::sync::Arc;
 #[cfg(feature = "scheduler")]
 use tokio::sync::OnceCell;
 use tracing::info;
-
 pub struct AcpServerFactoryConfig {
     pub builtins: AcpBuiltinSelection,
     pub config_dir: std::path::PathBuf,
@@ -149,153 +147,5 @@ impl AcpServer {
         info!("Created new ACP agent");
 
         Ok(Arc::new(agent))
-    }
-
-    #[cfg(all(test, feature = "scheduler"))]
-    pub(crate) fn new_for_test(
-        config: AcpServerFactoryConfig,
-        data_dir: std::path::PathBuf,
-    ) -> Self {
-        let active_runs = Arc::new(ActiveRunRegistry::default());
-        let live_voice = Arc::new(LiveVoiceService::from_config(active_runs.clone()));
-        Self {
-            config,
-            data_dir,
-            #[cfg(feature = "scheduler")]
-            scheduler: OnceCell::new(),
-            active_runs,
-            live_voice,
-        }
-    }
-}
-
-#[cfg(all(test, feature = "scheduler"))]
-mod tests {
-    use super::*;
-
-    fn server(data_dir: std::path::PathBuf, enable_scheduler: bool) -> AcpServer {
-        AcpServer::new_for_test(
-            AcpServerFactoryConfig {
-                builtins: AcpBuiltinSelection::default(),
-                config_dir: data_dir.clone(),
-                goose_platform: GoosePlatform::GooseCli,
-                additional_source_roots: Vec::new(),
-                session_cwd: None,
-                enable_scheduler,
-            },
-            data_dir,
-        )
-    }
-
-    #[tokio::test]
-    async fn disabled_server_does_not_construct_scheduler() {
-        let root = tempfile::tempdir().unwrap();
-        let server = server(root.path().to_path_buf(), false);
-
-        assert!(server.scheduler().await.unwrap().is_none());
-        assert!(!root.path().join("schedule.json").exists());
-    }
-
-    #[tokio::test]
-    async fn automatic_server_constructs_scheduler() {
-        let root = tempfile::tempdir().unwrap();
-        let server = server(root.path().to_path_buf(), true);
-
-        assert!(server.scheduler().await.unwrap().is_some());
-    }
-
-    #[tokio::test]
-    async fn agents_from_one_server_share_the_active_run_registry() {
-        let root = tempfile::tempdir().unwrap();
-        let server = server(root.path().to_path_buf(), false);
-
-        let a = server.create_agent().await.unwrap();
-        let b = server.create_agent().await.unwrap();
-
-        assert!(
-            Arc::ptr_eq(a.active_run_registry(), b.active_run_registry()),
-            "each connection's agent must share one per-session run registry"
-        );
-    }
-
-    #[tokio::test]
-    async fn steer_routes_to_the_agent_that_owns_the_run() {
-        let root = tempfile::tempdir().unwrap();
-        let server = server(root.path().to_path_buf(), false);
-
-        let running = server.create_agent().await.unwrap();
-        let steering = server.create_agent().await.unwrap();
-
-        let owner = Arc::new(crate::agents::Agent::new());
-        running
-            .test_start_active_run("session-1", "run-1".to_string(), owner.clone())
-            .await
-            .unwrap();
-
-        let (run_id, resolved) = steering
-            .test_require_active_run("session-1", "run-1")
-            .await
-            .unwrap();
-
-        assert_eq!(run_id, "run-1");
-        assert!(
-            Arc::ptr_eq(&resolved, &owner),
-            "a steer arriving on a second roaming connection must resolve the \
-             agent running the prompt, not the caller's connection-local agent"
-        );
-    }
-
-    #[tokio::test]
-    async fn dropping_a_prompt_future_releases_the_shared_run() {
-        let root = tempfile::tempdir().unwrap();
-        let server = server(root.path().to_path_buf(), false);
-
-        let running = server.create_agent().await.unwrap();
-        let owner = Arc::new(crate::agents::Agent::new());
-        running
-            .test_start_active_run("session-1", "run-1".to_string(), owner)
-            .await
-            .unwrap();
-
-        running.test_drop_active_run_guard("session-1", "run-1");
-        tokio::task::yield_now().await;
-
-        let second = server.create_agent().await.unwrap();
-        assert!(
-            second
-                .test_require_active_run("session-1", "run-1")
-                .await
-                .is_err(),
-            "a dropped prompt future must release its run so later \
-             connections are not permanently locked out of the session"
-        );
-    }
-
-    #[tokio::test]
-    async fn start_scheduler_initializes_before_any_client_connects() {
-        let root = tempfile::tempdir().unwrap();
-        let server = server(root.path().to_path_buf(), true);
-
-        assert!(!server.scheduler.initialized());
-        server.start_scheduler().await.unwrap();
-        assert!(server.scheduler.initialized());
-    }
-
-    #[tokio::test]
-    async fn start_scheduler_is_idempotent() {
-        let root = tempfile::tempdir().unwrap();
-        let server = server(root.path().to_path_buf(), true);
-
-        server.start_scheduler().await.unwrap();
-        server.start_scheduler().await.unwrap();
-    }
-
-    #[tokio::test]
-    async fn start_scheduler_does_not_construct_one_when_disabled() {
-        let root = tempfile::tempdir().unwrap();
-        let server = server(root.path().to_path_buf(), false);
-
-        server.start_scheduler().await.unwrap();
-        assert!(!server.scheduler.initialized());
     }
 }

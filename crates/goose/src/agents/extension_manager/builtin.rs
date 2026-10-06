@@ -1,12 +1,9 @@
-use std::collections::HashMap;
-
 use super::super::container::Container;
 use super::super::extension::{ExtensionError, ExtensionResult};
 use super::super::mcp_client::{ConnectContext, McpClient, McpClientTrait};
 use super::stdio;
-use crate::builtin_extension::get_builtin_extension;
-use crate::config::extensions::name_to_key;
-
+use crate::{builtin_extension::get_builtin_extension, config::extensions::name_to_key};
+use std::collections::HashMap;
 pub(super) async fn connect(
     name: &str,
     container: Option<&Container>,

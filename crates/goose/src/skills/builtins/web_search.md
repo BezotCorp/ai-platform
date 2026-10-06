@@ -11,11 +11,13 @@ description: Search the web and extract page content using DuckDuckGo (no API ke
 ## Search
 
 **Default — DuckDuckGo (no API key):**
+
 ```bash
 uvx ddgs text -q "your query here" -m 5
 ```
 
 **Tavily (richer results, requires `TAVILY_API_KEY`):**
+
 ```bash
 uvx --from tavily-python python -c "
 import os
@@ -29,6 +31,7 @@ for res in r['results']:
 ```
 
 **SearXNG (self-hosted, requires `SEARXNG_URL`):**
+
 ```bash
 curl -sG --data-urlencode "q=your query here" --data "format=json" "${SEARXNG_URL}/search" | python3 -c "
 import json, sys
@@ -53,6 +56,7 @@ head -c 15000 "$tmpfile"
 ```
 
 If the page is larger than 15 000 characters, show both head and tail so the user can decide whether to read the full file:
+
 ```bash
 echo "--- HEAD ---"
 head -c 7500 "$tmpfile"

@@ -1,8 +1,7 @@
-use crate::conversation::message::{Message, MessageContent};
 use chrono::Utc;
+use bcaip_provider_types::conversations::{Message, MessageContent};
 use rmcp::model::Role;
 use uuid::Uuid;
-
 #[derive(Default)]
 pub(super) struct LiveTranscript {
     // Consecutive deltas with the same role form one saved transcript entry.

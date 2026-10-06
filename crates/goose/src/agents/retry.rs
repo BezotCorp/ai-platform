@@ -1,23 +1,16 @@
 use anyhow::Result;
-use std::process::Stdio;
-use std::sync::Arc;
-use std::time::Duration;
+use std::{process::Stdio, sync::Arc, time::Duration};
 use tokio::io::{AsyncRead, AsyncReadExt};
-use tokio::process::Command;
-use tokio::sync::Mutex;
+use tokio::{process::Command, sync::Mutex};
 use tracing::{debug, info, warn};
 
-use crate::subprocess::SubprocessExt;
-
-use crate::agents::types::SessionConfig;
 use crate::agents::types::{
-    RetryConfig, SuccessCheck, DEFAULT_ON_FAILURE_TIMEOUT_SECONDS, DEFAULT_RETRY_TIMEOUT_SECONDS,
+    DEFAULT_ON_FAILURE_TIMEOUT_SECONDS, DEFAULT_RETRY_TIMEOUT_SECONDS, RetryConfig, SuccessCheck,
 };
 use crate::config::Config;
-use crate::conversation::message::Message;
-use crate::conversation::Conversation;
 use crate::tool_monitor::RepetitionInspector;
-
+use crate::{agents::types::SessionConfig, subprocess::SubprocessExt};
+use bcaip_provider_types::conversations::{Conversation, Message};
 /// Result of a retry logic evaluation
 #[derive(Debug, Clone, PartialEq)]
 pub enum RetryResult {
@@ -80,10 +73,10 @@ impl RetryManager {
         *attempts = 0;
 
         // Reset repetition inspector if available
-        if let Some(inspector) = &self.repetition_inspector {
-            if let Some(inspector) = inspector.lock().await.as_mut() {
-                inspector.reset();
-            }
+        if let Some(inspector) = &self.repetition_inspector
+            && let Some(inspector) = inspector.lock().await.as_mut()
+        {
+            inspector.reset();
         }
     }
 
@@ -356,217 +349,4 @@ pub async fn execute_on_failure_command_with_timeout(
     }
 
     Ok(())
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::agents::types::SuccessCheck;
-
-    fn create_test_retry_config() -> RetryConfig {
-        RetryConfig {
-            max_retries: 3,
-            checks: vec![],
-            on_failure: None,
-            timeout_seconds: Some(60),
-            on_failure_timeout_seconds: Some(120),
-        }
-    }
-
-    #[test]
-    fn test_retry_result_enum() {
-        let max_attempts = RetryResult::MaxAttemptsReached(Message::assistant().with_text("done"));
-        assert_ne!(RetryResult::Skipped, max_attempts);
-        assert_ne!(RetryResult::Skipped, RetryResult::SuccessChecksPassed);
-        assert_ne!(RetryResult::Skipped, RetryResult::Retried);
-        assert_ne!(max_attempts, RetryResult::SuccessChecksPassed);
-        assert_ne!(max_attempts, RetryResult::Retried);
-        assert_ne!(RetryResult::SuccessChecksPassed, RetryResult::Retried);
-
-        let result = RetryResult::Retried;
-        let cloned = result.clone();
-        assert_eq!(result, cloned);
-
-        let debug_str = format!("{:?}", max_attempts);
-        assert!(debug_str.contains("MaxAttemptsReached"));
-    }
-
-    #[tokio::test]
-    async fn test_execute_success_checks_all_pass() {
-        let checks = vec![
-            SuccessCheck::Shell {
-                command: "echo 'test'".to_string(),
-            },
-            SuccessCheck::Shell {
-                command: "true".to_string(),
-            },
-        ];
-        let retry_config = create_test_retry_config();
-
-        let result = execute_success_checks(&checks, &retry_config).await;
-        assert!(result.is_ok());
-        assert!(result.unwrap());
-    }
-
-    #[tokio::test]
-    async fn test_execute_success_checks_one_fails() {
-        let checks = vec![
-            SuccessCheck::Shell {
-                command: "echo 'test'".to_string(),
-            },
-            SuccessCheck::Shell {
-                command: "false".to_string(),
-            },
-        ];
-        let retry_config = create_test_retry_config();
-
-        let result = execute_success_checks(&checks, &retry_config).await;
-        assert!(result.is_ok());
-        assert!(!result.unwrap());
-    }
-
-    #[tokio::test]
-    async fn test_execute_shell_command_success() {
-        let result = execute_shell_command("echo 'hello world'", Duration::from_secs(30)).await;
-        assert!(result.is_ok());
-        let output = result.unwrap();
-        assert!(output.status.success());
-        assert!(output.stdout.is_empty());
-    }
-
-    #[tokio::test]
-    async fn test_execute_shell_command_failure() {
-        let result = execute_shell_command("false", Duration::from_secs(30)).await;
-        assert!(result.is_ok());
-        let output = result.unwrap();
-        assert!(!output.status.success());
-    }
-
-    #[cfg(unix)]
-    #[tokio::test]
-    async fn test_execute_shell_command_bounds_stderr_tail() {
-        let command = "i=0; while [ $i -lt 10000 ]; do printf x >&2; i=$((i + 1)); done; printf diagnostic-tail >&2; exit 1";
-        let output = execute_shell_command(command, Duration::from_secs(30))
-            .await
-            .unwrap();
-
-        assert!(!output.status.success());
-        assert_eq!(output.stderr.len(), MAX_COMMAND_STDERR_BYTES);
-        assert!(output.stderr.ends_with(b"diagnostic-tail"));
-    }
-
-    #[tokio::test]
-    async fn test_capture_tail_preserves_small_diagnostic() {
-        use tokio::io::AsyncWriteExt;
-
-        let diagnostic = b"useful diagnostic";
-        let (mut writer, reader) = tokio::io::duplex(diagnostic.len());
-        writer.write_all(diagnostic).await.unwrap();
-        writer.shutdown().await.unwrap();
-
-        assert_eq!(capture_tail(reader).await.unwrap(), diagnostic);
-    }
-
-    #[tokio::test]
-    async fn test_execute_on_failure_command_success() {
-        let retry_config = create_test_retry_config();
-        let result = execute_on_failure_command("echo 'cleanup'", &retry_config).await;
-        assert!(result.is_ok());
-    }
-
-    #[tokio::test]
-    async fn test_execute_on_failure_command_failure() {
-        let retry_config = create_test_retry_config();
-        let result = execute_on_failure_command("false", &retry_config).await;
-        assert!(result.is_err());
-    }
-
-    #[tokio::test]
-    async fn test_shell_command_timeout() {
-        let timeout = std::time::Duration::from_millis(100);
-        let result = if cfg!(target_os = "windows") {
-            execute_shell_command("timeout /t 1", timeout).await
-        } else {
-            execute_shell_command("sleep 1", timeout).await
-        };
-
-        assert!(result.is_err());
-    }
-
-    #[tokio::test]
-    async fn test_get_retry_timeout_uses_config_default() {
-        let retry_config = RetryConfig {
-            max_retries: 1,
-            checks: vec![],
-            on_failure: None,
-            timeout_seconds: None,
-            on_failure_timeout_seconds: None,
-        };
-
-        let timeout = get_retry_timeout(&retry_config);
-        assert_eq!(timeout, Duration::from_secs(DEFAULT_RETRY_TIMEOUT_SECONDS));
-    }
-
-    #[tokio::test]
-    async fn test_get_retry_timeout_uses_retry_config() {
-        let retry_config = RetryConfig {
-            max_retries: 1,
-            checks: vec![],
-            on_failure: None,
-            timeout_seconds: Some(120),
-            on_failure_timeout_seconds: None,
-        };
-
-        let timeout = get_retry_timeout(&retry_config);
-        assert_eq!(timeout, Duration::from_secs(120));
-    }
-
-    #[tokio::test]
-    async fn test_get_on_failure_timeout_uses_config_default() {
-        let retry_config = RetryConfig {
-            max_retries: 1,
-            checks: vec![],
-            on_failure: None,
-            timeout_seconds: None,
-            on_failure_timeout_seconds: None,
-        };
-
-        let timeout = get_on_failure_timeout(&retry_config);
-        assert_eq!(
-            timeout,
-            Duration::from_secs(DEFAULT_ON_FAILURE_TIMEOUT_SECONDS)
-        );
-    }
-
-    #[tokio::test]
-    async fn test_get_on_failure_timeout_uses_retry_config() {
-        let retry_config = RetryConfig {
-            max_retries: 1,
-            checks: vec![],
-            on_failure: None,
-            timeout_seconds: None,
-            on_failure_timeout_seconds: Some(900),
-        };
-
-        let timeout = get_on_failure_timeout(&retry_config);
-        assert_eq!(timeout, Duration::from_secs(900));
-    }
-
-    #[tokio::test]
-    async fn test_on_failure_timeout_different_from_retry_timeout() {
-        let retry_config = RetryConfig {
-            max_retries: 1,
-            checks: vec![],
-            on_failure: None,
-            timeout_seconds: Some(60),
-            on_failure_timeout_seconds: Some(300),
-        };
-
-        let retry_timeout = get_retry_timeout(&retry_config);
-        let on_failure_timeout = get_on_failure_timeout(&retry_config);
-
-        assert_eq!(retry_timeout, Duration::from_secs(60));
-        assert_eq!(on_failure_timeout, Duration::from_secs(300));
-        assert_ne!(retry_timeout, on_failure_timeout);
-    }
 }

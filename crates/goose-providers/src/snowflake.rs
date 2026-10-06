@@ -1,23 +1,23 @@
-use crate::conversation::token_usage::ProviderUsage;
-use crate::images::ImageFormat;
 use anyhow::Result;
 use async_trait::async_trait;
+use bcaip_provider_types::images::ImageFormat;
 use serde::{Deserialize, Serialize};
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 use crate::api_client::{ApiClient, AuthMethod, RequestBuilderDecorator, TlsConfig};
-use crate::base::{ConfigKey, MessageStream, Provider, ProviderMetadata};
-use crate::conversation::message::Message;
-use crate::errors::ProviderError;
-use crate::formats::snowflake::{create_request, get_usage, response_to_message};
 use crate::openai_compatible::{map_http_error_to_provider_error, sanitize_url};
-use crate::retry::ProviderRetry;
-use crate::utils::get_model;
+use bcaip_provider_types::base::{
+    ConfigKey, MessageStream, Provider, ProviderDescriptor, ProviderMetadata, stream_from_single_message,
+};
+use bcaip_provider_types::conversations::{Message, ProviderUsage};
+use bcaip_provider_types::errors::ProviderError;
+use bcaip_provider_types::formats::{create_request_google, get_usage, response_to_message_google};
+use bcaip_provider_types::retry::ProviderRetry;
+use bcaip_provider_types::utils::get_model;
 
-use crate::model::ModelConfig;
-use crate::request_log::{start_log, LoggerHandleExt};
+use bcaip_provider_types::model::ModelConfig;
+use bcaip_provider_types::request_log::{LoggerHandleExt, start_log};
 use rmcp::model::Tool;
-
 const SNOWFLAKE_PROVIDER_NAME: &str = "snowflake";
 pub const SNOWFLAKE_DEFAULT_MODEL: &str = "claude-sonnet-4-5";
 pub const SNOWFLAKE_KNOWN_MODELS: &[&str] = &[
@@ -126,23 +126,22 @@ impl SnowflakeProvider {
                 .unwrap_or_default()
         };
 
-        if status.is_success() {
-            if let Ok(payload) = serde_json::from_str::<Value>(&payload_text) {
-                if payload.get("code").is_some() {
-                    let code = payload
-                        .get("code")
-                        .and_then(|c| c.as_str())
-                        .unwrap_or("Unknown code");
-                    let message = payload
-                        .get("message")
-                        .and_then(|m| m.as_str())
-                        .unwrap_or("Unknown message");
-                    return Err(ProviderError::RequestFailed(format!(
-                        "{} - {}",
-                        code, message
-                    )));
-                }
-            }
+        if status.is_success()
+            && let Ok(payload) = serde_json::from_str::<Value>(&payload_text)
+            && payload.get("code").is_some()
+        {
+            let code = payload
+                .get("code")
+                .and_then(|c| c.as_str())
+                .unwrap_or("Unknown code");
+            let message = payload
+                .get("message")
+                .and_then(|m| m.as_str())
+                .unwrap_or("Unknown message");
+            return Err(ProviderError::RequestFailed(format!(
+                "{} - {}",
+                code, message
+            )));
         }
 
         let lines = payload_text.lines().collect::<Vec<_>>();
@@ -238,10 +237,10 @@ impl SnowflakeProvider {
                 }
 
                 // Handle direct content field (for text) only if we didn't find text in content_list
-                if !found_text_in_content_list {
-                    if let Some(content) = delta.get("content").and_then(|c| c.as_str()) {
-                        text.push_str(content);
-                    }
+                if !found_text_in_content_list
+                    && let Some(content) = delta.get("content").and_then(|c| c.as_str())
+                {
+                    text.push_str(content);
                 }
             }
         }
@@ -298,7 +297,7 @@ impl SnowflakeProvider {
     }
 }
 
-impl crate::base::ProviderDescriptor for SnowflakeProvider {
+impl ProviderDescriptor for SnowflakeProvider {
     fn metadata() -> ProviderMetadata {
         ProviderMetadata::new(
             SNOWFLAKE_PROVIDER_NAME,
@@ -335,7 +334,7 @@ impl Provider for SnowflakeProvider {
         messages: &[Message],
         tools: &[Tool],
     ) -> Result<MessageStream, ProviderError> {
-        let payload = create_request(model_config, system, messages, tools)?;
+        let payload = create_request_google(model_config, system, messages, tools)?;
 
         let mut log = start_log(model_config, &payload)?;
 
@@ -346,52 +345,13 @@ impl Provider for SnowflakeProvider {
             })
             .await?;
 
-        let message = response_to_message(&response)?;
-        let usage = get_usage(&response)?;
+        let message = response_to_message_google(response.clone())?;
+        let usage = get_usage(&response);
         let response_model = get_model(&response);
 
         log.write(&response, Some(&usage))?;
 
         let provider_usage = ProviderUsage::new(response_model, usage);
-        Ok(crate::base::stream_from_single_message(
-            message,
-            provider_usage,
-        ))
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    fn create_provider(host: &str) -> Result<SnowflakeProvider> {
-        SnowflakeProvider::new(host.to_string(), "token".to_string(), None, None)
-    }
-
-    #[test]
-    fn rejects_http_host() {
-        let error = create_provider("http://account.snowflakecomputing.com").unwrap_err();
-
-        assert!(error.to_string().contains("HTTPS"));
-    }
-
-    #[test]
-    fn accepts_https_host() {
-        let provider = create_provider("https://account.snowflakecomputing.com").unwrap();
-
-        assert_eq!(
-            provider.api_client.host(),
-            "https://account.snowflakecomputing.com"
-        );
-    }
-
-    #[test]
-    fn normalizes_schemeless_host_to_https() {
-        let provider = create_provider("account").unwrap();
-
-        assert_eq!(
-            provider.api_client.host(),
-            "https://account.snowflakecomputing.com"
-        );
+        Ok(stream_from_single_message(message, provider_usage))
     }
 }

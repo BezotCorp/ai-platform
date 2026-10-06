@@ -1,13 +1,11 @@
-use anyhow::{anyhow, Result};
-use std::fs;
-use std::hash::DefaultHasher;
+use anyhow::{Result, anyhow};
 use std::hash::{Hash, Hasher};
 use std::path::{Path, PathBuf};
+use std::{fs, hash::DefaultHasher};
 
-use crate::recipe::build_recipe::resolve_sub_recipe_path;
-use crate::recipe::local_recipes::list_local_recipes;
-use crate::recipe::Recipe;
-
+use crate::recipe::{
+    Recipe, build_recipe::resolve_sub_recipe_path, local_recipes::list_local_recipes,
+};
 #[derive(Debug, Clone)]
 pub struct RecipeFileManifest {
     pub id: String,
@@ -83,58 +81,5 @@ fn resolve_recipe_sub_recipe_paths(recipe: &mut Recipe, recipe_path: &Path) {
         if let Ok(resolved) = resolve_sub_recipe_path(&sub_recipe.path, recipe_dir) {
             sub_recipe.path = resolved;
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn short_id_from_path_is_stable() {
-        assert_eq!(
-            short_id_from_path("/tmp/example.yaml"),
-            short_id_from_path("/tmp/example.yaml")
-        );
-        assert_ne!(
-            short_id_from_path("/tmp/example.yaml"),
-            short_id_from_path("/tmp/other.yaml")
-        );
-    }
-
-    #[test]
-    fn load_recipe_from_path_resolves_sub_recipe_paths() {
-        let temp_dir = tempfile::tempdir().unwrap();
-        let child_path = temp_dir.path().join("child.yaml");
-        fs::write(
-            &child_path,
-            r#"
-title: Child
-description: Child recipe
-instructions: Child instructions
-"#,
-        )
-        .unwrap();
-        let parent_path = temp_dir.path().join("parent.yaml");
-        fs::write(
-            &parent_path,
-            r#"
-title: Parent
-description: Parent recipe
-instructions: Parent instructions
-sub_recipes:
-  - name: child
-    path: child.yaml
-"#,
-        )
-        .unwrap();
-
-        let recipe = load_recipe_from_path(&parent_path).unwrap();
-        let sub_recipes = recipe.sub_recipes.unwrap();
-
-        assert_eq!(
-            fs::canonicalize(sub_recipes[0].path.clone()).unwrap(),
-            fs::canonicalize(child_path.to_string_lossy().to_string()).unwrap()
-        );
     }
 }

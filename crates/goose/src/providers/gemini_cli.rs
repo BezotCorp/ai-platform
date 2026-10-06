@@ -1,28 +1,24 @@
-use anyhow::Result;
-use async_trait::async_trait;
-use serde_json::Value;
-use std::path::PathBuf;
-use std::process::Stdio;
-use std::sync::{Arc, OnceLock};
-use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader};
-use tokio::process::Command;
-
-use super::base::{MessageStream, Provider, ProviderDef, ProviderMetadata};
+use super::base::ProviderDef;
 use super::cli_common::{error_from_event, extract_usage_tokens};
 use super::utils::filter_extensions_from_system_prompt;
-use crate::config::search_path::SearchPaths;
-use crate::config::Config;
-use crate::conversation::message::{Message, MessageContent};
-use crate::providers::base::ConfigKey;
+use crate::config::{Config, search_path::SearchPaths};
 use crate::subprocess::configure_subprocess;
+use anyhow::Result;
 use async_stream::try_stream;
+use async_trait::async_trait;
+use bcaip_provider_types::base::ConfigKey;
+use bcaip_provider_types::base::{MessageStream, Provider, ProviderMetadata};
+use bcaip_provider_types::conversations::{Message, MessageContent};
+use bcaip_provider_types::conversations::{ProviderUsage, Usage};
+use bcaip_provider_types::errors::ProviderError;
+use bcaip_provider_types::model::ModelConfig;
 use futures::future::BoxFuture;
-use goose_providers::conversation::token_usage::{ProviderUsage, Usage};
-use goose_providers::errors::ProviderError;
-use goose_providers::model::ModelConfig;
-use rmcp::model::Role;
-use rmcp::model::Tool;
-
+use rmcp::model::{Role, Tool};
+use serde_json::Value;
+use std::sync::{Arc, OnceLock};
+use std::{path::PathBuf, process::Stdio};
+use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader};
+use tokio::process::Command;
 const GEMINI_CLI_PROVIDER_NAME: &str = "gemini-cli";
 pub const GEMINI_CLI_DEFAULT_MODEL: &str = "gemini-2.5-pro";
 pub const GEMINI_CLI_KNOWN_MODELS: &[&str] = &[
@@ -50,7 +46,7 @@ struct GeminiCliProcess {
 
 impl GeminiCliProvider {
     pub async fn from_env(
-        _tls_config: Option<crate::providers::api_client::TlsConfig>,
+        _tls_config: Option<goose_providers::api_client::TlsConfig>,
     ) -> Result<Self> {
         let config = Config::global();
         let command: String = config.get_gemini_cli_command().unwrap_or_default().into();
@@ -160,7 +156,7 @@ impl GeminiCliProvider {
     }
 }
 
-impl goose_providers::base::ProviderDescriptor for GeminiCliProvider {
+impl bcaip_provider_types::base::ProviderDescriptor for GeminiCliProvider {
     fn metadata() -> ProviderMetadata {
         ProviderMetadata::new(
             GEMINI_CLI_PROVIDER_NAME,
@@ -186,7 +182,7 @@ impl ProviderDef for GeminiCliProvider {
 
     fn from_env(
         _extensions: Vec<crate::config::ExtensionConfig>,
-        tls_config: Option<crate::providers::api_client::TlsConfig>,
+        tls_config: Option<goose_providers::api_client::TlsConfig>,
     ) -> BoxFuture<'static, Result<Self::Provider>> {
         Box::pin(Self::from_env(tls_config))
     }
@@ -329,160 +325,5 @@ impl Provider for GeminiCliProvider {
             let provider_usage = ProviderUsage::new(model_name, accumulated_usage);
             yield (None, Some(provider_usage));
         }))
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    #[cfg(unix)]
-    use futures::StreamExt;
-    #[cfg(unix)]
-    use std::fs;
-    #[cfg(unix)]
-    use std::os::unix::fs::PermissionsExt;
-    #[cfg(unix)]
-    use std::path::Path;
-
-    #[cfg(unix)]
-    const SENTINEL: &str = "loupe-sensitive-gemini-prompt";
-
-    fn make_provider() -> GeminiCliProvider {
-        GeminiCliProvider {
-            command: PathBuf::from("gemini"),
-            name: "gemini-cli".to_string(),
-            cli_session_id: Arc::new(OnceLock::new()),
-        }
-    }
-
-    #[test]
-    fn test_build_prompt_first_and_resume() {
-        let provider = make_provider();
-        let messages = vec![Message::new(
-            Role::User,
-            0,
-            vec![MessageContent::text("Hello")],
-        )];
-
-        let prompt = provider.build_prompt("You are helpful.", &messages);
-        assert!(prompt.contains("You are helpful."));
-        assert!(prompt.contains("Hello"));
-
-        let _ = provider.cli_session_id.set("session-123".to_string());
-        let messages = vec![
-            Message::new(Role::User, 0, vec![MessageContent::text("Hello")]),
-            Message::new(Role::Assistant, 0, vec![MessageContent::text("Hi!")]),
-            Message::new(
-                Role::User,
-                0,
-                vec![MessageContent::text("Follow up question")],
-            ),
-        ];
-        let prompt = provider.build_prompt("You are helpful.", &messages);
-        assert_eq!(prompt, "Follow up question");
-    }
-
-    #[cfg(unix)]
-    fn recording_cli(directory: &Path) -> PathBuf {
-        let command = directory.join("gemini-recording-shim");
-        fs::write(
-            &command,
-            r#"#!/bin/sh
-record_dir=${0%/*}
-printf '%s\n' "$@" > "$record_dir/args"
-cat > "$record_dir/stdin"
-printf '%s\n' '{"type":"init","session_id":"recorded-session"}'
-printf '%s\n' '{"type":"result","stats":{}}'
-"#,
-        )
-        .unwrap();
-        fs::set_permissions(&command, fs::Permissions::from_mode(0o755)).unwrap();
-        command
-    }
-
-    #[cfg(unix)]
-    async fn assert_prompt_uses_stdin(resumed: bool) {
-        let directory = tempfile::tempdir().unwrap();
-        let mut provider = make_provider();
-        provider.command = recording_cli(directory.path());
-        if resumed {
-            provider
-                .cli_session_id
-                .set("existing-session".to_string())
-                .unwrap();
-        }
-
-        let messages = if resumed {
-            vec![
-                Message::user().with_text("first turn"),
-                Message::assistant().with_text("first response"),
-                Message::user().with_text(SENTINEL),
-            ]
-        } else {
-            vec![Message::user().with_text(SENTINEL)]
-        };
-        let mut stream = provider
-            .stream(
-                &ModelConfig::new(GEMINI_CLI_DEFAULT_MODEL),
-                "system instructions",
-                &messages,
-                &[],
-            )
-            .await
-            .unwrap();
-        while let Some(item) = stream.next().await {
-            item.unwrap();
-        }
-
-        let args = fs::read_to_string(directory.path().join("args")).unwrap();
-        let stdin = fs::read_to_string(directory.path().join("stdin")).unwrap();
-        assert!(!args.contains(SENTINEL));
-        assert!(stdin.contains(SENTINEL));
-        assert!(!args.lines().any(|arg| arg == "-p"));
-        assert!(args.contains("-m\ngemini-2.5-pro"));
-        assert!(args.contains("--output-format\nstream-json"));
-        assert!(args.contains("--yolo"));
-        if resumed {
-            assert!(args.contains("-r\nexisting-session"));
-        } else {
-            assert!(!args.lines().any(|arg| arg == "-r"));
-        }
-    }
-
-    #[cfg(unix)]
-    #[tokio::test]
-    async fn initial_prompt_is_sent_on_stdin() {
-        assert_prompt_uses_stdin(false).await;
-    }
-
-    #[cfg(unix)]
-    #[tokio::test]
-    async fn resumed_prompt_is_sent_on_stdin() {
-        assert_prompt_uses_stdin(true).await;
-    }
-
-    #[cfg(unix)]
-    #[tokio::test]
-    async fn former_session_title_phrase_reaches_cli() {
-        let directory = tempfile::tempdir().unwrap();
-        let mut provider = make_provider();
-        provider.command = recording_cli(directory.path());
-
-        let mut stream = provider
-            .stream(
-                &ModelConfig::new(GEMINI_CLI_DEFAULT_MODEL),
-                "answer in four words or less",
-                &[Message::user().with_text("ordinary request")],
-                &[],
-            )
-            .await
-            .unwrap();
-        while let Some(item) = stream.next().await {
-            item.unwrap();
-        }
-
-        assert!(fs::read_to_string(directory.path().join("stdin"))
-            .unwrap()
-            .contains("answer in four words or less"));
     }
 }

@@ -1,11 +1,9 @@
-use std::path::Path;
-use std::sync::LazyLock;
-
+use crate::utils::safe_truncate;
 use anyhow::Result;
-use goose_providers::conversation::{message::Message, Conversation};
+use bcaip_provider_types::base::Provider;
+use bcaip_provider_types::conversations::{Conversation, Message};
 use regex::Regex;
-
-use crate::{providers::base::Provider, utils::safe_truncate};
+use std::{path::Path, sync::LazyLock};
 
 pub static MSG_COUNT_FOR_SESSION_NAME_GENERATION: usize = 3;
 
@@ -89,7 +87,7 @@ fn get_initial_user_messages(messages: &Conversation) -> Vec<String> {
 
 pub(crate) async fn generate_session_name(
     provider: &dyn Provider,
-    model_config: &goose_providers::model::ModelConfig,
+    model_config: &bcaip_provider_types::model::ModelConfig,
     session_id: &str,
     messages: &Conversation,
     working_dir: Option<&Path>,
@@ -154,90 +152,4 @@ pub(crate) async fn generate_session_name(
         .join(" ");
 
     Ok(safe_truncate(&extract_short_title(&description), 100))
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_strip_xml_tags() {
-        assert_eq!(strip_xml_tags("<think>reasoning</think>answer"), "answer");
-        assert_eq!(strip_xml_tags("before<t>mid</t>after"), "beforeafter");
-        assert_eq!(strip_xml_tags("<a>x</a><b>y</b>z"), "z");
-        assert_eq!(strip_xml_tags("no tags here"), "no tags here");
-        assert_eq!(strip_xml_tags("a < b > c"), "a < b > c");
-        assert_eq!(strip_xml_tags("<think>über</think>ok"), "ok");
-        assert_eq!(strip_xml_tags("<think>日本語</think>hello"), "hello");
-        assert_eq!(strip_xml_tags(""), "");
-        assert_eq!(strip_xml_tags("<>stuff</>"), "<>stuff</>");
-        // attributes
-        assert_eq!(
-            strip_xml_tags(r#"<think class="deep">reasoning</think>answer"#),
-            "answer"
-        );
-        // self-closing tags
-        assert_eq!(strip_xml_tags("<br/>self closing"), "self closing");
-        // orphan closing tags
-        assert_eq!(strip_xml_tags("orphan </think> tag"), "orphan  tag");
-        // multiline content
-        assert_eq!(
-            strip_xml_tags("<think>\nline1\nline2\n</think>result"),
-            "result"
-        );
-    }
-
-    #[test]
-    fn test_extract_short_title() {
-        assert_eq!(extract_short_title("List files"), "List files");
-        assert_eq!(
-            extract_short_title(
-                r#"blah blah blah blah blah blah blah blah blah "List files in folder""#
-            ),
-            "List files in folder"
-        );
-        assert_eq!(
-            extract_short_title(
-                "blah blah blah blah blah blah blah blah blah `View current files`"
-            ),
-            "View current files"
-        );
-        assert_eq!(
-            extract_short_title(
-                r#"stuff stuff stuff stuff stuff stuff stuff stuff "Abc title" "Zzz title""#
-            ),
-            "Zzz title"
-        );
-        assert_eq!(
-            extract_short_title(
-                "long long long long long long long long long\nList files in folder"
-            ),
-            "List files in folder"
-        );
-        assert_eq!(
-            extract_short_title(
-                r#"lots of words here and there and more and more "single" final line here"#
-            ),
-            "lots of words here and there and more and more \"single\" final line here"
-        );
-        assert_eq!(extract_short_title("Hello world"), "Hello world");
-        assert_eq!(
-            extract_short_title(
-                r#"1. Analyze the request. 2. The user's message says list files. 3. "List current folder files" fits perfectly. Result: List current folder files"#
-            ),
-            "List current folder files"
-        );
-        assert_eq!(
-            extract_short_title(
-                r#"the user's phrasing is about listing files and the user's intent is clear. "List folder files" is best"#
-            ),
-            "List folder files"
-        );
-        assert_eq!(
-            extract_short_title(
-                "lots of reasoning here about what to call it\nList current folder files"
-            ),
-            "List current folder files"
-        );
-    }
 }

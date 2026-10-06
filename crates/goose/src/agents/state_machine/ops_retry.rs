@@ -1,24 +1,23 @@
 //! Decides whether a completed response should finish, continue, or retry the turn.
 
-use anyhow::{anyhow, Result};
-use async_trait::async_trait;
-use std::time::Duration;
-
 use crate::agents::retry::{
     execute_on_failure_command_with_timeout, execute_success_checks_with_timeout,
 };
-use crate::agents::state_machine::{
-    applied, ends_turn, messages_since_kickoff, not_applicable, yielded_with, ConversationEffect,
-    Emitter, GooseEffect, Operation, OperationResult, SlashCommand,
-};
+use crate::agents::state_machine::GooseEffect;
 use crate::agents::types::RetryConfig;
-use crate::conversation::message::{Message, MessageErrorKind, SystemNotificationType};
-use crate::conversation::Conversation;
 use crate::session::Session;
+use anyhow::{Result, anyhow};
+use async_trait::async_trait;
+use bcaip_agent::operation::{
+    ConversationEffect, Emitter, Operation, OperationResult, SlashCommand, applied, ends_turn,
+    messages_since_kickoff, not_applicable, yielded_with,
+};
+use bcaip_provider_types::conversations::Conversation;
+use bcaip_provider_types::conversations::{Message, MessageErrorKind, SystemNotificationType};
+use std::time::Duration;
 use tokio::sync::Mutex;
-
-pub(super) const NUDGED: &str = "nudged";
-pub(super) const ATTEMPTS: &str = "attempts";
+pub(crate) const NUDGED: &str = "nudged";
+pub(crate) const ATTEMPTS: &str = "attempts";
 
 fn retry_error(error: &str) -> Message {
     Message::assistant().with_error(
@@ -186,24 +185,24 @@ impl Operation<Session, GooseEffect> for RetryOperation<'_> {
             return not_applicable();
         }
 
-        if !self.goal_was_nudged(messages) {
-            if let Some(goal) = self.goal.lock().await.clone() {
-                let nudge = format!(
-                    "Before finishing, check whether the following goal has been fully met:\n\n\
+        if !self.goal_was_nudged(messages)
+            && let Some(goal) = self.goal.lock().await.clone()
+        {
+            let nudge = format!(
+                "Before finishing, check whether the following goal has been fully met:\n\n\
                      **Goal:** {goal}\n\n\
                      If not, continue working toward it."
-                );
-                let mut message = Message::user()
-                    .with_text(&nudge)
-                    .with_visibility(false, true);
-                self.set_message_meta(&mut message, NUDGED, serde_json::json!(true));
-                emit.message(Message::assistant().with_system_notification(
-                    SystemNotificationType::InlineMessage,
-                    format!("Goal: {goal}"),
-                ))
-                .await;
-                return applied([message.into()]);
-            }
+            );
+            let mut message = Message::user()
+                .with_text(&nudge)
+                .with_visibility(false, true);
+            self.set_message_meta(&mut message, NUDGED, serde_json::json!(true));
+            emit.message(Message::assistant().with_system_notification(
+                SystemNotificationType::InlineMessage,
+                format!("Goal: {goal}"),
+            ))
+            .await;
+            return applied([message.into()]);
         }
 
         if let Some(grind) = self.grind.lock().await.clone() {

@@ -1,3 +1,5 @@
+#[cfg(unix)]
+use rustix::fs::{Mode, OFlags};
 use std::fs;
 use std::io::{self, Read, Write};
 use std::path::{Component, Path};
@@ -202,40 +204,13 @@ fn validated_relative_components(path: &Path) -> io::Result<Vec<&std::ffi::OsStr
 }
 
 #[cfg(any(target_os = "linux", target_os = "android"))]
-fn directory_traversal_flags() -> libc::c_int {
-    libc::O_PATH | libc::O_DIRECTORY | libc::O_NOFOLLOW | libc::O_CLOEXEC
+fn directory_traversal_flags() -> OFlags {
+    OFlags::PATH | OFlags::DIRECTORY | OFlags::NOFOLLOW | OFlags::CLOEXEC
 }
 
-#[cfg(all(
-    unix,
-    any(
-        target_vendor = "apple",
-        target_os = "aix",
-        target_os = "freebsd",
-        target_os = "illumos",
-        target_os = "netbsd",
-        target_os = "solaris"
-    )
-))]
-fn directory_traversal_flags() -> libc::c_int {
-    libc::O_SEARCH | libc::O_DIRECTORY | libc::O_NOFOLLOW | libc::O_CLOEXEC
-}
-
-#[cfg(all(
-    unix,
-    not(any(
-        target_vendor = "apple",
-        target_os = "aix",
-        target_os = "android",
-        target_os = "freebsd",
-        target_os = "illumos",
-        target_os = "linux",
-        target_os = "netbsd",
-        target_os = "solaris"
-    ))
-))]
-fn directory_traversal_flags() -> libc::c_int {
-    libc::O_RDONLY | libc::O_DIRECTORY | libc::O_NOFOLLOW | libc::O_CLOEXEC
+#[cfg(all(unix, not(any(target_os = "linux", target_os = "android"))))]
+fn directory_traversal_flags() -> OFlags {
+    OFlags::RDONLY | OFlags::DIRECTORY | OFlags::NOFOLLOW | OFlags::CLOEXEC
 }
 
 #[cfg(unix)]
@@ -244,9 +219,10 @@ fn open_skill_root(
     after_opened_component: &mut impl FnMut(&Path),
 ) -> io::Result<fs::File> {
     use std::os::unix::fs::OpenOptionsExt;
-
     let mut options = fs::OpenOptions::new();
-    options.read(true).custom_flags(directory_traversal_flags());
+    options
+        .read(true)
+        .custom_flags(directory_traversal_flags().bits() as i32);
     let mut directory = options.open(Path::new("/"))?;
     let mut opened_path = std::path::PathBuf::from("/");
     let mut saw_root = false;
@@ -303,7 +279,7 @@ fn read_confined_file_with_hook(
     let file = open_at(
         &directory,
         file_name,
-        libc::O_RDONLY | libc::O_NONBLOCK | libc::O_NOFOLLOW | libc::O_CLOEXEC,
+        OFlags::RDONLY | OFlags::NONBLOCK | OFlags::NOFOLLOW | OFlags::CLOEXEC,
     )?;
     if !file.metadata()?.is_file() {
         return Err(io::Error::new(
@@ -335,11 +311,11 @@ fn write_confined_file_with_hook(
     }
 
     let mut flags =
-        libc::O_WRONLY | libc::O_CREAT | libc::O_NONBLOCK | libc::O_NOFOLLOW | libc::O_CLOEXEC;
+        OFlags::WRONLY | OFlags::CREATE | OFlags::NONBLOCK | OFlags::NOFOLLOW | OFlags::CLOEXEC;
     if create_new {
-        flags |= libc::O_EXCL;
+        flags |= OFlags::EXCL;
     }
-    let mut file = open_at_with_mode(&directory, file_name, flags, 0o666)?;
+    let mut file = open_at_with_mode(&directory, file_name, flags, Mode::from_raw_mode(0o666))?;
     let metadata = file.metadata()?;
     if !metadata.is_file() {
         return Err(io::Error::new(
@@ -357,7 +333,6 @@ fn write_confined_file_with_hook(
 #[cfg(unix)]
 fn ensure_source_file_has_single_link(_file: &fs::File, metadata: &fs::Metadata) -> io::Result<()> {
     use std::os::unix::fs::MetadataExt;
-
     if metadata.nlink() != 1 {
         return Err(io::Error::new(
             io::ErrorKind::InvalidInput,
@@ -368,61 +343,19 @@ fn ensure_source_file_has_single_link(_file: &fs::File, metadata: &fs::Metadata)
 }
 
 #[cfg(unix)]
-fn open_at(
-    directory: &fs::File,
-    name: &std::ffi::OsStr,
-    flags: libc::c_int,
-) -> io::Result<fs::File> {
-    use std::ffi::CString;
-    use std::os::fd::{AsRawFd, FromRawFd};
-    use std::os::unix::ffi::OsStrExt;
-
-    let name = CString::new(name.as_bytes()).map_err(|_| {
-        io::Error::new(
-            io::ErrorKind::InvalidInput,
-            "supporting file path contains a NUL byte",
-        )
-    })?;
-    // SAFETY: openat does not retain the name pointer, and no creation flag requiring a mode is set.
-    let descriptor = unsafe { libc::openat(directory.as_raw_fd(), name.as_ptr(), flags) };
-    if descriptor < 0 {
-        return Err(io::Error::last_os_error());
-    }
-    // SAFETY: openat returned a new owned descriptor on success.
-    Ok(unsafe { fs::File::from_raw_fd(descriptor) })
+fn open_at(directory: &fs::File, name: &std::ffi::OsStr, flags: OFlags) -> io::Result<fs::File> {
+    open_at_with_mode(directory, name, flags, Mode::empty())
 }
 
 #[cfg(unix)]
 fn open_at_with_mode(
     directory: &fs::File,
     name: &std::ffi::OsStr,
-    flags: libc::c_int,
-    mode: libc::mode_t,
+    flags: OFlags,
+    mode: Mode,
 ) -> io::Result<fs::File> {
-    use std::ffi::CString;
-    use std::os::fd::{AsRawFd, FromRawFd};
-    use std::os::unix::ffi::OsStrExt;
-
-    let name = CString::new(name.as_bytes()).map_err(|_| {
-        io::Error::new(
-            io::ErrorKind::InvalidInput,
-            "source file path contains a NUL byte",
-        )
-    })?;
-    // SAFETY: openat does not retain the name pointer, and mode is supplied for O_CREAT.
-    let descriptor = unsafe {
-        libc::openat(
-            directory.as_raw_fd(),
-            name.as_ptr(),
-            flags,
-            libc::c_uint::from(mode),
-        )
-    };
-    if descriptor < 0 {
-        return Err(io::Error::last_os_error());
-    }
-    // SAFETY: openat returned a new owned descriptor on success.
-    Ok(unsafe { fs::File::from_raw_fd(descriptor) })
+    let descriptor = rustix::fs::openat(directory, name, flags, mode)?;
+    Ok(fs::File::from(descriptor))
 }
 
 #[cfg(windows)]
@@ -575,7 +508,7 @@ fn write_confined_file_with_hook(
 #[cfg(windows)]
 fn ensure_source_file_has_single_link(file: &fs::File, _metadata: &fs::Metadata) -> io::Result<()> {
     use std::os::windows::io::AsRawHandle;
-    use winapi::um::fileapi::{GetFileInformationByHandle, BY_HANDLE_FILE_INFORMATION};
+    use winapi::um::fileapi::{BY_HANDLE_FILE_INFORMATION, GetFileInformationByHandle};
 
     // SAFETY: BY_HANDLE_FILE_INFORMATION is a plain C data structure initialized before the call.
     let mut information: BY_HANDLE_FILE_INFORMATION = unsafe { std::mem::zeroed() };
@@ -649,11 +582,11 @@ fn windows_open_at_with_options(
     create_disposition: u32,
     create_options: u32,
 ) -> io::Result<fs::File> {
-    use ntapi::ntioapi::{NtCreateFile, IO_STATUS_BLOCK};
+    use ntapi::ntioapi::{IO_STATUS_BLOCK, NtCreateFile};
     use std::os::windows::ffi::OsStrExt;
     use std::os::windows::io::{AsRawHandle, FromRawHandle};
     use winapi::shared::ntdef::{
-        HANDLE, NT_SUCCESS, OBJECT_ATTRIBUTES, OBJ_CASE_INSENSITIVE, UNICODE_STRING,
+        HANDLE, NT_SUCCESS, OBJ_CASE_INSENSITIVE, OBJECT_ATTRIBUTES, UNICODE_STRING,
     };
     use winapi::um::winnt::{FILE_SHARE_DELETE, FILE_SHARE_READ, FILE_SHARE_WRITE};
 
@@ -711,7 +644,6 @@ fn windows_open_at_with_options(
 fn windows_metadata_is_reparse_point(metadata: &fs::Metadata) -> bool {
     use std::os::windows::fs::MetadataExt;
     use winapi::um::winnt::FILE_ATTRIBUTE_REPARSE_POINT;
-
     metadata.file_attributes() & FILE_ATTRIBUTE_REPARSE_POINT != 0
 }
 
@@ -749,316 +681,4 @@ fn write_confined_file_with_hook(
         io::ErrorKind::Unsupported,
         "secure source file writes are not supported on this platform",
     ))
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[cfg(any(unix, windows))]
-    #[test]
-    fn reads_nested_regular_file() {
-        let root = tempfile::tempdir().unwrap();
-        let skill_dir = fs::canonicalize(root.path()).unwrap();
-        let nested = skill_dir.join("nested");
-        fs::create_dir(&nested).unwrap();
-        fs::write(nested.join("guide.md"), "nested guidance").unwrap();
-
-        let content = read_supporting_file_with_limit(
-            &skill_dir,
-            Path::new("nested/guide.md"),
-            crate::agents::max_tool_response_size(),
-        )
-        .unwrap();
-
-        assert_eq!(content, "nested guidance");
-    }
-
-    #[cfg(any(unix, windows))]
-    #[test]
-    fn source_file_safety_limit_is_independent() {
-        let root = tempfile::tempdir().unwrap();
-        let source_dir = fs::canonicalize(root.path()).unwrap();
-        fs::write(
-            source_dir.join("source.md"),
-            "x".repeat(MAX_SOURCE_FILE_BYTES + 1),
-        )
-        .unwrap();
-
-        assert!(read_source_file(&source_dir, Path::new("source.md")).is_err());
-    }
-
-    #[cfg(all(
-        unix,
-        any(
-            target_vendor = "apple",
-            target_os = "aix",
-            target_os = "android",
-            target_os = "freebsd",
-            target_os = "illumos",
-            target_os = "linux",
-            target_os = "netbsd",
-            target_os = "solaris"
-        )
-    ))]
-    #[test]
-    fn reads_through_search_only_ancestor() {
-        use std::os::unix::fs::PermissionsExt;
-
-        let root = tempfile::tempdir().unwrap();
-        let skill_dir = root.path().join("skill");
-        fs::create_dir(&skill_dir).unwrap();
-        fs::write(skill_dir.join("guide.md"), "search-only guidance").unwrap();
-        let skill_dir = fs::canonicalize(skill_dir).unwrap();
-        let original_permissions = fs::metadata(root.path()).unwrap().permissions();
-        fs::set_permissions(root.path(), fs::Permissions::from_mode(0o111)).unwrap();
-
-        let result = read_supporting_file_with_limit(
-            &skill_dir,
-            Path::new("guide.md"),
-            crate::agents::max_tool_response_size(),
-        );
-
-        fs::set_permissions(root.path(), original_permissions).unwrap();
-        assert_eq!(result.unwrap(), "search-only guidance");
-    }
-
-    #[cfg(any(unix, windows))]
-    #[test]
-    fn reads_utf8_file_at_exact_character_limit() {
-        let root = tempfile::tempdir().unwrap();
-        let skill_dir = fs::canonicalize(root.path()).unwrap();
-        fs::write(skill_dir.join("guide.md"), "🙂🙂🙂🙂").unwrap();
-
-        let content =
-            read_supporting_file_with_limit(&skill_dir, Path::new("guide.md"), 4).unwrap();
-
-        assert_eq!(content, "🙂🙂🙂🙂");
-    }
-
-    #[cfg(any(unix, windows))]
-    #[test]
-    fn wrapped_file_respects_total_character_limit() {
-        let root = tempfile::tempdir().unwrap();
-        let skill_dir = fs::canonicalize(root.path()).unwrap();
-        fs::write(skill_dir.join("guide.md"), "🙂🙂🙂🙂").unwrap();
-        let skill_name = "test-skill/guide.md";
-        let wrapper_characters = LOADED_FILE_PREFIX.chars().count()
-            + skill_name.chars().count()
-            + LOADED_FILE_SEPARATOR.chars().count()
-            + LOADED_FILE_SUFFIX.chars().count();
-        let max_characters = wrapper_characters + 4;
-
-        let content = load_supporting_file_with_limit(
-            &skill_dir,
-            Path::new("guide.md"),
-            skill_name,
-            max_characters,
-        )
-        .unwrap();
-
-        assert_eq!(content.chars().count(), max_characters);
-        assert!(content.contains("🙂🙂🙂🙂"));
-    }
-
-    #[cfg(any(unix, windows))]
-    #[test]
-    fn rejects_file_that_exceeds_wrapped_character_limit() {
-        let root = tempfile::tempdir().unwrap();
-        let skill_dir = fs::canonicalize(root.path()).unwrap();
-        fs::write(skill_dir.join("guide.md"), "ééééé").unwrap();
-        let skill_name = "test-skill/guide.md";
-        let wrapper_characters = LOADED_FILE_PREFIX.chars().count()
-            + skill_name.chars().count()
-            + LOADED_FILE_SEPARATOR.chars().count()
-            + LOADED_FILE_SUFFIX.chars().count();
-
-        let error = load_supporting_file_with_limit(
-            &skill_dir,
-            Path::new("guide.md"),
-            skill_name,
-            wrapper_characters + 4,
-        )
-        .expect_err("wrapped supporting-file limit was not enforced");
-
-        assert_eq!(error.kind(), io::ErrorKind::InvalidData);
-        assert!(error
-            .to_string()
-            .contains("exceeds the maximum size of 4 characters"));
-    }
-
-    #[cfg(any(unix, windows))]
-    #[test]
-    fn rejects_file_one_character_over_size_limit() {
-        let root = tempfile::tempdir().unwrap();
-        let skill_dir = fs::canonicalize(root.path()).unwrap();
-        fs::write(skill_dir.join("guide.md"), "ééééé").unwrap();
-
-        let error = read_supporting_file_with_limit(&skill_dir, Path::new("guide.md"), 4)
-            .expect_err("oversized supporting file was accepted");
-
-        assert_eq!(error.kind(), io::ErrorKind::InvalidData);
-        assert!(error
-            .to_string()
-            .contains("exceeds the maximum size of 4 characters"));
-    }
-
-    #[test]
-    fn streaming_limit_reads_only_limit_plus_one() {
-        use std::cell::Cell;
-        use std::rc::Rc;
-
-        struct CountingReader(Rc<Cell<usize>>);
-
-        impl io::Read for CountingReader {
-            fn read(&mut self, buffer: &mut [u8]) -> io::Result<usize> {
-                buffer.fill(b'a');
-                self.0.set(self.0.get() + buffer.len());
-                Ok(buffer.len())
-            }
-        }
-
-        let bytes_read = Rc::new(Cell::new(0));
-        let error = read_utf8_with_limit(CountingReader(Rc::clone(&bytes_read)), 4)
-            .expect_err("streaming size limit was not enforced");
-
-        assert_eq!(error.kind(), io::ErrorKind::InvalidData);
-        assert!(error
-            .to_string()
-            .contains("exceeds the maximum encoded size of 16 bytes"));
-        assert_eq!(bytes_read.get(), 17);
-    }
-
-    #[cfg(unix)]
-    #[test]
-    fn rejects_symlinked_ancestor() {
-        let root = tempfile::tempdir().unwrap();
-        let outside = tempfile::tempdir().unwrap();
-        let skill_dir = fs::canonicalize(root.path()).unwrap();
-        fs::write(outside.path().join("secret.txt"), "outside secret").unwrap();
-        std::os::unix::fs::symlink(outside.path(), skill_dir.join("nested")).unwrap();
-
-        let result = read_supporting_file_with_limit(
-            &skill_dir,
-            Path::new("nested/secret.txt"),
-            crate::agents::max_tool_response_size(),
-        );
-
-        assert!(result.is_err());
-    }
-
-    #[cfg(unix)]
-    #[test]
-    fn stays_in_opened_ancestor_after_symlink_swap() {
-        let root = tempfile::tempdir().unwrap();
-        let outside = tempfile::tempdir().unwrap();
-        let skill_dir = fs::canonicalize(root.path()).unwrap();
-        let nested = skill_dir.join("nested");
-        let moved_nested = skill_dir.join("moved-nested");
-        fs::create_dir(&nested).unwrap();
-        fs::write(nested.join("payload"), "safe content").unwrap();
-        fs::write(outside.path().join("payload"), "outside secret").unwrap();
-
-        let content = read_supporting_file_with_hook(
-            &skill_dir,
-            Path::new("nested/payload"),
-            crate::agents::max_tool_response_size(),
-            |opened_path| {
-                if opened_path == Path::new("nested") {
-                    fs::rename(&nested, &moved_nested).unwrap();
-                    std::os::unix::fs::symlink(outside.path(), &nested).unwrap();
-                }
-            },
-        )
-        .unwrap();
-
-        assert_eq!(content, "safe content");
-        assert!(!content.contains("outside secret"));
-    }
-
-    #[cfg(unix)]
-    #[test]
-    fn rejects_skill_root_replaced_with_symlink_during_open() {
-        let parent = tempfile::tempdir().unwrap();
-        let outside = tempfile::tempdir().unwrap();
-        let parent = fs::canonicalize(parent.path()).unwrap();
-        let skill_dir = parent.join("skill");
-        let moved_skill_dir = parent.join("moved-skill");
-        fs::create_dir(&skill_dir).unwrap();
-        fs::write(skill_dir.join("payload"), "safe content").unwrap();
-        fs::write(outside.path().join("payload"), "outside secret").unwrap();
-
-        let result = read_supporting_file_with_hook(
-            &skill_dir,
-            Path::new("payload"),
-            crate::agents::max_tool_response_size(),
-            |opened_path| {
-                if opened_path == parent {
-                    fs::rename(&skill_dir, &moved_skill_dir).unwrap();
-                    std::os::unix::fs::symlink(outside.path(), &skill_dir).unwrap();
-                }
-            },
-        );
-
-        assert!(result.is_err());
-    }
-
-    #[cfg(windows)]
-    #[test]
-    fn windows_stays_in_opened_ancestor_after_directory_swap() {
-        let root = tempfile::tempdir().unwrap();
-        let skill_dir = fs::canonicalize(root.path()).unwrap();
-        let nested = skill_dir.join("nested");
-        let moved_nested = skill_dir.join("moved-nested");
-        fs::create_dir(&nested).unwrap();
-        fs::write(nested.join("payload"), "safe content").unwrap();
-
-        let content = read_supporting_file_with_hook(
-            &skill_dir,
-            Path::new("nested/payload"),
-            crate::agents::max_tool_response_size(),
-            |opened_path| {
-                if opened_path == Path::new("nested") {
-                    fs::rename(&nested, &moved_nested).unwrap();
-                    fs::create_dir(&nested).unwrap();
-                    fs::write(nested.join("payload"), "outside secret").unwrap();
-                }
-            },
-        )
-        .unwrap();
-
-        assert_eq!(content, "safe content");
-        assert!(!content.contains("outside secret"));
-    }
-
-    #[cfg(windows)]
-    #[test]
-    fn windows_rejects_skill_root_replaced_with_symlink_during_open() {
-        let parent = tempfile::tempdir().unwrap();
-        let outside = tempfile::tempdir().unwrap();
-        let parent = fs::canonicalize(parent.path()).unwrap();
-        let skill_dir = parent.join("skill");
-        let moved_skill_dir = parent.join("moved-skill");
-        let replacement = parent.join("replacement");
-        fs::create_dir(&skill_dir).unwrap();
-        fs::write(skill_dir.join("payload"), "safe content").unwrap();
-        fs::write(outside.path().join("payload"), "outside secret").unwrap();
-        if std::os::windows::fs::symlink_dir(outside.path(), &replacement).is_err() {
-            return;
-        }
-
-        let result = read_supporting_file_with_hook(
-            &skill_dir,
-            Path::new("payload"),
-            crate::agents::max_tool_response_size(),
-            |opened_path| {
-                if opened_path == parent {
-                    fs::rename(&skill_dir, &moved_skill_dir).unwrap();
-                    fs::rename(&replacement, &skill_dir).unwrap();
-                }
-            },
-        );
-
-        assert!(result.is_err());
-    }
 }

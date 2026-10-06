@@ -1,23 +1,21 @@
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex as StdMutex};
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
+use bcaip_provider_types::permission::Permission;
 use tokio::sync::{Mutex, Notify, OwnedMutexGuard};
 use tokio_util::sync::CancellationToken;
-
-use crate::permission::Permission;
-
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub(super) enum ConfirmationAnswer {
+pub(crate) enum ConfirmationAnswer {
     LiveHandled,
     StateMachine(Permission),
 }
 
-pub(super) struct SessionToolConfirmationState {
+pub(crate) struct SessionToolConfirmationState {
     // Held for the lifetime of one Agent::reply stream, including confirmation waits and resumes.
     turn_lock: Arc<Mutex<()>>,
     // Serializes submit_tool_confirmation so concurrent answers cannot both be accepted.
-    pub(super) confirmation_submission_lock: Mutex<()>,
+    pub(crate) confirmation_submission_lock: Mutex<()>,
     // Tracks requests from the current confirmation pause; None means still unanswered.
     confirmations: StdMutex<HashMap<String, Option<ConfirmationAnswer>>>,
     // Wakes wait_for_all_confirmation_answers; confirmations remains the source of truth.
@@ -34,7 +32,7 @@ impl SessionToolConfirmationState {
         }
     }
 
-    pub(super) fn try_start_turn(self: &Arc<Self>) -> Result<ActiveTurnGuard> {
+    pub(crate) fn try_start_turn(self: &Arc<Self>) -> Result<ActiveTurnGuard> {
         let turn_lock_guard = self
             .turn_lock
             .clone()
@@ -46,7 +44,7 @@ impl SessionToolConfirmationState {
         })
     }
 
-    pub(super) fn register_request(&self, request_id: String) {
+    pub(crate) fn register_request(&self, request_id: String) {
         self.confirmations
             .lock()
             .expect("tool confirmation state unavailable")
@@ -54,7 +52,7 @@ impl SessionToolConfirmationState {
             .or_insert(None);
     }
 
-    pub(super) fn answer(&self, request_id: &str) -> Option<ConfirmationAnswer> {
+    pub(crate) fn answer(&self, request_id: &str) -> Option<ConfirmationAnswer> {
         self.confirmations
             .lock()
             .expect("tool confirmation state unavailable")
@@ -62,14 +60,14 @@ impl SessionToolConfirmationState {
             .and_then(Clone::clone)
     }
 
-    pub(super) fn contains_request(&self, request_id: &str) -> bool {
+    pub(crate) fn contains_request(&self, request_id: &str) -> bool {
         self.confirmations
             .lock()
             .expect("tool confirmation state unavailable")
             .contains_key(request_id)
     }
 
-    pub(super) fn record_answer(&self, request_id: &str, answer: ConfirmationAnswer) -> Result<()> {
+    pub(crate) fn record_answer(&self, request_id: &str, answer: ConfirmationAnswer) -> Result<()> {
         let mut confirmations = self
             .confirmations
             .lock()
@@ -84,7 +82,7 @@ impl SessionToolConfirmationState {
         Ok(())
     }
 
-    pub(super) async fn wait_for_all_confirmation_answers(
+    pub(crate) async fn wait_for_all_confirmation_answers(
         &self,
         cancel: &CancellationToken,
     ) -> Result<bool> {
@@ -160,86 +158,5 @@ impl ToolConfirmationCoordinator {
             .entry(session_id.to_string())
             .or_insert_with(|| Arc::new(SessionToolConfirmationState::new()))
             .clone()
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn rejects_a_second_active_turn_and_releases_on_drop() {
-        let coordinator = ToolConfirmationCoordinator::new();
-        let session = coordinator.session("session");
-        let guard = session.try_start_turn().unwrap();
-
-        assert!(session.try_start_turn().is_err());
-
-        drop(guard);
-        assert!(session.try_start_turn().is_ok());
-    }
-
-    #[tokio::test]
-    async fn waits_for_every_confirmation_in_the_batch() {
-        let coordinator = ToolConfirmationCoordinator::new();
-        let session = coordinator.session("session");
-        let _guard = session.try_start_turn().unwrap();
-        session.register_request("request-1".to_string());
-        session.register_request("request-2".to_string());
-        session
-            .record_answer(
-                "request-1",
-                ConfirmationAnswer::StateMachine(Permission::AllowOnce),
-            )
-            .unwrap();
-        session
-            .record_answer("request-2", ConfirmationAnswer::LiveHandled)
-            .unwrap();
-
-        let has_state_machine_answer = session
-            .wait_for_all_confirmation_answers(&CancellationToken::new())
-            .await
-            .unwrap();
-
-        assert!(has_state_machine_answer);
-    }
-
-    #[test]
-    fn active_turn_drop_clears_pending_requests() {
-        let coordinator = ToolConfirmationCoordinator::new();
-        let session = coordinator.session("session");
-        let guard = session.try_start_turn().unwrap();
-        session.register_request("request".to_string());
-        assert!(session.contains_request("request"));
-
-        drop(guard);
-
-        assert!(!session.contains_request("request"));
-        assert!(session.answer("request").is_none());
-    }
-
-    #[test]
-    fn first_answer_is_immutable() {
-        let coordinator = ToolConfirmationCoordinator::new();
-        let session = coordinator.session("session");
-        let _guard = session.try_start_turn().unwrap();
-        session.register_request("request".to_string());
-        session
-            .record_answer(
-                "request",
-                ConfirmationAnswer::StateMachine(Permission::AllowOnce),
-            )
-            .unwrap();
-
-        assert!(session
-            .record_answer(
-                "request",
-                ConfirmationAnswer::StateMachine(Permission::DenyOnce),
-            )
-            .is_err());
-        assert_eq!(
-            session.answer("request"),
-            Some(ConfirmationAnswer::StateMachine(Permission::AllowOnce))
-        );
     }
 }

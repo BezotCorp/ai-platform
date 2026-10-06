@@ -42,16 +42,16 @@ goose's architecture is designed for extensibility. Organizations can create "re
 
 ## Key Customization Points
 
-| What You Want | Where to Look | Complexity |
-|---------------|---------------|------------|
-| Preconfigure a model/provider | `config.yaml`, `init-config.yaml`, environment variables | Low |
-| Add custom AI providers | `crates/goose/src/providers/declarative/` | Low |
-| Bundle custom MCP extensions | `config.yaml` extensions section, `ui/desktop/src/built-in-extensions.json`, `ui/desktop/src/components/settings/extensions/bundled-extensions.json` | Medium |
-| Modify system prompts | `crates/goose/src/prompts/` | Low |
-| Customize desktop branding | `ui/desktop/` (icons, names, colors) | Medium |
-| Build a new UI (web, mobile) | Integrate with `goose serve` over ACP | High |
-| Create guided workflows | Recipes (YAML-based task definitions) | Low |
-| Build complex multi-step workflows | Recipes with sub-recipes and subagents | Medium |
+| What You Want                      | Where to Look                                                                                                                                        | Complexity |
+| ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
+| Preconfigure a model/provider      | `config.yaml`, `init-config.yaml`, environment variables                                                                                             | Low        |
+| Add custom AI providers            | `crates/goose/src/providers/declarative/`                                                                                                            | Low        |
+| Bundle custom MCP extensions       | `config.yaml` extensions section, `ui/desktop/src/built-in-extensions.json`, `ui/desktop/src/components/settings/extensions/bundled-extensions.json` | Medium     |
+| Modify system prompts              | `crates/goose/src/prompts/`                                                                                                                          | Low        |
+| Customize desktop branding         | `ui/desktop/` (icons, names, colors)                                                                                                                 | Medium     |
+| Build a new UI (web, mobile)       | Integrate with `goose serve` over ACP                                                                                                                | High       |
+| Create guided workflows            | Recipes (YAML-based task definitions)                                                                                                                | Low        |
+| Build complex multi-step workflows | Recipes with sub-recipes and subagents                                                                                                               | Medium     |
 
 ## Getting Started
 
@@ -77,6 +77,7 @@ See [BUILDING_LINUX.md](BUILDING_LINUX.md) and [ui/desktop/README.md](ui/desktop
 ### Licensing
 
 goose is licensed under Apache License 2.0 (ASL v2). Custom distributions must:
+
 - Include the original license and copyright notices
 - Clearly indicate any modifications made
 - Not use "Goose" trademarks in ways that imply official endorsement
@@ -90,12 +91,14 @@ While you're free to maintain private forks, contributing improvements upstream 
 ### Telemetry
 
 goose includes optional telemetry (via PostHog) to help improve the project. For custom distributions, you can:
+
 - **Disable telemetry**: Set `GOOSE_DISABLE_TELEMETRY=1`
 - **Use your own instance**: Modify `crates/goose/src/posthog.rs` to point to your PostHog instance
 
 ### Staying Current
 
 To benefit from upstream improvements:
+
 1. Regularly sync your fork with the main repository
 2. Keep customizations isolated (config files, separate extension repos) when possible
 3. Use recipes for workflow customization rather than code changes
@@ -223,14 +226,14 @@ extensions:
   - type: stdio
     name: internal-data
     cmd: python
-    args: ["/opt/corp-goose/internal_data_mcp.py"]
+    args: ['/opt/corp-goose/internal_data_mcp.py']
     description: Corporate data lake access
 ```
 
 ### Technical Details
 
 - Extension types: `crates/goose/src/agents/extension.rs` (ExtensionConfig enum)
-- Built-in MCP servers: `crates/goose-mcp/`
+- Built-in MCP servers: `crates/bcaip-mcp/`
 - Extension loading: `crates/goose/src/agents/extension_manager.rs`
 
 ---
@@ -332,6 +335,7 @@ For the ACP protocol and client flow, see [Use goose as an ACP agent](documentat
 For richer local integrations (IDEs and embedded agents), run goose as an ACP agent over stdio.
 
 ACP provides:
+
 - **Bidirectional communication**: Agents can request permissions, stream updates, and receive cancellations
 - **Rich tool call handling**: Detailed status updates, locations, and content for each tool invocation
 - **Session management**: Create, load, and resume sessions with full conversation history
@@ -349,13 +353,13 @@ cargo run -p goose-cli -- acp --with-builtin developer
 
 **Key ACP methods**:
 
-| Method | Description |
-|--------|-------------|
-| `initialize` | Establish connection and exchange capabilities |
-| `session/new` | Create a new session with optional MCP servers |
-| `session/load` | Resume an existing session by ID |
-| `session/prompt` | Send a prompt and receive streaming responses |
-| `session/cancel` | Cancel an in-progress prompt |
+| Method           | Description                                    |
+| ---------------- | ---------------------------------------------- |
+| `initialize`     | Establish connection and exchange capabilities |
+| `session/new`    | Create a new session with optional MCP servers |
+| `session/load`   | Resume an existing session by ID               |
+| `session/prompt` | Send a prompt and receive streaming responses  |
+| `session/cancel` | Cancel an in-progress prompt                   |
 
 **Example: Python ACP client** (see `test_acp_client.py` for a complete example):
 
@@ -371,7 +375,7 @@ class AcpClient:
             stdout=subprocess.PIPE,
             text=True
         )
-    
+
     def send_request(self, method, params=None):
         request = {"jsonrpc": "2.0", "method": method, "id": 1}
         if params:
@@ -393,6 +397,7 @@ client.send_request("session/prompt", {
 ```
 
 **ACP notifications** (sent from agent to client):
+
 - `session/notification` with `agentMessageChunk` - Streaming text responses
 - `session/notification` with `toolCall` - Tool invocation started
 - `session/notification` with `toolCallUpdate` - Tool status/result updates
@@ -403,6 +408,7 @@ For the full ACP specification, see the [Agent Client Protocol documentation](ht
 ### Technical Details
 
 **ACP**:
+
 - ACP server implementation: `crates/goose/src/acp/server.rs`
 - CLI integration: `crates/goose-cli/src/cli.rs` (Command::Acp)
 - Protocol library: `agent-client-protocol` crate (Rust implementation of ACP)
@@ -429,7 +435,7 @@ instructions: |
   - Document review and summarization
   - Contract analysis
   - Legal writing assistance
-  
+
   Always cite sources. Flag when you're uncertain. Never provide actual legal advice.
 
 extensions:
@@ -439,13 +445,13 @@ extensions:
   - type: stdio
     name: legal-database
     cmd: python
-    args: ["/opt/legal-goose/legal_db_mcp.py"]
+    args: ['/opt/legal-goose/legal_db_mcp.py']
     description: Legal database search
 
 activities:
-  - "Research case law on..."
-  - "Summarize this contract..."
-  - "Find precedents for..."
+  - 'Research case law on...'
+  - 'Summarize this contract...'
+  - 'Find precedents for...'
 
 settings:
   goose_provider: anthropic
@@ -529,19 +535,19 @@ parameters:
     input_type: string
     requirement: required
     description: "GitHub repository (e.g., 'owner/repo')"
-  
+
   - key: time_period
     input_type: select
     requirement: optional
-    default: "24h"
-    options: ["24h", "48h", "week"]
-    description: "Time period to analyze"
+    default: '24h'
+    options: ['24h', '48h', 'week']
+    description: 'Time period to analyze'
 
 # System instructions for the AI
 instructions: |
   You are a standup report generator. Fetch PR and issue data from GitHub,
   analyze activity, and generate a formatted report.
-  
+
   Always save reports to ./standup/standup-{date}.md
 
 # Extensions this recipe needs
@@ -552,7 +558,7 @@ extensions:
   - type: stdio
     name: github
     cmd: uvx
-    args: ["github-mcp-server"]
+    args: ['github-mcp-server']
     description: GitHub API access
 
 # Quick-start suggestions shown in UI
@@ -567,14 +573,14 @@ prompt: |
 
 ### Recipe Parameter Types
 
-| Type | Description | Use Case |
-|------|-------------|----------|
-| `string` | Free-form text input | Names, paths, queries |
-| `number` | Numeric input | Counts, limits |
-| `boolean` | True/false toggle | Feature flags |
-| `date` | Date picker | Time-based filters |
-| `file` | File path (content imported) | Document processing |
-| `select` | Dropdown from options | Predefined choices |
+| Type      | Description                  | Use Case              |
+| --------- | ---------------------------- | --------------------- |
+| `string`  | Free-form text input         | Names, paths, queries |
+| `number`  | Numeric input                | Counts, limits        |
+| `boolean` | True/false toggle            | Feature flags         |
+| `date`    | Date picker                  | Time-based filters    |
+| `file`    | File path (content imported) | Document processing   |
+| `select`  | Dropdown from options        | Predefined choices    |
 
 ### Distributing Recipes
 
@@ -614,20 +620,20 @@ instructions: |
 
 # Define available sub-recipes
 sub_recipes:
-  - name: "find_files"
-    path: "./subrecipes/codebase-locator.yaml"
-    description: "Locate relevant files in the codebase"
-  
-  - name: "analyze_code"
-    path: "./subrecipes/code-analyzer.yaml"
-    description: "Analyze code structure and patterns"
-  
-  - name: "find_patterns"
-    path: "./subrecipes/pattern-finder.yaml"
+  - name: 'find_files'
+    path: './subrecipes/codebase-locator.yaml'
+    description: 'Locate relevant files in the codebase'
+
+  - name: 'analyze_code'
+    path: './subrecipes/code-analyzer.yaml'
+    description: 'Analyze code structure and patterns'
+
+  - name: 'find_patterns'
+    path: './subrecipes/pattern-finder.yaml'
     # Pre-fill some parameters
     values:
-      search_depth: "3"
-      include_tests: "true"
+      search_depth: '3'
+      include_tests: 'true'
 
 extensions:
   - type: builtin
@@ -635,10 +641,10 @@ extensions:
 
 prompt: |
   Create an implementation plan for the requested feature.
-  
+
   Use the available sub-recipes to research the codebase:
   - find_files: Locate relevant source files
-  - analyze_code: Understand current implementation  
+  - analyze_code: Understand current implementation
   - find_patterns: Find similar features to model after
 ```
 
@@ -663,13 +669,13 @@ Create subagents on-the-fly with custom instructions:
 ```yaml
 prompt: |
   To complete this task:
-  
+
   1. Spawn a subagent to analyze the frontend code:
      delegate(instructions: "Analyze all React components in src/components/ and list their props and state management patterns")
-  
+
   2. Spawn another subagent for the backend:
      delegate(instructions: "Document all API endpoints in src/api/ including their request/response schemas")
-  
+
   3. Synthesize findings from both subagents into a unified report.
 ```
 
@@ -680,11 +686,11 @@ Use `async: true` to run delegates in parallel, then collect each result with `l
 ```yaml
 prompt: |
   Run these analyses in parallel:
-  
+
   delegate(instructions: "Count lines of code by language", async: true)
   delegate(instructions: "Find all TODO comments", async: true)
   delegate(instructions: "List external dependencies", async: true)
-  
+
   Use load(source: "<task_id>") for each returned task id.
   Then combine the results into a codebase health report.
 ```
@@ -696,15 +702,15 @@ Customize model, provider, or behavior per subagent:
 ```yaml
 prompt: |
   Use a faster model for simple tasks:
-  
+
   delegate(
     instructions: "List all files modified in the last week",
     model: "gpt-4o-mini",
     max_turns: 3
   )
-  
+
   Use the full model for complex analysis:
-  
+
   delegate(
     instructions: "Review this code for security vulnerabilities",
     model: "claude-sonnet-4-20250514",
@@ -719,7 +725,7 @@ Limit which extensions a subagent can access:
 ```yaml
 prompt: |
   Create a sandboxed subagent with only file reading capabilities:
-  
+
   delegate(
     instructions: "Analyze the README files in this project",
     extensions: ["developer"]  # Only developer extension, no network access
@@ -734,41 +740,41 @@ title: Comprehensive Code Review
 description: Multi-stage code review with parallel analysis
 
 sub_recipes:
-  - name: "security_scan"
-    path: "./subrecipes/security-scanner.yaml"
-    sequential_when_repeated: true  # Don't run multiple security scans in parallel
-  
-  - name: "style_check"
-    path: "./subrecipes/style-checker.yaml"
-  
-  - name: "test_coverage"
-    path: "./subrecipes/coverage-analyzer.yaml"
+  - name: 'security_scan'
+    path: './subrecipes/security-scanner.yaml'
+    sequential_when_repeated: true # Don't run multiple security scans in parallel
+
+  - name: 'style_check'
+    path: './subrecipes/style-checker.yaml'
+
+  - name: 'test_coverage'
+    path: './subrecipes/coverage-analyzer.yaml'
 
 parameters:
   - key: pr_number
     input_type: number
     requirement: required
-    description: "Pull request number to review"
-  
+    description: 'Pull request number to review'
+
   - key: review_depth
     input_type: select
     requirement: optional
-    default: "standard"
-    options: ["quick", "standard", "thorough"]
+    default: 'standard'
+    options: ['quick', 'standard', 'thorough']
 
 instructions: |
   Perform a comprehensive code review using specialized sub-recipes.
-  
+
   ## Review Process
-  
+
   ### Phase 1: Parallel Analysis
   Run these checks simultaneously:
   - style_check: Code style and formatting
   - test_coverage: Test coverage analysis
-  
+
   ### Phase 2: Security Review
   After initial checks pass, run security_scan (sequential to avoid conflicts).
-  
+
   ### Phase 3: Synthesis
   Combine all findings into a unified review report with:
   - Critical issues (must fix)
@@ -781,17 +787,17 @@ extensions:
   - type: stdio
     name: github
     cmd: uvx
-    args: ["github-mcp-server"]
+    args: ['github-mcp-server']
 
 prompt: |
   Review PR #{{ pr_number }} with {{ review_depth }} depth.
-  
+
   {% if review_depth == "quick" %}
   Focus only on critical issues and security concerns.
   {% elif review_depth == "thorough" %}
   Perform exhaustive analysis including performance review.
   {% endif %}
-  
+
   Start by fetching the PR details, then orchestrate the review phases.
 ```
 

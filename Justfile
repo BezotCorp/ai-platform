@@ -355,8 +355,8 @@ prepare-release version:
         ui/goose-acp/package.json \
         ui/goose-binary/*/package.json \
         ui/pnpm-lock.yaml \
-        crates/goose-provider-types/src/canonical/data/canonical_models.json \
-        crates/goose-provider-types/src/canonical/data/provider_metadata.json
+        crates/bcaip-provider-types/src/canonical/data/canonical_models.json \
+        crates/bcaip-provider-types/src/canonical/data/provider_metadata.json
     @git commit --message "chore(release): release version {{ version }}"
 
 # extract version from Cargo.toml

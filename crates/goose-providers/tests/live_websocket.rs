@@ -3,7 +3,7 @@
 use anyhow::Result;
 use futures::{SinkExt, StreamExt};
 use goose_providers::openai_live::{OpenAiLiveClient, OpenAiLiveSessionConfig};
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use tokio::net::TcpListener;
 use tokio_tungstenite::{accept_hdr_async, tungstenite::Message};
 

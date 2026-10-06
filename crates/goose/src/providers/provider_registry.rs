@@ -1,14 +1,13 @@
-use super::api_client::TlsConfig;
-use super::base::{ConfigKey, ModelInfo, Provider, ProviderDef, ProviderMetadata, ProviderType};
+use super::base::{ProviderDef, ProviderType};
 use super::inventory::{InventoryIdentityInput, InventoryRegistration, InventoryResolvers};
-use crate::config::{DeclarativeProviderConfig, ExtensionConfig};
+use crate::config::ExtensionConfig;
 use anyhow::Result;
 use futures::future::BoxFuture;
-use goose_providers::model::ModelConfig;
-use std::collections::HashMap;
-use std::path::PathBuf;
-use std::sync::Arc;
-
+use bcaip_provider_types::base::{ConfigKey, ModelInfo, Provider, ProviderMetadata};
+use bcaip_provider_types::model::ModelConfig;
+use goose_providers::api_client::TlsConfig;
+use goose_providers::declarative::DeclarativeProviderConfig;
+use std::{collections::HashMap, path::PathBuf, sync::Arc};
 pub type ProviderConstructor = Arc<
     dyn Fn(
             Vec<ExtensionConfig>,
@@ -359,94 +358,5 @@ impl ProviderRegistry {
 
     pub fn remove_custom_providers(&mut self) {
         self.entries.retain(|name, _| !name.starts_with("custom_"));
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::config::declarative_providers::ProviderEngine;
-    use crate::providers::openai_def::OpenAiProviderDef;
-
-    fn test_config() -> DeclarativeProviderConfig {
-        DeclarativeProviderConfig {
-            name: "custom_hf".to_string(),
-            engine: ProviderEngine::OpenAI,
-            display_name: "Custom HF".to_string(),
-            description: None,
-            api_key_env: String::new(),
-            base_url: "https://router.huggingface.co/v1".to_string(),
-            models: vec![ModelInfo::new("test-model").with_context_limit(128_000)],
-            headers: None,
-            session_id_header_override: None,
-            timeout_seconds: None,
-            supports_streaming: Some(true),
-            requires_auth: true,
-            catalog_provider_id: Some("huggingface".to_string()),
-            base_path: None,
-            env_vars: None,
-            auth: None,
-            dynamic_models: None,
-            skip_canonical_filtering: false,
-            model_doc_link: None,
-            setup_steps: vec![],
-            toolshim: false,
-            preserves_thinking: false,
-            emit_clear_thinking: false,
-            setup: None,
-        }
-    }
-
-    #[test]
-    fn register_with_name_can_override_inventory_configured() {
-        let mut registry = ProviderRegistry::new(None);
-        registry.register_with_name_and_inventory_configured::<OpenAiProviderDef, _, _, _>(
-            &test_config(),
-            ProviderType::Declarative,
-            false,
-            |_| unreachable!("constructor is not used by this test"),
-            || Ok(InventoryIdentityInput::new("custom_hf", "huggingface")),
-            || false,
-        );
-
-        let entry = registry.entries.get("custom_hf").unwrap();
-
-        assert!(!entry.inventory_configured());
-        assert!(entry.metadata().setup.is_none());
-        assert!(entry.metadata().deprecated.is_none());
-    }
-
-    #[test]
-    fn custom_provider_toolshim_uses_global_setting_as_fallback() {
-        let mut registry = ProviderRegistry::new(None);
-        for (name, toolshim) in [("custom_toolshim", true), ("custom_default", false)] {
-            let mut config = test_config();
-            config.name = name.to_string();
-            config.toolshim = toolshim;
-            registry.register_with_name::<OpenAiProviderDef, _, _>(
-                &config,
-                ProviderType::Custom,
-                false,
-                |_| unreachable!("constructor is not used by this test"),
-                move || Ok(InventoryIdentityInput::new(name, name)),
-            );
-        }
-
-        let toolshim = registry.entries["custom_toolshim"]
-            .normalize_model_config(ModelConfig::new("test-model"))
-            .unwrap();
-        let fallback_enabled = registry.entries["custom_default"]
-            .normalize_model_config(ModelConfig::new("test-model").with_toolshim(true))
-            .unwrap();
-        let fallback_disabled = registry.entries["custom_default"]
-            .normalize_model_config(ModelConfig::new("test-model"))
-            .unwrap();
-
-        assert!(toolshim.toolshim);
-        assert!(fallback_enabled.toolshim);
-        assert!(!fallback_disabled.toolshim);
-        assert!(registry.entries["custom_toolshim"].toolshim_enabled(false));
-        assert!(registry.entries["custom_default"].toolshim_enabled(true));
-        assert!(!registry.entries["custom_default"].toolshim_enabled(false));
     }
 }

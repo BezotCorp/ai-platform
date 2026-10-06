@@ -10,8 +10,6 @@
 //! lets callers construct declarative providers from JSON and stream provider
 //! completions.
 
-pub use goose_sdk_types::{custom_notifications, custom_requests};
-
 #[cfg(feature = "uniffi")]
 uniffi::setup_scaffolding!("goose");
 

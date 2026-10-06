@@ -7,7 +7,7 @@ use crate::live::LiveTransport;
 use anyhow::Result;
 use async_trait::async_trait;
 use serde_json::Value;
-use tokio::sync::{mpsc, watch, Mutex};
+use tokio::sync::{Mutex, mpsc, watch};
 
 pub struct BrowserLiveOutbound {
     receiver: mpsc::Receiver<Value>,

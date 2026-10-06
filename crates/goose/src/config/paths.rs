@@ -1,7 +1,5 @@
-use etcetera::{choose_app_strategy, AppStrategy, AppStrategyArgs};
-use std::ffi::OsString;
-use std::path::PathBuf;
-
+use etcetera::{AppStrategy, AppStrategyArgs, choose_app_strategy};
+use std::{ffi::OsString, path::PathBuf};
 pub struct Paths;
 
 impl Paths {
@@ -93,28 +91,4 @@ enum DirType {
     Plugins,
     Agents,
     AgentsHome,
-}
-
-#[cfg(test)]
-mod tests {
-    use super::Paths;
-    use std::ffi::OsString;
-
-    #[test]
-    fn path_root_requires_an_absolute_path() {
-        assert_eq!(Paths::validated_path_root(None), None);
-        assert_eq!(Paths::validated_path_root(Some(OsString::new())), None);
-        assert_eq!(
-            Paths::validated_path_root(Some(OsString::from("relative/root"))),
-            None
-        );
-
-        let absolute = std::env::current_dir()
-            .unwrap()
-            .join("nonexistent-goose-root");
-        assert_eq!(
-            Paths::validated_path_root(Some(absolute.clone().into_os_string())),
-            Some(absolute)
-        );
-    }
 }

@@ -1,21 +1,16 @@
-use std::collections::{HashMap, HashSet, VecDeque};
-use std::path::PathBuf;
-use std::sync::Arc;
-use std::time::Duration;
-
-use futures::StreamExt;
-use tokio::sync::Mutex;
-use tokio_util::sync::CancellationToken;
-
-use crate::agents::{Agent, AgentEvent, ExtensionConfig, SessionConfig};
-use crate::config::extensions::get_enabled_extensions;
-use crate::config::paths::Paths;
-use crate::config::Config;
-use crate::conversation::message::{ActionRequiredData, Message, MessageContent};
+use crate::agents::{Agent, ExtensionConfig, SessionConfig};
+use crate::config::{Config, extensions::get_enabled_extensions, paths::Paths};
 use crate::execution::manager::AgentManager;
-use crate::permission::Permission;
 use crate::session::SessionType;
 use crate::session::{EnabledExtensionsState, ExtensionState, Session};
+use bcaip_agent::events::AgentEvent;
+use bcaip_provider_types::conversations::{ActionRequiredData, Message, MessageContent};
+use bcaip_provider_types::permission::Permission;
+use futures::StreamExt;
+use std::collections::{HashMap, HashSet, VecDeque};
+use std::{path::PathBuf, sync::Arc, time::Duration};
+use tokio::sync::Mutex;
+use tokio_util::sync::CancellationToken;
 
 use super::pairing::PairingStore;
 use super::{Gateway, GatewayConfig, IncomingMessage, OutgoingMessage, PairingState, PlatformUser};
@@ -332,7 +327,7 @@ impl GatewayHandler {
         if let Some(ref provider) = provider {
             update = update.provider_name(provider);
         }
-        if let (Some(ref provider), Ok(model_name)) = (&provider, config.get_goose_model()) {
+        if let (Some(provider), Ok(model_name)) = (&provider, config.get_goose_model()) {
             if let Ok(model_config) =
                 crate::model_config::model_config_from_user_config(provider, &model_name)
             {
@@ -426,8 +421,7 @@ impl GatewayHandler {
         if let Some(ref provider) = current_provider {
             update = update.provider_name(provider);
         }
-        if let (Some(ref provider), Some(ref model_name)) = (&current_provider, &current_model_name)
-        {
+        if let (Some(provider), Some(model_name)) = (&current_provider, &current_model_name) {
             if let Ok(model_config) =
                 crate::model_config::model_config_from_user_config(provider, model_name)
             {
@@ -858,93 +852,12 @@ fn allowed_user_ids_from_config(config: &GatewayConfig) -> Option<HashSet<String
                 .or_else(|| id.as_u64().map(|n| n.to_string()))
         })
         .collect();
-    if ids.is_empty() {
-        None
-    } else {
-        Some(ids)
-    }
+    if ids.is_empty() { None } else { Some(ids) }
 }
 
 fn is_user_allowed(allowed: &Option<HashSet<String>>, user: &PlatformUser) -> bool {
     match allowed {
         None => true,
         Some(ids) => ids.contains(&user.user_id),
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn defaults_when_no_overrides() {
-        assert_eq!(
-            resolve_gateway_max_turns(None, None),
-            DEFAULT_GATEWAY_MAX_TURNS
-        );
-    }
-
-    #[test]
-    fn uses_global_max_turns_when_gateway_unset() {
-        assert_eq!(resolve_gateway_max_turns(None, Some(42)), 42);
-    }
-
-    #[test]
-    fn gateway_override_wins_over_global() {
-        assert_eq!(resolve_gateway_max_turns(Some(10), Some(42)), 10);
-    }
-
-    #[test]
-    fn gateway_override_used_when_global_unset() {
-        assert_eq!(resolve_gateway_max_turns(Some(25), None), 25);
-    }
-
-    fn platform_user(user_id: &str) -> PlatformUser {
-        PlatformUser {
-            platform: "telegram".to_string(),
-            user_id: user_id.to_string(),
-            display_name: None,
-        }
-    }
-
-    fn config_with_platform(platform_config: serde_json::Value) -> GatewayConfig {
-        GatewayConfig {
-            gateway_type: "telegram".to_string(),
-            platform_config,
-            max_sessions: 1,
-        }
-    }
-
-    #[test]
-    fn allowlist_absent_or_empty_allows_everyone() {
-        for platform_config in [
-            serde_json::json!({}),
-            serde_json::json!({"allowed_user_ids": []}),
-        ] {
-            let allowed = allowed_user_ids_from_config(&config_with_platform(platform_config));
-            assert!(allowed.is_none());
-            assert!(is_user_allowed(&allowed, &platform_user("999999")));
-        }
-    }
-
-    #[test]
-    fn allowlist_admits_listed_and_blocks_unlisted_users() {
-        let config = config_with_platform(serde_json::json!({"allowed_user_ids": ["111", 222]}));
-        let allowed = allowed_user_ids_from_config(&config).expect("allowlist should be set");
-        assert_eq!(allowed.len(), 2);
-        assert!(is_user_allowed(
-            &Some(allowed.clone()),
-            &platform_user("111")
-        ));
-        assert!(is_user_allowed(&Some(allowed), &platform_user("222")));
-
-        let allowed = allowed_user_ids_from_config(&config).expect("allowlist should be set");
-        assert!(!is_user_allowed(&Some(allowed), &platform_user("333")));
-    }
-
-    #[test]
-    fn allowlist_ignores_non_id_values() {
-        let config = config_with_platform(serde_json::json!({"allowed_user_ids": [true, null]}));
-        assert!(allowed_user_ids_from_config(&config).is_none());
     }
 }

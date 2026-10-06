@@ -1,8 +1,9 @@
-use crate::agents::extension::ExtensionConfig;
-use crate::agents::extension::PlatformExtensionContext;
-use crate::agents::extension_manager::is_hidden_extension;
 use crate::agents::mcp_client::{Error, McpClientTrait};
 use crate::agents::tool_execution::ToolCallContext;
+use crate::agents::{
+    extension::{ExtensionConfig, PlatformExtensionContext},
+    extension_manager::is_hidden_extension,
+};
 use crate::config::{get_all_extensions, get_extension_by_name};
 use crate::session::SessionType;
 use anyhow::Result;
@@ -13,13 +14,12 @@ use rmcp::model::{
     InitializeResult, JsonObject, ListPromptsResult, ListResourcesResult, ListToolsResult,
     ReadResourceResult, ServerCapabilities, ServerNotification, Tool, ToolAnnotations,
 };
-use schemars::{schema_for, JsonSchema};
+use schemars::{JsonSchema, schema_for};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::sync::Arc;
 use tokio::sync::mpsc;
 use tokio_util::sync::CancellationToken;
-
 pub static EXTENSION_NAME: &str = "Extension Manager";
 
 #[derive(Debug, thiserror::Error)]
@@ -348,13 +348,14 @@ impl ExtensionManagerClient {
             );
         }
 
-        if let Some(weak_ref) = &self.context.extension_manager {
-            if let Some(extension_manager) = weak_ref.upgrade() {
-                if extension_manager.supports_resources().await {
-                    tools.extend([
-                        Tool::new(
-                            LIST_RESOURCES_TOOL_NAME.to_string(),
-                            indoc! {r#"
+        if let Some(weak_ref) = &self.context.extension_manager
+            && let Some(extension_manager) = weak_ref.upgrade()
+            && extension_manager.supports_resources().await
+        {
+            tools.extend([
+                Tool::new(
+                    LIST_RESOURCES_TOOL_NAME.to_string(),
+                    indoc! {r#"
             List resources from an extension(s).
 
             Resources allow extensions to share data that provide context to LLMs, such as
@@ -362,25 +363,25 @@ impl ExtensionManagerClient {
             in the provided extension, and returns a list for the user to browse. If no extension
             is provided, the tool will search all extensions for the resource.
         "#}
-                            .to_string(),
-                            Arc::new(
-                                serde_json::to_value(schema_for!(ListResourcesParams))
-                                    .expect("Failed to serialize schema")
-                                    .as_object()
-                                    .expect("Schema must be an object")
-                                    .clone(),
-                            ),
-                        )
-                        .annotate(ToolAnnotations::from_raw(
-                            Some("List resources".to_string()),
-                            Some(true),
-                            Some(false),
-                            Some(false),
-                            Some(false),
-                        )),
-                        Tool::new(
-                            READ_RESOURCE_TOOL_NAME.to_string(),
-                            indoc! {r#"
+                    .to_string(),
+                    Arc::new(
+                        serde_json::to_value(schema_for!(ListResourcesParams))
+                            .expect("Failed to serialize schema")
+                            .as_object()
+                            .expect("Schema must be an object")
+                            .clone(),
+                    ),
+                )
+                .annotate(ToolAnnotations::from_raw(
+                    Some("List resources".to_string()),
+                    Some(true),
+                    Some(false),
+                    Some(false),
+                    Some(false),
+                )),
+                Tool::new(
+                    READ_RESOURCE_TOOL_NAME.to_string(),
+                    indoc! {r#"
             Read a resource from a specific extension.
 
             Resources allow extensions to share data that provide context to LLMs, such as
@@ -389,25 +390,23 @@ impl ExtensionManagerClient {
             URI, call `list_resources` first — its output labels each resource with its
             extension.
         "#}
-                            .to_string(),
-                            Arc::new(
-                                serde_json::to_value(schema_for!(ReadResourceParams))
-                                    .expect("Failed to serialize schema")
-                                    .as_object()
-                                    .expect("Schema must be an object")
-                                    .clone(),
-                            ),
-                        )
-                        .annotate(ToolAnnotations::from_raw(
-                            Some("Read a resource".to_string()),
-                            Some(true),
-                            Some(false),
-                            Some(false),
-                            Some(false),
-                        )),
-                    ]);
-                }
-            }
+                    .to_string(),
+                    Arc::new(
+                        serde_json::to_value(schema_for!(ReadResourceParams))
+                            .expect("Failed to serialize schema")
+                            .as_object()
+                            .expect("Schema must be an object")
+                            .clone(),
+                    ),
+                )
+                .annotate(ToolAnnotations::from_raw(
+                    Some("Read a resource".to_string()),
+                    Some(true),
+                    Some(false),
+                    Some(false),
+                    Some(false),
+                )),
+            ]);
         }
 
         tools
@@ -560,161 +559,4 @@ fn search_available_extensions(enabled: &[String]) -> String {
         ));
     }
     output_parts.join("\n")
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::agents::extension_manager::ExtensionManager;
-    use crate::config::GooseMode;
-    use std::path::PathBuf;
-
-    fn client_for(manager: &Arc<ExtensionManager>) -> ExtensionManagerClient {
-        ExtensionManagerClient::new(PlatformExtensionContext {
-            extension_manager: Some(Arc::downgrade(manager)),
-            session_manager: manager.get_context().session_manager.clone(),
-            scheduler: None,
-            session: None,
-            use_login_shell_path: false,
-        })
-        .unwrap()
-    }
-
-    async fn create_session(manager: &ExtensionManager, session_type: SessionType) -> String {
-        manager
-            .get_context()
-            .session_manager
-            .create_session(
-                PathBuf::from("/tmp/extension-manager-test"),
-                "extension manager test".to_string(),
-                session_type,
-                GooseMode::default(),
-            )
-            .await
-            .unwrap()
-            .id
-    }
-
-    fn manage_arguments(action: &str) -> JsonObject {
-        manage_arguments_for(action, "developer")
-    }
-
-    fn manage_arguments_for(action: &str, extension_name: &str) -> JsonObject {
-        serde_json::json!({
-            "action": action,
-            "extension_name": extension_name,
-        })
-        .as_object()
-        .unwrap()
-        .clone()
-    }
-
-    async fn manage(
-        client: &ExtensionManagerClient,
-        session_id: &str,
-        action: &str,
-    ) -> CallToolResult {
-        client
-            .call_tool(
-                &ToolCallContext::new(session_id.to_string(), None, None),
-                MANAGE_EXTENSIONS_TOOL_NAME,
-                Some(manage_arguments(action)),
-                CancellationToken::default(),
-            )
-            .await
-            .unwrap()
-    }
-
-    #[tokio::test]
-    async fn subagent_direct_calls_cannot_enable_or_disable_extensions() {
-        let temp_dir = tempfile::tempdir().unwrap();
-        let manager = Arc::new(ExtensionManager::new_without_provider(
-            temp_dir.path().to_path_buf(),
-        ));
-        let client = client_for(&manager);
-        let user_id = create_session(&manager, SessionType::User).await;
-        let subagent_id = create_session(&manager, SessionType::SubAgent).await;
-
-        let enable = manage(&client, &subagent_id, "enable").await;
-        assert!(enable.is_error.unwrap_or(false));
-        assert!(!manager.is_extension_enabled("developer").await);
-
-        let user_enable = manage(&client, &user_id, "enable").await;
-        assert!(!user_enable.is_error.unwrap_or(false));
-        assert!(manager.is_extension_enabled("developer").await);
-
-        let disable = manage(&client, &subagent_id, "disable").await;
-        assert!(disable.is_error.unwrap_or(false));
-        assert!(manager.is_extension_enabled("developer").await);
-
-        let user_disable = manage(&client, &user_id, "disable").await;
-        assert!(!user_disable.is_error.unwrap_or(false));
-        assert!(!manager.is_extension_enabled("developer").await);
-    }
-
-    #[tokio::test]
-    async fn extension_manager_cannot_disable_itself() {
-        let temp_dir = tempfile::tempdir().unwrap();
-        let manager = Arc::new(ExtensionManager::new_without_provider(
-            temp_dir.path().to_path_buf(),
-        ));
-        let client = client_for(&manager);
-        let user_id = create_session(&manager, SessionType::User).await;
-
-        for name in [
-            "Extension Manager",
-            "extensionmanager",
-            "Extension Manager ",
-        ] {
-            let result = client
-                .call_tool(
-                    &ToolCallContext::new(user_id.clone(), None, None),
-                    MANAGE_EXTENSIONS_TOOL_NAME,
-                    Some(manage_arguments_for("disable", name)),
-                    CancellationToken::default(),
-                )
-                .await
-                .unwrap();
-            assert!(result.is_error.unwrap_or(false));
-        }
-    }
-
-    #[tokio::test]
-    async fn subagent_and_unknown_callers_are_not_offered_extension_management() {
-        let temp_dir = tempfile::tempdir().unwrap();
-        let manager = Arc::new(ExtensionManager::new_without_provider(
-            temp_dir.path().to_path_buf(),
-        ));
-        let client = client_for(&manager);
-        let user_id = create_session(&manager, SessionType::User).await;
-        let subagent_id = create_session(&manager, SessionType::SubAgent).await;
-
-        let user_tools = client
-            .list_tools(&user_id, None, CancellationToken::default())
-            .await
-            .unwrap();
-        assert!(user_tools
-            .tools
-            .iter()
-            .any(|tool| tool.name == MANAGE_EXTENSIONS_TOOL_NAME));
-
-        for session_id in [&subagent_id, "missing-session"] {
-            let tools = client
-                .list_tools(session_id, None, CancellationToken::default())
-                .await
-                .unwrap();
-            assert!(tools
-                .tools
-                .iter()
-                .any(|tool| tool.name == SEARCH_AVAILABLE_EXTENSIONS_TOOL_NAME));
-            assert!(tools
-                .tools
-                .iter()
-                .all(|tool| tool.name != MANAGE_EXTENSIONS_TOOL_NAME));
-        }
-
-        let unknown_enable = manage(&client, "missing-session", "enable").await;
-        assert!(unknown_enable.is_error.unwrap_or(false));
-        assert!(!manager.is_extension_enabled("developer").await);
-    }
 }

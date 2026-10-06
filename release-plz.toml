@@ -6,7 +6,7 @@ git_tag_name = "gdk-v{{ version }}"
 git_release_enable = false
 
 [[package]]
-name = "goose-provider-types"
+name = "bcaip-provider-types"
 release = true
 version_group = "gdk"
 
@@ -16,12 +16,12 @@ release = true
 version_group = "gdk"
 
 [[package]]
-name = "goose-download-manager"
+name = "bcaip-download-manager"
 release = true
 version_group = "gdk"
 
 [[package]]
-name = "goose-local-inference"
+name = "bcaip-local-inference"
 release = true
 version_group = "gdk"
 # cargo-semver-checks builds with --all-features, which turns on cuda/vulkan and
@@ -32,12 +32,12 @@ semver_check = false
 name = "goose-providers"
 release = true
 version_group = "gdk"
-# Same as goose-local-inference: --all-features pulls in the cuda/vulkan
+# Same as bcaip-local-inference: --all-features pulls in the cuda/vulkan
 # accelerator features through the optional local-inference dependency.
 semver_check = false
 
 [[package]]
-name = "goose-agent"
+name = "bcaip-agent"
 release = true
 version_group = "gdk"
 

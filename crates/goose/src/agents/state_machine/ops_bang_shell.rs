@@ -1,18 +1,15 @@
 //! Runs a kickoff message beginning with `!` as a direct shell tool call.
-
+use crate::agents::state_machine::effects::GooseEffect;
+use crate::session::Session;
 use anyhow::Result;
 use async_trait::async_trait;
-use rmcp::model::CallToolRequestParams;
-
-use crate::agents::state_machine::effects::GooseEffect;
-use crate::agents::state_machine::{
-    applied, last_effective_role, messages_since_kickoff, not_applicable, yielded, Emitter,
-    Operation, OperationResult,
+use bcaip_agent::operation::{
+    Emitter, Operation, OperationResult, applied, last_effective_role, messages_since_kickoff,
+    not_applicable, yielded,
 };
-use crate::conversation::message::Message;
-use crate::conversation::{Conversation, EffectiveRole};
-use crate::session::Session;
-
+use bcaip_provider_types::conversations::Message;
+use bcaip_provider_types::conversations::{Conversation, EffectiveRole};
+use rmcp::model::CallToolRequestParams;
 const SHELL_TOOL_NAME: &str = "shell";
 
 pub(crate) fn bang_shell_command(message: &str) -> Option<&str> {

@@ -1,12 +1,10 @@
 use anyhow::Result;
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
-use std::future::Future;
-use std::pin::Pin;
 use std::sync::{Arc, Mutex};
+use std::{future::Future, pin::Pin};
 
 use crate::api_client::AuthProvider;
-
 const DEFAULT_CLIENT_ID: &str = "databricks-cli";
 const DEFAULT_REDIRECT_URL: &str = "http://localhost";
 const DEFAULT_SCOPES: &[&str] = &["all-apis", "offline_access"];

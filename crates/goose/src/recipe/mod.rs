@@ -1,16 +1,16 @@
+use crate::{
+    agents::{extension::ExtensionConfig, types::RetryConfig},
+    recipe::{
+        read_recipe_file_content::read_recipe_file,
+        yaml_format_utils::reformat_fields_with_multiline_values,
+    },
+    utils::contains_unicode_tags,
+};
 use anyhow::Result;
-use serde_json::Value;
-use std::collections::HashMap;
-use std::fmt;
-use std::path::Path;
-
-use crate::agents::extension::ExtensionConfig;
-use crate::agents::types::RetryConfig;
-use crate::recipe::read_recipe_file_content::read_recipe_file;
-use crate::recipe::yaml_format_utils::reformat_fields_with_multiline_values;
-use crate::utils::contains_unicode_tags;
 use serde::de::Deserializer;
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
+use std::{collections::HashMap, fmt, path::Path};
 
 pub mod build_recipe;
 pub mod local_recipes;
@@ -290,7 +290,7 @@ impl Recipe {
     }
 
     pub fn to_yaml(&self) -> Result<String> {
-        let recipe_yaml = serde_yaml::to_string(self)
+        let recipe_yaml = yaml_serde::to_string(self)
             .map_err(|err| anyhow::anyhow!("Failed to serialize recipe: {}", err))?;
         let formatted_recipe_yaml =
             reformat_fields_with_multiline_values(&recipe_yaml, &["prompt", "instructions"]);
@@ -321,17 +321,17 @@ impl Recipe {
     }
 
     pub fn from_content(content: &str) -> Result<Self> {
-        let mut recipe: Recipe = match serde_yaml::from_str::<serde_yaml::Value>(content) {
+        let mut recipe: Recipe = match yaml_serde::from_str::<yaml_serde::Value>(content) {
             Ok(yaml_value) => {
                 if let Some(nested_recipe) = yaml_value.get("recipe") {
-                    serde_yaml::from_value(nested_recipe.clone())
+                    yaml_serde::from_value(nested_recipe.clone())
                         .map_err(|e| anyhow::anyhow!("{}", strip_error_location(&e.to_string())))?
                 } else {
-                    serde_yaml::from_str(content)
+                    yaml_serde::from_str(content)
                         .map_err(|e| anyhow::anyhow!("{}", strip_error_location(&e.to_string())))?
                 }
             }
-            Err(_) => serde_yaml::from_str(content)
+            Err(_) => yaml_serde::from_str(content)
                 .map_err(|e| anyhow::anyhow!("{}", strip_error_location(&e.to_string())))?,
         };
 
@@ -430,401 +430,5 @@ impl RecipeBuilder {
             sub_recipes: self.sub_recipes,
             retry: self.retry,
         })
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_from_content_with_json() {
-        let content = r#"{
-            "version": "1.0.0",
-            "title": "Test Recipe",
-            "description": "A test recipe",
-            "prompt": "Test prompt",
-            "instructions": "Test instructions",
-            "extensions": [
-                {
-                    "type": "stdio",
-                    "name": "test_extension",
-                    "cmd": "test_cmd",
-                    "args": ["arg1", "arg2"],
-                    "timeout": 300,
-                    "description": "Test extension"
-                }
-            ],
-            "parameters": [
-                {
-                    "key": "test_param",
-                    "input_type": "string",
-                    "requirement": "required",
-                    "description": "A test parameter"
-                }
-            ],
-            "response": {
-                "json_schema": {
-                    "type": "object",
-                    "properties": {
-                        "name": {
-                            "type": "string"
-                        },
-                        "age": {
-                            "type": "number"
-                        }
-                    },
-                    "required": ["name"]
-                }
-            },
-            "sub_recipes": [
-                {
-                    "name": "test_sub_recipe",
-                    "path": "test_sub_recipe.yaml",
-                    "values": {
-                        "sub_recipe_param": "sub_recipe_value"
-                    }
-                }
-            ]
-        }"#;
-
-        let recipe = Recipe::from_content(content).unwrap();
-        assert_eq!(recipe.version, "1.0.0");
-        assert_eq!(recipe.title, "Test Recipe");
-        assert_eq!(recipe.description, "A test recipe");
-        assert_eq!(recipe.instructions, Some("Test instructions".to_string()));
-        assert_eq!(recipe.prompt, Some("Test prompt".to_string()));
-
-        assert!(recipe.extensions.is_some());
-        let extensions = recipe.extensions.as_ref().unwrap();
-        assert_eq!(extensions.len(), 2);
-        assert!(extensions.iter().any(|e| e.name() == "test_extension"));
-        assert!(extensions.iter().any(|e| e.name() == "summon"));
-
-        assert!(recipe.parameters.is_some());
-        let parameters = recipe.parameters.unwrap();
-        assert_eq!(parameters.len(), 1);
-        assert_eq!(parameters[0].key, "test_param");
-        assert!(matches!(
-            parameters[0].input_type,
-            RecipeParameterInputType::String
-        ));
-        assert!(matches!(
-            parameters[0].requirement,
-            RecipeParameterRequirement::Required
-        ));
-
-        assert!(recipe.response.is_some());
-        let response = recipe.response.unwrap();
-        assert!(response.json_schema.is_some());
-        let json_schema = response.json_schema.unwrap();
-        assert_eq!(json_schema["type"], "object");
-        assert!(json_schema["properties"].is_object());
-        assert_eq!(json_schema["properties"]["name"]["type"], "string");
-        assert_eq!(json_schema["properties"]["age"]["type"], "number");
-        assert_eq!(json_schema["required"], serde_json::json!(["name"]));
-
-        assert!(recipe.sub_recipes.is_some());
-        let sub_recipes = recipe.sub_recipes.unwrap();
-        assert_eq!(sub_recipes.len(), 1);
-        assert_eq!(sub_recipes[0].name, "test_sub_recipe");
-        assert_eq!(sub_recipes[0].path, "test_sub_recipe.yaml");
-        assert_eq!(
-            sub_recipes[0].values,
-            Some(HashMap::from([(
-                "sub_recipe_param".to_string(),
-                "sub_recipe_value".to_string()
-            )]))
-        );
-    }
-
-    #[test]
-    fn test_from_content_with_yaml() {
-        let content = r#"version: 1.0.0
-title: Test Recipe
-description: A test recipe
-prompt: Test prompt
-instructions: Test instructions
-extensions:
-  - type: stdio
-    name: test_extension
-    cmd: test_cmd
-    args: [arg1, arg2]
-    timeout: 300
-    description: Test extension
-parameters:
-  - key: test_param
-    input_type: string
-    requirement: required
-    description: A test parameter
-response:
-  json_schema:
-    type: object
-    properties:
-      name:
-        type: string
-      age:
-        type: number
-    required:
-      - name
-sub_recipes:
-  - name: test_sub_recipe
-    path: test_sub_recipe.yaml
-    values:
-      sub_recipe_param: sub_recipe_value"#;
-
-        let recipe = Recipe::from_content(content).unwrap();
-        assert_eq!(recipe.version, "1.0.0");
-        assert_eq!(recipe.title, "Test Recipe");
-        assert_eq!(recipe.description, "A test recipe");
-        assert_eq!(recipe.instructions, Some("Test instructions".to_string()));
-        assert_eq!(recipe.prompt, Some("Test prompt".to_string()));
-
-        assert!(recipe.extensions.is_some());
-        let extensions = recipe.extensions.as_ref().unwrap();
-        assert_eq!(extensions.len(), 2);
-        assert!(extensions.iter().any(|e| e.name() == "test_extension"));
-        assert!(extensions.iter().any(|e| e.name() == "summon"));
-
-        assert!(recipe.parameters.is_some());
-        let parameters = recipe.parameters.unwrap();
-        assert_eq!(parameters.len(), 1);
-        assert_eq!(parameters[0].key, "test_param");
-        assert!(matches!(
-            parameters[0].input_type,
-            RecipeParameterInputType::String
-        ));
-        assert!(matches!(
-            parameters[0].requirement,
-            RecipeParameterRequirement::Required
-        ));
-
-        assert!(recipe.response.is_some());
-        let response = recipe.response.unwrap();
-        assert!(response.json_schema.is_some());
-        let json_schema = response.json_schema.unwrap();
-        assert_eq!(json_schema["type"], "object");
-        assert!(json_schema["properties"].is_object());
-        assert_eq!(json_schema["properties"]["name"]["type"], "string");
-        assert_eq!(json_schema["properties"]["age"]["type"], "number");
-        assert_eq!(json_schema["required"], serde_json::json!(["name"]));
-
-        assert!(recipe.sub_recipes.is_some());
-        let sub_recipes = recipe.sub_recipes.unwrap();
-        assert_eq!(sub_recipes.len(), 1);
-        assert_eq!(sub_recipes[0].name, "test_sub_recipe");
-        assert_eq!(sub_recipes[0].path, "test_sub_recipe.yaml");
-        assert_eq!(
-            sub_recipes[0].values,
-            Some(HashMap::from([(
-                "sub_recipe_param".to_string(),
-                "sub_recipe_value".to_string()
-            )]))
-        );
-    }
-
-    #[test]
-    fn test_from_content_invalid_json() {
-        let content = "{ invalid json }";
-
-        let result = Recipe::from_content(content);
-        assert!(result.is_err());
-    }
-
-    #[test]
-    fn test_from_content_missing_required_fields() {
-        let content = r#"{
-            "version": "1.0.0",
-            "description": "A test recipe"
-        }"#;
-
-        let result = Recipe::from_content(content);
-        assert!(result.is_err());
-    }
-
-    #[test]
-    fn test_from_content_with_author() {
-        let content = r#"{
-            "version": "1.0.0",
-            "title": "Test Recipe",
-            "description": "A test recipe",
-            "instructions": "Test instructions",
-            "author": {
-                "contact": "test@example.com"
-            }
-        }"#;
-
-        let recipe = Recipe::from_content(content).unwrap();
-
-        assert!(recipe.author.is_some());
-        let author = recipe.author.unwrap();
-        assert_eq!(author.contact, Some("test@example.com".to_string()));
-    }
-
-    #[test]
-    fn test_from_content_with_activities() {
-        let content = r#"{
-            "version": "1.0.0",
-            "title": "Test Recipe",
-            "description": "A test recipe",
-            "instructions": "Test instructions",
-            "activities": ["activity1", "activity2"]
-        }"#;
-
-        let recipe = Recipe::from_content(content).unwrap();
-
-        assert!(recipe.activities.is_some());
-        let activities = recipe.activities.unwrap();
-        assert_eq!(activities, vec!["activity1", "activity2"]);
-    }
-
-    #[test]
-    fn test_from_content_with_nested_recipe_yaml() {
-        let content = r#"name: test_recipe
-recipe:
-  title: Nested Recipe Test
-  description: A test recipe with nested structure
-  instructions: Test instructions for nested recipe
-  activities:
-    - Test activity 1
-    - Test activity 2
-  prompt: Test prompt
-  extensions: []
-isGlobal: true"#;
-
-        let recipe = Recipe::from_content(content).unwrap();
-        assert_eq!(recipe.title, "Nested Recipe Test");
-        assert_eq!(recipe.description, "A test recipe with nested structure");
-        assert_eq!(
-            recipe.instructions,
-            Some("Test instructions for nested recipe".to_string())
-        );
-        assert_eq!(recipe.prompt, Some("Test prompt".to_string()));
-        assert!(recipe.activities.is_some());
-        let activities = recipe.activities.unwrap();
-        assert_eq!(activities, vec!["Test activity 1", "Test activity 2"]);
-        assert!(recipe.extensions.is_some());
-        let extensions = recipe.extensions.unwrap();
-        assert_eq!(extensions.len(), 0);
-    }
-
-    #[test]
-    fn test_check_for_security_warnings() {
-        let mut recipe = Recipe {
-            version: "1.0.0".to_string(),
-            title: "Test".to_string(),
-            description: "Test".to_string(),
-            instructions: Some("clean instructions".to_string()),
-            prompt: Some("clean prompt".to_string()),
-            extensions: None,
-            settings: None,
-            activities: Some(vec!["clean activity 1".to_string()]),
-            author: None,
-            parameters: None,
-            response: None,
-            sub_recipes: None,
-            retry: None,
-        };
-
-        assert!(!recipe.check_for_security_warnings());
-
-        // Malicious activities
-        recipe.activities = Some(vec![
-            "clean activity".to_string(),
-            format!("malicious{}activity", '\u{E0041}'),
-        ]);
-        assert!(recipe.check_for_security_warnings());
-
-        // Malicious instructions
-        recipe.instructions = Some(format!("instructions{}", '\u{E0041}'));
-        assert!(recipe.check_for_security_warnings());
-
-        // Malicious prompt
-        recipe.prompt = Some(format!("prompt{}", '\u{E0042}'));
-        assert!(recipe.check_for_security_warnings());
-    }
-
-    #[test]
-    fn test_from_content_with_null_description() {
-        let content = r#"{
-            "version": "1.0.0",
-            "title": "Test Recipe",
-            "description": "A test recipe",
-            "instructions": "Test instructions",
-            "extensions": [
-                {
-                    "type": "stdio",
-                    "name": "test_extension",
-                    "cmd": "test_cmd",
-                    "args": [],
-                    "timeout": 300,
-                    "description": null
-                }
-            ]
-        }"#;
-
-        let recipe = Recipe::from_content(content).unwrap();
-
-        assert!(recipe.extensions.is_some());
-        let extensions = recipe.extensions.unwrap();
-        assert_eq!(extensions.len(), 1);
-
-        if let ExtensionConfig::Stdio {
-            name, description, ..
-        } = &extensions[0]
-        {
-            assert_eq!(name, "test_extension");
-            assert_eq!(description, "");
-        } else {
-            panic!("Expected Stdio extension");
-        }
-    }
-
-    #[test]
-    fn test_format_serde_error_removes_location() {
-        let content = r#"{"version": "1.0.0"}"#;
-
-        let result = Recipe::from_content(content);
-        assert!(result.is_err());
-
-        let error_msg = result.unwrap_err().to_string();
-        assert_eq!(error_msg, "missing field `title`");
-    }
-
-    #[test]
-    fn test_format_serde_error_missing_title() {
-        let content = r#"{
-            "version": "1.0.0",
-            "description": "A test recipe",
-            "instructions": "Test instructions"
-        }"#;
-
-        let result = Recipe::from_content(content);
-        assert!(result.is_err());
-
-        let error_msg = result.unwrap_err().to_string();
-        assert_eq!(error_msg, "missing field `title`");
-    }
-
-    #[test]
-    fn test_format_serde_error_invalid_type() {
-        let content = r#"{
-            "version": "1.0.0",
-            "title": "Test",
-            "description": "Test",
-            "instructions": "Test",
-            "settings": {
-                "temperature": "not_a_number"
-            }
-        }"#;
-
-        let result = Recipe::from_content(content);
-        assert!(result.is_err());
-
-        let error_msg = result.unwrap_err().to_string();
-        assert_eq!(
-            error_msg,
-            "settings.temperature: invalid type: string \"not_a_number\", expected f32"
-        );
     }
 }

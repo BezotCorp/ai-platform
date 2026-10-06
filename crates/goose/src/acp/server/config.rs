@@ -1,5 +1,15 @@
-use super::*;
-use goose_providers::thinking::ThinkingEffort;
+use crate::{
+    acp::server::server_informations::{GooseAcpAgent, ResultExt},
+    config,
+};
+use agent_client_protocol::Error;
+use bcaip_provider_types::thinking::ThinkingEffort;
+use goose_sdk_types::custom_requests::{
+    ConfigReadAllRequest, ConfigReadAllResponse, ConfigReadRequest, ConfigReadResponse,
+    ConfigRemoveRequest, ConfigUpsertRequest, DefaultsClearRequest, DefaultsReadRequest,
+    DefaultsReadResponse, DefaultsSaveRequest, EmptyResponse, PreferenceKey, PreferenceValue,
+    PreferencesReadRequest, PreferencesReadResponse, PreferencesSaveRequest,
+};
 
 const SECRET_MASK_SHOW_LEN: usize = 8;
 
@@ -18,10 +28,10 @@ fn mask_secret(secret: serde_json::Value) -> String {
 }
 
 impl GooseAcpAgent {
-    pub(super) async fn on_preferences_read(
+    pub(crate) async fn on_preferences_read(
         &self,
         req: PreferencesReadRequest,
-    ) -> Result<PreferencesReadResponse, agent_client_protocol::Error> {
+    ) -> Result<PreferencesReadResponse, Error> {
         let config = self.config()?;
         let keys = if req.keys.is_empty() {
             PREFERENCE_DEFS.iter().map(|def| def.key).collect()
@@ -36,7 +46,7 @@ impl GooseAcpAgent {
                 Ok(value) => value,
                 Err(crate::config::ConfigError::NotFound(_)) => serde_json::Value::Null,
                 Err(e) => {
-                    return Err(agent_client_protocol::Error::internal_error().data(e.to_string()));
+                    return Err(Error::internal_error().data(e.to_string()));
                 }
             };
             values.push(PreferenceValue { key, value });
@@ -45,10 +55,10 @@ impl GooseAcpAgent {
         Ok(PreferencesReadResponse { values })
     }
 
-    pub(super) async fn on_preferences_save(
+    pub(crate) async fn on_preferences_save(
         &self,
         req: PreferencesSaveRequest,
-    ) -> Result<EmptyResponse, agent_client_protocol::Error> {
+    ) -> Result<EmptyResponse, Error> {
         let config = self.config()?;
         let mut updates = Vec::with_capacity(req.values.len());
 
@@ -62,10 +72,10 @@ impl GooseAcpAgent {
         Ok(EmptyResponse {})
     }
 
-    pub(super) async fn on_config_read(
+    pub(crate) async fn on_config_read(
         &self,
         req: ConfigReadRequest,
-    ) -> Result<ConfigReadResponse, agent_client_protocol::Error> {
+    ) -> Result<ConfigReadResponse, Error> {
         let config = self.config()?;
 
         if req.key == "GOOSE_PROVIDER" || req.key == "active_provider" {
@@ -86,37 +96,36 @@ impl GooseAcpAgent {
         let value = match config.get(&req.key, req.is_secret) {
             Ok(value) if req.is_secret => serde_json::Value::String(mask_secret(value)),
             Ok(value) => value,
-            Err(crate::config::ConfigError::NotFound(_)) => serde_json::Value::Null,
+            Err(config::ConfigError::NotFound(_)) => serde_json::Value::Null,
             Err(e) => {
-                return Err(agent_client_protocol::Error::internal_error().data(e.to_string()));
+                return Err(Error::internal_error().data(e.to_string()));
             }
         };
         Ok(ConfigReadResponse { value })
     }
 
-    pub(super) async fn on_config_upsert(
+    pub(crate) async fn on_config_upsert(
         &self,
         req: ConfigUpsertRequest,
-    ) -> Result<EmptyResponse, agent_client_protocol::Error> {
+    ) -> Result<EmptyResponse, Error> {
         let config = self.config()?;
 
-        if req.key == "GOOSE_PROVIDER" {
-            if let Some(name) = req.value.as_str() {
-                let model = crate::config::get_provider_entry(config, name)
-                    .map(|e| e.model)
-                    .or_else(|| config.get_goose_model().ok())
-                    .unwrap_or_default();
-                crate::config::set_active_provider(config, name, &model).internal_err()?;
-                return Ok(EmptyResponse {});
-            }
+        if req.key == "GOOSE_PROVIDER"
+            && let Some(name) = req.value.as_str()
+        {
+            let model = config::get_provider_entry(config, name)
+                .map(|e| e.model)
+                .or_else(|| config.get_goose_model().ok())
+                .unwrap_or_default();
+            config::set_active_provider(config, name, &model).internal_err()?;
+            return Ok(EmptyResponse {});
         }
-        if req.key == "GOOSE_MODEL" {
-            if let Some(model) = req.value.as_str() {
-                if let Ok(provider) = config.get_goose_provider() {
-                    crate::config::set_active_provider(config, &provider, model).internal_err()?;
-                    return Ok(EmptyResponse {});
-                }
-            }
+        if req.key == "GOOSE_MODEL"
+            && let Some(model) = req.value.as_str()
+            && let Ok(provider) = config.get_goose_provider()
+        {
+            config::set_active_provider(config, &provider, model).internal_err()?;
+            return Ok(EmptyResponse {});
         }
 
         config
@@ -125,10 +134,10 @@ impl GooseAcpAgent {
         Ok(EmptyResponse {})
     }
 
-    pub(super) async fn on_config_remove(
+    pub(crate) async fn on_config_remove(
         &self,
         req: ConfigRemoveRequest,
-    ) -> Result<EmptyResponse, agent_client_protocol::Error> {
+    ) -> Result<EmptyResponse, Error> {
         let config = self.config()?;
 
         if req.is_secret {
@@ -138,7 +147,7 @@ impl GooseAcpAgent {
             config.delete("GOOSE_PROVIDER").internal_err()?;
         } else if req.key == "GOOSE_MODEL" {
             if let Ok(provider) = config.get_goose_provider() {
-                crate::config::set_active_provider(config, &provider, "").internal_err()?;
+                config::set_active_provider(config, &provider, "").internal_err()?;
             }
             config.delete("GOOSE_MODEL").internal_err()?;
         } else {
@@ -148,19 +157,19 @@ impl GooseAcpAgent {
         Ok(EmptyResponse {})
     }
 
-    pub(super) async fn on_config_read_all(
+    pub(crate) async fn on_config_read_all(
         &self,
         _req: ConfigReadAllRequest,
-    ) -> Result<ConfigReadAllResponse, agent_client_protocol::Error> {
+    ) -> Result<ConfigReadAllResponse, Error> {
         let config = self.config()?;
         let values = config.all_values().internal_err()?;
         Ok(ConfigReadAllResponse { config: values })
     }
 
-    pub(super) async fn on_defaults_read(
+    pub(crate) async fn on_defaults_read(
         &self,
         _req: DefaultsReadRequest,
-    ) -> Result<DefaultsReadResponse, agent_client_protocol::Error> {
+    ) -> Result<DefaultsReadResponse, Error> {
         let config = self.config()?;
         Ok(DefaultsReadResponse {
             provider_id: config.get_goose_provider().ok(),
@@ -168,15 +177,13 @@ impl GooseAcpAgent {
         })
     }
 
-    pub(super) async fn on_defaults_save(
+    pub(crate) async fn on_defaults_save(
         &self,
         req: DefaultsSaveRequest,
-    ) -> Result<DefaultsReadResponse, agent_client_protocol::Error> {
+    ) -> Result<DefaultsReadResponse, Error> {
         let provider_id = req.provider_id.trim().to_string();
         if provider_id.is_empty() {
-            return Err(
-                agent_client_protocol::Error::invalid_params().data("providerId cannot be empty")
-            );
+            return Err(Error::invalid_params().data("providerId cannot be empty"));
         }
 
         let model_id = req.model_id.and_then(|model| {
@@ -185,7 +192,7 @@ impl GooseAcpAgent {
         });
 
         let entries = self
-            .provider_inventory
+            .provider_inventory()
             .entries(std::slice::from_ref(&provider_id))
             .await
             .internal_err_ctx("Failed to read provider inventory")?;
@@ -193,13 +200,13 @@ impl GooseAcpAgent {
             .into_iter()
             .find(|entry| entry.provider_id == provider_id)
         else {
-            return Err(agent_client_protocol::Error::invalid_params()
-                .data(format!("Unknown provider: {provider_id}")));
+            return Err(Error::invalid_params().data(format!("Unknown provider: {provider_id}")));
         };
 
         if !entry.configured {
-            return Err(agent_client_protocol::Error::invalid_params()
-                .data(format!("Provider is not configured: {provider_id}")));
+            return Err(
+                Error::invalid_params().data(format!("Provider is not configured: {provider_id}"))
+            );
         }
 
         // Custom/unlisted model entry is always allowed (#7255), matching the CLI
@@ -208,26 +215,26 @@ impl GooseAcpAgent {
         // accepted as the default here. Local inference is the exception: its
         // models cannot be fetched on demand, so they are validated against the
         // inventory, the Hugging Face cache, or an explicit local path.
-        if provider_id == "local" {
-            if let Some(model_id) = model_id.as_deref() {
-                let model_exists = entry.default_model == model_id
-                    || entry.models.iter().any(|model| model.id == model_id)
-                    || local_inference_model_exists(model_id).await?;
-                if !model_exists {
-                    return Err(agent_client_protocol::Error::invalid_params().data(format!(
-                        "Model '{model_id}' is not available for provider '{provider_id}'"
-                    )));
-                }
+        if provider_id == "local"
+            && let Some(model_id) = model_id.as_deref()
+        {
+            let model_exists = entry.default_model == model_id
+                || entry.models.iter().any(|model| model.id == model_id)
+                || local_inference_model_exists(model_id).await?;
+            if !model_exists {
+                return Err(Error::invalid_params().data(format!(
+                    "Model '{model_id}' is not available for provider '{provider_id}'"
+                )));
             }
         }
 
         let config = self.config()?;
         let model = model_id.clone().unwrap_or_else(|| {
-            crate::config::get_provider_entry(config, &provider_id)
+            config::get_provider_entry(config, &provider_id)
                 .map(|e| e.model)
                 .unwrap_or_default()
         });
-        crate::config::set_active_provider(config, &provider_id, &model)
+        config::set_active_provider(config, &provider_id, &model)
             .internal_err_ctx("Failed to save default provider")?;
 
         Ok(DefaultsReadResponse {
@@ -236,12 +243,12 @@ impl GooseAcpAgent {
         })
     }
 
-    pub(super) async fn on_defaults_clear(
+    pub(crate) async fn on_defaults_clear(
         &self,
         _req: DefaultsClearRequest,
-    ) -> Result<DefaultsReadResponse, agent_client_protocol::Error> {
+    ) -> Result<DefaultsReadResponse, Error> {
         let config = self.config()?;
-        crate::config::clear_active_provider(config)
+        config::clear_active_provider(config)
             .internal_err_ctx("Failed to clear default provider")?;
 
         Ok(DefaultsReadResponse {
@@ -251,12 +258,12 @@ impl GooseAcpAgent {
     }
 }
 
-async fn local_inference_model_exists(
-    model_id: &str,
-) -> Result<bool, agent_client_protocol::Error> {
+async fn local_inference_model_exists(model_id: &str) -> Result<bool, Error> {
     #[cfg(feature = "local-inference")]
     {
-        crate::providers::local_inference::management::model_exists(model_id)
+        use bcaip_local_inference::management;
+
+        management::model_exists(model_id)
             .await
             .internal_err_ctx("Failed to read local inference models")
     }
@@ -302,43 +309,33 @@ const PREFERENCE_DEFS: &[PreferenceDef] = &[
     },
 ];
 
-fn preference_def(
-    key: PreferenceKey,
-) -> Result<&'static PreferenceDef, agent_client_protocol::Error> {
+fn preference_def(key: PreferenceKey) -> Result<&'static PreferenceDef, Error> {
     PREFERENCE_DEFS
         .iter()
         .find(|def| def.key == key)
         .ok_or_else(|| {
-            agent_client_protocol::Error::internal_error()
-                .data(format!("Missing preference definition for {key:?}"))
+            Error::internal_error().data(format!("Missing preference definition for {key:?}"))
         })
 }
 
-fn prepare_auto_compact_threshold(
-    value: &serde_json::Value,
-) -> Result<serde_json::Value, agent_client_protocol::Error> {
+fn prepare_auto_compact_threshold(value: &serde_json::Value) -> Result<serde_json::Value, Error> {
     let Some(threshold) = value.as_f64() else {
-        return Err(agent_client_protocol::Error::invalid_params()
-            .data("autoCompactThreshold must be a number"));
+        return Err(Error::invalid_params().data("autoCompactThreshold must be a number"));
     };
     if !threshold.is_finite() || threshold <= 0.0 || threshold > 1.0 {
-        return Err(agent_client_protocol::Error::invalid_params()
+        return Err(Error::invalid_params()
             .data("autoCompactThreshold must be greater than 0 and at most 1"));
     }
 
     Ok(value.clone())
 }
 
-fn prepare_thinking_effort(
-    value: &serde_json::Value,
-) -> Result<serde_json::Value, agent_client_protocol::Error> {
+fn prepare_thinking_effort(value: &serde_json::Value) -> Result<serde_json::Value, Error> {
     let Some(value) = value.as_str() else {
-        return Err(agent_client_protocol::Error::invalid_params()
-            .data("gooseThinkingEffort must be a string"));
+        return Err(Error::invalid_params().data("gooseThinkingEffort must be a string"));
     };
     let effort = value.parse::<ThinkingEffort>().map_err(|err| {
-        agent_client_protocol::Error::invalid_params()
-            .data(format!("Invalid gooseThinkingEffort: {err}"))
+        Error::invalid_params().data(format!("Invalid gooseThinkingEffort: {err}"))
     })?;
 
     Ok(serde_json::Value::String(effort.to_string()))
@@ -346,25 +343,20 @@ fn prepare_thinking_effort(
 
 fn prepare_voice_auto_submit_phrases(
     value: &serde_json::Value,
-) -> Result<serde_json::Value, agent_client_protocol::Error> {
+) -> Result<serde_json::Value, Error> {
     if !value.is_string() {
-        return Err(agent_client_protocol::Error::invalid_params()
-            .data("voiceAutoSubmitPhrases must be a string"));
+        return Err(Error::invalid_params().data("voiceAutoSubmitPhrases must be a string"));
     }
 
     Ok(value.clone())
 }
 
-fn prepare_voice_dictation_provider(
-    value: &serde_json::Value,
-) -> Result<serde_json::Value, agent_client_protocol::Error> {
+fn prepare_voice_dictation_provider(value: &serde_json::Value) -> Result<serde_json::Value, Error> {
     let Some(value) = value.as_str() else {
-        return Err(agent_client_protocol::Error::invalid_params()
-            .data("voiceDictationProvider must be a string"));
+        return Err(Error::invalid_params().data("voiceDictationProvider must be a string"));
     };
     if !is_supported_voice_dictation_provider(value) {
-        return Err(agent_client_protocol::Error::invalid_params()
-            .data("voiceDictationProvider is not supported"));
+        return Err(Error::invalid_params().data("voiceDictationProvider is not supported"));
     }
 
     Ok(serde_json::Value::String(value.to_string()))
@@ -372,14 +364,12 @@ fn prepare_voice_dictation_provider(
 
 fn prepare_voice_dictation_preferred_mic(
     value: &serde_json::Value,
-) -> Result<serde_json::Value, agent_client_protocol::Error> {
+) -> Result<serde_json::Value, Error> {
     let Some(value) = value.as_str() else {
-        return Err(agent_client_protocol::Error::invalid_params()
-            .data("voiceDictationPreferredMic must be a string"));
+        return Err(Error::invalid_params().data("voiceDictationPreferredMic must be a string"));
     };
     if value.is_empty() {
-        return Err(agent_client_protocol::Error::invalid_params()
-            .data("voiceDictationPreferredMic must be non-empty"));
+        return Err(Error::invalid_params().data("voiceDictationPreferredMic must be non-empty"));
     }
 
     Ok(serde_json::Value::String(value.to_string()))

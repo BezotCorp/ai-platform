@@ -8,9 +8,9 @@
   "dynamic_models": false,
   "skip_canonical_filtering": true,
   "models": [
-    {"name": "4.0Ultra", "context_limit": 8192},
-    {"name": "generalv3.5", "context_limit": 8192},
-    {"name": "max-32k", "context_limit": 32768}
+    { "name": "4.0Ultra", "context_limit": 8192 },
+    { "name": "generalv3.5", "context_limit": 8192 },
+    { "name": "max-32k", "context_limit": 32768 }
   ],
   "supports_streaming": true,
   "model_doc_link": "https://www.xfyun.cn/doc/spark/HTTP%E8%B0%83%E7%94%A8%E6%96%87%E6%A1%A3.html",

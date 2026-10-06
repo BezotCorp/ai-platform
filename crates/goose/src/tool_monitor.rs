@@ -1,12 +1,11 @@
-use crate::config::GooseMode;
-use crate::conversation::message::{Message, ToolRequest};
 use crate::tool_inspection::{InspectionAction, InspectionResult, ToolInspector};
 use anyhow::Result;
 use async_trait::async_trait;
+use bcaip_provider_types::conversations::{Message, ToolRequest};
+use bcaip_provider_types::goose_mode::GooseMode;
 use rmcp::model::CallToolRequestParams;
 use serde_json::Value;
 use std::collections::HashMap;
-
 // Helper struct for internal tracking
 #[derive(Debug, Clone)]
 struct InternalToolCall {

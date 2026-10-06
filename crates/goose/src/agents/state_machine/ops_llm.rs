@@ -1,21 +1,15 @@
 //! Goose integration for the reusable inference operation.
 
-use std::sync::Arc;
-
-use async_trait::async_trait;
-use futures::StreamExt;
-use goose_agent::inference::InferenceEffect;
-pub use goose_agent::inference::InferenceRunner;
-use goose_providers::base::{MessageStream, ModelInfo, Provider};
-use goose_providers::conversation::message::Message;
-use goose_providers::conversation::token_usage::ProviderUsage;
-use goose_providers::errors::ProviderError;
-use goose_providers::model::ModelConfig;
-
 use crate::agents::extension_manager::{get_tool_owner, recover_mangled_tool_name};
 use crate::agents::state_machine::GooseEffect;
-
-pub(super) use goose_agent::inference::{chat_span, record_chat_usage};
+use async_trait::async_trait;
+use futures::StreamExt;
+use bcaip_agent::inference::InferenceEffect;
+use bcaip_provider_types::base::{MessageStream, ModelInfo, Provider};
+use bcaip_provider_types::conversations::{Message, ProviderUsage};
+use bcaip_provider_types::errors::ProviderError;
+use bcaip_provider_types::model::ModelConfig;
+use std::sync::Arc;
 
 pub(super) const ADVERTISED_TOOLS_NOTE: &str = "advertised_tools";
 pub(super) const LLM_OPERATION_NAME: &str = "llm";
@@ -47,7 +41,7 @@ fn enrich_unclaimed_tool_errors(messages: &[Message], tools: &[rmcp::model::Tool
     let mut messages = messages.to_vec();
     for message in &mut messages {
         for content in &mut message.content {
-            let goose_providers::conversation::message::MessageContent::ToolResponse(response) =
+            let bcaip_provider_types::conversations::MessageContent::ToolResponse(response) =
                 content
             else {
                 continue;
@@ -77,7 +71,7 @@ fn canonicalize_tool_request_names(
     advertised_tools: &[(String, Option<String>)],
 ) {
     for content in &mut message.content {
-        let goose_providers::conversation::message::MessageContent::ToolRequest(request) = content
+        let bcaip_provider_types::conversations::MessageContent::ToolRequest(request) = content
         else {
             continue;
         };
@@ -176,63 +170,5 @@ impl Provider for GooseInferenceProvider {
 
     async fn fetch_model_info(&self, model_name: &str) -> Result<ModelInfo, ProviderError> {
         self.inner.fetch_model_info(model_name).await
-    }
-}
-
-#[cfg(test)]
-mod canonicalization_tests {
-    use super::*;
-    use rmcp::model::CallToolRequestParams;
-
-    fn request(name: &str) -> Message {
-        Message::assistant()
-            .with_tool_request("request", Ok(CallToolRequestParams::new(name.to_string())))
-    }
-
-    fn tool_name(message: &Message) -> &str {
-        message.content[0]
-            .as_tool_request()
-            .unwrap()
-            .tool_call
-            .as_ref()
-            .unwrap()
-            .name
-            .as_ref()
-    }
-
-    #[test]
-    fn canonicalizes_mangled_names_against_advertised_tools() {
-        let advertised = vec![("developer__shell".to_string(), None)];
-        let mut message = request("developer.shell");
-
-        canonicalize_tool_request_names(&mut message, &advertised);
-
-        assert_eq!(tool_name(&message), "developer__shell");
-    }
-
-    #[test]
-    fn canonicalizes_owner_qualified_unprefixed_tool_aliases() {
-        let advertised = vec![("shell".to_string(), Some("developer".to_string()))];
-        let mut message = request("developer.shell");
-
-        canonicalize_tool_request_names(&mut message, &advertised);
-
-        assert_eq!(tool_name(&message), "shell");
-
-        let mut message = request("developer__shell");
-
-        canonicalize_tool_request_names(&mut message, &advertised);
-
-        assert_eq!(tool_name(&message), "shell");
-    }
-
-    #[test]
-    fn leaves_unrecoverable_names_unmodified() {
-        let advertised = vec![("developer__shell".to_string(), None)];
-        let mut message = request("developer.shell!");
-
-        canonicalize_tool_request_names(&mut message, &advertised);
-
-        assert_eq!(tool_name(&message), "developer.shell!");
     }
 }

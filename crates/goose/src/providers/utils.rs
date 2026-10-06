@@ -1,14 +1,12 @@
 use crate::config::paths::Paths;
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use fs_err::File;
-use goose_providers::request_log::{install_logger, RequestLogHandle, RequestLogger};
+use bcaip_provider_types::request_log::{RequestLogHandle, RequestLogger, install_logger};
 use serde_json::Value;
 use std::error::Error;
 use std::io::{BufWriter, Write};
-use std::path::PathBuf;
-use std::sync::OnceLock;
+use std::{path::PathBuf, sync::OnceLock};
 use uuid::Uuid;
-
 pub fn filter_extensions_from_system_prompt(system: &str) -> String {
     let Some(extensions_start) = system.find("# Extensions") else {
         return system.to_string();

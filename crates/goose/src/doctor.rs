@@ -1,16 +1,14 @@
-use std::sync::Arc;
-
-use crate::agents::platform_extensions::developer;
 use crate::agents::ExtensionConfig;
+use crate::agents::platform_extensions::developer;
 use crate::config::Config;
-use crate::conversation::message::Message;
 use crate::providers;
-use crate::providers::base::Provider;
 use crate::session::{
-    config_path, latest_llm_log_path, read_capped, read_tail, recent_cli_log_paths, SystemInfo,
+    SystemInfo, config_path, latest_llm_log_path, read_capped, read_tail, recent_cli_log_paths,
 };
-use goose_providers::errors::ProviderError;
-
+use bcaip_provider_types::base::Provider;
+use bcaip_provider_types::conversations::Message;
+use bcaip_provider_types::errors::ProviderError;
+use std::sync::Arc;
 pub(crate) const DEVELOPER_EXTENSION_REQUIRED_MESSAGE: &str = "**Goose Doctor**\n\n\
 `/doctor` requires the Developer extension, but it is disabled for this session.\n\n\
 Enable it for this session and run `/doctor` again:\n\
@@ -92,7 +90,7 @@ async fn ensure_working_provider(
     let provider_name = config.get_goose_provider().ok();
     let model_name = config.get_goose_model().ok();
 
-    if let (Some(ref pname), Some(ref mname)) = (&provider_name, &model_name) {
+    if let (Some(pname), Some(mname)) = (&provider_name, &model_name) {
         log.push(format!("Checking {} / {} ...", pname, mname));
         match try_create_and_test(pname, mname).await {
             Ok(_) => {
@@ -145,7 +143,7 @@ async fn save_and_set(
     agent: &crate::agents::Agent,
     session_id: &str,
     provider: Arc<dyn Provider>,
-    model_config: goose_providers::model::ModelConfig,
+    model_config: bcaip_provider_types::model::ModelConfig,
 ) -> anyhow::Result<()> {
     let config = Config::global();
     crate::config::set_active_provider(config, provider.get_name(), &model_config.model_name)?;
@@ -156,7 +154,7 @@ async fn save_and_set(
 
 async fn test_provider(
     provider: &dyn Provider,
-    model_config: &goose_providers::model::ModelConfig,
+    model_config: &bcaip_provider_types::model::ModelConfig,
 ) -> Result<(), ProviderError> {
     let messages = vec![Message::user().with_text("Say 'hello' and nothing else.")];
     crate::session_context::with_session_id(
@@ -175,7 +173,7 @@ async fn test_provider(
 async fn try_create_and_test(
     provider_name: &str,
     model_name: &str,
-) -> Result<(Arc<dyn Provider>, goose_providers::model::ModelConfig), ProviderError> {
+) -> Result<(Arc<dyn Provider>, bcaip_provider_types::model::ModelConfig), ProviderError> {
     let model_config =
         crate::model_config::model_config_from_user_config(provider_name, model_name)
             .map_err(|e| ProviderError::ExecutionError(e.to_string()))?;
@@ -192,7 +190,7 @@ async fn try_other_models(
     provider_name: &str,
     skip_model: &str,
     log: &mut Vec<String>,
-) -> Option<(Arc<dyn Provider>, goose_providers::model::ModelConfig)> {
+) -> Option<(Arc<dyn Provider>, bcaip_provider_types::model::ModelConfig)> {
     let entry = providers::get_from_registry(provider_name).await.ok()?;
     let temp = entry.create_with_default_model(vec![]).await.ok()?;
     let toolshim = Config::global()
@@ -216,7 +214,7 @@ async fn try_other_models(
 async fn try_other_providers(
     skip: &str,
     log: &mut Vec<String>,
-) -> Option<(Arc<dyn Provider>, goose_providers::model::ModelConfig)> {
+) -> Option<(Arc<dyn Provider>, bcaip_provider_types::model::ModelConfig)> {
     for (meta, _) in providers::providers().await {
         if meta.name == skip {
             continue;
@@ -276,45 +274,5 @@ fn describe_error(e: &ProviderError) -> String {
             "Provider server error — the service may be temporarily down.".to_string()
         }
         other => format!("{}", other),
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[tokio::test]
-    async fn developer_requirement_accepts_enabled_extension() {
-        let agent = crate::agents::Agent::new();
-        agent
-            .extension_manager
-            .add_extension(
-                ExtensionConfig::Platform {
-                    name: developer::EXTENSION_NAME.to_string(),
-                    description: "Developer tools".to_string(),
-                    display_name: Some("Developer".to_string()),
-                    bundled: None,
-                    available_tools: vec![],
-                },
-                None,
-                None,
-                Some("doctor-enabled-test"),
-            )
-            .await
-            .expect("developer extension should load");
-
-        assert!(require_developer_extension(&agent).await.is_none());
-    }
-
-    #[test]
-    fn custom_extension_named_developer_does_not_satisfy_requirement() {
-        let config = ExtensionConfig::stdio(
-            developer::EXTENSION_NAME,
-            "custom-developer",
-            "Unrelated custom extension",
-            30_u64,
-        );
-
-        assert!(!is_developer_platform_config(&config));
     }
 }

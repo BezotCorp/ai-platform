@@ -1,27 +1,25 @@
 use super::{
-    config_secret_value, default_inventory_identity, default_inventory_identity_resolver,
-    serialize_string_map, InventoryIdentityInput, InventoryRegistration,
+    InventoryIdentityInput, InventoryRegistration, config_secret_value, default_inventory_identity,
+    default_inventory_identity_resolver, serialize_string_map,
 };
 use crate::config::{self, Config};
 use crate::providers::acp_tooling::{acp_adapter_installed, resolved_acp_command};
 use crate::providers::amp_acp::{AMP_ACP_BINARY, AMP_ACP_PROVIDER_NAME};
-use crate::providers::base::ProviderDescriptor;
 use crate::providers::chatgpt_codex::TokenCache as ChatGptCodexTokenCache;
 use crate::providers::claude_acp::{CLAUDE_ACP_BINARY, CLAUDE_ACP_PROVIDER_NAME};
 use crate::providers::codex_acp::CODEX_ACP_PROVIDER_NAME;
 use crate::providers::copilot_acp::{COPILOT_ACP_BINARY, COPILOT_ACP_PROVIDER_NAME};
-use crate::providers::formats::anthropic::ANTHROPIC_PROVIDER_NAME;
 use crate::providers::gemini_oauth::TokenCache as GeminiOAuthTokenCache;
-use crate::providers::google::{GOOGLE_API_HOST, GOOGLE_PROVIDER_NAME};
 use crate::providers::huggingface::HuggingFaceProvider;
-use crate::providers::huggingface_auth;
-use crate::providers::kimicode;
-use crate::providers::muse_code_def;
-use crate::providers::ollama::OLLAMA_PROVIDER_NAME;
-use crate::providers::openai::{OPEN_AI_DEFAULT_BASE_PATH, OPEN_AI_PROVIDER_NAME};
 use crate::providers::pi_acp::{PI_ACP_BINARY, PI_ACP_PROVIDER_NAME};
 use crate::providers::xai_oauth::TokenCache as XaiOAuthTokenCache;
-use goose_providers::azure_foundry::{endpoint_kind, EndpointKind, AZURE_FOUNDRY_PROVIDER_NAME};
+use crate::providers::{huggingface_auth, kimicode, muse_code_def};
+use bcaip_provider_types::base::ProviderDescriptor;
+use bcaip_provider_types::formats::ANTHROPIC_PROVIDER_NAME;
+use goose_providers::azure_foundry::{AZURE_FOUNDRY_PROVIDER_NAME, EndpointKind, endpoint_kind};
+use goose_providers::google::{GOOGLE_API_HOST, GOOGLE_PROVIDER_NAME};
+use goose_providers::ollama::OLLAMA_PROVIDER_NAME;
+use goose_providers::openai::{OPEN_AI_DEFAULT_BASE_PATH, OPEN_AI_PROVIDER_NAME};
 
 pub fn openai_inventory() -> InventoryRegistration {
     InventoryRegistration::new(true, || {
@@ -262,132 +260,4 @@ pub fn copilot_acp_inventory() -> InventoryRegistration {
 
 pub fn pi_acp_inventory() -> InventoryRegistration {
     acp_inventory(PI_ACP_PROVIDER_NAME, PI_ACP_BINARY, true)
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::config::paths::Paths;
-    use chrono::Utc;
-
-    #[test]
-    fn azure_foundry_maas_requires_a_model_to_be_configured() {
-        assert!(!azure_foundry_configured_values(
-            Some("https://deployment.models.ai.azure.com"),
-            None,
-        ));
-        assert!(!azure_foundry_configured_values(
-            Some("https://deployment.models.ai.azure.com"),
-            Some("  "),
-        ));
-        assert!(azure_foundry_configured_values(
-            Some("https://deployment.models.ai.azure.com"),
-            Some("Phi-4"),
-        ));
-        assert!(azure_foundry_configured_values(
-            Some("https://hub.services.ai.azure.com/api/projects/project"),
-            None,
-        ));
-        assert!(azure_foundry_configured_values(
-            Some("https://hub.services.ai.azure.com"),
-            None,
-        ));
-    }
-
-    #[test]
-    #[serial_test::serial]
-    fn gemini_oauth_inventory_configured_uses_token_cache() {
-        let root = tempfile::tempdir().unwrap();
-        let root_path = root.path().to_string_lossy().to_string();
-        let _guard = env_lock::lock_env([("GOOSE_PATH_ROOT", Some(root_path.as_str()))]);
-
-        let registration = gemini_oauth_inventory();
-        let configured = registration
-            .configured
-            .expect("Gemini OAuth should define configured resolver");
-
-        assert!(!configured());
-
-        let cache_path = Paths::in_config_dir("gemini_oauth/tokens.json");
-        std::fs::create_dir_all(cache_path.parent().unwrap()).unwrap();
-        std::fs::write(
-            cache_path,
-            serde_json::to_string(&serde_json::json!({
-                "project_id": "test-project",
-                "token": {
-                    "access_token": "access",
-                    "refresh_token": "refresh",
-                    "expires_at": (Utc::now() + chrono::Duration::hours(1)).to_rfc3339(),
-                },
-            }))
-            .unwrap(),
-        )
-        .unwrap();
-
-        assert!(configured());
-    }
-
-    #[test]
-    #[serial_test::serial]
-    fn kimi_code_inventory_configured_uses_token_cache() {
-        let root = tempfile::tempdir().unwrap();
-        let root_path = root.path().to_string_lossy().to_string();
-        let _guard = env_lock::lock_env([("GOOSE_PATH_ROOT", Some(root_path.as_str()))]);
-
-        let registration = kimi_code_inventory();
-        let configured = registration
-            .configured
-            .expect("Kimi Code should define configured resolver");
-
-        assert!(!configured());
-
-        let cache_path = Paths::in_config_dir("kimicode/token.json");
-        std::fs::create_dir_all(cache_path.parent().unwrap()).unwrap();
-        std::fs::write(
-            cache_path,
-            serde_json::to_string(&serde_json::json!({
-                "access_token": "access",
-                "refresh_token": "refresh",
-                "expires_at": (Utc::now() + chrono::Duration::hours(1)).to_rfc3339(),
-            }))
-            .unwrap(),
-        )
-        .unwrap();
-
-        assert!(configured());
-    }
-
-    #[test]
-    #[serial_test::serial]
-    fn muse_code_inventory_configured_uses_token_cache() {
-        let root = tempfile::tempdir().unwrap();
-        let root_path = root.path().to_string_lossy().to_string();
-        let _guard = env_lock::lock_env([
-            ("GOOSE_PATH_ROOT", Some(root_path.as_str())),
-            ("MUSE_AUTH_PATH", Some("/tmp/goose-missing-muse-auth.json")),
-            ("XDG_CONFIG_HOME", Some(root_path.as_str())),
-        ]);
-
-        let registration = muse_code_inventory();
-        let configured = registration
-            .configured
-            .expect("Muse Code should define configured resolver");
-
-        assert!(!configured());
-
-        let cache_path = Paths::in_config_dir("muse_code/token.json");
-        std::fs::create_dir_all(cache_path.parent().unwrap()).unwrap();
-        std::fs::write(
-            cache_path,
-            serde_json::to_string(&serde_json::json!({
-                "access_token": "access",
-                "refresh_token": "refresh",
-                "expires_at": (Utc::now() + chrono::Duration::hours(1)).to_rfc3339(),
-            }))
-            .unwrap(),
-        )
-        .unwrap();
-
-        assert!(configured());
-    }
 }

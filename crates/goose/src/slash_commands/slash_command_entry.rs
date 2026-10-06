@@ -1,10 +1,4 @@
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum SlashCommandSource {
-    Builtin,
-    Recipe,
-    Skill,
-}
-
+use crate::slash_commands::SlashCommandSource;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SlashCommandEntry {
     pub name: String,

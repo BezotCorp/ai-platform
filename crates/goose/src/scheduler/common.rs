@@ -7,7 +7,6 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 use crate::config::paths::Paths;
-
 pub(crate) const MAX_SCHEDULE_RECIPE_BYTES: u64 = 1024 * 1024;
 
 #[cfg_attr(not(feature = "scheduler"), allow(dead_code))]
@@ -42,7 +41,9 @@ pub(crate) fn open_regular_schedule_recipe(path: &Path) -> io::Result<File> {
     #[cfg(unix)]
     {
         use std::os::unix::fs::OpenOptionsExt;
-        options.custom_flags(libc::O_NONBLOCK | libc::O_NOFOLLOW);
+        options.custom_flags(
+            (rustix::fs::OFlags::NONBLOCK | rustix::fs::OFlags::NOFOLLOW).bits() as i32,
+        );
     }
     let file = options.open(path)?;
     if !file.metadata()?.is_file() {

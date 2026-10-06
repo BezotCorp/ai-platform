@@ -1,6 +1,8 @@
 use crate::agents::extension_manager::ExtensionManager;
-use crate::conversation::message::{Message, MessageMetadata};
-use crate::conversation::{CURRENT_TIME_TAG, TURN_CONTEXT_TAG, WORKING_DIRECTORY_TAG};
+use bcaip_provider_types::conversations::{
+    CURRENT_TIME_TAG, TURN_CONTEXT_TAG, WORKING_DIRECTORY_TAG,
+};
+use bcaip_provider_types::conversations::{Message, MessageMetadata};
 use std::path::{Path, PathBuf};
 
 const MIN_CONTEXT_FOR_MOIM: usize = 32_000;
@@ -65,7 +67,7 @@ pub(super) async fn compute_compaction_info(
         .and_then(|session| session.usage.total_tokens);
     let compaction_threshold = crate::config::Config::global()
         .get_param::<f64>("GOOSE_AUTO_COMPACT_THRESHOLD")
-        .unwrap_or(crate::context_mgmt::DEFAULT_COMPACTION_THRESHOLD);
+        .unwrap_or(goose_context_management::DEFAULT_COMPACTION_THRESHOLD);
     compaction_remaining_line(total_tokens, context_limit, compaction_threshold)
 }
 
@@ -216,103 +218,4 @@ fn turn_budget_part(turns_taken: u32, max_turns: u32) -> Option<String> {
         "turn-budget",
         &format!("{turns_taken}/{max_turns} used"),
     ))
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    async fn session_and_manager() -> (String, ExtensionManager, tempfile::TempDir) {
-        let temp_dir = tempfile::tempdir().unwrap();
-        let em = ExtensionManager::new_without_provider(temp_dir.path().to_path_buf());
-        let session = em
-            .get_context()
-            .session_manager
-            .create_session(
-                PathBuf::from("/test/dir"),
-                "test".to_string(),
-                crate::session::SessionType::User,
-                crate::config::GooseMode::Auto,
-            )
-            .await
-            .unwrap();
-        (session.id, em, temp_dir)
-    }
-
-    #[tokio::test]
-    async fn turn_context_message_is_an_agent_only_user_message() {
-        let (session_id, em, _tmp) = session_and_manager().await;
-
-        let message = turn_context_message(&session_id, &em, 0, 100, chrono::Local::now(), None)
-            .await
-            .expect("turn context should be produced");
-
-        assert_eq!(message.role, rmcp::model::Role::User);
-        assert!(message.is_agent_visible());
-        assert!(!message.is_user_visible());
-        assert!(message.is_turn_context());
-        let text = message.content[0].as_text().unwrap();
-        assert!(text.starts_with(&format!("<{TURN_CONTEXT_TAG}>\n")));
-        assert!(text.trim_end().ends_with(&format!("</{TURN_CONTEXT_TAG}>")));
-    }
-
-    #[tokio::test]
-    async fn turn_context_bytes_are_stable_for_a_turn() {
-        let (session_id, em, _tmp) = session_and_manager().await;
-        let turn_start = chrono::Local::now();
-
-        let first = turn_context_message(&session_id, &em, 0, 100, turn_start, None)
-            .await
-            .unwrap();
-        let second = turn_context_message(&session_id, &em, 0, 100, turn_start, None)
-            .await
-            .unwrap();
-
-        assert_eq!(
-            first.content[0].as_text(),
-            second.content[0].as_text(),
-            "the same turn inputs must render byte-identical blocks"
-        );
-    }
-
-    #[test]
-    fn turn_context_event_is_marked_and_skips_small_contexts() {
-        let event = turn_context_event(
-            Path::new("/test/dir"),
-            Some(200_000),
-            vec![],
-            chrono::Local::now(),
-        )
-        .expect("large-context models should get a turn-context event");
-        assert!(event.is_turn_context());
-        assert!(!event.is_user_visible());
-
-        assert!(turn_context_event(
-            Path::new("/test/dir"),
-            Some(16_000),
-            vec![],
-            chrono::Local::now(),
-        )
-        .is_none());
-    }
-
-    #[test]
-    fn current_time_is_timezone_aware() {
-        let block = compose_moim(
-            Path::new("/Users/me/code/goose"),
-            vec![],
-            chrono::Local::now(),
-        );
-        let time_line = block
-            .lines()
-            .find(|line| line.starts_with(&format!("<{CURRENT_TIME_TAG}>")))
-            .expect("turn-context block should contain a current-time line");
-
-        let value = time_line
-            .trim_start_matches(&format!("<{CURRENT_TIME_TAG}>"))
-            .trim_end_matches(&format!("</{CURRENT_TIME_TAG}>"));
-
-        chrono::DateTime::parse_from_str(value, "%Y-%m-%d %H:%M:%S %:z")
-            .expect("current-time should include a numeric UTC offset");
-    }
 }

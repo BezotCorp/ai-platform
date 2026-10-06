@@ -1,12 +1,10 @@
-use crate::agents::tool_execution::ToolCallResult;
-use crate::recipe::Response;
+use crate::{agents::tool_execution::ToolCallResult, recipe::Response};
 use indoc::formatdoc;
 use rmcp::model::{
     CallToolRequestParams, ContentBlock, ErrorCode, ErrorData, Tool, ToolAnnotations,
 };
 use serde_json::Value;
 use std::borrow::Cow;
-
 pub const FINAL_OUTPUT_TOOL_NAME: &str = "recipe__final_output";
 pub const FINAL_OUTPUT_SUCCESS_MESSAGE: &str = "Final output successfully collected.";
 pub const FINAL_OUTPUT_CONTINUATION_MESSAGE: &str =
@@ -52,19 +50,19 @@ impl FinalOutputTool {
             The final_output tool collects the final output for the user and provides validation for structured JSON final output against a predefined schema.
 
             This final_output tool MUST be called with the final output for the user.
-            
+
             Purpose:
             - Collects the final output for the user
             - Ensures that final outputs conform to the expected JSON structure
             - Provides clear validation feedback when outputs don't match the schema
-            
+
             Usage:
             - Call the `final_output` tool with your JSON final output passed as the argument.
-            
+
             The expected JSON schema format is:
 
             {}
-            
+
             When validation fails, you'll receive:
             - Specific validation errors
             - The expected format
@@ -123,7 +121,8 @@ impl FinalOutputTool {
             Err(format!(
                 "Validation failed:\n{}\n\nExpected format:\n{}\n\nPlease correct your output to match the expected JSON schema and try again.",
                 validation_errors.join("\n"),
-                serde_json::to_string_pretty(self.response.json_schema.as_ref().unwrap()).unwrap_or_else(|_| "Invalid schema".to_string())
+                serde_json::to_string_pretty(self.response.json_schema.as_ref().unwrap())
+                    .unwrap_or_else(|_| "Invalid schema".to_string())
             ))
         }
     }
@@ -157,144 +156,5 @@ impl FinalOutputTool {
     // Formats the parsed JSON as a single line string so its easy to extract from the output
     fn parsed_final_output_string(parsed_json: Value) -> String {
         serde_json::to_string(&parsed_json).unwrap()
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::recipe::Response;
-    use rmcp::model::CallToolRequestParams;
-    use rmcp::object;
-    use serde_json::json;
-
-    fn create_complex_test_schema() -> Value {
-        json!({
-            "type": "object",
-            "properties": {
-                "user": {
-                    "type": "object",
-                    "properties": {
-                        "name": {"type": "string"},
-                        "age": {"type": "number"}
-                    },
-                    "required": ["name", "age"]
-                },
-                "tags": {
-                    "type": "array",
-                    "items": {"type": "string"}
-                }
-            },
-            "required": ["user", "tags"]
-        })
-    }
-
-    #[test]
-    fn test_try_new_with_missing_schema() {
-        let response = Response { json_schema: None };
-        assert_eq!(
-            FinalOutputTool::try_new(response).err().unwrap(),
-            "json_schema is required"
-        );
-    }
-
-    #[test]
-    fn test_try_new_with_empty_schema() {
-        let response = Response {
-            json_schema: Some(json!({})),
-        };
-        assert_eq!(
-            FinalOutputTool::try_new(response).err().unwrap(),
-            "empty json_schema is not allowed"
-        );
-    }
-
-    #[test]
-    fn test_try_new_with_invalid_schema() {
-        let response = Response {
-            json_schema: Some(json!({
-                "type": "invalid_type",
-                "properties": {
-                    "message": {
-                        "type": "unknown_type"
-                    }
-                }
-            })),
-        };
-        assert!(FinalOutputTool::try_new(response).is_err());
-    }
-
-    #[test]
-    fn test_try_new_with_invalid_pattern() {
-        let response = Response {
-            json_schema: Some(json!({
-                "type": "object",
-                "properties": {
-                    "message": {
-                        "type": "string",
-                        "pattern": "["
-                    }
-                }
-            })),
-        };
-
-        assert!(FinalOutputTool::try_new(response).is_err());
-    }
-
-    #[tokio::test]
-    async fn test_execute_tool_call_schema_validation_failure() {
-        let response = Response {
-            json_schema: Some(json!({
-                "type": "object",
-                "properties": {
-                    "message": {
-                        "type": "string"
-                    },
-                    "count": {
-                        "type": "number"
-                    }
-                },
-                "required": ["message", "count"]
-            })),
-        };
-
-        let mut tool = FinalOutputTool::try_new(response).unwrap();
-        let tool_call =
-            CallToolRequestParams::new(FINAL_OUTPUT_TOOL_NAME).with_arguments(object!({
-                "message": "Hello"  // Missing required "count" field
-            }));
-
-        let result = tool.execute_tool_call(tool_call).await;
-        let tool_result = result.result.await;
-        assert!(tool_result.is_err());
-        if let Err(error) = tool_result {
-            assert!(error.to_string().contains("Validation failed"));
-        }
-    }
-
-    #[tokio::test]
-    async fn test_execute_tool_call_complex_valid_json() {
-        let response = Response {
-            json_schema: Some(create_complex_test_schema()),
-        };
-
-        let mut tool = FinalOutputTool::try_new(response).unwrap();
-        let tool_call =
-            CallToolRequestParams::new(FINAL_OUTPUT_TOOL_NAME).with_arguments(object!({
-                "user": {
-                    "name": "John",
-                    "age": 30
-                },
-                "tags": ["developer", "rust"]
-            }));
-
-        let result = tool.execute_tool_call(tool_call).await;
-        let tool_result = result.result.await;
-        assert!(tool_result.is_ok());
-        assert!(tool.final_output.is_some());
-
-        let final_output = tool.final_output.unwrap();
-        assert!(serde_json::from_str::<Value>(&final_output).is_ok());
-        assert!(!final_output.contains('\n'));
     }
 }

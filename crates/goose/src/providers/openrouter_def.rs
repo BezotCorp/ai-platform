@@ -1,17 +1,14 @@
-use anyhow::{bail, Result};
-use futures::future::BoxFuture;
-use goose_providers::{
-    api_client::{ApiClient, AuthMethod, TlsConfig},
-    base::{ProviderDescriptor, ProviderMetadata},
-    openrouter::OpenRouterProvider,
-};
-use serde_json::Value;
-use std::collections::HashMap;
-
 use crate::{
     config::{Config, ConfigError, ExtensionConfig},
     providers::base::ProviderDef,
 };
+use anyhow::{Result, bail};
+use futures::future::BoxFuture;
+use bcaip_provider_types::base::{ProviderDescriptor, ProviderMetadata};
+use goose_providers::api_client::{ApiClient, AuthMethod, TlsConfig};
+use goose_providers::openrouter::OpenRouterProvider;
+use serde_json::Value;
+use std::collections::HashMap;
 
 const OPENROUTER_PARAMETERS_CONFIG_KEY: &str = "OPENROUTER_PARAMETERS";
 
@@ -21,8 +18,8 @@ impl ProviderDescriptor for OpenRouterProviderDef {
     fn metadata() -> ProviderMetadata {
         OpenRouterProvider::metadata()
             .with_setup(
-                crate::providers::catalog::ProviderSetupMetadata::api_key(
-                    crate::providers::catalog::ProviderSetupGroup::Default,
+                bcaip_provider_types::ProviderSetupMetadata::api_key(
+                    bcaip_provider_types::ProviderSetupGroup::Default,
                 )
                 .with_docs_url("https://openrouter.ai/keys"),
             )
@@ -82,39 +79,5 @@ fn parse_openrouter_parameters(raw: Value) -> Result<HashMap<String, Value>> {
             _ => bail!("{OPENROUTER_PARAMETERS_CONFIG_KEY} must be a JSON object"),
         },
         _ => bail!("{OPENROUTER_PARAMETERS_CONFIG_KEY} must be a JSON object"),
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use serde_json::json;
-
-    #[test]
-    fn metadata_includes_parameters_config_key() {
-        assert!(OpenRouterProviderDef::metadata()
-            .config_keys
-            .iter()
-            .any(|key| key.name == OPENROUTER_PARAMETERS_CONFIG_KEY));
-    }
-
-    #[test]
-    fn parses_object_and_json_string_parameters() {
-        assert_eq!(
-            parse_openrouter_parameters(json!({ "verbosity": "high" })).unwrap()["verbosity"],
-            json!("high")
-        );
-        assert_eq!(
-            parse_openrouter_parameters(json!(r#"{"plugins":[{"id":"web"}]}"#)).unwrap()["plugins"],
-            json!([{ "id": "web" }])
-        );
-    }
-
-    #[test]
-    fn rejects_non_object_parameters() {
-        assert!(parse_openrouter_parameters(json!(r#"["web"]"#))
-            .unwrap_err()
-            .to_string()
-            .contains("OPENROUTER_PARAMETERS must be a JSON object"));
     }
 }

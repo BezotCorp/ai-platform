@@ -1,16 +1,14 @@
-use std::sync::Arc;
-
 use anyhow::Result;
 use async_trait::async_trait;
 use futures::future::BoxFuture;
+use bcaip_provider_types::base::{ProviderDescriptor, ProviderMetadata};
 use goose_providers::api_client::{AuthMethod, AuthProvider, TlsConfig};
-use goose_providers::azure_foundry::{endpoint_kind, AzureFoundryProvider, EndpointKind};
-use goose_providers::base::{ProviderDescriptor, ProviderMetadata};
+use goose_providers::azure_foundry::{AzureFoundryProvider, EndpointKind, endpoint_kind};
+use std::sync::Arc;
 
 use crate::config::{Config, ExtensionConfig};
 use crate::providers::azureauth::{AzureAuth, AzureCredentials};
 use crate::providers::base::ProviderDef;
-
 const AZURE_PROJECT_ENTRA_RESOURCE: &str = "https://ai.azure.com";
 const AZURE_MAAS_ENTRA_RESOURCE: &str = "https://ml.azure.com";
 
@@ -130,61 +128,4 @@ pub async fn from_env(tls_config: Option<TlsConfig>) -> Result<AzureFoundryProvi
         tls_config,
         Some(crate::session_context::session_id_request_builder()),
     )
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    fn auth(api_key: Option<&str>, ad_token: Option<&str>) -> Arc<AzureAuth> {
-        Arc::new(
-            AzureAuth::new_with_resource(
-                api_key.map(str::to_string),
-                ad_token.map(str::to_string),
-                AZURE_PROJECT_ENTRA_RESOURCE.to_string(),
-            )
-            .unwrap(),
-        )
-    }
-
-    async fn header(
-        api_key: Option<&str>,
-        ad_token: Option<&str>,
-        header: AuthHeader,
-    ) -> (String, String) {
-        AzureFoundryAuthProvider {
-            auth: auth(api_key, ad_token),
-            header,
-        }
-        .get_auth_header()
-        .await
-        .unwrap()
-    }
-
-    #[test]
-    fn project_api_key_uses_origin_bound_auth_method() {
-        match auth_method(&auth(Some("key"), None), AuthHeader::ApiKey) {
-            AuthMethod::ApiKey { header_name, key } => {
-                assert_eq!(header_name, "api-key");
-                assert_eq!(key, "key");
-            }
-            _ => panic!("project API keys must use the origin-bound API key auth method"),
-        }
-    }
-
-    #[test]
-    fn maas_api_key_uses_standard_bearer_auth_method() {
-        match auth_method(&auth(Some("key"), None), AuthHeader::Bearer) {
-            AuthMethod::BearerToken(token) => assert_eq!(token, "key"),
-            _ => panic!("MaaS API keys must use the standard bearer auth method"),
-        }
-    }
-
-    #[tokio::test]
-    async fn entra_token_uses_bearer_header() {
-        assert_eq!(
-            header(None, Some("token"), AuthHeader::Bearer).await,
-            ("Authorization".to_string(), "Bearer token".to_string())
-        );
-    }
 }

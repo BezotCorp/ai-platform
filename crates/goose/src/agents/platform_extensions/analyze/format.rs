@@ -1,10 +1,6 @@
+use super::{graph::CallGraph, parser::FileAnalysis};
 use std::collections::{HashMap, HashSet};
-use std::fmt::Write;
-use std::path::Path;
-
-use super::graph::CallGraph;
-use super::parser::FileAnalysis;
-
+use std::{fmt::Write, path::Path};
 const SIZE_LIMIT: usize = 50_000;
 const MULTILINE_THRESHOLD: usize = 10;
 

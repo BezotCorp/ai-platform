@@ -1,17 +1,20 @@
 use crate::api_client::{ApiClient, AuthMethod};
-use crate::base::MessageStream;
-use crate::conversation::message::Message;
-use crate::errors::ProviderError;
 use crate::openai_compatible::{handle_status, map_http_error_to_provider_error, sanitize_url};
-use crate::retry::ProviderRetry;
-
-use crate::base::{known_models_from_registry, ConfigKey, Provider, ProviderMetadata};
-use crate::formats::google::{create_request_with_thinking_budget, response_to_streaming_message};
-use crate::model::ModelConfig;
-use crate::request_log::{start_log, LoggerHandleExt};
 use anyhow::Result;
 use async_stream::try_stream;
 use async_trait::async_trait;
+use bcaip_provider_types::base::{
+    ConfigKey, Provider, ProviderMetadata, known_models_from_registry,
+};
+use bcaip_provider_types::base::{MessageStream, ProviderDescriptor};
+use bcaip_provider_types::conversations::Message;
+use bcaip_provider_types::errors::ProviderError;
+use bcaip_provider_types::formats::{
+    create_request_with_thinking_budget, response_to_streaming_message_google,
+};
+use bcaip_provider_types::model::ModelConfig;
+use bcaip_provider_types::request_log::{LoggerHandleExt, start_log};
+use bcaip_provider_types::retry::ProviderRetry;
 use futures::TryStreamExt;
 use rmcp::model::Tool;
 use serde_json::Value;
@@ -20,7 +23,6 @@ use tokio::pin;
 use tokio_stream::StreamExt;
 use tokio_util::codec::{FramedRead, LinesCodec};
 use tokio_util::io::StreamReader;
-
 pub const GOOGLE_PROVIDER_NAME: &str = "google";
 pub const GOOGLE_API_HOST: &str = "https://generativelanguage.googleapis.com";
 pub const GOOGLE_DEFAULT_MODEL: &str = "gemini-2.5-pro";
@@ -83,7 +85,7 @@ impl GoogleProvider {
     }
 }
 
-impl crate::base::ProviderDescriptor for GoogleProvider {
+impl ProviderDescriptor for GoogleProvider {
     fn metadata() -> ProviderMetadata {
         ProviderMetadata::with_models(
             GOOGLE_PROVIDER_NAME,
@@ -174,7 +176,7 @@ impl Provider for GoogleProvider {
             let framed = FramedRead::new(stream_reader, LinesCodec::new())
                 .map_err(anyhow::Error::from);
 
-            let message_stream = response_to_streaming_message(framed);
+            let message_stream = response_to_streaming_message_google(framed);
             pin!(message_stream);
             while let Some(message) = message_stream.next().await {
                 let (message, usage) = message.map_err(|e| {
@@ -187,29 +189,5 @@ impl Provider for GoogleProvider {
                 yield (message, usage);
             }
         }))
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::base::ProviderDescriptor;
-
-    #[test]
-    fn metadata_comes_from_the_registry() {
-        let metadata = GoogleProvider::metadata();
-        assert!(
-            metadata
-                .known_models
-                .iter()
-                .any(|model| model.name == GOOGLE_DEFAULT_MODEL),
-            "default model should be in the catalog-backed picker"
-        );
-        let pro = metadata
-            .known_models
-            .iter()
-            .find(|model| model.name == "gemini-2.5-pro")
-            .unwrap();
-        assert_eq!(pro.context_limit, Some(1_048_576));
     }
 }

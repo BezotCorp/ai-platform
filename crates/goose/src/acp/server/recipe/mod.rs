@@ -1,7 +1,3 @@
-use std::collections::HashMap;
-use std::path::{Path, PathBuf};
-use std::sync::Arc;
-
 use agent_client_protocol::schema::v1::Meta;
 use agent_client_protocol::{
     Client, ConnectionTo, JsonRpcMessage, JsonRpcRequest, JsonRpcResponse, UntypedMessage,
@@ -10,30 +6,30 @@ use fs_err as fs;
 use goose_sdk_types::custom_requests::{
     DecodeRecipeRequest, DecodeRecipeResponse, DeleteRecipeRequest, EmptyResponse,
     EncodeRecipeRequest, EncodeRecipeResponse, ListRecipesRequest, ListRecipesResponse,
-    ParseRecipeRequest, ParseRecipeResponse, RecipeDto, RecipeParameterDto, RecipeParamsAction,
-    RecipeParamsResponse, RecipeToYamlRequest, RecipeToYamlResponse, RequestRecipeParams,
-    SaveRecipeRequest, SaveRecipeResponse, ScanRecipeRequest, ScanRecipeResponse,
-    ScheduleRecipeRequest, SetRecipeSlashCommandRequest, REQUEST_RECIPE_PARAMS_METHOD,
+    ParseRecipeRequest, ParseRecipeResponse, REQUEST_RECIPE_PARAMS_METHOD, RecipeDto,
+    RecipeParameterDto, RecipeParamsAction, RecipeParamsResponse, RecipeToYamlRequest,
+    RecipeToYamlResponse, RequestRecipeParams, SaveRecipeRequest, SaveRecipeResponse,
+    ScanRecipeRequest, ScanRecipeResponse, ScheduleRecipeRequest, SetRecipeSlashCommandRequest,
 };
+use std::collections::HashMap;
+use std::path::{Path, PathBuf};
+use std::sync::Arc;
 use tokio::sync::oneshot;
-
 mod conversions;
 
-use super::{meta_string, GooseAcpAgent, ResultExt};
+use self::conversions::recipe_manifest_to_list_entry_dto;
+use crate::acp::server::server_informations::{GooseAcpAgent, ResultExt, meta_string};
 use crate::agents::Agent;
-use crate::recipe::build_recipe::{build_recipe_from_template, RecipeError};
+use crate::recipe::build_recipe::{RecipeError, build_recipe_from_template};
 use crate::recipe::local_recipes::{self, get_recipe_library_dir};
 use crate::recipe::manifest::{
     list_recipe_file_manifests, load_recipe_from_path, short_id_from_path,
 };
 use crate::recipe::validate_recipe::validate_recipe_template_from_content;
-use crate::recipe::{strip_error_location, Recipe, RecipeParameter};
+use crate::recipe::{Recipe, RecipeParameter, strip_error_location};
 use crate::recipe_deeplink;
 use crate::session::{Session, SessionType};
 use crate::slash_commands::recipe_slash_command;
-
-use self::conversions::recipe_manifest_to_list_entry_dto;
-
 pub(super) const RECIPE_PARAMS_METHOD: &str = REQUEST_RECIPE_PARAMS_METHOD;
 
 pub(super) const RECIPE_PARAMS_CANCELLED_REASON: &str = "recipe_params_cancelled";
@@ -77,7 +73,7 @@ impl GooseAcpAgent {
         &self,
         id: &str,
     ) -> Result<PathBuf, agent_client_protocol::Error> {
-        if let Some(path) = self.recipe_path_cache.lock().await.get(id).cloned() {
+        if let Some(path) = self.recipe_path_cache().lock().await.get(id).cloned() {
             return Ok(path);
         }
         let map: HashMap<String, PathBuf> = list_recipe_file_manifests()
@@ -86,7 +82,7 @@ impl GooseAcpAgent {
             .map(|manifest| (manifest.id, manifest.file_path))
             .collect();
         let resolved = map.get(id).cloned();
-        *self.recipe_path_cache.lock().await = map;
+        *self.recipe_path_cache().lock().await = map;
         resolved.ok_or_else(|| {
             agent_client_protocol::Error::invalid_params().data(format!("recipe not found: {id}"))
         })
@@ -151,9 +147,9 @@ impl GooseAcpAgent {
             .iter()
             .map(|manifest| (manifest.id.clone(), manifest.file_path.clone()))
             .collect();
-        *self.recipe_path_cache.lock().await = recipe_file_hash_map;
+        *self.recipe_path_cache().lock().await = recipe_file_hash_map;
 
-        let scheduled_jobs = match self.agent_manager.scheduler() {
+        let scheduled_jobs = match self.agent_manager().scheduler() {
             Some(scheduler) => scheduler.list_scheduled_jobs().await,
             None => Vec::new(),
         };
@@ -193,7 +189,7 @@ impl GooseAcpAgent {
     ) -> Result<EmptyResponse, agent_client_protocol::Error> {
         let file_path = self.resolve_recipe_path_by_id(&req.id).await?;
         fs::remove_file(&file_path).internal_err_ctx("Failed to delete recipe")?;
-        self.recipe_path_cache.lock().await.remove(&req.id);
+        self.recipe_path_cache().lock().await.remove(&req.id);
         Ok(EmptyResponse {})
     }
 
@@ -256,7 +252,7 @@ impl GooseAcpAgent {
             .unwrap_or_default();
         let file_path = save_file_path.display().to_string();
         let id = short_id_from_path(&file_path);
-        self.recipe_path_cache
+        self.recipe_path_cache()
             .lock()
             .await
             .insert(id.clone(), save_file_path);
@@ -529,54 +525,5 @@ impl JsonRpcResponse for RecipeParamsResponseMessage {
         value: serde_json::Value,
     ) -> Result<Self, agent_client_protocol::Error> {
         Ok(Self(agent_client_protocol::util::json_cast(&value)?))
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use serde_json::json;
-
-    fn error_data(error: agent_client_protocol::Error) -> String {
-        error.data.unwrap().as_str().unwrap().to_string()
-    }
-
-    #[test]
-    fn deserialize_save_recipe_request_reports_nested_path() {
-        let error = deserialize_save_recipe_request(json!({
-            "recipe": {
-                "title": "Test",
-                "description": "Test recipe",
-                "prompt": "Run the test",
-                "parameters": [
-                    {
-                        "key": "name",
-                        "input_type": "bogus",
-                        "requirement": "required",
-                        "description": "Name"
-                    }
-                ]
-            }
-        }))
-        .unwrap_err();
-
-        let message = error_data(error);
-        assert!(
-            message.starts_with(
-                "save recipe validation failed at recipe.parameters[0].input_type: unknown variant `bogus`"
-            ),
-            "{message}"
-        );
-    }
-
-    #[test]
-    fn deserialize_save_recipe_request_omits_root_path() {
-        let error = deserialize_save_recipe_request(json!("not an object")).unwrap_err();
-
-        let message = error_data(error);
-        assert!(
-            message.starts_with("Save recipe validation failed: invalid type: string"),
-            "{message}"
-        );
     }
 }

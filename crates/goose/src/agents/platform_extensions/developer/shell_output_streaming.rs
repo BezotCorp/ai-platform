@@ -1,10 +1,8 @@
-use std::time::Duration;
-
 use rmcp::model::{CustomNotification, ServerNotification};
 use serde::{Deserialize, Serialize};
+use std::time::Duration;
 
 use crate::agents::tool_execution::ToolCallNotificationEmitter;
-
 pub(super) const SHELL_LIVE_OUTPUT_FLUSH_INTERVAL: Duration = Duration::from_millis(150);
 const SHELL_LIVE_OUTPUT_BATCH_BYTES: usize = 16 * 1024;
 const SHELL_LIVE_OUTPUT_LIMIT_BYTES: usize = 256 * 1024;
@@ -134,93 +132,5 @@ impl ShellOutputBatcher {
                     ),
                 ));
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use tokio::sync::mpsc;
-
-    fn receive_params(
-        receiver: &mut mpsc::Receiver<ServerNotification>,
-    ) -> ShellOutputNotificationParams {
-        let notification = receiver
-            .try_recv()
-            .expect("expected a shell output notification");
-        let ServerNotification::CustomNotification(notification) = notification else {
-            panic!("expected a custom notification");
-        };
-        parse_shell_output_notification(&notification)
-            .expect("expected valid shell output notification params")
-    }
-
-    #[test]
-    fn first_line_emits_immediately_and_normalizes_crlf() {
-        let (sender, mut receiver) = mpsc::channel(4);
-        let mut batcher = ShellOutputBatcher::new(ToolCallNotificationEmitter::new(sender));
-
-        assert!(batcher.push_line(false, "hello\r"));
-
-        let params = receive_params(&mut receiver);
-        assert_eq!(params.sequence, 1);
-        assert!(!params.truncated);
-        assert_eq!(params.chunks.len(), 1);
-        assert_eq!(params.chunks[0].stream, ShellOutputStream::Stdout);
-        assert_eq!(params.chunks[0].output, "hello\n");
-    }
-
-    #[test]
-    fn flush_coalesces_consecutive_lines_and_advances_sequence() {
-        let (sender, mut receiver) = mpsc::channel(4);
-        let mut batcher = ShellOutputBatcher::new(ToolCallNotificationEmitter::new(sender));
-        batcher.push_line(false, "first");
-        receive_params(&mut receiver);
-
-        assert!(!batcher.push_line(false, "second"));
-        assert!(!batcher.push_line(false, "third"));
-        assert!(!batcher.push_line(true, "warning"));
-        assert!(batcher.flush());
-
-        let params = receive_params(&mut receiver);
-        assert_eq!(params.sequence, 2);
-        assert!(!params.truncated);
-        assert_eq!(params.chunks.len(), 2);
-        assert_eq!(params.chunks[0].stream, ShellOutputStream::Stdout);
-        assert_eq!(params.chunks[0].output, "second\nthird\n");
-        assert_eq!(params.chunks[1].stream, ShellOutputStream::Stderr);
-        assert_eq!(params.chunks[1].output, "warning\n");
-    }
-
-    #[test]
-    fn live_output_limit_emits_one_truncation_notification() {
-        let (sender, mut receiver) = mpsc::channel(4);
-        let mut batcher = ShellOutputBatcher::new(ToolCallNotificationEmitter::new(sender));
-        let output_at_limit = "x".repeat(SHELL_LIVE_OUTPUT_LIMIT_BYTES - 1);
-
-        assert!(batcher.push_line(false, &output_at_limit));
-        receive_params(&mut receiver);
-        assert!(batcher.push_line(false, "omitted"));
-
-        let params = receive_params(&mut receiver);
-        assert_eq!(params.sequence, 2);
-        assert!(params.truncated);
-        assert!(params.chunks.is_empty());
-
-        assert!(!batcher.push_line(false, "also omitted"));
-        assert!(!batcher.flush());
-        assert!(receiver.try_recv().is_err());
-    }
-
-    #[test]
-    fn parser_ignores_unrelated_or_malformed_custom_notifications() {
-        let unrelated = CustomNotification::new("goose/other", Some(serde_json::json!({})));
-        let malformed = CustomNotification::new(
-            DEVELOPER_SHELL_OUTPUT_NOTIFICATION_METHOD,
-            Some(serde_json::json!({ "sequence": "not-a-number" })),
-        );
-
-        assert!(parse_shell_output_notification(&unrelated).is_none());
-        assert!(parse_shell_output_notification(&malformed).is_none());
     }
 }

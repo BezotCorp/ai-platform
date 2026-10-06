@@ -115,7 +115,7 @@ Some workspace crates, including those that make up the GDK, are published to cr
 - Test: When adding features, update goose-self-test.yaml, rebuild, then run `goose run --recipe goose-self-test.yaml` to validate
 - Error: Use anyhow::Result
 - Provider: Implement Provider trait see providers/base.rs
-- MCP: Extensions in crates/goose-mcp/
+- MCP: Extensions in crates/bcaip-mcp/
 - UI Desktop: Use ACP SDK types or local `src/types/*` types. Do not import generated OpenAPI types/client code from `ui/desktop/src/api`
 
 ## Code Quality

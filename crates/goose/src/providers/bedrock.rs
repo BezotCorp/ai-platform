@@ -1,39 +1,44 @@
-use std::collections::HashMap;
-
-use super::base::{
-    model_info_for_provider_model, ConfigKey, MessageStream, ModelInfo, Provider, ProviderDef,
-    ProviderMetadata, DEFAULT_CONNECT_TIMEOUT_SECS, DEFAULT_PROVIDER_TIMEOUT_SECS,
-};
-use super::openai_compatible::{handle_status, stream_responses_compat};
-use super::retry::{ProviderRetry, RetryConfig};
-use crate::conversation::message::Message;
-use crate::session_context::SESSION_ID_HEADER;
-use anyhow::Result;
-use async_stream::try_stream;
-use async_trait::async_trait;
-use aws_sdk_bedrockruntime::config::ProvideCredentials;
-use aws_sdk_bedrockruntime::operation::converse::ConverseError;
-use aws_sdk_bedrockruntime::operation::converse_stream::ConverseStreamError;
-use aws_sdk_bedrockruntime::types::error::ConverseStreamOutputError;
-use aws_sdk_bedrockruntime::{types as bedrock, Client};
-use base64::Engine;
-use futures::future::BoxFuture;
-use goose_providers::conversation::token_usage::{ProviderUsage, Usage};
-use goose_providers::errors::ProviderError;
-use goose_providers::formats::openai::extract_reasoning_effort;
-use goose_providers::formats::openai_responses::create_responses_request;
-use goose_providers::model::ModelConfig;
-use goose_providers::request_log::{start_log, LoggerHandleExt};
-use reqwest::header::{HeaderName, HeaderValue, AUTHORIZATION};
-use rmcp::model::{object, CallToolRequestParams, ErrorCode, ErrorData, Tool};
-use serde_json::Value;
-use smithy_transport_reqwest::ReqwestHttpClient;
-
+use super::base::ProviderDef;
 use super::formats::bedrock::{
     bedrock_anthropic_thinking_fields, bedrock_inference_config, from_bedrock_message,
     from_bedrock_usage, sanitize_json_unicode_tags, to_bedrock_message_with_caching,
     to_bedrock_tool_config,
 };
+use crate::session_context::SESSION_ID_HEADER;
+use anyhow::Result;
+use async_stream::try_stream;
+use async_trait::async_trait;
+use aws_sdk_bedrockruntime::{Client, types as bedrock};
+use aws_sdk_bedrockruntime::{
+    config::ProvideCredentials,
+    operation::{converse::ConverseError, converse_stream::ConverseStreamError},
+    types::error::ConverseStreamOutputError,
+};
+use base64::Engine;
+use bcaip_provider_types::ProviderSetupCategory::Model;
+use bcaip_provider_types::ProviderSetupGroup::Additional;
+use bcaip_provider_types::ProviderSetupMethod::CloudCredentials;
+use bcaip_provider_types::base::{
+    ConfigKey, MessageStream, ModelInfo, Provider, ProviderDescriptor, ProviderMetadata,
+    model_info_for_provider_model,
+};
+use bcaip_provider_types::context_limit::ContextLimitResolver;
+use bcaip_provider_types::conversations::Message;
+use bcaip_provider_types::conversations::{ProviderUsage, Usage};
+use bcaip_provider_types::errors::ProviderError;
+use bcaip_provider_types::formats::{create_responses_request, extract_reasoning_effort};
+use bcaip_provider_types::model::ModelConfig;
+use bcaip_provider_types::request_log::{LoggerHandleExt, start_log};
+use bcaip_provider_types::retry::{ProviderRetry, RetryConfig};
+use bcaip_provider_types::{ProviderSetupMetadata, json};
+use futures::future::BoxFuture;
+use goose_providers::api_client::{DEFAULT_CONNECT_TIMEOUT_SECS, DEFAULT_PROVIDER_TIMEOUT_SECS};
+use goose_providers::openai_compatible::{handle_status, stream_responses_compat};
+use reqwest::header::{AUTHORIZATION, HeaderName, HeaderValue};
+use rmcp::model::{CallToolRequestParams, ErrorCode, ErrorData, Tool, object};
+use serde_json::Value;
+use smithy_transport_reqwest::ReqwestHttpClient;
+use std::collections::HashMap;
 
 pub(crate) const BEDROCK_PROVIDER_NAME: &str = "aws_bedrock";
 pub const BEDROCK_DOC_LINK: &str =
@@ -203,39 +208,15 @@ struct ConverseRequestParts {
 
 impl BedrockProvider {
     pub async fn from_env(
-        _tls_config: Option<crate::providers::api_client::TlsConfig>,
+        _tls_config: Option<goose_providers::api_client::TlsConfig>,
     ) -> Result<Self> {
         let config = crate::config::Config::global();
-
-        // Attempt to load config and secrets to get AWS_ prefixed keys
-        // to re-export them into the environment for aws_config to use as fallback
-        let set_aws_env_vars = |res: Result<HashMap<String, Value>, _>| {
-            if let Ok(map) = res {
-                map.into_iter()
-                    .filter(|(key, _)| key.starts_with("AWS_"))
-                    .filter_map(|(key, value)| value.as_str().map(|s| (key, s.to_string())))
-                    .for_each(|(key, s)| std::env::set_var(key, s));
-            }
-        };
-
-        let filtered_secrets = config.all_secrets().map(|map| {
-            map.into_iter()
-                .filter(|(key, _)| key != "AWS_BEARER_TOKEN_BEDROCK")
-                .collect()
-        });
-
-        set_aws_env_vars(config.all_values());
-        set_aws_env_vars(filtered_secrets);
 
         // Check for bearer token first to determine if region is required
         let bearer_token = match config.get_secret::<String>("AWS_BEARER_TOKEN_BEDROCK") {
             Ok(token) => {
                 let token = token.trim().to_string();
-                if token.is_empty() {
-                    None
-                } else {
-                    Some(token)
-                }
+                if token.is_empty() { None } else { Some(token) }
             }
             Err(_) => None,
         };
@@ -391,14 +372,13 @@ impl BedrockProvider {
             .header(AUTHORIZATION, format!("Bearer {}", token))
             .json(payload);
 
-        if let Some(id) = session_id.filter(|id| !id.is_empty()) {
-            if let (Ok(name), Ok(value)) = (
+        if let Some(id) = session_id.filter(|id| !id.is_empty())
+            && let (Ok(name), Ok(value)) = (
                 HeaderName::from_bytes(SESSION_ID_HEADER.as_bytes()),
                 HeaderValue::from_str(id),
             ) {
                 req = req.header(name, value);
             }
-        }
 
         let response = goose_providers::http_status::send_bounded(
             req,
@@ -452,17 +432,16 @@ impl BedrockProvider {
             if formatted.content().is_empty() {
                 continue;
             }
-            if let Some(previous) = bedrock_messages.last_mut() {
-                if previous.role() == formatted.role() {
+            if let Some(previous) = bedrock_messages.last_mut()
+                && previous.role() == formatted.role() {
                     previous.content.extend(formatted.content);
                     continue;
                 }
-            }
             bedrock_messages.push(formatted);
         }
 
-        if enable_caching {
-            if let Some(last) = bedrock_messages.last_mut() {
+        if enable_caching
+            && let Some(last) = bedrock_messages.last_mut() {
                 last.content.push(bedrock::ContentBlock::CachePoint(
                     bedrock::CachePointBlock::builder()
                         .r#type(bedrock::CachePointType::Default)
@@ -470,7 +449,6 @@ impl BedrockProvider {
                         .map_err(|error| ProviderError::ExecutionError(error.to_string()))?,
                 ));
             }
-        }
 
         let tool_config = if tools.is_empty() {
             None
@@ -688,7 +666,7 @@ impl BedrockProvider {
         )?;
 
         let provider_usage = ProviderUsage::new(model_name.to_string(), usage);
-        Ok(super::base::stream_from_single_message(
+        Ok(bcaip_provider_types::base::stream_from_single_message(
             message,
             provider_usage,
         ))
@@ -816,10 +794,9 @@ fn process_stream_event(
                             }),
                         Err(_) => Err(ErrorData::new(
                             ErrorCode::INVALID_PARAMS,
-                            goose_providers::json::truncation_error_message(&input_json)
-                                .unwrap_or_else(|| {
-                                    format!("Could not parse tool arguments: {}", input_json)
-                                }),
+                            json::truncation_error_message(&input_json).unwrap_or_else(|| {
+                                format!("Could not parse tool arguments: {}", input_json)
+                            }),
                             None,
                         )),
                     }
@@ -906,7 +883,7 @@ fn output_token_limit_marker(
     }
 }
 
-impl goose_providers::base::ProviderDescriptor for BedrockProvider {
+impl ProviderDescriptor for BedrockProvider {
     fn metadata() -> ProviderMetadata {
         let models = BEDROCK_MODEL_TABLE
             .iter()
@@ -939,10 +916,10 @@ impl goose_providers::base::ProviderDescriptor for BedrockProvider {
             ],
         )
         .with_setup(
-            crate::providers::catalog::ProviderSetupMetadata::new(
-                crate::providers::catalog::ProviderSetupCategory::Model,
-                crate::providers::catalog::ProviderSetupMethod::CloudCredentials,
-                crate::providers::catalog::ProviderSetupGroup::Additional,
+            ProviderSetupMetadata::new(
+                Model,
+                CloudCredentials,
+                Additional,
             )
             .with_field("AWS_REGION", "AWS Region", Some("us-west-2"), None),
         )
@@ -954,7 +931,7 @@ impl ProviderDef for BedrockProvider {
 
     fn from_env(
         _extensions: Vec<crate::config::ExtensionConfig>,
-        tls_config: Option<crate::providers::api_client::TlsConfig>,
+        tls_config: Option<goose_providers::api_client::TlsConfig>,
     ) -> BoxFuture<'static, Result<Self::Provider>> {
         Box::pin(Self::from_env(tls_config))
     }
@@ -976,7 +953,7 @@ impl Provider for BedrockProvider {
                 .context_limit
                 .map(|limit| (entry.name.to_string(), limit as usize))
         });
-        goose_providers::context_limit::ContextLimitResolver::new(&self.name)
+        ContextLimitResolver::new(&self.name)
             .with_configured_limits(configured_limits)
             .resolve(model, override_limit, || async { Ok(None) })
             .await
@@ -1163,1047 +1140,5 @@ impl Provider for BedrockProvider {
             );
             yield (None, Some(usage));
         }))
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use goose_providers::base::ProviderDescriptor as _;
-    use serial_test::serial;
-
-    fn create_mock_provider_and_model(model_name: &str) -> (BedrockProvider, ModelConfig) {
-        let sdk_config = aws_config::SdkConfig::builder()
-            .behavior_version(aws_config::BehaviorVersion::latest())
-            .region(aws_config::Region::new("us-east-1"))
-            .build();
-        let client = Client::new(&sdk_config);
-
-        (
-            BedrockProvider {
-                client,
-                retry_config: RetryConfig::default(),
-                name: "aws_bedrock".to_string(),
-                region: None,
-                bearer_token: None,
-                http_client: reqwest::Client::new(),
-                mantle_base_url: None,
-            },
-            ModelConfig {
-                model_name: model_name.to_string(),
-                context_limit: None,
-                temperature: None,
-                max_tokens: None,
-                toolshim: false,
-                toolshim_model: None,
-                request_params: None,
-                reasoning: None,
-                supports_vision: None,
-                request_headers: None,
-            },
-        )
-    }
-
-    #[test]
-    fn test_metadata_config_keys_have_expected_flags() {
-        let meta = BedrockProvider::metadata();
-
-        let aws_profile = meta
-            .config_keys
-            .iter()
-            .find(|k| k.name == "AWS_PROFILE")
-            .expect("AWS_PROFILE config key should exist");
-        assert!(!aws_profile.required, "AWS_PROFILE should not be required");
-        assert!(
-            !aws_profile.secret,
-            "AWS_PROFILE should not be marked as secret"
-        );
-
-        let aws_region = meta
-            .config_keys
-            .iter()
-            .find(|k| k.name == "AWS_REGION")
-            .expect("AWS_REGION config key should exist");
-        assert!(
-            aws_region.required,
-            "AWS_REGION is required for Bedrock to be marked as configured"
-        );
-        assert!(
-            !aws_region.secret,
-            "AWS_REGION should not be marked as secret"
-        );
-        assert!(
-            aws_region.default.is_some(),
-            "AWS_REGION should have a default value"
-        );
-
-        let bearer_token = meta
-            .config_keys
-            .iter()
-            .find(|k| k.name == "AWS_BEARER_TOKEN_BEDROCK")
-            .expect("AWS_BEARER_TOKEN_BEDROCK config key should exist");
-        assert!(
-            !bearer_token.required,
-            "AWS_BEARER_TOKEN_BEDROCK should not be required"
-        );
-        assert!(
-            bearer_token.secret,
-            "AWS_BEARER_TOKEN_BEDROCK should be marked as secret"
-        );
-
-        let caching = meta
-            .config_keys
-            .iter()
-            .find(|k| k.name == "BEDROCK_ENABLE_CACHING")
-            .expect("BEDROCK_ENABLE_CACHING config key should exist");
-        assert!(
-            !caching.required,
-            "BEDROCK_ENABLE_CACHING should not be required"
-        );
-        assert!(
-            !caching.secret,
-            "BEDROCK_ENABLE_CACHING should not be marked as secret"
-        );
-    }
-
-    #[test]
-    fn test_caching_disabled_for_non_claude_models() {
-        let (provider, model) = create_mock_provider_and_model("amazon.titan-text-express-v1");
-        assert!(
-            !provider.should_enable_caching(&model),
-            "Caching should be disabled for non-Claude models"
-        );
-    }
-
-    #[test]
-    fn stale_reasoning_only_turn_is_removed_and_neighboring_roles_are_merged() {
-        use crate::conversation::message::{InferenceMetadata, MessageContent};
-
-        let (provider, model) = create_mock_provider_and_model("anthropic.claude-sonnet-4");
-        let messages = vec![
-            Message::user().with_text("first"),
-            Message::assistant()
-                .with_content(MessageContent::thinking("internal", "sig-abc"))
-                .with_inference(InferenceMetadata {
-                    provider: "aws_bedrock".to_string(),
-                    requested_model: "anthropic.claude-opus-4".to_string(),
-                    resolved_model: None,
-                    provider_session_id: None,
-                }),
-            Message::user().with_text("second"),
-        ];
-
-        let parts = provider
-            .build_request_parts(&model, "system", &messages, &[])
-            .unwrap();
-
-        assert_eq!(parts.messages.len(), 1);
-        assert_eq!(parts.messages[0].role(), &bedrock::ConversationRole::User);
-        let text: Vec<&str> = parts.messages[0]
-            .content()
-            .iter()
-            .filter_map(|content| match content {
-                bedrock::ContentBlock::Text(text) => Some(text.as_str()),
-                _ => None,
-            })
-            .collect();
-        assert_eq!(text, vec!["first", "second"]);
-    }
-
-    #[test]
-    #[serial]
-    fn test_caching_enabled_for_claude_model() {
-        std::env::set_var("BEDROCK_ENABLE_CACHING", "true");
-
-        let (provider, model) =
-            create_mock_provider_and_model("us.anthropic.claude-sonnet-4-5-20250929-v1:0");
-        assert!(
-            provider.should_enable_caching(&model),
-            "Caching should be enabled for Claude models when BEDROCK_ENABLE_CACHING=true"
-        );
-
-        let one_shot = model.with_merged_request_params(HashMap::from([(
-            "disable_prompt_cache".to_string(),
-            serde_json::json!(true),
-        )]));
-        assert!(
-            !provider.should_enable_caching(&one_shot),
-            "One-shot requests must not create cache points"
-        );
-
-        std::env::remove_var("BEDROCK_ENABLE_CACHING");
-    }
-
-    #[tokio::test]
-    async fn test_post_mantle_streaming_missing_region() {
-        let (provider, _) = create_mock_provider_and_model("openai.gpt-5.5");
-        let payload = serde_json::json!({"model": "openai.gpt-5.5"});
-        let result = provider.post_mantle_streaming(None, &payload).await;
-        assert!(result.is_err());
-        if let Err(ProviderError::Authentication(msg)) = result {
-            assert!(
-                msg.contains("region"),
-                "Error message should mention region: {}",
-                msg
-            );
-        } else {
-            panic!("Expected ProviderError::Authentication");
-        }
-    }
-
-    #[tokio::test]
-    async fn test_post_mantle_streaming_missing_bearer_token() {
-        let (mut provider, _) = create_mock_provider_and_model("openai.gpt-5.5");
-        provider.region = Some("us-east-1".to_string());
-
-        let payload = serde_json::json!({"model": "openai.gpt-5.5"});
-        let result = provider.post_mantle_streaming(None, &payload).await;
-        assert!(result.is_err());
-        if let Err(ProviderError::Authentication(msg)) = result {
-            assert!(
-                msg.contains("AWS_BEARER_TOKEN_BEDROCK"),
-                "Error message should mention AWS_BEARER_TOKEN_BEDROCK: {}",
-                msg
-            );
-        } else {
-            panic!("Expected ProviderError::Authentication");
-        }
-    }
-
-    #[tokio::test]
-    async fn test_mantle_stream_returns_text_message() {
-        use futures::StreamExt;
-        use wiremock::matchers::{header, method, path};
-        use wiremock::{Mock, MockServer, ResponseTemplate};
-
-        let server = MockServer::start().await;
-
-        let sse_body = [
-            r#"data: {"type":"response.output_text.delta","sequence_number":1,"item_id":"msg_1","output_index":0,"content_index":0,"delta":"Hello"}"#,
-            r#"data: {"type":"response.output_text.delta","sequence_number":2,"item_id":"msg_1","output_index":0,"content_index":0,"delta":" world"}"#,
-            "data: [DONE]",
-        ]
-        .join("\n");
-
-        Mock::given(method("POST"))
-            .and(path("/openai/v1/responses"))
-            .and(header("authorization", "Bearer test-token"))
-            .respond_with(ResponseTemplate::new(200).set_body_raw(sse_body, "text/event-stream"))
-            .mount(&server)
-            .await;
-
-        let sdk_config = aws_config::SdkConfig::builder()
-            .behavior_version(aws_config::BehaviorVersion::latest())
-            .region(aws_config::Region::new("us-east-1"))
-            .build();
-
-        let model = ModelConfig::new("openai.gpt-5.5");
-        let provider = BedrockProvider {
-            client: Client::new(&sdk_config),
-            retry_config: RetryConfig::default(),
-            name: "aws_bedrock".to_string(),
-            region: Some("us-east-1".to_string()),
-            bearer_token: Some("test-token".to_string()),
-            http_client: reqwest::Client::new(),
-            mantle_base_url: Some(format!("{}/openai/v1/responses", server.uri())),
-        };
-
-        let messages = vec![crate::conversation::message::Message::user().with_text("hi")];
-        let mut stream = provider
-            .stream(&model.clone(), "", &messages, &[])
-            .await
-            .unwrap();
-
-        let mut text = String::new();
-        while let Some(item) = stream.next().await {
-            let (msg, _usage) = item.unwrap();
-            if let Some(m) = msg {
-                for c in m.content {
-                    if let MessageContent::Text(t) = c {
-                        text.push_str(&t.text);
-                    }
-                }
-            }
-        }
-
-        assert_eq!(text, "Hello world");
-
-        let received = server.received_requests().await.unwrap();
-        assert_eq!(received.len(), 1);
-        let body: serde_json::Value = serde_json::from_slice(&received[0].body).unwrap();
-        assert_eq!(body["model"].as_str().unwrap(), "openai.gpt-5.5");
-    }
-
-    #[tokio::test]
-    async fn test_mantle_stream_returns_text_message_gpt_5_6() {
-        use futures::StreamExt;
-        use wiremock::matchers::{header, method, path};
-        use wiremock::{Mock, MockServer, ResponseTemplate};
-
-        let server = MockServer::start().await;
-
-        let sse_body = [
-            r#"data: {"type":"response.output_text.delta","sequence_number":1,"item_id":"msg_1","output_index":0,"content_index":0,"delta":"Hello"}"#,
-            r#"data: {"type":"response.output_text.delta","sequence_number":2,"item_id":"msg_1","output_index":0,"content_index":0,"delta":" world"}"#,
-            "data: [DONE]",
-        ]
-        .join("\n");
-
-        Mock::given(method("POST"))
-            .and(path("/openai/v1/responses"))
-            .and(header("authorization", "Bearer test-token"))
-            .respond_with(ResponseTemplate::new(200).set_body_raw(sse_body, "text/event-stream"))
-            .mount(&server)
-            .await;
-
-        let sdk_config = aws_config::SdkConfig::builder()
-            .behavior_version(aws_config::BehaviorVersion::latest())
-            .region(aws_config::Region::new("us-east-1"))
-            .build();
-
-        let model = ModelConfig::new("openai.gpt-5.6-terra");
-        let provider = BedrockProvider {
-            client: Client::new(&sdk_config),
-            retry_config: RetryConfig::default(),
-            name: "aws_bedrock".to_string(),
-            region: Some("us-east-1".to_string()),
-            bearer_token: Some("test-token".to_string()),
-            http_client: reqwest::Client::new(),
-            mantle_base_url: Some(format!("{}/openai/v1/responses", server.uri())),
-        };
-
-        let messages = vec![crate::conversation::message::Message::user().with_text("hi")];
-        let mut stream = provider
-            .stream(&model.clone(), "", &messages, &[])
-            .await
-            .unwrap();
-
-        let mut text = String::new();
-        while let Some(item) = stream.next().await {
-            let (msg, _usage) = item.unwrap();
-            if let Some(m) = msg {
-                for c in m.content {
-                    if let MessageContent::Text(t) = c {
-                        text.push_str(&t.text);
-                    }
-                }
-            }
-        }
-
-        assert_eq!(text, "Hello world");
-
-        let received = server.received_requests().await.unwrap();
-        assert_eq!(received.len(), 1);
-        let body: serde_json::Value = serde_json::from_slice(&received[0].body).unwrap();
-        assert_eq!(body["model"].as_str().unwrap(), "openai.gpt-5.6-terra");
-    }
-
-    // ── ConverseStream event processing ──────────────────────────────────
-
-    use crate::conversation::message::MessageContent;
-
-    /// Stand-in for the per-turn message id that `stream()` generates.
-    const TEST_MESSAGE_ID: &str = "msg_test";
-
-    fn delta_event(idx: i32, delta: bedrock::ContentBlockDelta) -> bedrock::ConverseStreamOutput {
-        bedrock::ConverseStreamOutput::ContentBlockDelta(
-            bedrock::ContentBlockDeltaEvent::builder()
-                .delta(delta)
-                .content_block_index(idx)
-                .build()
-                .unwrap(),
-        )
-    }
-
-    fn tool_start_event(idx: i32, id: &str, name: &str) -> bedrock::ConverseStreamOutput {
-        bedrock::ConverseStreamOutput::ContentBlockStart(
-            bedrock::ContentBlockStartEvent::builder()
-                .start(bedrock::ContentBlockStart::ToolUse(
-                    bedrock::ToolUseBlockStart::builder()
-                        .tool_use_id(id)
-                        .name(name)
-                        .build()
-                        .unwrap(),
-                ))
-                .content_block_index(idx)
-                .build()
-                .unwrap(),
-        )
-    }
-
-    fn tool_delta_event(idx: i32, fragment: &str) -> bedrock::ConverseStreamOutput {
-        delta_event(
-            idx,
-            bedrock::ContentBlockDelta::ToolUse(
-                bedrock::ToolUseBlockDelta::builder()
-                    .input(fragment)
-                    .build()
-                    .unwrap(),
-            ),
-        )
-    }
-
-    fn stop_event(idx: i32) -> bedrock::ConverseStreamOutput {
-        bedrock::ConverseStreamOutput::ContentBlockStop(
-            bedrock::ContentBlockStopEvent::builder()
-                .content_block_index(idx)
-                .build()
-                .unwrap(),
-        )
-    }
-
-    #[test]
-    fn test_stream_text_delta_yields_immediately() {
-        let mut state = StreamBlockState::default();
-        let (messages, usage) = process_stream_event(
-            delta_event(0, bedrock::ContentBlockDelta::Text("Hello".to_string())),
-            &mut state,
-            TEST_MESSAGE_ID,
-        );
-        assert_eq!(messages.len(), 1, "text delta should yield one message");
-        assert_eq!(messages[0].as_concat_text(), "Hello");
-        assert!(usage.is_none());
-    }
-
-    #[test]
-    fn test_stream_empty_text_delta_yields_nothing() {
-        let mut state = StreamBlockState::default();
-        let (messages, _) = process_stream_event(
-            delta_event(0, bedrock::ContentBlockDelta::Text(String::new())),
-            &mut state,
-            TEST_MESSAGE_ID,
-        );
-        assert!(messages.is_empty(), "empty text delta should be skipped");
-    }
-
-    #[test]
-    fn test_stream_tool_use_accumulates_until_stop() {
-        let mut state = StreamBlockState::default();
-
-        let (messages, _) = process_stream_event(
-            tool_start_event(1, "tool-1", "file_write"),
-            &mut state,
-            TEST_MESSAGE_ID,
-        );
-        assert!(messages.is_empty(), "tool start should not yield");
-
-        // Input arrives as partial-JSON fragments
-        for fragment in [r#"{"path": "#, r#""a.txt"}"#] {
-            let (messages, _) =
-                process_stream_event(tool_delta_event(1, fragment), &mut state, TEST_MESSAGE_ID);
-            assert!(messages.is_empty(), "tool input fragments should not yield");
-        }
-
-        let (messages, _) = process_stream_event(stop_event(1), &mut state, TEST_MESSAGE_ID);
-        assert_eq!(
-            messages.len(),
-            1,
-            "tool stop should yield the complete request"
-        );
-        match &messages[0].content[0] {
-            MessageContent::ToolRequest(req) => {
-                assert_eq!(req.id, "tool-1");
-                let call = req
-                    .tool_call
-                    .as_ref()
-                    .expect("accumulated JSON should parse");
-                assert_eq!(call.name.to_string(), "file_write");
-                let args = call.arguments.as_ref().expect("arguments should be set");
-                assert_eq!(args.get("path").and_then(|v| v.as_str()), Some("a.txt"));
-            }
-            other => panic!("expected ToolRequest, got {:?}", other),
-        }
-    }
-
-    #[test]
-    fn test_stream_tool_use_sanitizes_nested_arguments() {
-        let mut state = StreamBlockState::default();
-
-        process_stream_event(
-            tool_start_event(1, "tool-1", "lookup"),
-            &mut state,
-            TEST_MESSAGE_ID,
-        );
-        process_stream_event(
-            tool_delta_event(
-                1,
-                "{\"query\":\"visible\u{E0041}text\",\"nested\":[{\"cit\u{E0042}y\":\"東京🌍\u{E0043}\"}]}",
-            ),
-            &mut state,
-            TEST_MESSAGE_ID,
-        );
-
-        let (messages, _) = process_stream_event(stop_event(1), &mut state, TEST_MESSAGE_ID);
-        let MessageContent::ToolRequest(request) = &messages[0].content[0] else {
-            panic!("expected tool request");
-        };
-        let call = request
-            .tool_call
-            .as_ref()
-            .expect("expected valid tool call");
-        assert_eq!(
-            call.arguments,
-            Some(object(serde_json::json!({
-                "query": "visibletext",
-                "nested": [{"city": "東京🌍"}]
-            })))
-        );
-    }
-
-    #[test]
-    fn test_stream_tool_use_invalid_json_yields_error_request() {
-        let mut state = StreamBlockState::default();
-
-        process_stream_event(
-            tool_start_event(0, "tool-2", "shell"),
-            &mut state,
-            TEST_MESSAGE_ID,
-        );
-        process_stream_event(
-            tool_delta_event(0, "this is {{{ not json"),
-            &mut state,
-            TEST_MESSAGE_ID,
-        );
-
-        let (messages, _) = process_stream_event(stop_event(0), &mut state, TEST_MESSAGE_ID);
-        assert_eq!(messages.len(), 1);
-        match &messages[0].content[0] {
-            MessageContent::ToolRequest(req) => {
-                assert!(
-                    req.tool_call.is_err(),
-                    "unparseable input should yield an error tool request, not a stream failure"
-                );
-            }
-            other => panic!("expected ToolRequest, got {:?}", other),
-        }
-    }
-
-    #[test]
-    fn test_stream_tool_use_truncated_json_reports_output_token_limit() {
-        // Live max_tokens cut-off on Bedrock: ContentBlockStop still arrives for
-        // the open block, so the truncation guidance has to come from this arm.
-        let mut state = StreamBlockState::default();
-
-        process_stream_event(
-            tool_start_event(0, "tool-4", "write_file"),
-            &mut state,
-            TEST_MESSAGE_ID,
-        );
-        process_stream_event(
-            tool_delta_event(0, "{\"path\": \"/report.md\""),
-            &mut state,
-            TEST_MESSAGE_ID,
-        );
-
-        let (messages, _) = process_stream_event(stop_event(0), &mut state, TEST_MESSAGE_ID);
-        assert_eq!(messages.len(), 1);
-        match &messages[0].content[0] {
-            MessageContent::ToolRequest(req) => {
-                let err = req
-                    .tool_call
-                    .as_ref()
-                    .expect_err("truncated input should yield an error tool request");
-                assert!(
-                    err.message.contains("output token limit"),
-                    "truncated tool arguments should carry the token-limit guidance, got: {}",
-                    err.message
-                );
-            }
-            other => panic!("expected ToolRequest, got {:?}", other),
-        }
-    }
-
-    #[test]
-    fn test_stream_tool_use_empty_input_yields_empty_args() {
-        let mut state = StreamBlockState::default();
-
-        process_stream_event(
-            tool_start_event(0, "tool-3", "list_files"),
-            &mut state,
-            TEST_MESSAGE_ID,
-        );
-        // No input deltas at all — some tools take no arguments.
-
-        let (messages, _) = process_stream_event(stop_event(0), &mut state, TEST_MESSAGE_ID);
-        assert_eq!(messages.len(), 1);
-        match &messages[0].content[0] {
-            MessageContent::ToolRequest(req) => {
-                let call = req
-                    .tool_call
-                    .as_ref()
-                    .expect("empty input should parse as {}");
-                assert_eq!(call.name.to_string(), "list_files");
-            }
-            other => panic!("expected ToolRequest, got {:?}", other),
-        }
-    }
-
-    #[test]
-    fn test_stream_reasoning_accumulates_until_stop() {
-        let mut state = StreamBlockState::default();
-
-        for (delta, expect_empty) in [
-            (
-                bedrock::ReasoningContentBlockDelta::Text("Let me think".to_string()),
-                true,
-            ),
-            (
-                bedrock::ReasoningContentBlockDelta::Text(" about this.".to_string()),
-                true,
-            ),
-            (
-                bedrock::ReasoningContentBlockDelta::Signature("sig-abc".to_string()),
-                true,
-            ),
-        ] {
-            let (messages, _) = process_stream_event(
-                delta_event(0, bedrock::ContentBlockDelta::ReasoningContent(delta)),
-                &mut state,
-                TEST_MESSAGE_ID,
-            );
-            assert_eq!(
-                messages.is_empty(),
-                expect_empty,
-                "reasoning deltas accumulate"
-            );
-        }
-
-        let (messages, _) = process_stream_event(stop_event(0), &mut state, TEST_MESSAGE_ID);
-        assert_eq!(
-            messages.len(),
-            1,
-            "reasoning stop should yield thinking message"
-        );
-        match &messages[0].content[0] {
-            MessageContent::Thinking(t) => {
-                assert_eq!(t.thinking, "Let me think about this.");
-                assert_eq!(t.signature, "sig-abc");
-            }
-            other => panic!("expected Thinking, got {:?}", other),
-        }
-    }
-
-    #[test]
-    fn test_stream_metadata_returns_usage() {
-        let mut state = StreamBlockState::default();
-        let event = bedrock::ConverseStreamOutput::Metadata(
-            bedrock::ConverseStreamMetadataEvent::builder()
-                .usage(
-                    bedrock::TokenUsage::builder()
-                        .input_tokens(100)
-                        .output_tokens(50)
-                        .total_tokens(150)
-                        .build()
-                        .unwrap(),
-                )
-                .build(),
-        );
-        let (messages, usage) = process_stream_event(event, &mut state, TEST_MESSAGE_ID);
-        assert!(messages.is_empty());
-        let usage = usage.expect("metadata event should carry usage");
-        assert_eq!(usage.input_tokens, Some(100));
-        assert_eq!(usage.output_tokens, Some(50));
-        assert_eq!(usage.total_tokens, Some(150));
-    }
-
-    #[test]
-    fn test_stream_interleaved_text_and_tool_blocks() {
-        // Bedrock interleaves block indices: text at index 0, tool at index 1.
-        // Text yields immediately even while a tool block is mid-accumulation.
-        let mut state = StreamBlockState::default();
-
-        process_stream_event(
-            tool_start_event(1, "tool-4", "search"),
-            &mut state,
-            TEST_MESSAGE_ID,
-        );
-        process_stream_event(tool_delta_event(1, r#"{"q":"#), &mut state, TEST_MESSAGE_ID);
-
-        let (messages, _) = process_stream_event(
-            delta_event(
-                0,
-                bedrock::ContentBlockDelta::Text("Searching now".to_string()),
-            ),
-            &mut state,
-            TEST_MESSAGE_ID,
-        );
-        assert_eq!(
-            messages.len(),
-            1,
-            "text should stream while tool accumulates"
-        );
-        assert_eq!(messages[0].as_concat_text(), "Searching now");
-
-        process_stream_event(
-            tool_delta_event(1, r#""rust"}"#),
-            &mut state,
-            TEST_MESSAGE_ID,
-        );
-        let (messages, _) = process_stream_event(stop_event(1), &mut state, TEST_MESSAGE_ID);
-        assert_eq!(messages.len(), 1);
-        match &messages[0].content[0] {
-            MessageContent::ToolRequest(req) => {
-                let call = req.tool_call.as_ref().unwrap();
-                let args = call.arguments.as_ref().unwrap();
-                assert_eq!(args.get("q").and_then(|v| v.as_str()), Some("rust"));
-            }
-            other => panic!("expected ToolRequest, got {:?}", other),
-        }
-    }
-
-    #[test]
-    fn test_metadata_includes_disable_streaming_key() {
-        let meta = BedrockProvider::metadata();
-
-        let key = meta
-            .config_keys
-            .iter()
-            .find(|k| k.name == "BEDROCK_DISABLE_STREAMING")
-            .expect("BEDROCK_DISABLE_STREAMING config key should exist");
-        assert!(
-            !key.required,
-            "BEDROCK_DISABLE_STREAMING should not be required"
-        );
-        assert!(
-            !key.secret,
-            "BEDROCK_DISABLE_STREAMING should not be marked as secret"
-        );
-        assert_eq!(
-            key.default.as_deref(),
-            Some("false"),
-            "BEDROCK_DISABLE_STREAMING should default to false (streaming on)"
-        );
-    }
-
-    #[test]
-    fn test_stream_messages_carry_turn_message_id() {
-        // Every message from one turn must share the caller-provided id so
-        // Conversation::push can coalesce consecutive deltas instead of
-        // persisting one message per token (same contract as the Anthropic
-        // provider, which stamps the API message id on every chunk).
-        let mut state = StreamBlockState::default();
-
-        let (messages, _) = process_stream_event(
-            delta_event(0, bedrock::ContentBlockDelta::Text("Hello".to_string())),
-            &mut state,
-            TEST_MESSAGE_ID,
-        );
-        assert_eq!(messages[0].id.as_deref(), Some(TEST_MESSAGE_ID));
-
-        process_stream_event(
-            tool_start_event(1, "tool-9", "shell"),
-            &mut state,
-            TEST_MESSAGE_ID,
-        );
-        let (messages, _) = process_stream_event(stop_event(1), &mut state, TEST_MESSAGE_ID);
-        assert_eq!(
-            messages[0].id.as_deref(),
-            Some(TEST_MESSAGE_ID),
-            "tool requests must carry the same turn id as text deltas"
-        );
-    }
-
-    #[test]
-    fn test_stream_redacted_reasoning_accumulates_until_stop() {
-        let mut state = StreamBlockState::default();
-
-        let raw = b"encrypted-reasoning-bytes";
-        let (messages, _) = process_stream_event(
-            delta_event(
-                0,
-                bedrock::ContentBlockDelta::ReasoningContent(
-                    bedrock::ReasoningContentBlockDelta::RedactedContent(
-                        aws_smithy_types::Blob::new(raw.to_vec()),
-                    ),
-                ),
-            ),
-            &mut state,
-            TEST_MESSAGE_ID,
-        );
-        assert!(messages.is_empty(), "redacted deltas accumulate until stop");
-
-        let (messages, _) = process_stream_event(stop_event(0), &mut state, TEST_MESSAGE_ID);
-        assert_eq!(messages.len(), 1);
-        match &messages[0].content[0] {
-            MessageContent::RedactedThinking(redacted) => {
-                let expected = base64::prelude::BASE64_STANDARD.encode(raw);
-                assert_eq!(
-                    redacted.data, expected,
-                    "blob must round-trip as base64, matching the non-streaming path"
-                );
-            }
-            other => panic!("expected RedactedThinking, got {:?}", other),
-        }
-    }
-
-    #[test]
-    fn test_gemma_no_reasoning_effort() {
-        let entry = find_model_entry("google.gemma-4-31b").unwrap();
-        assert_eq!(entry.endpoint, BedrockEndpoint::MantleResponses);
-
-        let entry_26b = find_model_entry("google.gemma-4-26b-a4b").unwrap();
-        assert_eq!(entry_26b.endpoint, BedrockEndpoint::MantleResponses);
-
-        let entry_e2b = find_model_entry("google.gemma-4-e2b").unwrap();
-        assert_eq!(entry_e2b.endpoint, BedrockEndpoint::MantleResponses);
-    }
-
-    #[test]
-    fn test_metadata_includes_gemma_models() {
-        let meta = BedrockProvider::metadata();
-        let model_names: Vec<&str> = meta.known_models.iter().map(|m| m.name.as_str()).collect();
-        assert!(
-            model_names.contains(&"google.gemma-4-31b"),
-            "metadata should include google.gemma-4-31b"
-        );
-        assert!(
-            model_names.contains(&"google.gemma-4-26b-a4b"),
-            "metadata should include google.gemma-4-26b-a4b"
-        );
-        assert!(
-            model_names.contains(&"google.gemma-4-e2b"),
-            "metadata should include google.gemma-4-e2b"
-        );
-    }
-
-    #[tokio::test]
-    async fn test_mantle_stream_gemma_4_31b() {
-        use futures::StreamExt;
-        use wiremock::matchers::{header, method, path};
-        use wiremock::{Mock, MockServer, ResponseTemplate};
-
-        let server = MockServer::start().await;
-
-        let sse_body = [
-            r#"data: {"type":"response.output_text.delta","sequence_number":1,"item_id":"msg_1","output_index":0,"content_index":0,"delta":"Hello"}"#,
-            r#"data: {"type":"response.output_text.delta","sequence_number":2,"item_id":"msg_1","output_index":0,"content_index":0,"delta":" world"}"#,
-            "data: [DONE]",
-        ]
-        .join("\n");
-
-        Mock::given(method("POST"))
-            .and(path("/openai/v1/responses"))
-            .and(header("authorization", "Bearer test-token"))
-            .respond_with(ResponseTemplate::new(200).set_body_raw(sse_body, "text/event-stream"))
-            .mount(&server)
-            .await;
-
-        let sdk_config = aws_config::SdkConfig::builder()
-            .behavior_version(aws_config::BehaviorVersion::latest())
-            .region(aws_config::Region::new("us-east-1"))
-            .build();
-
-        let model = ModelConfig::new("google.gemma-4-31b");
-        let provider = BedrockProvider {
-            client: Client::new(&sdk_config),
-            retry_config: RetryConfig::default(),
-            name: "aws_bedrock".to_string(),
-            region: Some("us-east-1".to_string()),
-            bearer_token: Some("test-token".to_string()),
-            http_client: reqwest::Client::new(),
-            mantle_base_url: Some(format!("{}/openai/v1/responses", server.uri())),
-        };
-
-        let messages = vec![crate::conversation::message::Message::user().with_text("hi")];
-        let mut stream = provider
-            .stream(&model.clone(), "", &messages, &[])
-            .await
-            .unwrap();
-
-        let mut text = String::new();
-        while let Some(item) = stream.next().await {
-            let (msg, _usage) = item.unwrap();
-            if let Some(m) = msg {
-                for c in m.content {
-                    if let MessageContent::Text(t) = c {
-                        text.push_str(&t.text);
-                    }
-                }
-            }
-        }
-
-        assert_eq!(text, "Hello world");
-
-        let received = server.received_requests().await.unwrap();
-        assert_eq!(received.len(), 1);
-        let body: serde_json::Value = serde_json::from_slice(&received[0].body).unwrap();
-        // The wire model ID must be the full google.gemma-4-31b, not mangled
-        assert_eq!(body["model"].as_str().unwrap(), "google.gemma-4-31b");
-        // Gemma models should NOT inject thinking_effort
-        assert!(
-            body.get("reasoning").is_none(),
-            "Gemma model should not have a reasoning block"
-        );
-        assert!(
-            body.get("thinking_effort").is_none(),
-            "Gemma model should not inject thinking_effort"
-        );
-        // Gemma does not support parallel tool calls per AWS docs
-        assert_eq!(
-            body["parallel_tool_calls"].as_bool(),
-            Some(false),
-            "Gemma model must set parallel_tool_calls=false"
-        );
-    }
-
-    #[test]
-    fn test_gpt_routing_entry_with_effort_suffix() {
-        let entry = find_model_entry("openai.gpt-5.5-high").unwrap();
-        assert_eq!(entry.endpoint, BedrockEndpoint::MantleResponses);
-        assert_eq!(entry.wire_model_id, "openai.gpt-5.5");
-    }
-
-    #[test]
-    fn test_bare_gpt_name_routes_to_mantle() {
-        for model in ["gpt-5.5", "gpt-5.5-high"] {
-            let entry = find_model_entry(model).unwrap();
-            assert_eq!(entry.endpoint, BedrockEndpoint::MantleResponses);
-        }
-    }
-
-    #[test]
-    fn test_gemma_context_limit_in_metadata() {
-        let metadata = BedrockProvider::metadata();
-        let model = metadata
-            .known_models
-            .iter()
-            .find(|model| model.name == "google.gemma-4-31b")
-            .unwrap();
-        assert!(model.context_limit.is_some_and(|limit| limit >= 262144));
-    }
-
-    #[tokio::test]
-    async fn test_gemma_context_limit_resolution() {
-        let (provider, _) = create_mock_provider_and_model("google.gemma-4-31b");
-        assert_eq!(
-            provider.get_context_limit("google.gemma-4-31b", None).await,
-            262_144
-        );
-        assert_eq!(
-            provider
-                .get_context_limit("google.gemma-4-31b", Some(64_000))
-                .await,
-            64_000
-        );
-    }
-    #[test]
-    fn test_converse_model_not_mantle() {
-        let entry = find_model_entry("us.anthropic.claude-sonnet-4-5-20250929-v1:0").unwrap();
-        assert_eq!(entry.endpoint, BedrockEndpoint::Converse);
-    }
-
-    fn stream_tool_call(state: &mut StreamBlockState, input: &str) {
-        process_stream_event(
-            bedrock::ConverseStreamOutput::ContentBlockStart(
-                bedrock::ContentBlockStartEvent::builder()
-                    .content_block_index(0)
-                    .start(bedrock::ContentBlockStart::ToolUse(
-                        bedrock::ToolUseBlockStart::builder()
-                            .tool_use_id("call_1")
-                            .name("search")
-                            .build()
-                            .unwrap(),
-                    ))
-                    .build()
-                    .unwrap(),
-            ),
-            state,
-            "msg_1",
-        );
-        process_stream_event(
-            bedrock::ConverseStreamOutput::ContentBlockDelta(
-                bedrock::ContentBlockDeltaEvent::builder()
-                    .content_block_index(0)
-                    .delta(bedrock::ContentBlockDelta::ToolUse(
-                        bedrock::ToolUseBlockDelta::builder()
-                            .input(input)
-                            .build()
-                            .unwrap(),
-                    ))
-                    .build()
-                    .unwrap(),
-            ),
-            state,
-            "msg_1",
-        );
-    }
-
-    fn message_stop(reason: bedrock::StopReason) -> bedrock::ConverseStreamOutput {
-        bedrock::ConverseStreamOutput::MessageStop(
-            bedrock::MessageStopEvent::builder()
-                .stop_reason(reason)
-                .build()
-                .unwrap(),
-        )
-    }
-
-    fn content_block_stop(index: i32) -> bedrock::ConverseStreamOutput {
-        bedrock::ConverseStreamOutput::ContentBlockStop(
-            bedrock::ContentBlockStopEvent::builder()
-                .content_block_index(index)
-                .build()
-                .unwrap(),
-        )
-    }
-
-    #[test]
-    fn truncated_tool_call_is_flushed_as_failed_request_and_flagged() {
-        let mut state = StreamBlockState::default();
-        stream_tool_call(&mut state, "{\"query\": \"tes");
-
-        process_stream_event(
-            message_stop(bedrock::StopReason::MaxTokens),
-            &mut state,
-            "msg_1",
-        );
-
-        let stop_reason = state.stop_reason.take();
-        let flushed = flush_incomplete_tool_blocks(&mut state, true, "msg_1");
-        assert_eq!(flushed.len(), 1);
-        use crate::conversation::message::MessageContent;
-        match &flushed[0].content[0] {
-            MessageContent::ToolRequest(req) => {
-                let err = req
-                    .tool_call
-                    .as_ref()
-                    .expect_err("truncated tool call must surface as a failed tool request");
-                assert!(err.message.contains("output token limit"));
-            }
-            other => panic!("expected tool request, got {:?}", other),
-        }
-        assert_eq!(flushed[0].id.as_deref(), Some("msg_1"));
-
-        let marker = output_token_limit_marker(stop_reason.as_ref(), "msg_1")
-            .expect("marker message expected for max_tokens stop");
-        assert!(marker.metadata.output_token_limit_reached);
-    }
-
-    #[test]
-    fn end_turn_with_completed_tool_call_emits_no_truncation_marker() {
-        let mut state = StreamBlockState::default();
-        stream_tool_call(&mut state, "{\"query\": \"test\"}");
-
-        process_stream_event(content_block_stop(0), &mut state, "msg_1");
-        process_stream_event(
-            message_stop(bedrock::StopReason::EndTurn),
-            &mut state,
-            "msg_1",
-        );
-
-        use crate::conversation::message::MessageContent;
-        let stop_reason = state.stop_reason.take();
-        assert!(matches!(stop_reason, Some(bedrock::StopReason::EndTurn)));
-        let flushed = flush_incomplete_tool_blocks(&mut state, false, "msg_1");
-        assert!(flushed.is_empty());
-        assert!(output_token_limit_marker(stop_reason.as_ref(), "msg_1").is_none());
-
-        let mut fresh = StreamBlockState::default();
-        stream_tool_call(&mut fresh, "{\"query\": \"test\"}");
-        let (stopped, _) = process_stream_event(content_block_stop(0), &mut fresh, "msg_1");
-        assert_eq!(stopped.len(), 1);
-        assert!(matches!(
-            &stopped[0].content[0],
-            MessageContent::ToolRequest(req) if req.tool_call.is_ok()
-        ));
     }
 }

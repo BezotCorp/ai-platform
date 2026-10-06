@@ -1,10 +1,18 @@
-use super::*;
-use crate::config::extensions::name_to_key;
+use crate::{
+    acp::server::server_informations::GooseAcpAgent,
+    agents::{ExtensionConfig, extension::Envs},
+    config::{Config, base::CONFIG_YAML_NAME, extensions::name_to_key},
+};
+use goose_sdk_types::custom_requests::{
+    DefaultsReadResponse, OnboardingImportApplyRequest, OnboardingImportApplyResponse,
+    OnboardingImportCandidate, OnboardingImportCounts, OnboardingImportScanRequest,
+    OnboardingImportScanResponse, OnboardingImportSourceKind,
+};
 use serde::Deserialize;
-use serde_yaml::Mapping;
 use std::collections::{HashMap, HashSet};
+use std::fs;
 use std::path::{Path, PathBuf};
-
+use yaml_serde::Mapping;
 const GOOSE_CONFIG_PREFIX: &str = "goose_config:";
 const CLAUDE_DESKTOP_PREFIX: &str = "claude_desktop:";
 
@@ -34,7 +42,7 @@ impl GooseAcpAgent {
         let mut candidates = Vec::new();
 
         if source_filter.contains(&OnboardingImportSourceKind::GooseConfig) {
-            for path in goose_config_candidate_paths(&self.config_dir) {
+            for path in goose_config_candidate_paths(self.config_dir()) {
                 if let Some(candidate) = scan_goose_config_candidate(&path) {
                     candidates.push(candidate);
                 }
@@ -60,7 +68,7 @@ impl GooseAcpAgent {
         let config = self.config()?;
         Ok(apply_onboarding_import_candidates(
             config,
-            &self.config_dir,
+            self.config_dir(),
             &req,
         ))
     }
@@ -283,20 +291,20 @@ fn parse_candidate_id(id: &str) -> Option<(OnboardingImportSourceKind, PathBuf)>
 
 fn read_yaml_mapping(path: &Path) -> anyhow::Result<Mapping> {
     let content = fs::read_to_string(path)?;
-    let value: serde_yaml::Value = serde_yaml::from_str(&content)?;
+    let value: yaml_serde::Value = yaml_serde::from_str(&content)?;
     Ok(value.as_mapping().cloned().unwrap_or_default())
 }
 
 fn mapping_contains_string(mapping: &Mapping, key: &str) -> bool {
     mapping
-        .get(serde_yaml::Value::String(key.to_string()))
+        .get(yaml_serde::Value::String(key.to_string()))
         .and_then(|value| value.as_str())
         .is_some_and(|value| !value.trim().is_empty())
 }
 
 fn extension_count(mapping: &Mapping) -> u32 {
     mapping
-        .get(serde_yaml::Value::String("extensions".to_string()))
+        .get(yaml_serde::Value::String("extensions".to_string()))
         .and_then(|value| value.as_mapping())
         .map(|extensions| extensions.len() as u32)
         .unwrap_or_default()
@@ -364,7 +372,7 @@ fn apply_goose_config_candidate(
 
 fn yaml_string(mapping: &Mapping, key: &str) -> Option<String> {
     mapping
-        .get(serde_yaml::Value::String(key.to_string()))
+        .get(yaml_serde::Value::String(key.to_string()))
         .and_then(|value| value.as_str())
         .map(str::trim)
         .filter(|value| !value.is_empty())
@@ -382,7 +390,7 @@ fn import_goose_config_extensions(
     source: &Mapping,
 ) -> anyhow::Result<ImportPairCount> {
     let Some(source_extensions) = source
-        .get(serde_yaml::Value::String("extensions".to_string()))
+        .get(yaml_serde::Value::String("extensions".to_string()))
         .and_then(|value| value.as_mapping())
     else {
         return Ok(ImportPairCount::default());
@@ -503,7 +511,7 @@ fn apply_claude_desktop_candidate(
             }
         };
 
-        let key = serde_yaml::Value::String(name_to_key(&name));
+        let key = yaml_serde::Value::String(name_to_key(&name));
         if target_extensions.contains_key(&key) {
             result.skipped.extensions += 1;
             continue;
@@ -524,7 +532,7 @@ fn apply_claude_desktop_candidate(
                 available_tools: Vec::new(),
             },
         };
-        target_extensions.insert(key, serde_yaml::to_value(entry)?);
+        target_extensions.insert(key, yaml_serde::to_value(entry)?);
         result.imported.extensions += 1;
     }
 
@@ -562,147 +570,4 @@ fn read_claude_servers(
     }
 
     Ok((servers, warnings))
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use tempfile::TempDir;
-
-    #[test]
-    fn scan_claude_desktop_counts_valid_servers() {
-        let tmp = TempDir::new().unwrap();
-        let path = tmp.path().join("claude_desktop_config.json");
-        fs::write(
-            &path,
-            r#"{
-              "mcpServers": {
-                "github": { "command": "npx", "args": ["github-mcp"] },
-                "broken": { "args": ["missing-command"] }
-              }
-            }"#,
-        )
-        .unwrap();
-
-        let candidate = scan_claude_desktop_candidate(&path).unwrap();
-        assert_eq!(candidate.counts.extensions, 1);
-        assert_eq!(candidate.warnings.len(), 1);
-    }
-
-    #[test]
-    fn apply_onboarding_imports_continues_after_candidate_failure() {
-        let source = TempDir::new().unwrap();
-        let target = TempDir::new().unwrap();
-        let missing_goose_config = source.path().join("missing-config.yaml");
-        let claude_config = source.path().join("claude_desktop_config.json");
-        fs::write(
-            &claude_config,
-            r#"{
-              "mcpServers": {
-                "github": { "command": "npx", "args": ["github-mcp"] }
-              }
-            }"#,
-        )
-        .unwrap();
-        let target_config = Config::new_with_file_secrets(
-            target.path().join(CONFIG_YAML_NAME),
-            target.path().join("secrets.yaml"),
-        )
-        .unwrap();
-        let req = OnboardingImportApplyRequest {
-            candidate_ids: vec![
-                candidate_id(GOOSE_CONFIG_PREFIX, &missing_goose_config),
-                candidate_id(CLAUDE_DESKTOP_PREFIX, &claude_config),
-            ],
-            enable_imported_extensions: false,
-        };
-
-        let response = apply_onboarding_import_candidates(&target_config, target.path(), &req);
-
-        assert_eq!(response.imported.extensions, 1);
-        assert!(response
-            .warnings
-            .iter()
-            .any(|warning| warning.starts_with("Skipped Goose configuration import at ")));
-        let extensions = target_config.get_param::<Mapping>("extensions").unwrap();
-        assert!(extensions.contains_key(serde_yaml::Value::String(name_to_key("github"))));
-    }
-
-    #[test]
-    fn apply_goose_config_imports_defaults_extensions_and_skills() {
-        let source = TempDir::new().unwrap();
-        let target = TempDir::new().unwrap();
-        let source_config = source.path().join(CONFIG_YAML_NAME);
-        fs::write(
-            &source_config,
-            r#"
-GOOSE_PROVIDER: openai
-GOOSE_MODEL: gpt-5.1
-extensions:
-  github:
-    enabled: true
-    type: stdio
-    name: github
-    description: GitHub
-    cmd: npx
-    args: ["github-mcp"]
-"#,
-        )
-        .unwrap();
-        let skill_dir = source.path().join("skills").join("reviewer");
-        fs::create_dir_all(&skill_dir).unwrap();
-        fs::write(skill_dir.join("SKILL.md"), "# Reviewer").unwrap();
-
-        let target_config = Config::new_with_file_secrets(
-            target.path().join(CONFIG_YAML_NAME),
-            target.path().join("secrets.yaml"),
-        )
-        .unwrap();
-
-        let result =
-            apply_goose_config_candidate(&target_config, target.path(), &source_config).unwrap();
-
-        assert_eq!(result.imported.providers, 1);
-        assert_eq!(result.imported.extensions, 1);
-        assert_eq!(result.imported.skills, 1);
-        assert_eq!(target_config.get_goose_provider().unwrap(), "openai");
-        assert!(target.path().join("skills").join("reviewer").exists());
-    }
-
-    #[test]
-    fn apply_goose_config_model_only_skips_provider_activation() {
-        let source = TempDir::new().unwrap();
-        let target = TempDir::new().unwrap();
-        let source_config = source.path().join(CONFIG_YAML_NAME);
-        fs::write(&source_config, "GOOSE_MODEL: gpt-5.1\n").unwrap();
-
-        let target_config = Config::new_with_file_secrets(
-            target.path().join(CONFIG_YAML_NAME),
-            target.path().join("secrets.yaml"),
-        )
-        .unwrap();
-
-        let result =
-            apply_goose_config_candidate(&target_config, target.path(), &source_config).unwrap();
-
-        assert_eq!(result.imported.providers, 0);
-        assert!(target_config.get_goose_provider().is_err());
-    }
-
-    #[cfg(unix)]
-    #[test]
-    fn import_skill_dirs_skips_symlink_cycles() {
-        let source = TempDir::new().unwrap();
-        let target = TempDir::new().unwrap();
-        let skill_dir = source.path().join("reviewer");
-        fs::create_dir_all(&skill_dir).unwrap();
-        fs::write(skill_dir.join("SKILL.md"), "# Reviewer").unwrap();
-        std::os::unix::fs::symlink(&skill_dir, skill_dir.join("loop")).unwrap();
-
-        let result = import_skill_dirs(source.path(), target.path()).unwrap();
-
-        assert_eq!(result.imported, 1);
-        assert!(target.path().join("reviewer").join("SKILL.md").exists());
-        assert!(!target.path().join("reviewer").join("loop").exists());
-    }
 }

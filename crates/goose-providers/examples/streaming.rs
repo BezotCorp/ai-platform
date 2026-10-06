@@ -1,14 +1,11 @@
-use std::env;
-
 use anyhow::Result;
 use futures::StreamExt;
-use goose_providers::{
-    api_client::{ApiClient, AuthMethod},
-    base::Provider,
-    conversation::message::Message,
-    model::ModelConfig,
-    openai::OpenAiProvider,
-};
+use bcaip_provider_types::base::Provider;
+use bcaip_provider_types::conversations::Message;
+use bcaip_provider_types::model::ModelConfig;
+use goose_providers::api_client::{ApiClient, AuthMethod};
+use goose_providers::openai::OpenAiProvider;
+use std::env;
 
 async fn stream(provider: impl Provider, model: ModelConfig) -> Result<()> {
     let system = "You are a knowledgable geography expert";

@@ -1,8 +1,7 @@
 use crate::config::Config;
-use crate::providers::api_client::TlsConfig;
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
+use goose_providers::api_client::TlsConfig;
 use std::path::PathBuf;
-
 pub fn provider_tls_config_from_config(config: &Config) -> Result<Option<TlsConfig>> {
     let mut tls_config = TlsConfig::new();
     let mut has_tls_config = false;

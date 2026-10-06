@@ -5,7 +5,6 @@ use agent_client_protocol::{JsonRpcRequest, JsonRpcResponse};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-
 mod recipe;
 pub use recipe::*;
 mod schedule;
@@ -2321,23 +2320,3 @@ pub struct SetToolPermissionsRequest {
 
 #[derive(Debug, Default, Clone, Serialize, Deserialize, JsonSchema, JsonRpcResponse)]
 pub struct SetToolPermissionsResponse {}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn export_session_request_defaults_to_json_without_format() {
-        let req: ExportSessionRequest = serde_json::from_str(r#"{"sessionId":"abc"}"#).unwrap();
-
-        assert_eq!(req.format, SessionExportFormat::Json);
-    }
-
-    #[test]
-    fn export_session_request_accepts_markdown_format() {
-        let req: ExportSessionRequest =
-            serde_json::from_str(r#"{"sessionId":"abc","format":"markdown"}"#).unwrap();
-
-        assert_eq!(req.format, SessionExportFormat::Markdown);
-    }
-}

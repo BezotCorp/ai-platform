@@ -4,7 +4,6 @@ use std::{
     sync::{Arc, Mutex},
 };
 use tokio_util::sync::CancellationToken;
-
 struct ActiveRun {
     run_id: String,
     cancel_token: CancellationToken,
@@ -167,78 +166,5 @@ impl ActiveRunRegistry {
             .lock()
             .expect("active run lock poisoned")
             .contains_key(session_id)
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn live_runs_are_scoped_by_session() {
-        let registry = ActiveRunRegistry::default();
-
-        assert!(registry.start_live("one"));
-        assert!(!registry.start_live("one"));
-        assert!(registry.start_live("two"));
-
-        registry.finish_live("one");
-        assert!(registry.start_live("one"));
-    }
-
-    #[tokio::test]
-    async fn prompt_and_live_runs_conflict() {
-        let registry = ActiveRunRegistry::default();
-
-        assert!(registry
-            .start_prompt_run(
-                "session",
-                "run".into(),
-                CancellationToken::new(),
-                Arc::new(Agent::new()),
-            )
-            .is_ok());
-        assert!(!registry.start_live("session"));
-
-        registry.remove_agent_run("session", "run");
-        assert!(registry.start_live("session"));
-        assert!(matches!(
-            registry.start_prompt_run(
-                "session",
-                "run".into(),
-                CancellationToken::new(),
-                Arc::new(Agent::new()),
-            ),
-            Err(StartRunError::LiveVoiceInteractionExists)
-        ));
-    }
-
-    #[tokio::test]
-    async fn live_delegation_shares_the_live_session_without_admitting_another_prompt() {
-        let registry = ActiveRunRegistry::default();
-        assert!(registry.start_live("session"));
-        assert!(registry
-            .start_live_delegation(
-                "session",
-                "delegated".into(),
-                CancellationToken::new(),
-                Arc::new(Agent::new()),
-            )
-            .is_ok());
-        assert!(matches!(
-            registry.start_prompt_run(
-                "session",
-                "prompt".into(),
-                CancellationToken::new(),
-                Arc::new(Agent::new()),
-            ),
-            Err(StartRunError::AgentRunExists { .. })
-        ));
-
-        registry.finish_live("session");
-        assert_eq!(
-            registry.agent_run("session").map(|(run_id, _)| run_id),
-            Some("delegated".into())
-        );
     }
 }

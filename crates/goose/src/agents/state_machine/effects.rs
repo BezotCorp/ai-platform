@@ -1,9 +1,8 @@
-use crate::conversation::message::Message;
-use crate::conversation::Conversation;
-use crate::providers::base::ProviderUsage;
 use crate::recipe::Recipe;
 use crate::session::ExtensionData;
-use goose_agent::operation::{ConversationEffect, MachineEffect};
+use bcaip_agent::operation::{ConversationEffect, MachineEffect};
+use bcaip_provider_types::conversations::ProviderUsage;
+use bcaip_provider_types::conversations::{Conversation, Message};
 
 pub enum GooseEffect {
     Conversation(ConversationEffect),

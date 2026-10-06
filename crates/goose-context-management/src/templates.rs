@@ -1,7 +1,6 @@
-use include_dir::{include_dir, Dir};
+use include_dir::{Dir, include_dir};
 use minijinja::{Environment, Error as MiniJinjaError, Value as MJValue};
 use serde::Serialize;
-
 static PROMPTS: Dir = include_dir!("$CARGO_MANIFEST_DIR/src/prompts");
 
 pub const COMPACTION_TEMPLATE: &str = "compaction.md";

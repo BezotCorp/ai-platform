@@ -1,5 +1,25 @@
-use super::*;
+use crate::acp::response_builder::send_session_setup_notifications;
+use crate::acp::server::server_informations::GooseAcpHandler;
+use crate::config::Config;
 use crate::providers::inventory::ensure_refresh_identity_current;
+use agent_client_protocol::schema::v1::{
+    AuthenticateRequest, AuthenticateResponse, CancelNotification, CloseSessionRequest,
+    CloseSessionResponse, CurrentModeUpdate, DeleteSessionRequest, DeleteSessionResponse,
+    ForkSessionRequest, ForkSessionResponse, InitializeRequest, InitializeResponse,
+    ListSessionsRequest, ListSessionsResponse, LoadSessionRequest, LoadSessionResponse,
+    NewSessionRequest, NewSessionResponse, PromptRequest, PromptResponse, SessionNotification,
+    SessionUpdate, SetSessionConfigOptionRequest, SetSessionConfigOptionResponse,
+    SetSessionModeRequest, SetSessionModeResponse,
+};
+use agent_client_protocol::util::MatchDispatchFrom;
+use agent_client_protocol::{
+    Client, ConnectionTo, Dispatch, HandleDispatchFrom, Handled, Responder,
+};
+use anyhow::Result;
+use futures::FutureExt;
+use bcaip_provider_types::base::Provider;
+use std::{panic::AssertUnwindSafe, sync::Arc};
+use tracing::{debug, warn};
 
 impl HandleDispatchFrom<Client> for GooseAcpHandler {
     fn describe_chain(&self) -> impl std::fmt::Debug {
@@ -21,7 +41,7 @@ impl HandleDispatchFrom<Client> for GooseAcpHandler {
             // sessions that exist on disk but were never activated via
             // new_session/load_session on this connection. Set-once per
             // connection; the result is ignored on later requests.
-            let _ = agent.client_cx.set(cx.clone());
+            let _ = agent.set_client_cx(cx.clone());
             agent.start_thinking_effort_update_forwarder(&cx).await;
 
             // InitializeRequest runs inline: it sets connection-scoped state
@@ -218,7 +238,7 @@ impl HandleDispatchFrom<Client> for GooseAcpHandler {
                             let maybe_refresh = if config_id == "provider" {
                                 let provider_id = value_id.0.to_string();
                                 agent
-                                    .provider_inventory
+                                    .provider_inventory()
                                     .plan_refresh_jobs(std::slice::from_ref(&provider_id))
                                     .await
                                     .ok()
@@ -238,7 +258,7 @@ impl HandleDispatchFrom<Client> for GooseAcpHandler {
                                     let refresh_identity = refresh_job.identity;
                                     let refresh_provider_id = refresh_job.provider_id;
                                     let mut refresh_guard =
-                                        agent_bg.provider_inventory.refresh_guard(&refresh_identity);
+                                        agent_bg.provider_inventory().refresh_guard(&refresh_identity);
                                     let provider_result: Result<Arc<dyn Provider>> =
                                         AssertUnwindSafe(async {
                                             let session_agent =
@@ -294,7 +314,7 @@ impl HandleDispatchFrom<Client> for GooseAcpHandler {
 
                                 match fetch_result {
                                     Ok(models) => match agent_bg
-                                        .provider_inventory
+                                        .provider_inventory()
                                         .store_refreshed_models_for_identity(
                                             &refresh_identity,
                                             &models,
@@ -325,7 +345,7 @@ impl HandleDispatchFrom<Client> for GooseAcpHandler {
                                     Err(error) => {
                                         let error_message = error.to_string();
                                         match agent_bg
-                                            .provider_inventory
+                                            .provider_inventory()
                                             .store_refresh_error_for_identity(
                                                 &refresh_identity,
                                                 error_message.clone(),

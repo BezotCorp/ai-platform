@@ -3417,7 +3417,7 @@ export type StatusMessageUpdate = {
 export type CostSourceData = ("provider_reported" | "estimated");
 
 /**
- * @description Wire mirror of the conversation `MessageUsage` (this crate cannot depend on\ngoose-provider-types); field names and serde casing MUST stay in parity.
+ * @description Wire mirror of the conversation `MessageUsage` (this crate cannot depend on\nbcaip-provider-types); field names and serde casing MUST stay in parity.
  * @type object
 */
 export type MessageUsageData = {
@@ -3459,7 +3459,7 @@ export type MessageUsageData = {
 export type MessageUsageUpdate = {
     messageId?: string | null;
     /**
-     * @description Wire mirror of the conversation `MessageUsage` (this crate cannot depend on\ngoose-provider-types); field names and serde casing MUST stay in parity.
+     * @description Wire mirror of the conversation `MessageUsage` (this crate cannot depend on\nbcaip-provider-types); field names and serde casing MUST stay in parity.
      * @type object
     */
     usage: MessageUsageData;

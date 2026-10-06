@@ -1,21 +1,18 @@
 //! Schedule management tool business logic.
 
+use crate::mcp_utils::ToolResult;
+use chrono::Utc;
+use rmcp::model::{Annotations, ContentBlock, ErrorCode, ErrorData, Role, TextContent};
 use std::io::Read;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use crate::mcp_utils::ToolResult;
-use chrono::Utc;
-use rmcp::model::{Annotations, ContentBlock, ErrorCode, ErrorData, Role, TextContent};
-
-use crate::conversation::Conversation;
 use crate::recipe::validate_recipe::{recipe_file_format, validate_recipe_for_scheduling};
 use crate::scheduler::{
-    open_regular_schedule_recipe, ValidatedScheduleRecipe, MAX_SCHEDULE_RECIPE_BYTES,
+    MAX_SCHEDULE_RECIPE_BYTES, ValidatedScheduleRecipe, open_regular_schedule_recipe,
 };
-use crate::scheduler_trait::SchedulerTrait;
-use crate::session::SessionManager;
-
+use crate::{scheduler_trait::SchedulerTrait, session::SessionManager};
+use bcaip_provider_types::conversations::Conversation;
 fn recipe_file_error(message: &str) -> ErrorData {
     ErrorData::new(ErrorCode::INTERNAL_ERROR, message.to_string(), None)
 }

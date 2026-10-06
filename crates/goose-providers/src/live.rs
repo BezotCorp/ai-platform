@@ -3,13 +3,13 @@
 //! A single actor owns transport I/O and lifecycle transitions so sends,
 //! shutdown, and incoming events have deterministic ordering.
 
-use anyhow::{anyhow, bail, Result};
+use anyhow::{Result, anyhow, bail};
 use async_trait::async_trait;
 use serde_json::Value;
 use std::sync::Arc;
 use tokio::{
     sync::{broadcast, mpsc, oneshot, watch},
-    time::{timeout, Duration},
+    time::{Duration, timeout},
 };
 
 pub(crate) const LIVE_EVENT_CHANNEL_CAPACITY: usize = 256;

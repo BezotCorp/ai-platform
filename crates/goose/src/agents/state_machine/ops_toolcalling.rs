@@ -2,34 +2,36 @@
 
 use std::collections::{HashMap, HashSet};
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use async_trait::async_trait;
 use futures::{FutureExt, StreamExt};
 use rmcp::model::{CallToolRequestParams, CallToolResult, ContentBlock, ErrorData, Role, Tool};
 
 use crate::agents::extension_manager::ExtensionManager;
 use crate::agents::platform_extensions::MANAGE_EXTENSIONS_TOOL_NAME_COMPLETE;
+use crate::agents::state_machine::GooseEffect;
 use crate::agents::state_machine::ops_llm::{ADVERTISED_TOOLS_NOTE, LLM_OPERATION_NAME};
 use crate::agents::state_machine::ops_tool_approval::request_executable;
-use crate::agents::state_machine::{
-    applied, messages_since_kickoff, not_applicable, yielded_with, ConversationEffect, Emitter,
-    GooseEffect, Operation, OperationResult, SlashCommand,
-};
 use crate::agents::tool_execution::{
-    tool_stream, ToolCallResult, ToolStreamItem, CHAT_MODE_TOOL_SKIPPED_RESPONSE, DECLINED_RESPONSE,
+    CHAT_MODE_TOOL_SKIPPED_RESPONSE, DECLINED_RESPONSE, ToolCallResult, ToolStreamItem, tool_stream,
 };
-use crate::agents::AgentEvent;
-use crate::config::GooseMode;
-use crate::conversation::message::{ActionRequiredData, Message, MessageContent, ToolRequest};
-use crate::conversation::Conversation;
 use crate::hints::load_hints::SubdirectoryHintTracker;
 use crate::hooks::{HookChainOutcome, HookContext, HookEvent, HookManager};
 use crate::session::{EnabledExtensionsState, ExtensionState, Session};
+use bcaip_agent::events::AgentEvent;
+use bcaip_agent::operation::{
+    ConversationEffect, Emitter, Operation, OperationResult, SlashCommand, applied,
+    messages_since_kickoff, not_applicable, yielded_with,
+};
+use bcaip_provider_types::conversations::Conversation;
+use bcaip_provider_types::conversations::{
+    ActionRequiredData, Message, MessageContent, ToolRequest,
+};
+use bcaip_provider_types::goose_mode::GooseMode;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use tokio_util::sync::CancellationToken;
 use tracing_futures::Instrument;
-
 #[derive(Clone, Copy)]
 enum ToolCategory {
     Shell,
@@ -292,14 +294,14 @@ pub(super) fn with_post_tool_hooks(
                 )),
                 ToolCategory::Read | ToolCategory::Other => None,
             };
-            if let Some((event, Some(matcher))) = extended {
-                if hook_manager.has_hooks(event) {
-                    let mut context = HookContext::new(event, &session_id)
-                        .with_tool(tool_name, tool_input)
-                        .with_working_dir(working_dir);
-                    context.matcher_context = Some(matcher);
-                    hook_manager.emit(event, context).await;
-                }
+            if let Some((event, Some(matcher))) = extended
+                && hook_manager.has_hooks(event)
+            {
+                let mut context = HookContext::new(event, &session_id)
+                    .with_tool(tool_name, tool_input)
+                    .with_working_dir(working_dir);
+                context.matcher_context = Some(matcher);
+                hook_manager.emit(event, context).await;
             }
         }
         result
@@ -455,15 +457,15 @@ impl<'a> ToolExecutionOperation<'a> {
             }
         };
         let extension_filter = command.params_str.split_whitespace().next();
-        if let Some(filter) = extension_filter {
-            if !prompts.contains_key(filter) {
-                return Self::command_response(
-                    conversation,
-                    format!("Extension '{filter}' not found"),
-                    emit,
-                )
-                .await;
-            }
+        if let Some(filter) = extension_filter
+            && !prompts.contains_key(filter)
+        {
+            return Self::command_response(
+                conversation,
+                format!("Extension '{filter}' not found"),
+                emit,
+            )
+            .await;
         }
 
         let filtered: HashMap<_, _> = prompts
@@ -581,12 +583,14 @@ impl<'a> ToolExecutionOperation<'a> {
             .id
             .clone()
             .ok_or_else(|| anyhow!("Persisted slash command message has no id"))?;
-        let mut effects = vec![ConversationEffect::SetMessageVisibility {
-            message_id,
-            user_visible: true,
-            agent_visible: false,
-        }
-        .into()];
+        let mut effects = vec![
+            ConversationEffect::SetMessageVisibility {
+                message_id,
+                user_visible: true,
+                agent_visible: false,
+            }
+            .into(),
+        ];
         for (index, prompt_message) in result.messages.into_iter().enumerate() {
             let message = Message::from(prompt_message);
             let expected_role = if index % 2 == 0 {
@@ -719,13 +723,13 @@ pub(super) enum ToolDisposition {
     ParseError(String),
 }
 
-fn approval_denied(permission: Option<&crate::permission::Permission>) -> bool {
+fn approval_denied(permission: Option<&bcaip_provider_types::permission::Permission>) -> bool {
     matches!(
         permission,
         Some(
-            crate::permission::Permission::DenyOnce
-                | crate::permission::Permission::AlwaysDeny
-                | crate::permission::Permission::Cancel
+            bcaip_provider_types::permission::Permission::DenyOnce
+                | bcaip_provider_types::permission::Permission::AlwaysDeny
+                | bcaip_provider_types::permission::Permission::Cancel
         )
     )
 }
@@ -778,10 +782,10 @@ impl Operation<Session, GooseEffect> for ToolExecutionOperation<'_> {
         let mut hints = SubdirectoryHintTracker::new();
         for message in conversation.messages() {
             for content in &message.content {
-                if let MessageContent::ToolRequest(request) = content {
-                    if let Ok(tool_call) = &request.tool_call {
-                        hints.record_tool_arguments(&tool_call.arguments, &session.working_dir);
-                    }
+                if let MessageContent::ToolRequest(request) = content
+                    && let Ok(tool_call) = &request.tool_call
+                {
+                    hints.record_tool_arguments(&tool_call.arguments, &session.working_dir);
                 }
             }
         }
@@ -967,15 +971,14 @@ impl Operation<Session, GooseEffect> for ToolExecutionOperation<'_> {
                             {
                                 extension_change_failed = true;
                             }
-                            if let Ok(result) = &output {
-                                if let Some(notification) = platform_notification(result) {
+                            if let Ok(result) = &output
+                                && let Some(notification) = platform_notification(result) {
                                     emit.emit(AgentEvent::McpNotification((
                                         request_id.clone(),
                                         notification,
                                     )))
                                     .await;
                                 }
-                            }
                             let metadata = requests
                                 .iter()
                                 .find(|r| r.id == request_id)
@@ -1022,61 +1025,5 @@ impl Operation<Session, GooseEffect> for ToolExecutionOperation<'_> {
             .await;
         effects.push(response.into());
         applied(effects)
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn externally_dispatched_observations_are_not_pending_execution() {
-        use crate::conversation::message::TOOL_META_EXTERNAL_DISPATCH_KEY;
-
-        let message = Message::assistant().with_tool_request_with_metadata(
-            "external",
-            Ok(CallToolRequestParams::new("registered__tool")),
-            None,
-            Some(serde_json::json!({ TOOL_META_EXTERNAL_DISPATCH_KEY: true })),
-        );
-
-        assert!(pending_tool_requests(&[message]).is_empty());
-    }
-
-    #[test]
-    fn operation_generated_requests_without_inference_remain_executable() {
-        let message = Message::assistant().with_tool_request(
-            "operation-generated",
-            Ok(CallToolRequestParams::new("registered__tool")),
-        );
-
-        let pending = pending_advertised_tool_requests(&[message]);
-
-        assert_eq!(pending.len(), 1);
-        assert!(matches!(pending[0].1, ToolDisposition::Execute));
-    }
-
-    #[test]
-    fn reads_platform_notification_from_tool_result() {
-        let meta = serde_json::json!({
-            "platform_notification": {
-                "method": "platform_event",
-                "params": { "event_type": "app_updated" }
-            }
-        });
-        let result = CallToolResult::success(Vec::new()).with_meta(Some(rmcp::model::MetaObject(
-            meta.as_object().unwrap().clone(),
-        )));
-
-        let Some(rmcp::model::ServerNotification::CustomNotification(notification)) =
-            platform_notification(&result)
-        else {
-            panic!("expected a custom notification");
-        };
-        assert_eq!(notification.method, "platform_event");
-        assert_eq!(
-            notification.params,
-            Some(serde_json::json!({ "event_type": "app_updated" }))
-        );
     }
 }

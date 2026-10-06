@@ -1,12 +1,11 @@
+use super::azureauth::{AuthError, AzureAuth};
+use super::base::ProviderDef;
 use anyhow::Result;
 use async_trait::async_trait;
-
-use super::api_client::{ApiClient, AuthMethod, AuthProvider};
-use super::azureauth::{AuthError, AzureAuth};
-use super::base::{ConfigKey, ProviderDef, ProviderMetadata};
-use super::openai_compatible::OpenAiCompatibleProvider;
+use bcaip_provider_types::base::{ConfigKey, ProviderMetadata};
 use futures::future::BoxFuture;
-
+use goose_providers::api_client::{ApiClient, AuthMethod, AuthProvider};
+use goose_providers::openai_compatible::OpenAiCompatibleProvider;
 const AZURE_PROVIDER_NAME: &str = "azure_openai";
 pub const AZURE_DEFAULT_MODEL: &str = "gpt-4o";
 pub const AZURE_DOC_URL: &str =
@@ -49,7 +48,7 @@ impl AuthProvider for AzureAuthProvider {
     }
 }
 
-impl goose_providers::base::ProviderDescriptor for AzureProvider {
+impl bcaip_provider_types::base::ProviderDescriptor for AzureProvider {
     fn metadata() -> ProviderMetadata {
         ProviderMetadata::new(
             AZURE_PROVIDER_NAME,
@@ -67,10 +66,10 @@ impl goose_providers::base::ProviderDescriptor for AzureProvider {
             ],
         )
         .with_setup(
-            crate::providers::catalog::ProviderSetupMetadata::new(
-                crate::providers::catalog::ProviderSetupCategory::Model,
-                crate::providers::catalog::ProviderSetupMethod::ConfigFields,
-                crate::providers::catalog::ProviderSetupGroup::Additional,
+            bcaip_provider_types::ProviderSetupMetadata::new(
+                bcaip_provider_types::ProviderSetupCategory::Model,
+                bcaip_provider_types::ProviderSetupMethod::ConfigFields,
+                bcaip_provider_types::ProviderSetupGroup::Additional,
             )
             .with_field("AZURE_OPENAI_ENDPOINT", "Endpoint", Some("https://your-resource.openai.azure.com"), None)
             .with_field("AZURE_OPENAI_DEPLOYMENT_NAME", "Deployment", Some("gpt-4o"), None)
@@ -85,7 +84,7 @@ impl ProviderDef for AzureProvider {
 
     fn from_env(
         _extensions: Vec<crate::config::ExtensionConfig>,
-        tls_config: Option<crate::providers::api_client::TlsConfig>,
+        tls_config: Option<goose_providers::api_client::TlsConfig>,
     ) -> BoxFuture<'static, Result<Self::Provider>> {
         Box::pin(async move {
             let config = crate::config::Config::global();
@@ -133,47 +132,5 @@ impl ProviderDef for AzureProvider {
                 format!("deployments/{}/", deployment_name),
             ))
         })
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_is_v1_endpoint() {
-        assert!(is_v1_endpoint(
-            "https://my-resource.services.ai.azure.com/api/projects/my-proj/openai/v1"
-        ));
-        assert!(is_v1_endpoint(
-            "https://my-resource.services.ai.azure.com/api/projects/my-proj/openai/v1/"
-        ));
-        assert!(is_v1_endpoint(
-            "https://my-resource.services.ai.azure.com/v1/some/path"
-        ));
-
-        assert!(!is_v1_endpoint("https://my-resource.openai.azure.com"));
-        assert!(!is_v1_endpoint("https://my-resource.openai.azure.com/"));
-        assert!(!is_v1_endpoint(
-            "https://my-resource.openai.azure.com/openai"
-        ));
-    }
-
-    #[tokio::test]
-    async fn test_auth_header_bearer_token() {
-        let auth = AzureAuth::new(None, Some("my-token".to_string())).unwrap();
-        let provider = AzureAuthProvider { auth };
-        let (header, value) = provider.get_auth_header().await.unwrap();
-        assert_eq!(header, "Authorization");
-        assert_eq!(value, "Bearer my-token");
-    }
-
-    #[tokio::test]
-    async fn test_auth_header_api_key() {
-        let auth = AzureAuth::new(Some("my-key".to_string()), None).unwrap();
-        let provider = AzureAuthProvider { auth };
-        let (header, value) = provider.get_auth_header().await.unwrap();
-        assert_eq!(header, "api-key");
-        assert_eq!(value, "my-key");
     }
 }

@@ -1,16 +1,14 @@
+use anyhow::{Result, anyhow};
 use std::collections::HashSet;
 
-use anyhow::{anyhow, Result};
-
-use crate::agents::state_machine::messages_since_kickoff;
 use crate::agents::state_machine::ops_tool_approval::ApprovalState;
-use crate::conversation::message::{
+use crate::session::SessionManager;
+use bcaip_agent::operation::messages_since_kickoff;
+use bcaip_provider_types::conversations::Conversation;
+use bcaip_provider_types::conversations::{
     ActionRequiredData, Message, MessageContent, ToolConfirmationRequest,
 };
-use crate::conversation::Conversation;
-use crate::permission::Permission;
-use crate::session::SessionManager;
-
+use bcaip_provider_types::permission::Permission;
 fn active_turn_messages(conversation: &Conversation) -> &[Message] {
     let messages = conversation.messages();
     messages

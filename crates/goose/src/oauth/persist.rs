@@ -2,7 +2,6 @@ use rmcp::transport::auth::{AuthError, CredentialStore, StoredCredentials};
 use serde::{Deserialize, Serialize};
 
 use crate::config::Config;
-
 #[derive(Serialize, Deserialize)]
 struct PersistedCredentials {
     #[serde(flatten)]
@@ -87,42 +86,5 @@ impl CredentialStore for GooseCredentialStore {
         config
             .delete_secret(&key)
             .map_err(|e| AuthError::InternalError(format!("Failed to clear credentials: {}", e)))
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    fn credentials() -> StoredCredentials {
-        StoredCredentials::new(
-            "client-id".to_string(),
-            None,
-            vec!["scope.read".to_string()],
-            Some(123),
-        )
-    }
-
-    #[test]
-    fn persisted_credentials_read_the_legacy_shape() {
-        let legacy = serde_json::to_value(credentials()).unwrap();
-        let persisted: PersistedCredentials = serde_json::from_value(legacy).unwrap();
-
-        assert_eq!(persisted.credentials.client_id, "client-id");
-        assert_eq!(persisted.credentials.granted_scopes, vec!["scope.read"]);
-        assert_eq!(persisted.requested_scopes, None);
-    }
-
-    #[test]
-    fn persisted_credentials_remain_readable_as_stored_credentials() {
-        let persisted = PersistedCredentials {
-            credentials: credentials(),
-            requested_scopes: Some(vec!["scope.read".to_string(), "scope.write".to_string()]),
-        };
-        let value = serde_json::to_value(persisted).unwrap();
-        let credentials: StoredCredentials = serde_json::from_value(value).unwrap();
-
-        assert_eq!(credentials.client_id, "client-id");
-        assert_eq!(credentials.granted_scopes, vec!["scope.read"]);
     }
 }

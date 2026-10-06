@@ -1,25 +1,22 @@
+use crate::acp::{
+    ACP_CURRENT_MODEL, AcpProvider, AcpProviderConfig, extension_configs_to_mcp_servers,
+};
+use crate::config::Config;
+use crate::config::search_path::SearchPaths;
+use crate::providers::base::{ProviderDef, current_working_dir};
 use anyhow::Result;
 use futures::future::BoxFuture;
-use std::collections::HashMap;
-use std::path::PathBuf;
-
-use crate::acp::{
-    extension_configs_to_mcp_servers, AcpProvider, AcpProviderConfig, ACP_CURRENT_MODEL,
-};
-use crate::config::search_path::SearchPaths;
-use crate::config::{Config, GooseMode};
-use crate::providers::base::{
-    current_working_dir, ProviderDef, ProviderDescriptor, ProviderMetadata,
-};
-use crate::providers::catalog::ProviderSetupMetadata;
-
+use bcaip_provider_types::ProviderSetupMetadata;
+use bcaip_provider_types::base::{ProviderDescriptor, ProviderMetadata};
+use bcaip_provider_types::goose_mode::GooseMode;
+use std::{collections::HashMap, path::PathBuf};
 pub(crate) const AMP_ACP_PROVIDER_NAME: &str = "amp-acp";
 const AMP_ACP_DOC_URL: &str = "https://ampcode.com";
 pub(crate) const AMP_ACP_BINARY: &str = "amp-acp";
 
 pub struct AmpAcpProvider;
 
-impl goose_providers::base::ProviderDescriptor for AmpAcpProvider {
+impl bcaip_provider_types::base::ProviderDescriptor for AmpAcpProvider {
     fn metadata() -> ProviderMetadata {
         ProviderMetadata::new(
             AMP_ACP_PROVIDER_NAME,
@@ -49,7 +46,7 @@ impl ProviderDef for AmpAcpProvider {
 
     fn from_env(
         extensions: Vec<crate::config::ExtensionConfig>,
-        tls_config: Option<crate::providers::api_client::TlsConfig>,
+        tls_config: Option<goose_providers::api_client::TlsConfig>,
     ) -> BoxFuture<'static, Result<AcpProvider>> {
         Self::from_env_with_working_dir(extensions, current_working_dir(), tls_config)
     }
@@ -57,7 +54,7 @@ impl ProviderDef for AmpAcpProvider {
     fn from_env_with_working_dir(
         extensions: Vec<crate::config::ExtensionConfig>,
         working_dir: PathBuf,
-        _tls_config: Option<crate::providers::api_client::TlsConfig>,
+        _tls_config: Option<goose_providers::api_client::TlsConfig>,
     ) -> BoxFuture<'static, Result<AcpProvider>> {
         Box::pin(async move {
             let config = Config::global();

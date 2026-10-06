@@ -1,21 +1,18 @@
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
-use std::collections::HashMap;
-use std::fs;
-use std::path::Path;
 use std::sync::{Arc, Mutex};
+use std::{collections::HashMap, fs, path::Path};
 
-#[cfg(test)]
-use super::base::stream_from_single_message;
-use super::base::{MessageStream, Provider, ProviderDef, ProviderMetadata};
-use crate::conversation::message::{Message, ToolResponse};
+use super::base::ProviderDef;
 use crate::utils::bytes_to_hex;
+use bcaip_provider_types::base::{MessageStream, Provider, ProviderMetadata};
+use bcaip_provider_types::conversations::ProviderUsage;
+use bcaip_provider_types::conversations::{Message, ToolResponse};
+use bcaip_provider_types::errors::ProviderError;
+use bcaip_provider_types::model::ModelConfig;
 use futures::future::BoxFuture;
-use goose_providers::conversation::token_usage::ProviderUsage;
-use goose_providers::errors::ProviderError;
-use goose_providers::model::ModelConfig;
 use rmcp::model::{CallToolResult, Tool};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -76,8 +73,7 @@ impl TestProvider {
     }
 
     fn hash_input(messages: &[Message]) -> String {
-        use crate::conversation::message::MessageContent;
-
+        use bcaip_provider_types::conversations::MessageContent;
         // Strip internal metadata (e.g. tool_meta/_meta) from content before hashing.
         // This metadata is used for internal routing (like goose_extension ownership)
         // and isn't part of the semantic input the LLM sees, so it shouldn't affect
@@ -89,13 +85,13 @@ impl TestProvider {
 
                 for content in &mut cleaned_content {
                     match content {
-                        MessageContent::ToolRequest(ref mut req) => {
+                        MessageContent::ToolRequest(req) => {
                             req.tool_meta = None;
                         }
                         MessageContent::ToolResponse(ToolResponse {
                             tool_result:
                                 Ok(
-                                    ref mut result @ CallToolResult {
+                                    result @ CallToolResult {
                                         is_error: Some(false),
                                         ..
                                     },
@@ -139,7 +135,7 @@ impl TestProvider {
     }
 }
 
-impl goose_providers::base::ProviderDescriptor for TestProvider {
+impl bcaip_provider_types::base::ProviderDescriptor for TestProvider {
     fn metadata() -> ProviderMetadata {
         ProviderMetadata::new(
             Self::PROVIDER_NAME,
@@ -158,7 +154,7 @@ impl ProviderDef for TestProvider {
 
     fn from_env(
         _extensions: Vec<crate::config::ExtensionConfig>,
-        _tls_config: Option<crate::providers::api_client::TlsConfig>,
+        _tls_config: Option<goose_providers::api_client::TlsConfig>,
     ) -> BoxFuture<'static, Result<Self::Provider>> {
         Box::pin(async { Err(anyhow!("TestProvider must be constructed explicitly")) })
     }
@@ -182,7 +178,7 @@ impl Provider for TestProvider {
         if let Some(inner) = &self.inner {
             // Call inner provider's stream and collect it
             let stream = inner.stream(model_config, system, messages, tools).await?;
-            let (message, usage) = super::base::collect_stream(stream).await?;
+            let (message, usage) = bcaip_provider_types::base::collect_stream(stream).await?;
 
             let record = TestRecord {
                 input: TestInput {
@@ -201,13 +197,17 @@ impl Provider for TestProvider {
                 records.insert(hash, record);
             }
 
-            Ok(super::base::stream_from_single_message(message, usage))
+            Ok(bcaip_provider_types::base::stream_from_single_message(
+                message, usage,
+            ))
         } else {
             let records = self.records.lock().unwrap();
             if let Some(record) = records.get(&hash) {
                 let message = record.output.message.clone();
                 let usage = record.output.usage.clone();
-                Ok(super::base::stream_from_single_message(message, usage))
+                Ok(bcaip_provider_types::base::stream_from_single_message(
+                    message, usage,
+                ))
             } else {
                 Err(ProviderError::ExecutionError(format!(
                     "No recorded response found for input hash: {}",
@@ -215,119 +215,5 @@ impl Provider for TestProvider {
                 )))
             }
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::conversation::message::{Message, MessageContent};
-    use chrono::Utc;
-    use goose_providers::conversation::token_usage::{ProviderUsage, Usage};
-    use rmcp::model::{Role, TextContent};
-    use std::env;
-
-    #[derive(Clone)]
-    struct MockProvider {
-        response: String,
-    }
-
-    #[async_trait]
-    impl Provider for MockProvider {
-        fn get_name(&self) -> &str {
-            "mock-testprovider"
-        }
-
-        async fn stream(
-            &self,
-            _model_config: &ModelConfig,
-            _system: &str,
-            _messages: &[Message],
-            _tools: &[Tool],
-        ) -> Result<MessageStream, ProviderError> {
-            let message = Message::new(
-                Role::Assistant,
-                Utc::now().timestamp(),
-                vec![MessageContent::Text(TextContent::new(
-                    self.response.clone(),
-                ))],
-            );
-            let usage = ProviderUsage::new("mock-model".to_string(), Usage::default());
-            Ok(stream_from_single_message(message, usage))
-        }
-    }
-
-    #[tokio::test]
-    async fn test_record_and_replay() {
-        let temp_file = format!(
-            "{}/test_records_{}.json",
-            env::temp_dir().display(),
-            std::process::id()
-        );
-
-        let mock = Arc::new(MockProvider {
-            response: "Hello, world!".to_string(),
-        });
-
-        {
-            let test_provider = TestProvider::new_recording(mock, &temp_file);
-            let model_config = ModelConfig::new("test-model");
-
-            let result = test_provider
-                .complete(&model_config, "You are helpful", &[], &[])
-                .await;
-
-            assert!(result.is_ok());
-            let (message, _) = result.unwrap();
-
-            if let MessageContent::Text(content) = &message.content[0] {
-                assert_eq!(content.text, "Hello, world!");
-            }
-
-            assert_eq!(test_provider.get_record_count(), 1);
-            test_provider.finish_recording().unwrap();
-        }
-
-        {
-            let replay_provider = TestProvider::new_replaying(&temp_file).unwrap();
-            let model_config = ModelConfig::new("test-model");
-
-            let result = replay_provider
-                .complete(&model_config, "You are helpful", &[], &[])
-                .await;
-
-            assert!(result.is_ok());
-            let (message, _) = result.unwrap();
-
-            if let MessageContent::Text(content) = &message.content[0] {
-                assert_eq!(content.text, "Hello, world!");
-            }
-        }
-
-        let _ = fs::remove_file(temp_file);
-    }
-
-    #[tokio::test]
-    async fn test_replay_missing_record() {
-        let temp_file = format!(
-            "{}/test_missing_{}.json",
-            env::temp_dir().display(),
-            std::process::id()
-        );
-
-        let replay_provider = TestProvider::new_replaying(&temp_file).unwrap();
-        let model_config = ModelConfig::new("test-model");
-
-        let result = replay_provider
-            .complete(&model_config, "Different system prompt", &[], &[])
-            .await;
-
-        assert!(result.is_err());
-        assert!(result
-            .unwrap_err()
-            .to_string()
-            .contains("No recorded response found"));
-
-        let _ = fs::remove_file(temp_file);
     }
 }

@@ -1,23 +1,20 @@
 //! Replaces one batch of old tool request and response pairs with compact summaries.
 
-use std::sync::Arc;
-
+use crate::agents::state_machine::GooseEffect;
+use crate::context_mgmt::{summarize_tool_call, tool_ids_to_summarize};
+use crate::session::Session;
 use anyhow::Result;
 use async_trait::async_trait;
-use tracing_futures::Instrument;
-
-use crate::agents::state_machine::ops_llm::chat_span;
-use crate::agents::state_machine::{
-    applied, messages_since_kickoff, not_applicable, ConversationEffect, Emitter, GooseEffect,
-    Operation, OperationResult,
+use bcaip_agent::inference::chat_span;
+use bcaip_agent::operation::{
+    ConversationEffect, Emitter, Operation, OperationResult, applied, messages_since_kickoff,
+    not_applicable,
 };
-use crate::context_mgmt::{summarize_tool_call, tool_ids_to_summarize};
-use crate::conversation::message::MessageContent;
-use crate::conversation::Conversation;
-use crate::providers::base::Provider;
-use crate::session::Session;
-use goose_providers::model::ModelConfig;
-
+use bcaip_provider_types::base::Provider;
+use bcaip_provider_types::conversations::{Conversation, MessageContent};
+use bcaip_provider_types::model::ModelConfig;
+use std::sync::Arc;
+use tracing_futures::Instrument;
 pub struct ToolPairCompactionOperation {
     provider: Arc<dyn Provider>,
     model_config: ModelConfig,

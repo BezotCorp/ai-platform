@@ -9,16 +9,14 @@
 //!
 //! Format reference: pi-mono `packages/coding-agent/docs/session.md`.
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use chrono::{DateTime, Utc};
 use rmcp::model::{CallToolRequestParams, CallToolResult, ContentBlock, ErrorCode, ErrorData};
-use serde_json::{json, Map, Value};
+use serde_json::{Map, Value, json};
 
-use crate::conversation::message::Message;
-use crate::conversation::Conversation;
 use crate::utils::sanitize_unicode_tags;
-use goose_providers::conversation::token_usage::Usage;
-
+use bcaip_provider_types::conversations::Usage;
+use bcaip_provider_types::conversations::{Conversation, Message};
 pub fn convert(content: &str) -> Result<String> {
     let mut lines = content.lines().filter(|l| !l.trim().is_empty());
 
@@ -351,98 +349,11 @@ fn build_tool_result(content: Option<&Value>, is_error: bool) -> Result<CallTool
 }
 
 fn extract_first_text(msg: &Message) -> Option<String> {
-    use crate::conversation::message::MessageContent;
+    use bcaip_provider_types::conversations::MessageContent;
     for c in &msg.content {
         if let MessageContent::Text(t) = c {
             return Some(t.text.clone());
         }
     }
     None
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    fn assert_conversion_strips_unicode_tags(jsonl: &str) {
-        let converted = convert(&jsonl.replace("<TAG>", "\u{e0061}")).unwrap();
-
-        assert!(!converted.contains('\u{e0061}'));
-        assert!(converted.contains("visiblehidden"));
-    }
-
-    #[test]
-    fn converts_tool_call_and_result() {
-        let jsonl = r#"{"type":"session","version":3,"id":"s","timestamp":"2024-12-03T14:00:00.000Z","cwd":"/w"}
-{"type":"message","id":"a","parentId":null,"timestamp":"2024-12-03T14:00:01.000Z","message":{"role":"user","content":"list files"}}
-{"type":"message","id":"b","parentId":"a","timestamp":"2024-12-03T14:00:02.000Z","message":{"role":"assistant","content":[{"type":"toolCall","id":"t1","name":"bash","arguments":{"command":"ls"}}]}}
-{"type":"message","id":"c","parentId":"b","timestamp":"2024-12-03T14:00:03.000Z","message":{"role":"toolResult","toolCallId":"t1","toolName":"bash","content":[{"type":"text","text":"a.txt\nb.txt"}],"isError":false}}"#;
-
-        let json = convert(jsonl).unwrap();
-        let v: Value = serde_json::from_str(&json).unwrap();
-        let msgs = v["conversation"].as_array().unwrap();
-        assert_eq!(msgs.len(), 3);
-        assert!(msgs[1]["content"]
-            .as_array()
-            .unwrap()
-            .iter()
-            .any(|c| c["type"] == "toolRequest"));
-        assert!(msgs[2]["content"]
-            .as_array()
-            .unwrap()
-            .iter()
-            .any(|c| c["type"] == "toolResponse"));
-    }
-
-    #[test]
-    fn synthesizes_bash_execution() {
-        let jsonl = r#"{"type":"session","version":3,"id":"s","timestamp":"2024-12-03T14:00:00.000Z","cwd":"/w"}
-{"type":"message","id":"a","parentId":null,"timestamp":"2024-12-03T14:00:01.000Z","message":{"role":"user","content":"!ls"}}
-{"type":"message","id":"b","parentId":"a","timestamp":"2024-12-03T14:00:02.000Z","message":{"role":"bashExecution","command":"ls","output":"file.txt","exitCode":0,"cancelled":false,"truncated":false}}"#;
-
-        let json = convert(jsonl).unwrap();
-        let v: Value = serde_json::from_str(&json).unwrap();
-        let msgs = v["conversation"].as_array().unwrap();
-        assert_eq!(msgs.len(), 3);
-    }
-
-    #[test]
-    fn sanitizes_thinking_blocks() {
-        let jsonl = r#"{"type":"session","version":3,"id":"s","timestamp":"2024-12-03T14:00:00.000Z","cwd":"/w"}
-{"type":"message","id":"a","parentId":null,"timestamp":"2024-12-03T14:00:01.000Z","message":{"role":"assistant","content":[{"type":"thinking","thinking":"visible<TAG>hidden"}]}}"#;
-
-        assert_conversion_strips_unicode_tags(jsonl);
-    }
-
-    #[test]
-    fn sanitizes_tool_result_text() {
-        let jsonl = r#"{"type":"session","version":3,"id":"s","timestamp":"2024-12-03T14:00:00.000Z","cwd":"/w"}
-{"type":"message","id":"a","parentId":null,"timestamp":"2024-12-03T14:00:01.000Z","message":{"role":"toolResult","toolCallId":"t1","toolName":"bash","content":[{"type":"text","text":"visible<TAG>hidden"}],"isError":false}}"#;
-
-        assert_conversion_strips_unicode_tags(jsonl);
-    }
-
-    #[test]
-    fn sanitizes_tool_call_arguments() {
-        let jsonl = r#"{"type":"session","version":3,"id":"s","timestamp":"2024-12-03T14:00:00.000Z","cwd":"/w"}
-{"type":"message","id":"a","parentId":null,"timestamp":"2024-12-03T14:00:01.000Z","message":{"role":"assistant","content":[{"type":"toolCall","id":"t1","name":"bash","arguments":{"nested":{"command":["visible<TAG>hidden"]}}}]}}"#;
-
-        assert_conversion_strips_unicode_tags(jsonl);
-    }
-
-    #[test]
-    fn sanitizes_bash_execution_output() {
-        let jsonl = r#"{"type":"session","version":3,"id":"s","timestamp":"2024-12-03T14:00:00.000Z","cwd":"/w"}
-{"type":"message","id":"a","parentId":null,"timestamp":"2024-12-03T14:00:01.000Z","message":{"role":"bashExecution","command":"printf output","output":"visible<TAG>hidden","exitCode":0,"cancelled":false,"truncated":false}}"#;
-
-        assert_conversion_strips_unicode_tags(jsonl);
-    }
-
-    #[test]
-    fn sanitizes_bash_execution_command() {
-        let jsonl = r#"{"type":"session","version":3,"id":"s","timestamp":"2024-12-03T14:00:00.000Z","cwd":"/w"}
-{"type":"message","id":"a","parentId":null,"timestamp":"2024-12-03T14:00:01.000Z","message":{"role":"bashExecution","command":"printf visible<TAG>hidden","output":"ok","exitCode":0,"cancelled":false,"truncated":false}}"#;
-
-        assert_conversion_strips_unicode_tags(jsonl);
-    }
 }

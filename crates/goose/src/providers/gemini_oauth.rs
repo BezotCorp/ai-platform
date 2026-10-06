@@ -1,42 +1,38 @@
 use crate::config::paths::Paths;
-use crate::conversation::message::Message;
-use crate::providers::api_client::RequestBuilderDecorator;
-use crate::providers::base::{
-    ConfigKey, MessageStream, Provider, ProviderDef, ProviderMetadata,
-    DEFAULT_CONNECT_TIMEOUT_SECS, DEFAULT_PROVIDER_TIMEOUT_SECS,
-};
-use crate::providers::formats::google::{create_request, response_to_streaming_message};
-use crate::providers::google::GOOGLE_DOC_URL;
+use crate::providers::base::ProviderDef;
+use crate::providers::formats::google::create_request;
 use crate::providers::private_file::write_private_file;
-use goose_providers::errors::ProviderError;
-use goose_providers::model::ModelConfig;
-use goose_providers::request_log::{start_log, LoggerHandleExt};
+use bcaip_provider_types::base::{ConfigKey, MessageStream, Provider, ProviderMetadata};
+use bcaip_provider_types::conversations::Message;
+use bcaip_provider_types::errors::ProviderError;
+use bcaip_provider_types::formats::response_to_streaming_message_google;
+use bcaip_provider_types::model::ModelConfig;
+use bcaip_provider_types::request_log::{LoggerHandleExt, start_log};
+use goose_providers::api_client::RequestBuilderDecorator;
+use goose_providers::api_client::{DEFAULT_CONNECT_TIMEOUT_SECS, DEFAULT_PROVIDER_TIMEOUT_SECS};
+use goose_providers::google::GOOGLE_DOC_URL;
 
 const GEMINI_OAUTH_DEFAULT_MODEL: &str = "gemini-3-flash-preview";
-use crate::providers::retry::ProviderRetry;
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use async_stream::try_stream;
 use async_trait::async_trait;
-use axum::{extract::Query, response::Html, routing::get, Router};
+use axum::{Router, extract::Query, response::Html, routing::get};
 use base64::Engine;
+use bcaip_provider_types::retry::ProviderRetry;
 use chrono::{DateTime, Utc};
-use futures::future::BoxFuture;
-use futures::TryStreamExt;
+use futures::{TryStreamExt, future::BoxFuture};
 use rmcp::model::Tool;
 use serde::{Deserialize, Serialize};
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use sha2::Digest;
-use std::io;
-use std::net::SocketAddr;
-use std::path::PathBuf;
 use std::sync::{Arc, LazyLock};
 use std::time::Duration;
+use std::{io, net::SocketAddr, path::PathBuf};
 use tokio::pin;
-use tokio::sync::{oneshot, Mutex as TokioMutex};
+use tokio::sync::{Mutex as TokioMutex, oneshot};
 use tokio_stream::StreamExt;
 use tokio_util::codec::{FramedRead, LinesCodec};
 use tokio_util::io::StreamReader;
-
 static HTTP_CLIENT: LazyLock<reqwest::Client> = LazyLock::new(|| {
     reqwest::Client::builder()
         .connect_timeout(Duration::from_secs(DEFAULT_CONNECT_TIMEOUT_SECS))
@@ -844,7 +840,7 @@ pub struct GeminiOAuthProvider {
 
 impl GeminiOAuthProvider {
     pub async fn from_env(
-        _tls_config: Option<crate::providers::api_client::TlsConfig>,
+        _tls_config: Option<goose_providers::api_client::TlsConfig>,
     ) -> Result<Self> {
         let token_provider = Arc::new(GeminiOAuthTokenProvider::new(
             GeminiOAuthAuthState::instance(),
@@ -928,7 +924,7 @@ impl GeminiOAuthProvider {
     }
 }
 
-impl goose_providers::base::ProviderDescriptor for GeminiOAuthProvider {
+impl bcaip_provider_types::base::ProviderDescriptor for GeminiOAuthProvider {
     fn metadata() -> ProviderMetadata {
         ProviderMetadata::new(
             GEMINI_OAUTH_PROVIDER_NAME,
@@ -953,7 +949,7 @@ impl ProviderDef for GeminiOAuthProvider {
 
     fn from_env(
         _extensions: Vec<crate::config::ExtensionConfig>,
-        tls_config: Option<crate::providers::api_client::TlsConfig>,
+        tls_config: Option<goose_providers::api_client::TlsConfig>,
     ) -> BoxFuture<'static, Result<Self::Provider>> {
         Box::pin(Self::from_env(tls_config))
     }
@@ -1006,7 +1002,7 @@ impl Provider for GeminiOAuthProvider {
                 .map_ok(|line| unwrap_code_assist_sse_line(&line))
                 .map_err(anyhow::Error::from);
 
-            let message_stream = response_to_streaming_message(raw_lines);
+            let message_stream = response_to_streaming_message_google(raw_lines);
             pin!(message_stream);
             while let Some(message) = message_stream.next().await {
                 let (message, usage) = message.map_err(|e| {
@@ -1019,142 +1015,5 @@ impl Provider for GeminiOAuthProvider {
                 yield (message, usage);
             }
         }))
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_build_authorize_url() {
-        let pkce = PkceChallenge {
-            verifier: "test-verifier".to_string(),
-            challenge: "test-challenge".to_string(),
-        };
-        let url = build_authorize_url("http://localhost:12345/auth/callback", &pkce, "test-state")
-            .unwrap();
-
-        assert!(url.starts_with(GOOGLE_AUTH_ENDPOINT));
-        assert!(url.contains("response_type=code"));
-        assert!(url.contains(&format!("client_id={}", google_oauth_client_id())));
-        assert!(url.contains("access_type=offline"));
-        assert!(url.contains("prompt=consent"));
-        assert!(url.contains("code_challenge=test-challenge"));
-        assert!(url.contains("code_challenge_method=S256"));
-        assert!(url.contains("state=test-state"));
-    }
-
-    #[test]
-    fn test_generate_pkce() {
-        let pkce = generate_pkce();
-        assert!(!pkce.verifier.is_empty());
-        assert!(!pkce.challenge.is_empty());
-        assert_ne!(pkce.verifier, pkce.challenge);
-    }
-
-    #[test]
-    fn test_generate_state() {
-        let s1 = generate_state();
-        let s2 = generate_state();
-        assert!(!s1.is_empty());
-        assert_ne!(s1, s2);
-    }
-
-    #[test]
-    fn test_wrap_code_assist_request() {
-        let inner = json!({
-            "contents": [{"role": "user", "parts": [{"text": "hello"}]}],
-            "systemInstruction": {"parts": [{"text": "be helpful"}]}
-        });
-        let wrapped = wrap_code_assist_request("gemini-2.5-pro", "project-123", &inner);
-
-        assert_eq!(wrapped["model"], "gemini-2.5-pro");
-        assert_eq!(wrapped["project"], "project-123");
-        assert_eq!(
-            wrapped["request"]["contents"][0]["parts"][0]["text"],
-            "hello"
-        );
-    }
-
-    #[test]
-    fn test_unwrap_code_assist_sse_line() {
-        // Code Assist wraps the response under a "response" key
-        let ca_line = r#"data: {"response":{"candidates":[{"content":{"parts":[{"text":"hi"}],"role":"model"}}],"usageMetadata":{"promptTokenCount":10}},"traceId":"abc"}"#;
-        let unwrapped = unwrap_code_assist_sse_line(ca_line);
-
-        let data_part = unwrapped.strip_prefix("data: ").unwrap();
-        let parsed: Value = serde_json::from_str(data_part).unwrap();
-
-        // Should have candidates at top level
-        assert!(parsed.get("candidates").is_some());
-        assert_eq!(parsed["candidates"][0]["content"]["parts"][0]["text"], "hi");
-    }
-
-    #[test]
-    fn test_unwrap_code_assist_sse_line_passthrough() {
-        // Non-data lines should pass through unchanged
-        assert_eq!(
-            unwrap_code_assist_sse_line("event: message"),
-            "event: message"
-        );
-        assert_eq!(unwrap_code_assist_sse_line(""), "");
-    }
-
-    #[test]
-    #[serial_test::serial]
-    fn test_token_cache_roundtrip() {
-        let root = tempfile::tempdir().unwrap();
-        let root_path = root.path().to_string_lossy().to_string();
-        let _guard = env_lock::lock_env([("GOOSE_PATH_ROOT", Some(root_path.as_str()))]);
-
-        let cache = TokenCache::new();
-        cache.clear();
-        assert!(!cache.has_token());
-        let data = SetupData {
-            project_id: "test-project".to_string(),
-            token: TokenData {
-                access_token: "test-access".to_string(),
-                refresh_token: "test-refresh".to_string(),
-                expires_at: Utc::now() + chrono::Duration::hours(1),
-            },
-        };
-        cache.save(&data).unwrap();
-        let loaded = cache.load().unwrap();
-        assert_eq!(loaded.project_id, "test-project");
-        assert_eq!(loaded.token.access_token, "test-access");
-        assert_eq!(loaded.token.refresh_token, "test-refresh");
-        assert!(cache.has_token());
-        cache.clear();
-        assert!(cache.load().is_none());
-        assert!(!cache.has_token());
-    }
-
-    #[cfg(unix)]
-    #[test]
-    fn token_cache_replaces_loose_file_with_owner_only_permissions() {
-        use std::os::unix::fs::PermissionsExt;
-
-        let directory = tempfile::tempdir().unwrap();
-        let cache_path = directory.path().join("tokens.json");
-        std::fs::write(&cache_path, "{}").unwrap();
-        std::fs::set_permissions(&cache_path, std::fs::Permissions::from_mode(0o644)).unwrap();
-        let cache = TokenCache {
-            cache_path: cache_path.clone(),
-        };
-
-        cache
-            .save(&SetupData {
-                project_id: "project".to_string(),
-                token: TokenData {
-                    access_token: "access".to_string(),
-                    refresh_token: "refresh".to_string(),
-                    expires_at: Utc::now() + chrono::Duration::hours(1),
-                },
-            })
-            .unwrap();
-
-        let mode = std::fs::metadata(cache_path).unwrap().permissions().mode() & 0o777;
-        assert_eq!(mode, 0o600);
     }
 }

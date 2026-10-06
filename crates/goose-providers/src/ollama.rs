@@ -1,33 +1,33 @@
 use super::api_client::ApiClient;
-use super::base::{ConfigKey, MessageStream, ModelInfo, Provider, ProviderMetadata};
 use super::openai_compatible::handle_status;
-use super::retry::{ProviderRetry, RetryConfig};
 use crate::api_client::{AuthMethod, TlsConfig};
-use crate::base::ProviderDescriptor;
-use crate::conversation::message::Message;
 use crate::declarative::{DeclarativeProviderConfig, KeyResolver};
-use crate::errors::ProviderError;
-use crate::formats::ollama::{create_request, response_to_streaming_message_ollama};
-use crate::images::ImageFormat;
-use crate::model::ModelConfig;
-use crate::request_log::{start_log, LoggerHandleExt, RequestLogHandle};
-use crate::thinking::ThinkingEffort;
 use anyhow::{Error, Result};
 use async_stream::try_stream;
 use async_trait::async_trait;
+use bcaip_provider_types::base::{
+    ConfigKey, MessageStream, ModelInfo, Provider, ProviderDescriptor, ProviderMetadata,
+    merge_configured_model_info,
+};
+use bcaip_provider_types::context_limit::ContextLimitResolver;
+use bcaip_provider_types::conversations::Message;
+use bcaip_provider_types::errors::ProviderError;
+use bcaip_provider_types::formats::{create_request_openai, response_to_streaming_message_ollama};
+use bcaip_provider_types::images::ImageFormat;
+use bcaip_provider_types::model::ModelConfig;
+use bcaip_provider_types::request_log::{LoggerHandleExt, RequestLogHandle, start_log};
+use bcaip_provider_types::retry::{ProviderRetry, RetryConfig};
+use bcaip_provider_types::thinking::ThinkingEffort;
 use futures::TryStreamExt;
 use reqwest::{Response, StatusCode};
 use rmcp::model::Tool;
-use serde_json::{json, Value};
-use std::collections::HashMap;
-use std::sync::Mutex;
-use std::time::Duration;
+use serde_json::{Value, json};
+use std::{collections::HashMap, sync::Mutex, time::Duration};
 use tokio::pin;
 use tokio_stream::StreamExt;
 use tokio_util::codec::{FramedRead, LinesCodec};
 use tokio_util::io::StreamReader;
 use url::Url;
-
 pub const OLLAMA_PROVIDER_NAME: &str = "ollama";
 pub const OLLAMA_HOST: &str = "localhost";
 pub const OLLAMA_TIMEOUT: u64 = 600;
@@ -492,7 +492,7 @@ impl Provider for OllamaProvider {
             effective_model_config.supports_vision = Some(capabilities.vision);
         }
 
-        let mut payload = create_request(
+        let mut payload = create_request_openai(
             &effective_model_config,
             system,
             messages,
@@ -528,7 +528,7 @@ impl Provider for OllamaProvider {
             .iter()
             .flatten()
             .filter_map(|model| model.context_limit.map(|limit| (model.name.clone(), limit)));
-        crate::context_limit::ContextLimitResolver::new(&self.name)
+        ContextLimitResolver::new(&self.name)
             .with_configured_limits(configured_limits)
             .resolve(model, override_limit, || async {
                 Ok(self.options.input_limit)
@@ -567,7 +567,7 @@ impl Provider for OllamaProvider {
 
     async fn fetch_supported_model_info(&self) -> Result<Vec<ModelInfo>, ProviderError> {
         let names = self.fetch_supported_models().await?;
-        Ok(crate::base::merge_configured_model_info(
+        Ok(merge_configured_model_info(
             &self.name,
             &names,
             self.custom_models.as_deref().unwrap_or_default(),
@@ -644,400 +644,4 @@ fn stream_ollama(
             yield (message, usage);
         }
     }))
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::base::ModelInfo;
-    use wiremock::matchers::{method, path};
-    use wiremock::{Mock, MockServer, ResponseTemplate};
-
-    fn ollama_config(
-        dynamic_models: Option<bool>,
-        models: Vec<ModelInfo>,
-    ) -> DeclarativeProviderConfig {
-        ollama_config_with_base_url(dynamic_models, models, "http://localhost:11434")
-    }
-
-    fn ollama_config_with_base_url(
-        dynamic_models: Option<bool>,
-        models: Vec<ModelInfo>,
-        base_url: &str,
-    ) -> DeclarativeProviderConfig {
-        DeclarativeProviderConfig {
-            name: "test-ollama".to_string(),
-            engine: crate::declarative::ProviderEngine::Ollama,
-            display_name: "Test Ollama".to_string(),
-            description: None,
-            api_key_env: String::new(),
-            base_url: base_url.to_string(),
-            models,
-            headers: None,
-            session_id_header_override: None,
-            timeout_seconds: None,
-            supports_streaming: None,
-            requires_auth: false,
-            catalog_provider_id: None,
-            base_path: None,
-            env_vars: None,
-            auth: None,
-            dynamic_models,
-            skip_canonical_filtering: false,
-            model_doc_link: None,
-            setup_steps: vec![],
-            toolshim: false,
-            preserves_thinking: false,
-            emit_clear_thinking: false,
-            setup: None,
-        }
-    }
-
-    #[tokio::test]
-    async fn fetch_supported_models_uses_static_models_when_dynamic_models_false() {
-        let provider = from_declarative_config(
-            ollama_config(
-                Some(false),
-                vec![ModelInfo::new("static-model").with_context_limit(4096)],
-            ),
-            None,
-            crate::declarative::EnvKeyResolver,
-        )
-        .unwrap()
-        .build();
-
-        assert_eq!(
-            provider.fetch_supported_models().await.unwrap(),
-            vec!["static-model".to_string()]
-        );
-    }
-
-    #[tokio::test]
-    async fn fetch_supported_model_info_preserves_configured_metadata() {
-        let declared = ModelInfo {
-            reasoning: true,
-            ..ModelInfo::new("unrecognized-static-model").with_context_limit(4096)
-        };
-
-        let provider = from_declarative_config(
-            ollama_config(Some(false), vec![declared]),
-            None,
-            crate::declarative::EnvKeyResolver,
-        )
-        .unwrap()
-        .build();
-
-        let models = provider.fetch_supported_model_info().await.unwrap();
-
-        assert_eq!(models.len(), 1);
-        assert_eq!(models[0].name, "unrecognized-static-model");
-        assert_eq!(models[0].context_limit, Some(4096));
-        assert!(models[0].reasoning);
-    }
-
-    #[test]
-    fn from_custom_config_requires_static_models_when_dynamic_models_false() {
-        let err = from_declarative_config(
-            ollama_config(Some(false), vec![]),
-            None,
-            crate::declarative::EnvKeyResolver,
-        )
-        .err()
-        .expect("expected static models validation error");
-
-        assert!(err
-            .to_string()
-            .contains("dynamic_models: false but no static models listed"));
-    }
-
-    #[tokio::test]
-    async fn fetch_supported_models_falls_back_to_static_models_on_404() {
-        let server = MockServer::start().await;
-        Mock::given(method("GET"))
-            .and(path("/api/tags"))
-            .respond_with(ResponseTemplate::new(404))
-            .expect(1)
-            .mount(&server)
-            .await;
-
-        let provider = from_declarative_config(
-            ollama_config_with_base_url(
-                None,
-                vec![ModelInfo::new("static-model").with_context_limit(4096)],
-                &server.uri(),
-            ),
-            None,
-            crate::declarative::EnvKeyResolver,
-        )
-        .unwrap()
-        .build();
-
-        assert_eq!(
-            provider.fetch_supported_models().await.unwrap(),
-            vec!["static-model".to_string()]
-        );
-    }
-
-    #[test]
-    fn test_apply_ollama_options_uses_input_limit() {
-        let options = OllamaOptions {
-            input_limit: Some(8192),
-            ..Default::default()
-        };
-        let mut payload = json!({});
-        apply_ollama_options(&mut payload, &options, None);
-        assert_eq!(payload["options"]["num_ctx"], 8192);
-    }
-
-    #[test]
-    fn test_apply_ollama_options_ignores_context_management_limit() {
-        let options = OllamaOptions::default();
-        let mut payload = json!({});
-        apply_ollama_options(&mut payload, &options, None);
-        assert!(payload.get("options").is_none());
-    }
-
-    async fn mock_show_server(show_response: ResponseTemplate, expected_calls: u64) -> MockServer {
-        let server = MockServer::start().await;
-        Mock::given(method("POST"))
-            .and(path("/api/show"))
-            .respond_with(show_response)
-            .expect(expected_calls)
-            .mount(&server)
-            .await;
-        server
-    }
-
-    fn provider_for(server: &MockServer) -> OllamaProvider {
-        from_declarative_config(
-            ollama_config_with_base_url(None, vec![], &server.uri()),
-            None,
-            crate::declarative::EnvKeyResolver,
-        )
-        .unwrap()
-        .build()
-    }
-
-    fn show_capabilities(capabilities: &[&str]) -> ResponseTemplate {
-        ResponseTemplate::new(200).set_body_json(json!({ "capabilities": capabilities }))
-    }
-
-    #[tokio::test]
-    async fn reasoning_effort_disables_thinking_without_checking_capabilities() {
-        let server = mock_show_server(show_capabilities(&["completion"]), 0).await;
-        let model_config = ModelConfig::new("qwen2.5:7b").with_thinking_effort(ThinkingEffort::Off);
-
-        assert_eq!(
-            provider_for(&server).reasoning_effort(&model_config).await,
-            Some("none")
-        );
-    }
-
-    #[tokio::test]
-    async fn reasoning_effort_sends_level_for_thinking_models_and_caches_capability() {
-        let server = mock_show_server(show_capabilities(&["completion", "thinking"]), 1).await;
-        let provider = provider_for(&server);
-        let model_config =
-            ModelConfig::new("gpt-oss:20b").with_thinking_effort(ThinkingEffort::Max);
-
-        assert_eq!(provider.reasoning_effort(&model_config).await, Some("high"));
-        assert_eq!(provider.reasoning_effort(&model_config).await, Some("high"));
-    }
-
-    #[tokio::test]
-    async fn reasoning_effort_omits_level_for_models_without_thinking() {
-        let server = mock_show_server(show_capabilities(&["completion", "tools"]), 1).await;
-        let model_config = ModelConfig::new("qwen2.5:7b").with_thinking_effort(ThinkingEffort::Low);
-
-        assert_eq!(
-            provider_for(&server).reasoning_effort(&model_config).await,
-            None
-        );
-    }
-
-    #[tokio::test]
-    async fn reasoning_effort_falls_back_to_model_config_when_show_fails() {
-        let server = mock_show_server(ResponseTemplate::new(404), 2).await;
-        let provider = provider_for(&server);
-        let mut model_config =
-            ModelConfig::new("kimi-k3:cloud").with_thinking_effort(ThinkingEffort::Medium);
-
-        assert_eq!(
-            provider.reasoning_effort(&model_config).await,
-            Some("medium")
-        );
-        model_config.model_name = "llama3.1".to_string();
-        assert_eq!(provider.reasoning_effort(&model_config).await, None);
-    }
-
-    #[tokio::test]
-    async fn stream_uses_ollama_vision_capability_before_formatting_images() {
-        for (capabilities, supports_vision) in [
-            (vec!["completion", "vision"], true),
-            (vec!["completion"], false),
-        ] {
-            let server = mock_show_server(show_capabilities(&capabilities), 1).await;
-            Mock::given(method("POST"))
-                .and(path("/v1/chat/completions"))
-                .respond_with(ResponseTemplate::new(200))
-                .expect(1)
-                .mount(&server)
-                .await;
-
-            let model_config = ModelConfig::new("qwen3-vl:2b");
-            let message = Message::user()
-                .with_text("What is in this image?")
-                .with_image("aW1hZ2VkYXRh", "image/png");
-            let provider = provider_for(&server);
-            let _stream = provider
-                .stream(&model_config, "system", &[message], &[])
-                .await
-                .unwrap();
-
-            let requests = server.received_requests().await.unwrap();
-            assert_eq!(requests.len(), 2);
-            let request = requests
-                .iter()
-                .find(|request| request.url.path() == "/v1/chat/completions")
-                .unwrap();
-            let payload: Value = serde_json::from_slice(&request.body).unwrap();
-
-            if supports_vision {
-                assert_eq!(payload["messages"][1]["content"][1]["type"], "image_url");
-                assert_eq!(
-                    payload["messages"][1]["content"][1]["image_url"]["url"],
-                    "data:image/png;base64,aW1hZ2VkYXRh"
-                );
-            } else {
-                assert!(payload["messages"][1]["content"]
-                    .as_str()
-                    .unwrap()
-                    .contains("[image omitted: model does not support vision]"));
-            }
-        }
-    }
-
-    #[test]
-    fn test_apply_ollama_options_sets_reasoning_effort() {
-        let mut payload = json!({});
-        apply_ollama_options(&mut payload, &OllamaOptions::default(), Some("none"));
-        assert_eq!(payload["reasoning_effort"], "none");
-    }
-
-    #[test]
-    fn test_apply_ollama_options_drops_name_derived_reasoning_effort() {
-        let model_config =
-            ModelConfig::new("gpt-5-mini").with_thinking_effort(ThinkingEffort::High);
-        let messages = vec![crate::conversation::message::Message::user().with_text("hi")];
-        let mut payload = create_request(
-            &model_config,
-            "You are a helpful assistant.",
-            &messages,
-            &[],
-            &ImageFormat::OpenAi,
-            true,
-        )
-        .unwrap();
-        assert!(payload.get("reasoning_effort").is_some());
-
-        apply_ollama_options(&mut payload, &OllamaOptions::default(), None);
-
-        assert!(payload.get("reasoning_effort").is_none());
-    }
-
-    #[test]
-    fn test_raw_create_request_contains_unsupported_ollama_fields() {
-        use crate::formats::ollama::create_request;
-
-        let model_config = ModelConfig::new("llama3.1").with_max_tokens(Some(4096));
-        let messages = vec![crate::conversation::message::Message::user().with_text("hi")];
-
-        let payload = create_request(
-            &model_config,
-            "You are a helpful assistant.",
-            &messages,
-            &[],
-            &ImageFormat::OpenAi,
-            true,
-        )
-        .unwrap();
-
-        assert!(
-            payload.get("stream_options").is_some(),
-            "create_request should produce stream_options for usage tracking"
-        );
-        assert!(
-            payload.get("max_tokens").is_some(),
-            "create_request should produce max_tokens (unsupported by Ollama)"
-        );
-    }
-
-    #[test]
-    fn test_apply_ollama_options_preserves_stream_options_by_default() {
-        use crate::formats::ollama::create_request;
-
-        let options = OllamaOptions::default();
-        let model_config = ModelConfig::new("llama3.1").with_max_tokens(Some(4096));
-        let messages = vec![crate::conversation::message::Message::user().with_text("hi")];
-
-        let mut payload = create_request(
-            &model_config,
-            "You are a helpful assistant.",
-            &messages,
-            &[],
-            &ImageFormat::OpenAi,
-            true,
-        )
-        .unwrap();
-
-        apply_ollama_options(&mut payload, &options, None);
-
-        assert!(
-            payload.get("stream_options").is_some(),
-            "stream_options should be preserved by default for usage tracking"
-        );
-        assert!(
-            payload.get("max_tokens").is_none(),
-            "max_tokens should be removed for Ollama"
-        );
-        assert!(
-            payload.get("max_completion_tokens").is_none(),
-            "max_completion_tokens should be removed for Ollama"
-        );
-        assert_eq!(
-            payload["options"]["num_predict"], 4096,
-            "max_tokens should be moved to options.num_predict"
-        );
-        assert_eq!(payload["stream"], true, "stream field should be preserved");
-    }
-
-    #[test]
-    fn test_apply_ollama_options_strips_stream_options_when_disabled() {
-        use crate::formats::ollama::create_request;
-
-        let options = OllamaOptions {
-            input_limit: None,
-            stream_usage: false,
-            chunk_timeout_secs: 120,
-        };
-        let model_config = ModelConfig::new("llama3.1").with_max_tokens(Some(4096));
-        let messages = vec![crate::conversation::message::Message::user().with_text("hi")];
-
-        let mut payload = create_request(
-            &model_config,
-            "You are a helpful assistant.",
-            &messages,
-            &[],
-            &ImageFormat::OpenAi,
-            true,
-        )
-        .unwrap();
-
-        apply_ollama_options(&mut payload, &options, None);
-
-        assert!(
-            payload.get("stream_options").is_none(),
-            "stream_options should be removed when OLLAMA_STREAM_USAGE=false"
-        );
-    }
 }

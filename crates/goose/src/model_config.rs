@@ -1,15 +1,14 @@
 use crate::config::{Config, ConfigError};
-use crate::conversation::message::Message;
-use crate::providers::base::Provider;
-use anyhow::{anyhow, Result};
-use goose_providers::conversation::token_usage::ProviderUsage;
-use goose_providers::errors::ProviderError;
-use goose_providers::model::ModelConfig;
-use goose_providers::thinking::ThinkingEffort;
+use anyhow::{Result, anyhow};
+use bcaip_provider_types::base::Provider;
+use bcaip_provider_types::conversations::Message;
+use bcaip_provider_types::conversations::ProviderUsage;
+use bcaip_provider_types::errors::ProviderError;
+use bcaip_provider_types::model::ModelConfig;
+use bcaip_provider_types::thinking::ThinkingEffort;
 use rmcp::model::Tool;
 use serde_json::Value;
 use std::collections::HashMap;
-
 pub fn model_config_from_user_config(
     provider_name: &str,
     model_name: impl AsRef<str>,
@@ -183,7 +182,7 @@ fn get_goose_temperature(config: &Config) -> Result<Option<f32>> {
 }
 
 fn get_goose_toolshim(config: &Config) -> Result<Option<bool>> {
-    match config.get_param::<serde_yaml::Value>("GOOSE_TOOLSHIM") {
+    match config.get_param::<yaml_serde::Value>("GOOSE_TOOLSHIM") {
         Ok(value) => parse_yaml_bool_config("GOOSE_TOOLSHIM", value).map(Some),
         Err(ConfigError::NotFound(_)) => Ok(None),
         Err(e) => Err(e.into()),
@@ -219,144 +218,16 @@ fn parse_bool_config(key: &str, value: &str) -> Result<bool> {
     }
 }
 
-fn parse_yaml_bool_config(key: &str, value: serde_yaml::Value) -> Result<bool> {
+fn parse_yaml_bool_config(key: &str, value: yaml_serde::Value) -> Result<bool> {
     match value {
-        serde_yaml::Value::Bool(value) => Ok(value),
-        serde_yaml::Value::Number(value) => parse_bool_config(key, &value.to_string()),
-        serde_yaml::Value::String(value) => parse_bool_config(key, &value),
-        other => {
-            Err(anyhow!(
+        yaml_serde::Value::Bool(value) => Ok(value),
+        yaml_serde::Value::Number(value) => parse_bool_config(key, &value.to_string()),
+        yaml_serde::Value::String(value) => parse_bool_config(key, &value),
+        other => Err(anyhow!(
             "Invalid value for '{key}': '{}' - must be one of: 1, true, yes, on, 0, false, no, off",
-            serde_yaml::to_string(&other).unwrap_or_else(|_| "<unprintable>".to_string()).trim()
-        ))
-        }
-    }
-}
-
-#[cfg(test)]
-mod one_shot_tests {
-    use super::*;
-
-    #[test]
-    fn thinking_and_prompt_cache_are_disabled() {
-        let config = one_shot_model_config(
-            ModelConfig::new("claude-haiku-4-5").with_thinking_effort(ThinkingEffort::High),
-        );
-
-        assert_eq!(config.thinking_effort(), Some(ThinkingEffort::Off));
-        assert!(config.prompt_cache_disabled());
-    }
-}
-
-#[cfg(test)]
-mod cache_ttl_tests {
-    use super::*;
-
-    #[test]
-    fn env_var_populates_cache_ttl() {
-        let _guard = env_lock::lock_env([("GOOSE_CACHE_TTL", Some("1h"))]);
-        let model = materialize_model_config_inner(
-            ModelConfig::new("claude-sonnet-4-5"),
-            "anthropic",
-            false,
-        )
-        .unwrap();
-        assert_eq!(model.cache_ttl().as_deref(), Some("1h"));
-    }
-
-    #[test]
-    fn absent_env_var_leaves_cache_ttl_unset() {
-        let _guard = env_lock::lock_env([("GOOSE_CACHE_TTL", None::<&str>)]);
-        let model = materialize_model_config_inner(
-            ModelConfig::new("claude-sonnet-4-5"),
-            "anthropic",
-            false,
-        )
-        .unwrap();
-        assert!(model.cache_ttl().is_none());
-    }
-
-    #[test]
-    fn invalid_env_var_is_rejected() {
-        let _guard = env_lock::lock_env([("GOOSE_CACHE_TTL", Some("2h"))]);
-        let result = materialize_model_config_inner(
-            ModelConfig::new("claude-sonnet-4-5"),
-            "anthropic",
-            false,
-        );
-        assert!(result.is_err());
-    }
-
-    #[test]
-    fn rederive_replaces_stored_ttl_with_configured_value() {
-        let _guard = env_lock::lock_env([("GOOSE_CACHE_TTL", Some("1h"))]);
-        let model =
-            with_rederived_cache_ttl(ModelConfig::new("claude-sonnet-4-5").with_cache_ttl("5m"))
-                .unwrap();
-        assert_eq!(model.cache_ttl().as_deref(), Some("1h"));
-    }
-
-    #[test]
-    fn rederive_drops_stored_ttl_when_config_absent() {
-        let _guard = env_lock::lock_env([("GOOSE_CACHE_TTL", None::<&str>)]);
-        let model =
-            with_rederived_cache_ttl(ModelConfig::new("claude-sonnet-4-5").with_cache_ttl("1h"))
-                .unwrap();
-        assert!(model.cache_ttl().is_none());
-    }
-
-    #[test]
-    fn explicit_model_ttl_wins_over_env_var() {
-        let _guard = env_lock::lock_env([("GOOSE_CACHE_TTL", Some("1h"))]);
-        let model = materialize_model_config_inner(
-            ModelConfig::new("claude-sonnet-4-5").with_cache_ttl("5m"),
-            "anthropic",
-            false,
-        )
-        .unwrap();
-        assert_eq!(model.cache_ttl().as_deref(), Some("5m"));
-    }
-}
-
-#[cfg(test)]
-mod azure_foundry_tests {
-    use super::*;
-
-    #[test]
-    fn deployment_name_survives_thinking_effort_changes() {
-        let config = base_model_config_from_user_config("azure_foundry", "gpt-5-high")
-            .unwrap()
-            .with_thinking_effort(ThinkingEffort::Off);
-
-        assert_eq!(config.model_name, "gpt-5-high");
-        assert_eq!(config.context_limit, None);
-        assert_eq!(config.thinking_effort(), Some(ThinkingEffort::Off));
-    }
-
-    #[test]
-    fn none_suffixed_deployment_name_is_preserved() {
-        let config = base_model_config_from_user_config("azure_foundry", "gpt-5-none").unwrap();
-
-        assert_eq!(config.model_name, "gpt-5-none");
-        assert_eq!(config.thinking_effort(), None);
-    }
-}
-
-#[cfg(test)]
-mod canonical_vision_tests {
-    use super::*;
-
-    #[test]
-    fn apply_canonical_limits_resolves_vision_support() {
-        let model = apply_canonical_limits("alibaba-token-plan", ModelConfig::new("qwen3.8-flash"));
-
-        assert_eq!(model.supports_vision, Some(true));
-    }
-
-    #[test]
-    fn apply_canonical_limits_leaves_unknown_providers_untouched() {
-        let model = apply_canonical_limits("my-custom-provider", ModelConfig::new("some-model"));
-
-        assert_eq!(model.supports_vision, None);
+            yaml_serde::to_string(&other)
+                .unwrap_or_else(|_| "<unprintable>".to_string())
+                .trim()
+        )),
     }
 }

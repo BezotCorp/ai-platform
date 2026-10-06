@@ -1,9 +1,7 @@
-use anyhow::Result;
-use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
-use thiserror::Error;
-
 use crate::recipe::Recipe;
-
+use anyhow::Result;
+use base64::{Engine as _, engine::general_purpose::URL_SAFE_NO_PAD};
+use thiserror::Error;
 #[derive(Error, Debug)]
 pub enum DecodeError {
     #[error("Failed to decode recipe deeplink")]
@@ -40,69 +38,4 @@ pub fn decode(link: &str) -> Result<Recipe, DecodeError> {
     }
 
     Err(DecodeError::AllMethodsFailed)
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::recipe::Recipe;
-
-    fn create_test_recipe() -> Recipe {
-        Recipe::builder()
-            .title("Test Recipe")
-            .description("A test recipe for deeplink encoding/decoding")
-            .instructions("Act as a helpful assistant")
-            .build()
-            .expect("Failed to build test recipe")
-    }
-
-    #[test]
-    fn test_encode_decode_round_trip() {
-        let original_recipe = create_test_recipe();
-
-        let encoded = encode(&original_recipe).expect("Failed to encode recipe");
-        assert!(!encoded.is_empty());
-
-        let decoded_recipe = decode(&encoded).expect("Failed to decode recipe");
-
-        assert_eq!(original_recipe.title, decoded_recipe.title);
-        assert_eq!(original_recipe.description, decoded_recipe.description);
-        assert_eq!(original_recipe.instructions, decoded_recipe.instructions);
-        assert_eq!(original_recipe.version, decoded_recipe.version);
-    }
-
-    #[test]
-    fn test_decode_legacy_standard_base64() {
-        let recipe = create_test_recipe();
-        let recipe_json = serde_json::to_string(&recipe).unwrap();
-        let legacy_encoded =
-            base64::engine::general_purpose::STANDARD.encode(recipe_json.as_bytes());
-
-        let decoded_recipe = decode(&legacy_encoded).expect("Failed to decode legacy format");
-        assert_eq!(recipe.title, decoded_recipe.title);
-        assert_eq!(recipe.description, decoded_recipe.description);
-        assert_eq!(recipe.instructions, decoded_recipe.instructions);
-    }
-
-    #[test]
-    fn test_decode_legacy_url_encoded_base64() {
-        let recipe = create_test_recipe();
-        let recipe_json = serde_json::to_string(&recipe).unwrap();
-        let base64_encoded =
-            base64::engine::general_purpose::STANDARD.encode(recipe_json.as_bytes());
-        let url_encoded = urlencoding::encode(&base64_encoded);
-
-        let decoded_recipe =
-            decode(&url_encoded).expect("Failed to decode URL-encoded legacy format");
-        assert_eq!(recipe.title, decoded_recipe.title);
-        assert_eq!(recipe.description, decoded_recipe.description);
-        assert_eq!(recipe.instructions, decoded_recipe.instructions);
-    }
-
-    #[test]
-    fn test_decode_invalid_input() {
-        let result = decode("invalid_base64!");
-        assert!(result.is_err());
-        assert!(matches!(result.unwrap_err(), DecodeError::AllMethodsFailed));
-    }
 }

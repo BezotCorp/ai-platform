@@ -1,33 +1,33 @@
 //! Applies recipe commands and enforces their structured final output.
 
-use std::collections::HashSet;
-use std::sync::Arc;
-
-use anyhow::{anyhow, Result};
-use async_trait::async_trait;
-use rmcp::model::{CallToolResult, ContentBlock, Tool};
-use tracing_futures::Instrument;
-
 use crate::agents::final_output_tool::{
-    structured_output_unsupported_message, FinalOutputTool, FINAL_OUTPUT_CONTINUATION_MESSAGE,
-    FINAL_OUTPUT_SUCCESS_MESSAGE, FINAL_OUTPUT_TOOL_NAME,
+    FINAL_OUTPUT_CONTINUATION_MESSAGE, FINAL_OUTPUT_SUCCESS_MESSAGE, FINAL_OUTPUT_TOOL_NAME,
+    FinalOutputTool, structured_output_unsupported_message,
 };
+use crate::agents::state_machine::GooseEffect;
 use crate::agents::state_machine::ops_toolcalling::{
-    emit_post_tool_use, pending_advertised_tool_requests, run_pre_tool_hooks, tool_span,
-    ToolDisposition,
-};
-use crate::agents::state_machine::{
-    applied, ends_turn, last_effective_role, messages_since_kickoff, not_applicable, yielded_with,
-    ConversationEffect, Emitter, GooseEffect, Operation, OperationResult, SlashCommand,
+    ToolDisposition, emit_post_tool_use, pending_advertised_tool_requests, run_pre_tool_hooks,
+    tool_span,
 };
 use crate::agents::tool_execution::CHAT_MODE_TOOL_SKIPPED_RESPONSE;
-use crate::config::GooseMode;
-use crate::conversation::message::{Message, MessageContent};
-use crate::conversation::{Conversation, EffectiveRole};
 use crate::hooks::HookManager;
-use crate::providers::base::Provider;
+#[cfg(feature = "telemetry")]
+use crate::posthog;
 use crate::session::Session;
-
+use crate::slash_commands;
+use anyhow::{Result, anyhow};
+use async_trait::async_trait;
+use bcaip_agent::operation::{
+    ConversationEffect, Emitter, Operation, OperationResult, SlashCommand, applied, ends_turn,
+    last_effective_role, messages_since_kickoff, not_applicable, yielded_with,
+};
+use bcaip_provider_types::base::Provider;
+use bcaip_provider_types::conversations::{Conversation, EffectiveRole};
+use bcaip_provider_types::conversations::{Message, MessageContent};
+use bcaip_provider_types::goose_mode::GooseMode;
+use rmcp::model::{CallToolResult, ContentBlock, Tool};
+use std::{collections::HashSet, sync::Arc};
+use tracing_futures::Instrument;
 pub struct RecipeOperation {
     provider: Arc<dyn Provider>,
     hook_manager: HookManager,
@@ -217,7 +217,7 @@ impl Operation<Session, GooseEffect> for RecipeOperation {
         conversation: &Conversation,
         emit: &Emitter,
     ) -> Result<OperationResult<GooseEffect>> {
-        let (recipe, prompt) = match crate::slash_commands::recipe_slash_command::resolve_command(
+        let (recipe, prompt) = match slash_commands::recipe_slash_command::resolve_command(
             command.command,
             command.params_str,
         ) {
@@ -226,16 +226,16 @@ impl Operation<Session, GooseEffect> for RecipeOperation {
             Err(error) => return self.command_error(conversation, error, emit).await,
         };
 
-        if let Some(response) = recipe.response.clone() {
-            if let Err(error) = FinalOutputTool::try_new(response) {
-                return self
-                    .command_error(conversation, format!("Recipe is not valid: {error}"), emit)
-                    .await;
-            }
+        if let Some(response) = recipe.response.clone()
+            && let Err(error) = FinalOutputTool::try_new(response)
+        {
+            return self
+                .command_error(conversation, format!("Recipe is not valid: {error}"), emit)
+                .await;
         }
 
         #[cfg(feature = "telemetry")]
-        crate::posthog::emit_custom_slash_command_used();
+        posthog::emit_custom_slash_command_used();
 
         let command_message = messages_since_kickoff(conversation)?
             .first()

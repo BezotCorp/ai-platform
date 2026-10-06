@@ -3,19 +3,17 @@
 #[cfg(feature = "code-mode")]
 use crate::agents::ExtensionManager;
 use crate::agents::PromptManager;
-use crate::config::GooseMode;
 use crate::session::Session;
 use crate::tool_inspection::ToolInspectionManager;
 use anyhow::Result;
 use async_trait::async_trait;
-use goose_agent::inference::{InferenceRequestPreparer, PreparedInferenceRequest};
-use goose_agent::operation::{messages_since_kickoff, InferenceInput};
-use goose_providers::conversation::message::Message;
-use goose_providers::conversation::Conversation;
+use bcaip_agent::inference::{InferenceRequestPreparer, PreparedInferenceRequest};
+use bcaip_agent::operation::{InferenceInput, messages_since_kickoff};
+use bcaip_provider_types::conversations::{Conversation, Message};
+use bcaip_provider_types::goose_mode::GooseMode;
 #[cfg(feature = "code-mode")]
 use std::sync::Arc;
 use tokio::sync::Mutex;
-
 pub struct GooseInferenceRequestPreparer<'a> {
     #[cfg(feature = "code-mode")]
     pub(crate) extension_manager: Arc<ExtensionManager>,

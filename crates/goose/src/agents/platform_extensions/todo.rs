@@ -1,8 +1,7 @@
 use crate::agents::extension::PlatformExtensionContext;
 use crate::agents::mcp_client::{Error, McpClientTrait};
 use crate::agents::tool_execution::ToolCallContext;
-use crate::session::extension_data;
-use crate::session::extension_data::ExtensionState;
+use crate::session::{ExtensionState, TodoState};
 use anyhow::Result;
 use async_trait::async_trait;
 use indoc::indoc;
@@ -10,10 +9,9 @@ use rmcp::model::{
     CallToolResult, ContentBlock, Implementation, InitializeResult, JsonObject, ListToolsResult,
     ServerCapabilities, Tool, ToolAnnotations,
 };
-use schemars::{schema_for, JsonSchema};
+use schemars::{JsonSchema, schema_for};
 use serde::{Deserialize, Serialize};
 use tokio_util::sync::CancellationToken;
-
 pub static EXTENSION_NAME: &str = "todo";
 pub const TODO_WRITE_TOOL_NAME: &str = "todo_write";
 pub const TODO_WRITE_TOOL_NAME_COMPLETE: &str = "todo__todo_write";
@@ -80,7 +78,7 @@ impl TodoClient {
         let manager = &self.context.session_manager;
         match manager.get_session(session_id, false).await {
             Ok(mut session) => {
-                let todo_state = extension_data::TodoState::new(content);
+                let todo_state = TodoState::new(content);
                 if todo_state
                     .to_extension_data(&mut session.extension_data)
                     .is_ok()
@@ -110,9 +108,10 @@ impl TodoClient {
         let schema_value =
             serde_json::to_value(schema).expect("Failed to serialize TodoWriteParams schema");
 
-        vec![Tool::new(
-            TODO_WRITE_TOOL_NAME.to_string(),
-            indoc! {r#"
+        vec![
+            Tool::new(
+                TODO_WRITE_TOOL_NAME.to_string(),
+                indoc! {r#"
                     Overwrite the entire TODO content.
 
                     The content persists across conversation turns and compaction. Use this for:
@@ -122,16 +121,17 @@ impl TodoClient {
                     WARNING: This operation completely replaces the existing content. Always include
                     all content you want to keep, not just the changes.
                 "#}
-            .to_string(),
-            schema_value.as_object().unwrap().clone(),
-        )
-        .annotate(ToolAnnotations::from_raw(
-            Some("Write TODO".to_string()),
-            Some(false),
-            Some(true),
-            Some(false),
-            Some(false),
-        ))]
+                .to_string(),
+                schema_value.as_object().unwrap().clone(),
+            )
+            .annotate(ToolAnnotations::from_raw(
+                Some("Write TODO".to_string()),
+                Some(false),
+                Some(true),
+                Some(false),
+                Some(false),
+            )),
+        ]
     }
 }
 
@@ -185,7 +185,7 @@ impl McpClientTrait for TodoClient {
             .await
             .ok()?;
 
-        match extension_data::TodoState::from_extension_data(&metadata.extension_data) {
+        match TodoState::from_extension_data(&metadata.extension_data) {
             Some(state) if !state.content.trim().is_empty() => Some(format!(
                 "Planning notes (for your reference; items need not be closed out):\n{}\n",
                 state.content

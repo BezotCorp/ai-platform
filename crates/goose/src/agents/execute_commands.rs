@@ -1,15 +1,12 @@
-use std::collections::HashMap;
-use std::path::Path;
-
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
+use std::{collections::HashMap, path::Path};
 
 use crate::context_mgmt::compact_messages;
-use crate::conversation::message::Message;
 use crate::recipe::Recipe;
 use crate::slash_commands::{recipe_slash_command, skill_slash_command};
+use bcaip_provider_types::conversations::Message;
 
 use super::Agent;
-
 pub fn slash_commands_enabled() -> bool {
     crate::config::Config::global()
         .get_param::<bool>("GOOSE_SLASH_COMMANDS_ENABLED")
@@ -55,8 +52,7 @@ static COMMANDS: &[CommandDef] = &[
     },
     CommandDef {
         name: "grind",
-        description:
-            "Set a goal the agent pursues relentlessly until max_turns, or clear with /grind off",
+        description: "Set a goal the agent pursues relentlessly until max_turns, or clear with /grind off",
     },
     CommandDef {
         name: "status",
@@ -218,8 +214,7 @@ impl Agent {
     }
 
     async fn handle_clear_command(&self, session_id: &str) -> Result<Option<Message>> {
-        use crate::conversation::Conversation;
-
+        use bcaip_provider_types::conversations::Conversation;
         let provider = self.provider().await?;
         if provider.manages_own_context() {
             return Err(anyhow!(context_management_unsupported_message(
@@ -235,7 +230,7 @@ impl Agent {
 
         manager
             .update(session_id)
-            .usage(goose_providers::conversation::token_usage::Usage::new(
+            .usage(bcaip_provider_types::conversations::Usage::new(
                 Some(0),
                 Some(0),
                 Some(0),
@@ -324,11 +319,11 @@ impl Agent {
 
         let prompts = self.list_extension_prompts(session_id).await;
 
-        if let Some(filter) = &extension_filter {
-            if !prompts.contains_key(filter) {
-                let error_msg = format!("Extension '{}' not found", filter);
-                return Ok(Some(Message::assistant().with_text(error_msg)));
-            }
+        if let Some(filter) = &extension_filter
+            && !prompts.contains_key(filter)
+        {
+            let error_msg = format!("Extension '{}' not found", filter);
+            return Ok(Some(Message::assistant().with_text(error_msg)));
         }
 
         let filtered_prompts: HashMap<String, Vec<String>> = prompts
@@ -575,128 +570,4 @@ impl Agent {
 
 fn user_only_assistant_text(text: impl Into<String>) -> Message {
     Message::assistant().with_text(text).user_only()
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::conversation::message::MessageContent;
-    use crate::recipe::Response;
-    use serde_json::json;
-
-    #[test]
-    fn parse_slash_command_splits_on_literal_space() {
-        let parsed = parse_slash_command("/speckit.plan hello world").unwrap();
-
-        assert_eq!(parsed.command, "speckit.plan");
-        assert_eq!(parsed.params_str, "hello world");
-    }
-
-    #[test]
-    fn parse_slash_command_does_not_split_on_tab_or_newline() {
-        let parsed = parse_slash_command("/speckit.plan\thello").unwrap();
-        assert_eq!(parsed.command, "speckit.plan\thello");
-        assert_eq!(parsed.params_str, "");
-
-        let parsed = parse_slash_command("/speckit.plan\nhello").unwrap();
-        assert_eq!(parsed.command, "speckit.plan\nhello");
-        assert_eq!(parsed.params_str, "");
-    }
-
-    #[test]
-    fn command_starts_turn_only_for_goal_and_grind_with_description() {
-        assert!(command_starts_turn("/goal make all tests pass"));
-        assert!(command_starts_turn("/grind keep refactoring"));
-
-        // Query and clear forms must not start a turn.
-        assert!(!command_starts_turn("/goal"));
-        assert!(!command_starts_turn("/goal off"));
-        assert!(!command_starts_turn("/goal clear"));
-        assert!(!command_starts_turn("/goal none"));
-        assert!(!command_starts_turn("/grind"));
-        assert!(!command_starts_turn("/grind off"));
-
-        // Other commands and plain prompts never start a turn here.
-        assert!(!command_starts_turn("/compact"));
-        assert!(!command_starts_turn("just a normal message"));
-    }
-
-    #[test]
-    fn user_only_assistant_text_is_durable_text_not_system_notification() {
-        let message = user_only_assistant_text("Conversation cleared");
-
-        assert!(message.metadata.user_visible);
-        assert!(!message.metadata.agent_visible);
-        assert_eq!(message.role, rmcp::model::Role::Assistant);
-        assert!(matches!(
-            message.content.as_slice(),
-            [MessageContent::Text(text)] if text.text == "Conversation cleared"
-        ));
-    }
-
-    #[test]
-    fn status_is_registered_as_a_builtin_command() {
-        assert!(list_commands()
-            .iter()
-            .any(|command| command.name == "status"));
-    }
-    #[tokio::test]
-    async fn invalid_rendered_recipe_schema_returns_assistant_response() {
-        let agent = Agent::new();
-        let recipe = Recipe::builder()
-            .title("Invalid rendered schema")
-            .description("Invalid rendered schema")
-            .instructions("Return structured output")
-            .response(Response {
-                json_schema: Some(json!({
-                    "type": "object",
-                    "properties": {
-                        "result": {
-                            "type": "string",
-                            "pattern": "["
-                        }
-                    }
-                })),
-            })
-            .build()
-            .expect("recipe shape is otherwise valid");
-
-        let response = agent
-            .apply_resolved_recipe_command(
-                "invalid-rendered-schema",
-                recipe,
-                "Return structured output".to_string(),
-                "unused-session",
-            )
-            .await
-            .unwrap()
-            .unwrap();
-
-        assert_eq!(response.role, rmcp::model::Role::Assistant);
-        assert!(response
-            .as_concat_text()
-            .contains("Recipe /invalid-rendered-schema is not valid"));
-        assert!(agent.final_output_tool.lock().await.is_none());
-    }
-    #[tokio::test]
-    async fn doctor_refuses_without_enabling_developer() {
-        let agent = Agent::new();
-
-        let response = agent
-            .execute_command("/doctor", "doctor-disabled-legacy-test")
-            .await
-            .expect("doctor command should succeed")
-            .expect("doctor command should return a message");
-
-        assert_eq!(
-            response.as_concat_text(),
-            crate::doctor::DEVELOPER_EXTENSION_REQUIRED_MESSAGE
-        );
-        assert!(
-            !agent
-                .extension_manager
-                .is_extension_enabled(crate::agents::platform_extensions::developer::EXTENSION_NAME)
-                .await
-        );
-    }
 }

@@ -1,41 +1,39 @@
+use crate::config::{Config, ConfigError, ExtensionConfig};
+use crate::providers::base::ProviderDef;
 use anyhow::Result;
+use bcaip_provider_types::ProviderSetupCategory::Model;
+use bcaip_provider_types::ProviderSetupGroup::Additional;
+use bcaip_provider_types::ProviderSetupMetadata;
+use bcaip_provider_types::ProviderSetupMethod::HostWithOauthFallback;
+use bcaip_provider_types::base::{ProviderDescriptor, ProviderMetadata};
 use futures::future::BoxFuture;
 use goose_providers::api_client::TlsConfig;
-use goose_providers::base::ProviderDescriptor;
 use goose_providers::databricks_auth::{
     DatabricksAuth, DatabricksOauthTokenProvider, DatabricksRefreshHook, DatabricksTokenResolver,
 };
 use goose_providers::databricks_v2::DatabricksV2Provider;
 use std::sync::Arc;
-
-use crate::config::{Config, ConfigError, ExtensionConfig};
-use crate::providers::base::ProviderDef;
-
 pub struct DatabricksV2ProviderDef;
 
 impl ProviderDescriptor for DatabricksV2ProviderDef {
-    fn metadata() -> goose_providers::base::ProviderMetadata {
+    fn metadata() -> ProviderMetadata {
         DatabricksV2Provider::metadata().with_setup(
-            crate::providers::catalog::ProviderSetupMetadata::new(
-                crate::providers::catalog::ProviderSetupCategory::Model,
-                crate::providers::catalog::ProviderSetupMethod::HostWithOauthFallback,
-                crate::providers::catalog::ProviderSetupGroup::Additional,
-            )
-            .with_docs_url("https://docs.databricks.com/en/generative-ai/ai-gateway/")
-            .with_aliases(&["databricks_ai_gateway"])
-            .with_capabilities(false, true, false)
-            .with_field(
-                "DATABRICKS_HOST",
-                "Host URL",
-                Some("https://dbc-...cloud.databricks.com"),
-                None,
-            )
-            .with_field(
-                "DATABRICKS_TOKEN",
-                "Access Token",
-                Some("Paste your access token"),
-                None,
-            ),
+            ProviderSetupMetadata::new(Model, HostWithOauthFallback, Additional)
+                .with_docs_url("https://docs.databricks.com/en/generative-ai/ai-gateway/")
+                .with_aliases(&["databricks_ai_gateway"])
+                .with_capabilities(false, true, false)
+                .with_field(
+                    "DATABRICKS_HOST",
+                    "Host URL",
+                    Some("https://dbc-...cloud.databricks.com"),
+                    None,
+                )
+                .with_field(
+                    "DATABRICKS_TOKEN",
+                    "Access Token",
+                    Some("Paste your access token"),
+                    None,
+                ),
         )
     }
 }

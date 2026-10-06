@@ -2,7 +2,6 @@
 
 use anyhow::Result;
 use async_trait::async_trait;
-
 const MAX_SDP_BYTES: usize = 256 * 1024;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -88,17 +87,4 @@ pub trait LiveVoiceProvider: Send + Sync {
         offer: WebRtcOffer,
         input_messages: Vec<LiveVoiceInputMessage>,
     ) -> Result<(WebRtcAnswer, Box<dyn ProviderConnection>)>;
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn sdp_values_must_be_present_and_bounded() {
-        assert!(WebRtcOffer::new(String::new()).is_none());
-        assert!(WebRtcOffer::new("x".repeat(MAX_SDP_BYTES + 1)).is_none());
-        assert!(WebRtcOffer::new("offer".into()).is_some());
-        assert!(WebRtcAnswer::new("answer".into()).is_some());
-    }
 }

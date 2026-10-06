@@ -1,31 +1,27 @@
 //! Compacts conversation history when it is too large for the configured context window.
-
-use std::collections::HashSet;
-use std::sync::Arc;
-
-use anyhow::{anyhow, Result};
-use async_trait::async_trait;
-use tracing_futures::Instrument;
-
-use crate::agents::state_machine::ops_llm::{chat_span, record_chat_usage};
+use crate::agents::state_machine::GooseEffect;
 use crate::agents::state_machine::ops_recipe::RecipeOperation;
-use crate::agents::state_machine::{
-    applied, last_effective_role, messages_since_kickoff, not_applicable, trailing_error, yielded,
-    yielded_with, ConversationEffect, Emitter, GooseEffect, Operation, OperationResult,
-    SlashCommand,
-};
 use crate::context_mgmt::{compact_messages, count_context_tokens};
-use crate::conversation::message::{
+use crate::session::Session;
+use anyhow::{Result, anyhow};
+use async_trait::async_trait;
+use bcaip_agent::inference::{chat_span, record_chat_usage};
+use bcaip_agent::operation::{
+    ConversationEffect, Emitter, Operation, OperationResult, SlashCommand, applied,
+    last_effective_role, messages_since_kickoff, not_applicable, trailing_error, yielded,
+    yielded_with,
+};
+use bcaip_provider_types::base::Provider;
+use bcaip_provider_types::conversations::{Conversation, EffectiveRole};
+use bcaip_provider_types::conversations::{
     Message, MessageContent, MessageErrorKind, SystemNotificationType,
 };
-use crate::conversation::{Conversation, EffectiveRole};
-use crate::providers::base::Provider;
-use crate::session::Session;
-use goose_providers::model::ModelConfig;
-
+use bcaip_provider_types::model::ModelConfig;
+use std::{collections::HashSet, sync::Arc};
+use tracing_futures::Instrument;
 const COMPACTION_THINKING_TEXT: &str = "goose is compacting the conversation...";
 
-pub(super) const MAX_CONTEXT_ERROR_COMPACTIONS: usize = 2;
+pub(crate) const MAX_CONTEXT_ERROR_COMPACTIONS: usize = 2;
 
 fn compaction_part(
     total_tokens: Option<i32>,

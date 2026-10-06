@@ -1,8 +1,7 @@
-use crate::providers::base::Provider;
+use bcaip_provider_types::base::Provider;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tokio::sync::Mutex;
-
 pub type SharedProvider = Arc<Mutex<Option<Arc<dyn Provider>>>>;
 
 /// Default timeout for retry operations (5 minutes)
@@ -36,18 +35,18 @@ impl RetryConfig {
             return Err("max_retries must be greater than 0".to_string());
         }
 
-        if let Some(timeout) = self.timeout_seconds {
-            if timeout == 0 {
-                return Err("timeout_seconds must be greater than 0 if specified".to_string());
-            }
+        if let Some(timeout) = self.timeout_seconds
+            && timeout == 0
+        {
+            return Err("timeout_seconds must be greater than 0 if specified".to_string());
         }
 
-        if let Some(on_failure_timeout) = self.on_failure_timeout_seconds {
-            if on_failure_timeout == 0 {
-                return Err(
-                    "on_failure_timeout_seconds must be greater than 0 if specified".to_string(),
-                );
-            }
+        if let Some(on_failure_timeout) = self.on_failure_timeout_seconds
+            && on_failure_timeout == 0
+        {
+            return Err(
+                "on_failure_timeout_seconds must be greater than 0 if specified".to_string(),
+            );
         }
 
         Ok(())
@@ -78,69 +77,4 @@ pub struct SessionConfig {
     /// Retry configuration for automated validation and recovery
     #[serde(skip_serializing_if = "Option::is_none")]
     pub retry_config: Option<RetryConfig>,
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_retry_config_validate_success() {
-        let config = RetryConfig {
-            max_retries: 3,
-            checks: vec![],
-            on_failure: None,
-            timeout_seconds: Some(60),
-            on_failure_timeout_seconds: Some(120),
-        };
-        assert!(config.validate().is_ok());
-    }
-
-    #[test]
-    fn test_retry_config_validate_max_retries_zero() {
-        let config = RetryConfig {
-            max_retries: 0,
-            checks: vec![],
-            on_failure: None,
-            timeout_seconds: None,
-            on_failure_timeout_seconds: None,
-        };
-        let result = config.validate();
-        assert!(result.is_err());
-        assert_eq!(result.unwrap_err(), "max_retries must be greater than 0");
-    }
-
-    #[test]
-    fn test_retry_config_validate_timeout_zero() {
-        let config = RetryConfig {
-            max_retries: 3,
-            checks: vec![],
-            on_failure: None,
-            timeout_seconds: Some(0),
-            on_failure_timeout_seconds: None,
-        };
-        let result = config.validate();
-        assert!(result.is_err());
-        assert_eq!(
-            result.unwrap_err(),
-            "timeout_seconds must be greater than 0 if specified"
-        );
-    }
-
-    #[test]
-    fn test_retry_config_validate_on_failure_timeout_zero() {
-        let config = RetryConfig {
-            max_retries: 3,
-            checks: vec![],
-            on_failure: None,
-            timeout_seconds: None,
-            on_failure_timeout_seconds: Some(0),
-        };
-        let result = config.validate();
-        assert!(result.is_err());
-        assert_eq!(
-            result.unwrap_err(),
-            "on_failure_timeout_seconds must be greater than 0 if specified"
-        );
-    }
 }

@@ -1,4 +1,16 @@
-use super::*;
+use crate::acp::server::server_informations::{GooseAcpAgent, ResultExt};
+use goose_sdk_types::custom_requests::{
+    EmptyResponse, LocalInferenceBuiltinChatTemplatesListRequest,
+    LocalInferenceBuiltinChatTemplatesListResponse, LocalInferenceHuggingFaceRepoVariantsRequest,
+    LocalInferenceHuggingFaceRepoVariantsResponse, LocalInferenceHuggingFaceSearchRequest,
+    LocalInferenceHuggingFaceSearchResponse, LocalInferenceModelDeleteRequest,
+    LocalInferenceModelDownloadCancelRequest, LocalInferenceModelDownloadProgressRequest,
+    LocalInferenceModelDownloadProgressResponse, LocalInferenceModelDownloadRequest,
+    LocalInferenceModelDownloadResponse, LocalInferenceModelEvictRequest,
+    LocalInferenceModelSettingsReadRequest, LocalInferenceModelSettingsReadResponse,
+    LocalInferenceModelSettingsUpdateRequest, LocalInferenceModelSettingsUpdateResponse,
+    LocalInferenceModelsListRequest, LocalInferenceModelsListResponse,
+};
 
 #[cfg(not(feature = "local-inference"))]
 fn local_inference_unavailable() -> agent_client_protocol::Error {
@@ -13,7 +25,7 @@ impl GooseAcpAgent {
         #[cfg(feature = "local-inference")]
         {
             crate::providers::local_inference::configure_huggingface_auth();
-            crate::providers::local_inference::management::list_models()
+            bcaip_local_inference::management::list_models()
                 .await
                 .internal_err()
         }
@@ -29,7 +41,7 @@ impl GooseAcpAgent {
         #[cfg(feature = "local-inference")]
         {
             crate::providers::local_inference::configure_huggingface_auth();
-            crate::providers::local_inference::management::download_model(req)
+            bcaip_local_inference::management::download_model(req)
                 .await
                 .invalid_params_err()
         }
@@ -48,7 +60,7 @@ impl GooseAcpAgent {
         #[cfg(feature = "local-inference")]
         {
             crate::providers::local_inference::configure_huggingface_auth();
-            crate::providers::local_inference::management::download_progress(&req.model_id)
+            bcaip_local_inference::management::download_progress(&req.model_id)
                 .map(|progress| LocalInferenceModelDownloadProgressResponse { progress })
                 .internal_err()
         }
@@ -67,8 +79,7 @@ impl GooseAcpAgent {
         #[cfg(feature = "local-inference")]
         {
             crate::providers::local_inference::configure_huggingface_auth();
-            crate::providers::local_inference::management::cancel_download(&req.model_id)
-                .internal_err()?;
+            bcaip_local_inference::management::cancel_download(&req.model_id).internal_err()?;
             Ok(EmptyResponse {})
         }
 
@@ -86,7 +97,7 @@ impl GooseAcpAgent {
         #[cfg(feature = "local-inference")]
         {
             crate::providers::local_inference::configure_huggingface_auth();
-            crate::providers::local_inference::management::delete_model(&req.model_id)
+            bcaip_local_inference::management::delete_model(&req.model_id)
                 .await
                 .invalid_params_err()?;
             Ok(EmptyResponse {})
@@ -106,7 +117,7 @@ impl GooseAcpAgent {
         #[cfg(feature = "local-inference")]
         {
             crate::providers::local_inference::configure_huggingface_auth();
-            crate::providers::local_inference::management::evict_model(&req.model_id)
+            bcaip_local_inference::management::evict_model(&req.model_id)
                 .await
                 .invalid_params_err()?;
             Ok(EmptyResponse {})
@@ -126,7 +137,7 @@ impl GooseAcpAgent {
         #[cfg(feature = "local-inference")]
         {
             crate::providers::local_inference::configure_huggingface_auth();
-            crate::providers::local_inference::management::get_model_settings(&req.model_id)
+            bcaip_local_inference::management::get_model_settings(&req.model_id)
                 .invalid_params_err()
         }
 
@@ -144,11 +155,8 @@ impl GooseAcpAgent {
         #[cfg(feature = "local-inference")]
         {
             crate::providers::local_inference::configure_huggingface_auth();
-            crate::providers::local_inference::management::update_model_settings(
-                &req.model_id,
-                req.settings,
-            )
-            .invalid_params_err()
+            bcaip_local_inference::management::update_model_settings(&req.model_id, req.settings)
+                .invalid_params_err()
         }
 
         #[cfg(not(feature = "local-inference"))]
@@ -165,11 +173,9 @@ impl GooseAcpAgent {
         #[cfg(feature = "local-inference")]
         {
             crate::providers::local_inference::configure_huggingface_auth();
-            crate::providers::local_inference::management::search_huggingface_models(
-                req.query, req.limit,
-            )
-            .await
-            .internal_err()
+            bcaip_local_inference::management::search_huggingface_models(req.query, req.limit)
+                .await
+                .internal_err()
         }
 
         #[cfg(not(feature = "local-inference"))]
@@ -186,7 +192,7 @@ impl GooseAcpAgent {
         #[cfg(feature = "local-inference")]
         {
             crate::providers::local_inference::configure_huggingface_auth();
-            crate::providers::local_inference::management::huggingface_repo_variants(req.repo_id)
+            bcaip_local_inference::management::huggingface_repo_variants(req.repo_id)
                 .await
                 .internal_err()
         }
@@ -205,7 +211,7 @@ impl GooseAcpAgent {
         #[cfg(feature = "local-inference")]
         {
             crate::providers::local_inference::configure_huggingface_auth();
-            Ok(crate::providers::local_inference::management::list_builtin_chat_templates())
+            Ok(bcaip_local_inference::management::list_builtin_chat_templates())
         }
 
         #[cfg(not(feature = "local-inference"))]

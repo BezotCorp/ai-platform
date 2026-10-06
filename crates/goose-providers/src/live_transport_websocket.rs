@@ -3,16 +3,15 @@
 use crate::{live::LiveTransport, openai_live::OpenAiLiveWebSocketRequest};
 use anyhow::{Context, Result};
 use async_trait::async_trait;
-use futures::{stream::SplitSink, stream::SplitStream, SinkExt, StreamExt};
+use futures::{SinkExt, StreamExt, stream::SplitSink, stream::SplitStream};
 use serde_json::Value;
 use tokio::{
     sync::Mutex,
-    time::{timeout, Duration},
+    time::{Duration, timeout},
 };
 use tokio_tungstenite::{
-    connect_async,
-    tungstenite::{client::IntoClientRequest, Message},
-    MaybeTlsStream, WebSocketStream,
+    MaybeTlsStream, WebSocketStream, connect_async,
+    tungstenite::{Message, client::IntoClientRequest},
 };
 
 const CONNECT_TIMEOUT: Duration = Duration::from_secs(10);

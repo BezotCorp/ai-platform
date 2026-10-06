@@ -1,13 +1,10 @@
 macro_rules! expose_declarative_provider {
     ($module:ident, $definition:expr) => {
         pub mod $module {
+            use crate::api_client::TlsConfig;
+            use crate::declarative::{KeyResolver, from_json};
             use anyhow::Result;
-
-            use crate::{
-                api_client::TlsConfig,
-                base::Provider,
-                declarative::{from_json, KeyResolver},
-            };
+            use bcaip_provider_types::base::Provider;
 
             pub const JSON: &str = include_str!(concat!(
                 env!("CARGO_MANIFEST_DIR"),

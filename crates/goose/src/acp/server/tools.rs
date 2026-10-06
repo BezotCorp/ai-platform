@@ -1,10 +1,14 @@
-use super::*;
+use crate::acp::server::server_informations::GooseAcpAgent;
 use crate::agents::extension_manager::{get_parameter_names, is_tool_owned_by_extension};
 use crate::agents::reply_parts::is_tool_visible_to_app;
 use crate::config::permission::PermissionLevel;
-use goose_sdk_types::custom_requests::{ToolListItem, ToolPermissionLevel};
+use bcaip_provider_types::goose_mode::GooseMode;
+use goose_sdk_types::custom_requests::{
+    GetToolsRequest, GetToolsResponse, GooseToolCallRequest, GooseToolCallResponse,
+    SetToolPermissionsRequest, SetToolPermissionsResponse, ToolListItem, ToolPermissionLevel,
+};
 use rmcp::model::CallToolRequestParams;
-
+use tokio_util::sync::CancellationToken;
 impl GooseAcpAgent {
     pub(super) async fn on_get_tools(
         &self,
@@ -101,7 +105,7 @@ impl GooseAcpAgent {
         }
 
         let session = self
-            .session_manager
+            .session_manager()
             .get_session(session_id, false)
             .await
             .map_err(|_| {

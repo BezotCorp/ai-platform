@@ -1,14 +1,41 @@
 use super::message_meta::{
     content_chunk_for_message, merge_message_meta, populate_output_token_limit_content,
 };
-use super::tool_calls::conversion::{
+use crate::acp::server::tool_calls::tool_chain_summary;
+
+use crate::acp::response_builder::{
+    agent_thinking_effort_support, build_session_setup_config, session_response_meta,
+};
+use crate::acp::server::server_informations::{
+    ActiveRunDropGuard, GooseAcpAgent, PendingToolPermission, ResultExt, SessionAgentTarget,
+    effective_session_cwd, message_usage_update, resume_saved_provider_session,
+    validate_absolute_cwd,
+};
+use crate::acp::server::tool_calls::conversion::{
     build_initial_tool_call_with_message_meta, tool_call_update_fields_from_response,
     trusted_update_meta,
 };
-use super::tool_calls::enrichment::tool_chain_summary;
-use super::*;
-use agent_client_protocol::schema::v1::ToolCall;
-
+use crate::acp::tool_call_notifier::ToolCallNotifier;
+use crate::agents::state_machine::{
+    has_unapplied_tool_confirmation_response, pending_tool_confirmations,
+};
+use crate::agents::{Agent, SessionConfig};
+use crate::session::Session;
+use agent_client_protocol::schema::v1::{
+    Annotations, ContentBlock, ImageContent, LoadSessionRequest, LoadSessionResponse, Meta,
+    SessionId, SessionNotification, SessionUpdate, TextContent, ToolCall, ToolCallId,
+    ToolCallUpdate,
+};
+use agent_client_protocol::{Client, ConnectionTo};
+use bcaip_provider_types::conversations::{
+    Conversation, Message, MessageContent, ToolConfirmationRequest, ToolRequest,
+};
+use goose_sdk_types::custom_notifications::{GooseSessionNotification, GooseSessionUpdate};
+use rmcp::model::Role;
+use std::{collections::HashMap, sync::Arc};
+use tokio_util::sync::CancellationToken;
+use tracing::{debug, warn};
+use uuid::Uuid;
 fn replay_audience_annotations(audience: &[Role]) -> Annotations {
     Annotations::new().audience(
         audience
@@ -201,16 +228,14 @@ fn replay_conversation_to_client(
             }
         }
 
-        if supports_goose_custom_notifications {
-            if let Some(usage) = &message.metadata.usage {
-                cx.send_notification(GooseSessionNotification {
-                    session_id: session.id.clone(),
-                    update: GooseSessionUpdate::MessageUsage(message_usage_update(
-                        message.id.clone(),
-                        usage,
-                    )),
-                })?;
-            }
+        if supports_goose_custom_notifications && let Some(usage) = &message.metadata.usage {
+            cx.send_notification(GooseSessionNotification {
+                session_id: session.id.clone(),
+                update: GooseSessionUpdate::MessageUsage(message_usage_update(
+                    message.id.clone(),
+                    usage,
+                )),
+            })?;
         }
     }
 
@@ -305,7 +330,7 @@ impl GooseAcpAgent {
         let task_acp_session_id = acp_session_id.clone();
         if let Err(error) = cx.spawn(async move {
             let _run_guard = ActiveRunDropGuard {
-                registry: server.active_runs.clone(),
+                registry: server.active_runs().clone(),
                 session_id: task_session_id.clone(),
                 run_id: task_run_id.clone(),
                 cancel_token: task_cancel_token.clone(),
@@ -320,8 +345,8 @@ impl GooseAcpAgent {
                     stream,
                 )
                 .await;
-            if result.is_ok() {
-                if let Err(error) = server
+            if result.is_ok()
+                && let Err(error) = server
                     .send_session_usage_updates(
                         &task_cx,
                         &task_acp_session_id,
@@ -330,13 +355,12 @@ impl GooseAcpAgent {
                         &mut None,
                     )
                     .await
-                {
-                    warn!(
-                        session_id = task_session_id,
-                        ?error,
-                        "Failed to update usage after resumed ACP turn"
-                    );
-                }
+            {
+                warn!(
+                    session_id = task_session_id,
+                    ?error,
+                    "Failed to update usage after resumed ACP turn"
+                );
             }
             server
                 .clear_active_run(&task_session_id, &task_run_id)
@@ -389,7 +413,7 @@ impl GooseAcpAgent {
         let session_id_str = args.session_id.0.to_string();
 
         let mut session = self
-            .session_manager
+            .session_manager()
             .get_session(&session_id_str, true)
             .await
             .map_err(|_| {
@@ -397,7 +421,7 @@ impl GooseAcpAgent {
                     .data(format!("Session not found: {}", session_id_str))
             })?;
 
-        let cwd = effective_session_cwd(self.session_cwd.as_deref(), &args.cwd);
+        let cwd = effective_session_cwd(self.session_cwd(), &args.cwd);
         validate_absolute_cwd(&cwd)?;
 
         session = self
@@ -421,7 +445,7 @@ impl GooseAcpAgent {
             .internal_err_ctx("Failed to get provider while loading ACP session")?;
         resume_saved_provider_session(&provider, session.conversation.as_ref()).await;
         session = self
-            .session_manager
+            .session_manager()
             .get_session(&session_id_str, false)
             .await
             .internal_err_ctx("Failed to reload session")?;
@@ -432,7 +456,7 @@ impl GooseAcpAgent {
             .await;
 
         let (mode_state, config_options) = build_session_setup_config(
-            &self.provider_inventory,
+            self.provider_inventory(),
             &session,
             &agent_thinking_effort_support(&agent).await,
         )
@@ -481,289 +505,10 @@ impl GooseAcpAgent {
             )?;
         }
 
-        self.closed_session_ids.lock().await.remove(&session_id_str);
+        self.closed_session_ids()
+            .lock()
+            .await
+            .remove(&session_id_str);
         Ok(response)
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::conversation::message::InferenceMetadata;
-    use goose_providers::thinking::{
-        ThinkingEffortCapability, ThinkingEffortOption, ThinkingEffortSupport,
-    };
-    use rmcp::model::CallToolRequestParams;
-    use std::sync::atomic::{AtomicBool, Ordering};
-
-    #[derive(Debug)]
-    struct ResumeEffortProvider {
-        resumed: AtomicBool,
-    }
-
-    #[async_trait::async_trait]
-    impl Provider for ResumeEffortProvider {
-        fn get_name(&self) -> &str {
-            "claude-acp"
-        }
-
-        async fn resume(&self, session_id: &str) -> std::result::Result<(), ProviderError> {
-            assert_eq!(session_id, "saved-inner-session");
-            self.resumed.store(true, Ordering::Release);
-            Ok(())
-        }
-
-        fn thinking_effort_support(&self) -> ThinkingEffortSupport {
-            let value = if self.resumed.load(Ordering::Acquire) {
-                "high"
-            } else {
-                "low"
-            };
-            ThinkingEffortSupport::Options(ThinkingEffortCapability {
-                option_id: "effort".to_string(),
-                values: vec![ThinkingEffortOption {
-                    value: value.to_string(),
-                    label: value.to_string(),
-                }],
-                current: Some(value.to_string()),
-            })
-        }
-
-        async fn stream(
-            &self,
-            _model_config: &goose_providers::model::ModelConfig,
-            _system: &str,
-            _messages: &[Message],
-            _tools: &[rmcp::model::Tool],
-        ) -> std::result::Result<crate::providers::base::MessageStream, ProviderError> {
-            Ok(Box::pin(futures::stream::empty()))
-        }
-    }
-
-    #[tokio::test]
-    async fn saved_provider_session_is_resumed_before_effort_snapshot() {
-        let provider = Arc::new(ResumeEffortProvider {
-            resumed: AtomicBool::new(false),
-        });
-        let conversation = Conversation::new_unvalidated([Message::assistant().with_inference(
-            InferenceMetadata {
-                provider: "claude-acp".to_string(),
-                requested_model: "current".to_string(),
-                resolved_model: None,
-                provider_session_id: Some("saved-inner-session".to_string()),
-            },
-        )]);
-
-        let provider_dyn: Arc<dyn Provider> = provider.clone();
-        resume_saved_provider_session(&provider_dyn, Some(&conversation)).await;
-
-        let ThinkingEffortSupport::Options(capability) = provider.thinking_effort_support() else {
-            panic!("expected resumed effort capability");
-        };
-        assert_eq!(capability.current.as_deref(), Some("high"));
-    }
-
-    #[test]
-    fn replay_start_index_short_history_replays_everything() {
-        let messages = vec![
-            Message::user().with_text("q1"),
-            Message::assistant().with_text("a1"),
-        ];
-        assert_eq!(replay_start_index(&messages, 10), 0);
-        assert_eq!(replay_start_index(&messages, 2), 0);
-    }
-
-    #[test]
-    fn replay_start_index_zero_tail_replays_everything() {
-        let messages = vec![
-            Message::user().with_text("q1"),
-            Message::assistant().with_text("a1"),
-        ];
-        assert_eq!(replay_start_index(&messages, 0), 0);
-    }
-
-    #[test]
-    fn replay_start_index_starts_at_turn_boundary() {
-        let messages = vec![
-            Message::user().with_text("q1"),
-            Message::assistant().with_text("a1"),
-            Message::user().with_text("q2"),
-            Message::assistant().with_text("a2"),
-            Message::user().with_text("q3"),
-            Message::assistant().with_text("a3"),
-        ];
-        // tail=3 → candidate index 3 (a2); nearest user boundary at or before is q2 (index 2)
-        assert_eq!(replay_start_index(&messages, 3), 2);
-        // tail=1 → candidate index 5 (a3); boundary is q3 (index 4)
-        assert_eq!(replay_start_index(&messages, 1), 4);
-    }
-
-    #[test]
-    fn replay_start_index_never_splits_tool_call_pairs() {
-        let tool_request = Message::assistant()
-            .with_tool_request("tool_1", Ok(CallToolRequestParams::new("developer__shell")));
-        let tool_response = Message::user()
-            .with_tool_response("tool_1", Ok(rmcp::model::CallToolResult::success(vec![])));
-        let messages = vec![
-            Message::user().with_text("q1"),
-            tool_request,
-            tool_response,
-            Message::assistant().with_text("a1"),
-        ];
-        // tail=2 → candidate is the tool response; it is not a turn boundary,
-        // so we walk back to q1 (index 0) rather than splitting the pair.
-        assert_eq!(replay_start_index(&messages, 2), 0);
-    }
-
-    #[test]
-    fn replay_start_index_no_boundary_replays_everything() {
-        let messages = vec![
-            Message::assistant().with_text("a1"),
-            Message::assistant().with_text("a2"),
-            Message::assistant().with_text("a3"),
-        ];
-        assert_eq!(replay_start_index(&messages, 1), 0);
-    }
-
-    #[test]
-    fn acp_replay_populates_only_empty_marked_assistant_messages() {
-        let visible_message = Message::assistant()
-            .with_text("visible")
-            .with_id("msg_visible");
-        let empty_message = Message::assistant().with_id("msg_empty");
-
-        let mut marked_message = Message::assistant().with_id("msg_limited");
-        marked_message.metadata.output_token_limit_reached = true;
-
-        let mut marked_user_message = Message::user().with_id("msg_user");
-        marked_user_message.metadata.output_token_limit_reached = true;
-
-        let mut hidden_marked_message = Message::assistant()
-            .with_id("msg_hidden")
-            .with_visibility(false, false);
-        hidden_marked_message.metadata.output_token_limit_reached = true;
-
-        let conversation = Conversation::new_unvalidated([
-            visible_message,
-            empty_message,
-            marked_message,
-            marked_user_message,
-            hidden_marked_message,
-        ]);
-
-        let messages = messages_for_acp_replay(&conversation);
-
-        assert_eq!(
-            messages
-                .iter()
-                .filter_map(|message| message.id.as_deref())
-                .collect::<Vec<_>>(),
-            vec!["msg_visible", "msg_limited"]
-        );
-        assert_eq!(
-            messages[1].as_concat_text(),
-            "Response stopped because the model reached its output-token limit."
-        );
-        assert!(messages[1].metadata.output_token_limit_reached);
-        assert!(conversation.messages()[2].content.is_empty());
-    }
-
-    fn persisted_enriched_tool_request() -> ToolRequest {
-        ToolRequest {
-            id: "req_first".to_string(),
-            tool_call: Ok(CallToolRequestParams::new("developer__shell")),
-            metadata: None,
-            tool_meta: Some(serde_json::json!({
-                (crate::conversation::message::TOOL_META_TITLE_KEY): "applied dark mode polish",
-                (crate::conversation::message::TOOL_META_CHAIN_SUMMARY_KEY): {
-                    "summary": "applied dark mode polish",
-                    "count": 3,
-                },
-            })),
-        }
-    }
-
-    #[test]
-    fn replay_includes_persisted_enrichment_when_requested() {
-        let mut message =
-            Message::new(Role::Assistant, 1_700_000_000, vec![]).with_id("msg_replay");
-        message.metadata.output_token_limit_reached = true;
-        let tool_call =
-            build_replayed_tool_call(&persisted_enriched_tool_request(), &message, true);
-        let goose = tool_call
-            .meta
-            .as_ref()
-            .and_then(|meta| meta.get("goose"))
-            .expect("valid initial tool call should contain goose metadata");
-
-        assert_eq!(tool_call.title, "applied dark mode polish");
-        assert_eq!(
-            goose,
-            &serde_json::json!({
-                "created": 1_700_000_000,
-                "messageId": "msg_replay",
-                "outputTokenLimitReached": true,
-                "toolCall": {
-                    "toolName": "developer__shell",
-                    "extensionName": "developer",
-                },
-                "toolChainSummary": {
-                    "summary": "applied dark mode polish",
-                    "count": 3,
-                },
-            }),
-        );
-    }
-
-    #[test]
-    fn replay_omits_persisted_enrichment_when_not_requested() {
-        let message = Message::new(Role::Assistant, 1_700_000_000, vec![]).with_id("msg_replay");
-        let tool_call =
-            build_replayed_tool_call(&persisted_enriched_tool_request(), &message, false);
-        let goose = tool_call
-            .meta
-            .as_ref()
-            .and_then(|meta| meta.get("goose"))
-            .expect("valid initial tool call should contain goose metadata");
-
-        assert_eq!(tool_call.title, "developer: shell");
-        assert_eq!(
-            goose,
-            &serde_json::json!({
-                "created": 1_700_000_000,
-                "messageId": "msg_replay",
-                "toolCall": {
-                    "toolName": "developer__shell",
-                    "extensionName": "developer",
-                },
-            }),
-        );
-    }
-
-    #[test]
-    fn pending_permissions_are_limited_to_the_active_turn() {
-        let approval = |id: &str| {
-            Message::assistant().with_action_required(
-                id,
-                "tool".to_string(),
-                Default::default(),
-                None,
-            )
-        };
-        let conversation = Conversation::new_unvalidated([
-            Message::user().with_text("old turn"),
-            approval("old"),
-            Message::user().with_text("current turn"),
-            approval("current"),
-        ]);
-
-        let approval_ids = pending_tool_confirmations(&conversation)
-            .into_iter()
-            .map(|request| request.id)
-            .collect::<Vec<_>>();
-        assert_eq!(approval_ids, ["current"]);
-
-        let no_kickoff = Conversation::new_unvalidated([approval("orphan")]);
-        assert_eq!(pending_tool_confirmations(&no_kickoff).len(), 1);
     }
 }

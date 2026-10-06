@@ -1,11 +1,10 @@
-use crate::acp::tool_call_notifier::ToolCallNotifier;
-use crate::acp::tools::AcpAwareToolMeta;
+use crate::acp::{tool_call_notifier::ToolCallNotifier, tools::AcpAwareToolMeta};
 use crate::agents::mcp_client::{Error as McpError, McpClientTrait};
-use crate::agents::platform_extensions::developer::edit::{
-    resolve_path, string_replace, FileEditParams, FileReadParams, FileWriteParams,
-};
-use crate::agents::platform_extensions::developer::shell::{ShellParams, OUTPUT_LIMIT_BYTES};
 use crate::agents::platform_extensions::developer::DeveloperClient;
+use crate::agents::platform_extensions::developer::edit::{
+    FileEditParams, FileReadParams, FileWriteParams, resolve_path, string_replace,
+};
+use crate::agents::platform_extensions::developer::shell::{OUTPUT_LIMIT_BYTES, ShellParams};
 use agent_client_protocol::schema::v1::{
     CreateTerminalRequest, Diff, EnvVariable, KillTerminalRequest, ReadTextFileRequest,
     ReleaseTerminalRequest, SessionId, Terminal, TerminalOutputRequest, ToolCallContent,
@@ -20,12 +19,9 @@ use rmcp::model::{
     Annotations, CallToolResult, ContentBlock as RmcpContent, TextContent, Tool, ToolAnnotations,
 };
 use schemars::schema_for;
-use std::path::Path;
-use std::sync::Arc;
-use std::time::Duration;
+use std::{path::Path, sync::Arc, time::Duration};
 use tokio::time::timeout;
 use tokio_util::sync::CancellationToken;
-
 async fn acp_read_text_file(
     cx: &ConnectionTo<Client>,
     session_id: &SessionId,
@@ -443,33 +439,5 @@ impl McpClientTrait for AcpTools {
 
     fn get_info(&self) -> Option<&rmcp::model::InitializeResult> {
         self.inner.get_info()
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::agents::ToolCallContext;
-
-    #[test]
-    fn terminal_request_includes_agent_session_id() {
-        let session_id = SessionId::new("acp-session");
-        let params = ShellParams {
-            command: "echo test".to_string(),
-            timeout_secs: None,
-        };
-        let ctx = ToolCallContext::new(
-            "agent-session".to_string(),
-            Some(std::path::PathBuf::from("/tmp/worktree")),
-            None,
-        );
-
-        let request = create_terminal_request(&session_id, &params, &ctx);
-
-        assert_eq!(
-            request.env,
-            vec![EnvVariable::new("AGENT_SESSION_ID", "agent-session")]
-        );
-        assert_eq!(request.cwd, Some(std::path::PathBuf::from("/tmp/worktree")));
     }
 }

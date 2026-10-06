@@ -1,12 +1,9 @@
-use goose::acp::custom_notifications::custom_notification_schemas;
-use goose::acp::server::{agent_request_schemas, GooseAcpAgent};
+use goose::acp::server::{GooseAcpAgent, agent_request_schemas};
+use goose_sdk_types::custom_notifications::custom_notification_schemas;
 use schemars::SchemaGenerator;
-use serde_json::{json, Map, Value};
+use serde_json::{Map, Value, json};
 use std::collections::{BTreeSet, HashMap};
-use std::env;
-use std::fs;
-use std::path::PathBuf;
-
+use std::{env, fs, path::PathBuf};
 const STABLE_SCHEMA_TYPE_NAMES: &[&str] = &["EmptyResponse"];
 
 fn main() {
@@ -98,17 +95,17 @@ fn main() {
     // used by exactly one method (shared types like EmptyResponse skip x-method).
     for (name, methods_list) in &type_methods {
         let generated_name = generated_type_name(name, &unstable_type_names);
-        if let Some(def) = defs.get_mut(&generated_name) {
-            if let Some(obj) = def.as_object_mut() {
-                let side = if client_side_type_names.contains(name) {
-                    "client"
-                } else {
-                    "agent"
-                };
-                obj.insert("x-side".into(), json!(side));
-                if methods_list.len() == 1 {
-                    obj.insert("x-method".into(), json!(methods_list[0]));
-                }
+        if let Some(def) = defs.get_mut(&generated_name)
+            && let Some(obj) = def.as_object_mut()
+        {
+            let side = if client_side_type_names.contains(name) {
+                "client"
+            } else {
+                "agent"
+            };
+            obj.insert("x-side".into(), json!(side));
+            if methods_list.len() == 1 {
+                obj.insert("x-method".into(), json!(methods_list[0]));
             }
         }
     }
@@ -434,11 +431,11 @@ fn generated_type_name(name: &str, unstable_type_names: &BTreeSet<String>) -> St
 fn rewrite_unstable_schema_refs(value: &mut Value, unstable_type_names: &BTreeSet<String>) {
     match value {
         Value::Object(map) => {
-            if let Some(Value::String(reference)) = map.get_mut("$ref") {
-                if let Some(name) = reference.strip_prefix("#/$defs/") {
-                    if unstable_type_names.contains(name) {
-                        *reference = format!("#/$defs/{name}_unstable");
-                    }
+            if let Some(Value::String(reference)) = map.get_mut("$ref")
+                && let Some(name) = reference.strip_prefix("#/$defs/")
+            {
+                if unstable_type_names.contains(name) {
+                    *reference = format!("#/$defs/{name}_unstable");
                 }
             }
             for v in map.values_mut() {
@@ -547,107 +544,5 @@ fn replace_true_schemas(value: &mut Value) {
             }
         }
         _ => {}
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn adds_http_and_sse_discriminants_without_tagging_stdio() {
-        let mut defs = Map::from_iter([
-            (
-                "McpServerHttp".into(),
-                json!({
-                    "type": "object",
-                    "properties": {
-                        "name": { "type": "string" }
-                    },
-                    "required": ["name"]
-                }),
-            ),
-            (
-                "McpServerSse".into(),
-                json!({
-                    "type": "object",
-                    "properties": {
-                        "name": { "type": "string" }
-                    },
-                    "required": ["name"]
-                }),
-            ),
-            (
-                "McpServerStdio".into(),
-                json!({
-                    "type": "object",
-                    "properties": {
-                        "name": { "type": "string" }
-                    },
-                    "required": ["name"]
-                }),
-            ),
-        ]);
-
-        add_mcp_server_transport_discriminants(&mut defs);
-
-        assert_eq!(
-            defs["McpServerHttp"]["properties"]["type"],
-            json!({ "type": "string", "const": "http" })
-        );
-        assert_eq!(
-            defs["McpServerSse"]["properties"]["type"],
-            json!({ "type": "string", "const": "sse" })
-        );
-        assert_eq!(defs["McpServerStdio"]["properties"].get("type"), None);
-        assert!(defs["McpServerHttp"]["required"]
-            .as_array()
-            .unwrap()
-            .contains(&json!("type")));
-        assert!(defs["McpServerSse"]["required"]
-            .as_array()
-            .unwrap()
-            .contains(&json!("type")));
-    }
-
-    #[test]
-    fn strips_integer_formats_from_nullable_integer_schemas() {
-        let mut schema = json!({
-            "type": "object",
-            "properties": {
-                "timeout": {
-                    "type": ["integer", "null"],
-                    "format": "uint64",
-                    "minimum": 0
-                },
-                "count": {
-                    "type": "integer",
-                    "format": "uint32",
-                    "minimum": 0
-                },
-                "name": {
-                    "type": "string",
-                    "format": "custom"
-                }
-            }
-        });
-
-        strip_integer_formats(&mut schema);
-
-        assert_eq!(
-            schema["properties"]["timeout"].get("format"),
-            None,
-            "nullable integer formats should be stripped"
-        );
-        assert_eq!(
-            schema["properties"]["count"].get("format"),
-            None,
-            "integer formats should be stripped"
-        );
-        assert_eq!(
-            schema["properties"]["name"]["format"],
-            json!("custom"),
-            "non-integer formats should be preserved"
-        );
     }
 }

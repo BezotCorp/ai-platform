@@ -1,9 +1,9 @@
-use super::api_client::{ApiClient, AuthMethod};
-use super::base::{ConfigKey, ProviderDef, ProviderMetadata};
-use super::openai_compatible::OpenAiCompatibleProvider;
+use super::base::ProviderDef;
 use anyhow::Result;
 use futures::future::BoxFuture;
-
+use bcaip_provider_types::base::{ConfigKey, ProviderDescriptor, ProviderMetadata};
+use goose_providers::api_client::{ApiClient, AuthMethod};
+use goose_providers::openai_compatible::OpenAiCompatibleProvider;
 const AVIAN_PROVIDER_NAME: &str = "avian";
 pub const AVIAN_API_HOST: &str = "https://api.avian.io/v1";
 pub const AVIAN_DEFAULT_MODEL: &str = "deepseek/deepseek-v3.2";
@@ -17,7 +17,7 @@ pub const AVIAN_DOC_URL: &str = "https://avian.io/docs";
 
 pub struct AvianProvider;
 
-impl goose_providers::base::ProviderDescriptor for AvianProvider {
+impl ProviderDescriptor for AvianProvider {
     fn metadata() -> ProviderMetadata {
         ProviderMetadata::new(
             AVIAN_PROVIDER_NAME,
@@ -39,7 +39,7 @@ impl ProviderDef for AvianProvider {
 
     fn from_env(
         _extensions: Vec<crate::config::ExtensionConfig>,
-        tls_config: Option<crate::providers::api_client::TlsConfig>,
+        tls_config: Option<goose_providers::api_client::TlsConfig>,
     ) -> BoxFuture<'static, Result<OpenAiCompatibleProvider>> {
         Box::pin(async move {
             let config = crate::config::Config::global();

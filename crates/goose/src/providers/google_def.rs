@@ -1,19 +1,18 @@
 use anyhow::Result;
 use futures::future::BoxFuture;
+use bcaip_provider_types::base::{ProviderDescriptor, ProviderMetadata};
 use goose_providers::api_client::TlsConfig;
-use goose_providers::base::{ProviderDescriptor, ProviderMetadata};
-use goose_providers::google::{GoogleProvider, GOOGLE_API_HOST};
+use goose_providers::google::{GOOGLE_API_HOST, GoogleProvider};
 
 use crate::config::{Config, ExtensionConfig};
 use crate::providers::base::ProviderDef;
-
 pub struct GoogleProviderDef;
 
 impl ProviderDescriptor for GoogleProviderDef {
     fn metadata() -> ProviderMetadata {
         GoogleProvider::metadata().with_setup(
-            crate::providers::catalog::ProviderSetupMetadata::api_key(
-                crate::providers::catalog::ProviderSetupGroup::Default,
+            bcaip_provider_types::ProviderSetupMetadata::api_key(
+                bcaip_provider_types::ProviderSetupGroup::Default,
             )
             .with_docs_url("https://aistudio.google.com/apikey"),
         )

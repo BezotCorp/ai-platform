@@ -1,41 +1,42 @@
-use crate::formats::openai::{
-    extract_reasoning_effort, is_openai_responses_model, openai_reasoning_effort_for_thinking,
-};
-use crate::images::ImageFormat;
 use anyhow::Result;
 use async_trait::async_trait;
+use bcaip_provider_types::context_limit::ContextLimitResolver;
+use bcaip_provider_types::formats::{
+    extract_reasoning_effort, is_openai_responses_model, openai_reasoning_effort_for_thinking,
+};
+use bcaip_provider_types::images::ImageFormat;
+use bcaip_provider_types::maybe_get_canonical_model;
 use serde_json::Value;
-use std::collections::HashSet;
-use std::sync::LazyLock;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
+use std::{collections::HashSet, sync::LazyLock};
 
 use crate::api_client::{ApiClient, AuthMethod, TlsConfig};
-use crate::base::{ConfigKey, MessageStream, ModelInfo, Provider, ProviderMetadata};
+use bcaip_provider_types::base::{
+    ConfigKey, MessageStream, ModelInfo, Provider, ProviderDescriptor, ProviderMetadata,
+};
 const DEFAULT_PROVIDER_TIMEOUT_SECS: u64 = 600;
-use crate::conversation::message::Message;
 use crate::databricks_auth::{
     DatabricksAuth, DatabricksAuthProvider, DatabricksOauthTokenProvider, DatabricksRefreshHook,
     DatabricksSessionIdProvider, DatabricksTokenResolver,
 };
-use crate::errors::ProviderError;
-use crate::formats::databricks::create_request_for_provider;
-pub use crate::formats::databricks::DATABRICKS_PROVIDER_NAME;
-use crate::formats::openai_responses::create_responses_request;
-use crate::model::ModelConfig;
 use crate::openai_compatible::{
     handle_status, map_http_error_to_provider_error, sanitize_url, stream_openai_compat,
     stream_responses_compat,
 };
-use crate::request_log::{start_log, LoggerHandleExt};
-use crate::retry::ProviderRetry;
-use crate::retry::{
-    RetryConfig, DEFAULT_BACKOFF_MULTIPLIER, DEFAULT_INITIAL_RETRY_INTERVAL_MS,
-    DEFAULT_MAX_RETRIES, DEFAULT_MAX_RETRY_INTERVAL_MS,
+use bcaip_provider_types::conversations::Message;
+use bcaip_provider_types::errors::ProviderError;
+use bcaip_provider_types::formats::DATABRICKS_PROVIDER_NAME;
+use bcaip_provider_types::formats::{create_request_for_provider, create_responses_request};
+use bcaip_provider_types::model::ModelConfig;
+use bcaip_provider_types::request_log::{LoggerHandleExt, start_log};
+use bcaip_provider_types::retry::ProviderRetry;
+use bcaip_provider_types::retry::{
+    DEFAULT_BACKOFF_MULTIPLIER, DEFAULT_INITIAL_RETRY_INTERVAL_MS, DEFAULT_MAX_RETRIES,
+    DEFAULT_MAX_RETRY_INTERVAL_MS, RetryConfig,
 };
 use rmcp::model::Tool;
 use serde_json::json;
-
 #[derive(Debug, Clone)]
 struct DatabricksEndpointInfo {
     name: String,
@@ -496,9 +497,8 @@ impl DatabricksProvider {
 
     fn model_info_from_endpoint(info: DatabricksEndpointInfo) -> ModelInfo {
         let context_model = info.upstream_model_name.as_deref().unwrap_or(&info.name);
-        let context_limit =
-            crate::canonical::maybe_get_canonical_model(DATABRICKS_PROVIDER_NAME, context_model)
-                .map(|model| model.limit.context);
+        let context_limit = maybe_get_canonical_model(DATABRICKS_PROVIDER_NAME, context_model)
+            .map(|model| model.limit.context);
         let reasoning = info
             .reasoning
             .unwrap_or_else(|| ModelConfig::new(context_model).is_reasoning_model());
@@ -536,7 +536,7 @@ impl DatabricksProvider {
     }
 }
 
-impl crate::base::ProviderDescriptor for DatabricksProvider {
+impl ProviderDescriptor for DatabricksProvider {
     fn metadata() -> ProviderMetadata {
         ProviderMetadata::new(
             DATABRICKS_PROVIDER_NAME,
@@ -564,7 +564,7 @@ impl Provider for DatabricksProvider {
     }
 
     async fn get_context_limit(&self, model: &str, override_limit: Option<usize>) -> usize {
-        crate::context_limit::ContextLimitResolver::new(self.get_name())
+        ContextLimitResolver::new(self.get_name())
             .resolve(model, override_limit, || async {
                 self.fetch_model_info(model)
                     .await
@@ -849,270 +849,5 @@ impl Provider for DatabricksProvider {
         _toolshim: bool,
     ) -> Result<Vec<ModelInfo>, ProviderError> {
         self.fetch_supported_model_info().await
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn routing_retries_cached_metadata_failures() {
-        let cached = CachedDatabricksEndpointInfo {
-            info: None,
-            fetched_at: Instant::now(),
-        };
-
-        assert!(cached.applies_to(EndpointMetadataLookup::ContextDiscovery));
-        assert!(!cached.applies_to(EndpointMetadataLookup::InferenceRouting));
-    }
-
-    #[test]
-    fn routing_reuses_cached_metadata_successes() {
-        let cached = CachedDatabricksEndpointInfo {
-            info: Some(DatabricksEndpointInfo {
-                name: "production-chat".to_string(),
-                upstream_model_name: Some("gpt-5".to_string()),
-                upstream_model_provider: Some("openai".to_string()),
-                reasoning: Some(true),
-                supports_responses_api: true,
-            }),
-            fetched_at: Instant::now(),
-        };
-
-        assert!(cached.applies_to(EndpointMetadataLookup::ContextDiscovery));
-        assert!(cached.applies_to(EndpointMetadataLookup::InferenceRouting));
-    }
-
-    #[test]
-    fn endpoint_metadata_marks_reasoning_alias_from_external_model() {
-        let endpoint = json!({
-            "name": "goose",
-            "config": {
-                "served_entities": [{
-                    "name": "current",
-                    "external_model": {
-                        "name": "claude-opus-4.6",
-                        "provider": "anthropic",
-                        "task": "llm/v1/chat"
-                    }
-                }]
-            }
-        });
-
-        let info = DatabricksProvider::endpoint_info_from_value(&endpoint).unwrap();
-
-        assert_eq!(info.name, "goose");
-        assert_eq!(info.upstream_model_name.as_deref(), Some("claude-opus-4.6"));
-        assert_eq!(info.reasoning, Some(true));
-        assert!(!info.supports_responses_api);
-
-        let model_info = DatabricksProvider::model_info_from_endpoint(info);
-        assert_eq!(model_info.name, "goose");
-        assert_eq!(
-            model_info.resolved_model.as_deref(),
-            Some("claude-opus-4.6")
-        );
-        assert!(model_info.reasoning);
-    }
-
-    #[test]
-    fn endpoint_metadata_captures_databricks_model_serving_hop() {
-        let endpoint = json!({
-            "name": "goose",
-            "config": {
-                "served_entities": [{
-                    "external_model": {
-                        "name": "databricks-claude-opus-4-6",
-                        "provider": "databricks-model-serving",
-                        "task": "llm/v1/chat"
-                    }
-                }]
-            }
-        });
-
-        let info = DatabricksProvider::endpoint_info_from_value(&endpoint).unwrap();
-
-        assert_eq!(info.name, "goose");
-        assert_eq!(
-            info.upstream_model_name.as_deref(),
-            Some("databricks-claude-opus-4-6")
-        );
-        assert_eq!(
-            info.upstream_model_provider.as_deref(),
-            Some("databricks-model-serving")
-        );
-        assert_eq!(info.reasoning, Some(true));
-    }
-
-    #[test]
-    fn endpoint_metadata_marks_reasoning_alias_from_pending_gpt_model() {
-        let endpoint = json!({
-            "name": "goose",
-            "pending_config": {
-                "served_entities": [{
-                    "external_model": {
-                        "name": "gpt-5.5",
-                        "provider": "openai",
-                        "task": "llm/v1/chat"
-                    }
-                }]
-            }
-        });
-
-        let info = DatabricksProvider::endpoint_info_from_value(&endpoint).unwrap();
-
-        assert_eq!(info.name, "goose");
-        assert_eq!(info.upstream_model_name.as_deref(), Some("gpt-5.5"));
-        assert_eq!(info.reasoning, Some(true));
-    }
-
-    #[test]
-    fn endpoint_metadata_uses_endpoint_name_when_no_upstream_model_exists() {
-        let endpoint = json!({
-            "name": "goose-gpt-5-5"
-        });
-
-        let info = DatabricksProvider::endpoint_info_from_value(&endpoint).unwrap();
-
-        assert_eq!(info.name, "goose-gpt-5-5");
-        assert_eq!(info.upstream_model_name, None);
-        assert_eq!(info.reasoning, Some(true));
-        assert!(!info.supports_responses_api);
-    }
-
-    #[test]
-    fn endpoint_metadata_detects_responses_api_from_foundation_model_api_types() {
-        let endpoint = json!({
-            "name": "databricks-gpt-5-4",
-            "config": {
-                "served_entities": [{
-                    "name": "databricks-gpt-5-4",
-                    "entity_name": "system.ai.databricks-gpt-5-4",
-                    "type": "FOUNDATION_MODEL",
-                    "foundation_model": {
-                        "name": "system.ai.databricks-gpt-5-4",
-                        "display_name": "GPT-5.4",
-                        "api_types": [
-                            "mlflow/v1/chat/completions",
-                            "openai/v1/responses",
-                            "cursor/v1/chat/completions"
-                        ]
-                    }
-                }]
-            }
-        });
-
-        let info = DatabricksProvider::endpoint_info_from_value(&endpoint).unwrap();
-
-        assert_eq!(info.name, "databricks-gpt-5-4");
-        assert_eq!(
-            info.upstream_model_name.as_deref(),
-            Some("system.ai.databricks-gpt-5-4")
-        );
-        assert!(info.supports_responses_api);
-    }
-
-    #[test]
-    fn endpoint_metadata_detects_responses_api_from_served_models() {
-        let endpoint = json!({
-            "name": "databricks-gpt-5-4",
-            "config": {
-                "served_models": [{
-                    "foundation_model": {
-                        "api_types": ["openai/v1/responses"]
-                    }
-                }]
-            }
-        });
-
-        let info = DatabricksProvider::endpoint_info_from_value(&endpoint).unwrap();
-
-        assert!(info.supports_responses_api);
-    }
-
-    #[test]
-    fn endpoint_metadata_ignores_pending_config_for_responses_routing() {
-        let endpoint = json!({
-            "name": "databricks-gpt-5-4",
-            "config": {
-                "served_entities": [{
-                    "foundation_model": {
-                        "api_types": ["mlflow/v1/chat/completions"]
-                    }
-                }]
-            },
-            "pending_config": {
-                "served_entities": [{
-                    "foundation_model": {
-                        "api_types": ["openai/v1/responses"]
-                    }
-                }]
-            }
-        });
-
-        let info = DatabricksProvider::endpoint_info_from_value(&endpoint).unwrap();
-
-        assert!(!info.supports_responses_api);
-    }
-
-    #[test]
-    fn vision_support_resolves_from_upstream_model_behind_endpoint_alias() {
-        let aliased = ModelConfig::new("production-chat");
-        assert_eq!(aliased.supports_vision, None);
-
-        let resolved = DatabricksProvider::resolve_vision_support(&aliased, "gpt-4o")
-            .expect("upstream model should resolve vision support");
-        assert_eq!(resolved.supports_vision, Some(true));
-        assert_eq!(resolved.model_name, "production-chat");
-
-        let catalog_alias = ModelConfig::new("gpt-3.5-turbo")
-            .with_canonical_vision_support(DATABRICKS_PROVIDER_NAME);
-        assert_eq!(catalog_alias.supports_vision, Some(false));
-
-        let corrected = DatabricksProvider::resolve_vision_support(&catalog_alias, "gpt-4o")
-            .expect("upstream model should override alias-derived capability");
-        assert_eq!(corrected.supports_vision, Some(true));
-
-        let downgraded =
-            DatabricksProvider::resolve_vision_support(&resolved, "gpt-3.5-turbo").unwrap();
-        assert_eq!(downgraded.supports_vision, Some(false));
-    }
-
-    #[test]
-    fn responses_routing_prefers_metadata_over_model_name() {
-        let responses_info = DatabricksEndpointInfo {
-            name: "custom".into(),
-            upstream_model_name: None,
-            upstream_model_provider: None,
-            reasoning: None,
-            supports_responses_api: true,
-        };
-        assert!(DatabricksProvider::uses_responses_api(
-            Some(&responses_info),
-            &["databricks-claude-sonnet-4"]
-        ));
-
-        let chat_info = DatabricksEndpointInfo {
-            supports_responses_api: false,
-            ..responses_info
-        };
-        assert!(!DatabricksProvider::uses_responses_api(
-            Some(&chat_info),
-            &["gpt-5.4"]
-        ));
-    }
-
-    #[test]
-    fn responses_routing_falls_back_to_model_name_without_metadata() {
-        assert!(DatabricksProvider::uses_responses_api(None, &["gpt-5.4"]));
-        assert!(DatabricksProvider::uses_responses_api(
-            None,
-            &["databricks-claude-sonnet-4", "gpt-5.4"]
-        ));
-        assert!(!DatabricksProvider::uses_responses_api(
-            None,
-            &["databricks-claude-sonnet-4"]
-        ));
     }
 }

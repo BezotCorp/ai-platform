@@ -1,28 +1,24 @@
-use std::collections::HashMap;
-use std::time::Duration;
-
+use super::base::ProviderDef;
+use crate::session_context::SESSION_ID_HEADER;
 use anyhow::Result;
 use async_trait::async_trait;
 use aws_config;
 use aws_sdk_bedrockruntime::config::ProvideCredentials;
 use aws_sdk_sagemakerruntime::Client as SageMakerClient;
-use rmcp::model::Tool;
-use serde_json::{json, Value};
-use smithy_transport_reqwest::ReqwestHttpClient;
-
-use super::base::{ConfigKey, MessageStream, Provider, ProviderDef, ProviderMetadata};
-use super::retry::ProviderRetry;
-use crate::conversation::message::{Message, MessageContent};
-use crate::session_context::SESSION_ID_HEADER;
-use goose_providers::errors::ProviderError;
-
 use chrono::Utc;
 use futures::future::BoxFuture;
-use goose_providers::conversation::token_usage::{ProviderUsage, Usage};
-use goose_providers::model::ModelConfig;
-use goose_providers::request_log::{start_log, LoggerHandleExt};
+use bcaip_provider_types::base::{ConfigKey, MessageStream, Provider, ProviderMetadata};
+use bcaip_provider_types::conversations::{Message, MessageContent};
+use bcaip_provider_types::conversations::{ProviderUsage, Usage};
+use bcaip_provider_types::errors::ProviderError;
+use bcaip_provider_types::model::ModelConfig;
+use bcaip_provider_types::request_log::{LoggerHandleExt, start_log};
+use bcaip_provider_types::retry::ProviderRetry;
 use rmcp::model::Role;
-
+use rmcp::model::Tool;
+use serde_json::{Value, json};
+use smithy_transport_reqwest::ReqwestHttpClient;
+use std::time::Duration;
 const SAGEMAKER_TGI_PROVIDER_NAME: &str = "sagemaker_tgi";
 pub const SAGEMAKER_TGI_DOC_LINK: &str =
     "https://docs.aws.amazon.com/sagemaker/latest/dg/realtime-endpoints.html";
@@ -40,7 +36,7 @@ pub struct SageMakerTgiProvider {
 
 impl SageMakerTgiProvider {
     pub async fn from_env(
-        _tls_config: Option<crate::providers::api_client::TlsConfig>,
+        _tls_config: Option<goose_providers::api_client::TlsConfig>,
     ) -> Result<Self> {
         let config = crate::config::Config::global();
 
@@ -49,23 +45,22 @@ impl SageMakerTgiProvider {
             anyhow::anyhow!("SAGEMAKER_ENDPOINT_NAME is required for SageMaker TGI provider")
         })?;
 
-        // Attempt to load config and secrets to get AWS_ prefixed keys
-        let set_aws_env_vars = |res: Result<HashMap<String, Value>, _>| {
-            if let Ok(map) = res {
-                map.into_iter()
-                    .filter(|(key, _)| key.starts_with("AWS_"))
-                    .filter_map(|(key, value)| value.as_str().map(|s| (key, s.to_string())))
-                    .for_each(|(key, s)| std::env::set_var(key, s));
-            }
-        };
-
-        set_aws_env_vars(config.all_values());
-        set_aws_env_vars(config.all_secrets());
-
-        let aws_config = aws_config::from_env()
-            .http_client(ReqwestHttpClient::new())
-            .load()
-            .await;
+        let mut loader = aws_config::from_env().http_client(ReqwestHttpClient::new());
+        if let Some(profile_name) = config
+            .get_param::<String>("AWS_PROFILE")
+            .ok()
+            .filter(|profile_name| !profile_name.is_empty())
+        {
+            loader = loader.profile_name(profile_name);
+        }
+        if let Some(region) = config
+            .get_param::<String>("AWS_REGION")
+            .ok()
+            .filter(|region| !region.is_empty())
+        {
+            loader = loader.region(aws_config::Region::new(region));
+        }
+        let aws_config = loader.load().await;
 
         // Validate credentials
         aws_config
@@ -280,7 +275,7 @@ impl SageMakerTgiProvider {
     }
 }
 
-impl goose_providers::base::ProviderDescriptor for SageMakerTgiProvider {
+impl bcaip_provider_types::base::ProviderDescriptor for SageMakerTgiProvider {
     fn metadata() -> ProviderMetadata {
         ProviderMetadata::new(
             SAGEMAKER_TGI_PROVIDER_NAME,
@@ -303,7 +298,7 @@ impl ProviderDef for SageMakerTgiProvider {
 
     fn from_env(
         _extensions: Vec<crate::config::ExtensionConfig>,
-        tls_config: Option<crate::providers::api_client::TlsConfig>,
+        tls_config: Option<goose_providers::api_client::TlsConfig>,
     ) -> BoxFuture<'static, Result<Self::Provider>> {
         Box::pin(Self::from_env(tls_config))
     }
@@ -362,7 +357,7 @@ impl Provider for SageMakerTgiProvider {
         )?;
 
         let provider_usage = ProviderUsage::new(model_name.to_string(), usage);
-        Ok(super::base::stream_from_single_message(
+        Ok(bcaip_provider_types::base::stream_from_single_message(
             message,
             provider_usage,
         ))

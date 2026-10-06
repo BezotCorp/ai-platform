@@ -2,11 +2,9 @@
 //! environment variables, which would otherwise be observed by unrelated
 //! tests in the same process that build HTTP clients.
 
-use std::time::Duration;
-
 use goose_providers::api_client::{ApiClient, AuthMethod};
+use std::time::Duration;
 use tokio::net::TcpListener;
-
 #[tokio::test]
 async fn loopback_transport_does_not_use_environment_proxy() {
     let proxy = TcpListener::bind("127.0.0.1:0").await.unwrap();

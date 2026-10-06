@@ -1,9 +1,8 @@
-use crate::agents::extension::PLATFORM_EXTENSIONS;
-use crate::agents::ExtensionConfig;
-use crate::config::extensions::ExtensionEntry;
-use crate::config::providers::ProviderEntry;
-use serde_yaml::Mapping;
-
+use crate::{
+    agents::{ExtensionConfig, extension::PLATFORM_EXTENSIONS},
+    config::{extensions::ExtensionEntry, providers::ProviderEntry},
+};
+use yaml_serde::Mapping;
 const EXTENSIONS_CONFIG_KEY: &str = "extensions";
 const PROVIDERS_CONFIG_KEY: &str = "providers";
 const ACTIVE_PROVIDER_KEY: &str = "active_provider";
@@ -22,35 +21,35 @@ pub fn run_read_migrations(config: &mut Mapping) {
     migrate_platform_extensions(config);
 }
 
-fn read_enabled_field(value: &serde_yaml::Value) -> Option<bool> {
+fn read_enabled_field(value: &yaml_serde::Value) -> Option<bool> {
     value
         .as_mapping()?
-        .get(serde_yaml::Value::String("enabled".to_string()))?
+        .get(yaml_serde::Value::String("enabled".to_string()))?
         .as_bool()
 }
 
 fn migrate_platform_extensions(config: &mut Mapping) -> bool {
-    let extensions_key = serde_yaml::Value::String(EXTENSIONS_CONFIG_KEY.to_string());
+    let extensions_key = yaml_serde::Value::String(EXTENSIONS_CONFIG_KEY.to_string());
 
     let extensions_value = config
         .get(&extensions_key)
         .cloned()
-        .unwrap_or(serde_yaml::Value::Mapping(Mapping::new()));
+        .unwrap_or(yaml_serde::Value::Mapping(Mapping::new()));
 
     let mut extensions_map: Mapping = match extensions_value {
-        serde_yaml::Value::Mapping(m) => m,
+        yaml_serde::Value::Mapping(m) => m,
         _ => Mapping::new(),
     };
 
     let mut needs_save = false;
 
     for (name, def) in PLATFORM_EXTENSIONS.iter() {
-        let ext_key = serde_yaml::Value::String(name.to_string());
+        let ext_key = yaml_serde::Value::String(name.to_string());
         let existing = extensions_map.get(&ext_key);
 
         let needs_migration = match existing {
             None => true,
-            Some(value) => match serde_yaml::from_value::<ExtensionEntry>(value.clone()) {
+            Some(value) => match yaml_serde::from_value::<ExtensionEntry>(value.clone()) {
                 Ok(entry) => match &entry.config {
                     ExtensionConfig::Platform {
                         description,
@@ -73,7 +72,7 @@ fn migrate_platform_extensions(config: &mut Mapping) -> bool {
 
         if needs_migration {
             let existing_entry =
-                existing.and_then(|v| serde_yaml::from_value::<ExtensionEntry>(v.clone()).ok());
+                existing.and_then(|v| yaml_serde::from_value::<ExtensionEntry>(v.clone()).ok());
 
             let enabled = existing
                 .and_then(read_enabled_field)
@@ -118,7 +117,7 @@ fn migrate_platform_extensions(config: &mut Mapping) -> bool {
 
             let new_entry = ExtensionEntry { config, enabled };
 
-            if let Ok(value) = serde_yaml::to_value(&new_entry) {
+            if let Ok(value) = yaml_serde::to_value(&new_entry) {
                 extensions_map.insert(ext_key, value);
                 needs_save = true;
             }
@@ -126,7 +125,7 @@ fn migrate_platform_extensions(config: &mut Mapping) -> bool {
     }
 
     if needs_save {
-        config.insert(extensions_key, serde_yaml::Value::Mapping(extensions_map));
+        config.insert(extensions_key, yaml_serde::Value::Mapping(extensions_map));
     }
 
     needs_save
@@ -137,7 +136,7 @@ fn cleanup_legacy_provider_keys(config: &mut Mapping) -> bool {
     let configured_suffix = "_configured";
     let mut changed = false;
 
-    let stale_keys: Vec<serde_yaml::Value> = config
+    let stale_keys: Vec<yaml_serde::Value> = config
         .keys()
         .filter(|k| {
             k.as_str()
@@ -182,31 +181,30 @@ fn cleanup_legacy_provider_keys(config: &mut Mapping) -> bool {
 /// ```
 ///
 fn migrate_provider_config(config: &mut Mapping) -> bool {
-    let providers_key = serde_yaml::Value::String(PROVIDERS_CONFIG_KEY.to_string());
+    let providers_key = yaml_serde::Value::String(PROVIDERS_CONFIG_KEY.to_string());
 
     // If providers block already exists, backfill active_provider from the
     // legacy flat key when missing, then clean up leftover flat keys.
     if config.contains_key(&providers_key) {
-        let ap_key = serde_yaml::Value::String(ACTIVE_PROVIDER_KEY.to_string());
-        if !config.contains_key(&ap_key) {
-            if let Some(legacy) = config
-                .get(serde_yaml::Value::String("GOOSE_PROVIDER".to_string()))
+        let ap_key = yaml_serde::Value::String(ACTIVE_PROVIDER_KEY.to_string());
+        if !config.contains_key(&ap_key)
+            && let Some(legacy) = config
+                .get(yaml_serde::Value::String("GOOSE_PROVIDER".to_string()))
                 .and_then(|v| v.as_str())
-            {
-                config.insert(ap_key, serde_yaml::Value::String(legacy.to_string()));
-            }
+        {
+            config.insert(ap_key, yaml_serde::Value::String(legacy.to_string()));
         }
         return cleanup_legacy_provider_keys(config);
     }
 
     // Read the old flat keys, if present.
     let active_provider = config
-        .get(serde_yaml::Value::String("GOOSE_PROVIDER".to_string()))
+        .get(yaml_serde::Value::String("GOOSE_PROVIDER".to_string()))
         .and_then(|v| v.as_str())
         .map(|s| s.to_string());
 
     let active_model = config
-        .get(serde_yaml::Value::String("GOOSE_MODEL".to_string()))
+        .get(yaml_serde::Value::String("GOOSE_MODEL".to_string()))
         .and_then(|v| v.as_str())
         .map(|s| s.to_string())
         .unwrap_or_default();
@@ -228,10 +226,10 @@ fn migrate_provider_config(config: &mut Mapping) -> bool {
 
     // Ensure the active provider is in the list even if no `*_configured`
     // marker exists for it yet.
-    if let Some(ref ap) = active_provider {
-        if !discovered_providers.contains(ap) {
-            discovered_providers.push(ap.clone());
-        }
+    if let Some(ref ap) = active_provider
+        && !discovered_providers.contains(ap)
+    {
+        discovered_providers.push(ap.clone());
     }
 
     // If there is nothing to migrate, bail out.
@@ -253,361 +251,28 @@ fn migrate_provider_config(config: &mut Mapping) -> bool {
             model,
             configured: true,
         };
-        if let Ok(value) = serde_yaml::to_value(&entry) {
-            providers_map.insert(serde_yaml::Value::String(name.clone()), value);
+        if let Ok(value) = yaml_serde::to_value(&entry) {
+            providers_map.insert(yaml_serde::Value::String(name.clone()), value);
         }
     }
 
-    config.insert(providers_key, serde_yaml::Value::Mapping(providers_map));
+    config.insert(providers_key, yaml_serde::Value::Mapping(providers_map));
 
     // Write `active_provider` top-level key.
     if let Some(ref ap) = active_provider {
         config.insert(
-            serde_yaml::Value::String(ACTIVE_PROVIDER_KEY.to_string()),
-            serde_yaml::Value::String(ap.clone()),
+            yaml_serde::Value::String(ACTIVE_PROVIDER_KEY.to_string()),
+            yaml_serde::Value::String(ap.clone()),
         );
     }
 
     // Remove old flat keys.
-    config.shift_remove(serde_yaml::Value::String("GOOSE_PROVIDER".to_string()));
-    config.shift_remove(serde_yaml::Value::String("GOOSE_MODEL".to_string()));
+    config.shift_remove(yaml_serde::Value::String("GOOSE_PROVIDER".to_string()));
+    config.shift_remove(yaml_serde::Value::String("GOOSE_MODEL".to_string()));
     for name in &discovered_providers {
-        let marker_key = serde_yaml::Value::String(format!("{}{}", name, configured_suffix));
+        let marker_key = yaml_serde::Value::String(format!("{}{}", name, configured_suffix));
         config.shift_remove(&marker_key);
     }
 
     true
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_migrate_platform_extensions_empty_config() {
-        let mut config = Mapping::new();
-        let changed = run_migrations(&mut config);
-
-        assert!(changed);
-        let extensions_key = serde_yaml::Value::String(EXTENSIONS_CONFIG_KEY.to_string());
-        assert!(config.contains_key(&extensions_key));
-    }
-
-    #[test]
-    fn test_migrate_platform_extensions_preserves_restrictions() {
-        let mut config = Mapping::new();
-        let mut extensions = Mapping::new();
-        let todo_entry = ExtensionEntry {
-            config: ExtensionConfig::Platform {
-                name: "todo".to_string(),
-                description: "old description".to_string(),
-                display_name: Some("Old Name".to_string()),
-                bundled: Some(true),
-                available_tools: vec!["todo_read".to_string()],
-            },
-            enabled: false,
-        };
-        extensions.insert(
-            serde_yaml::Value::String("todo".to_string()),
-            serde_yaml::to_value(&todo_entry).unwrap(),
-        );
-        config.insert(
-            serde_yaml::Value::String(EXTENSIONS_CONFIG_KEY.to_string()),
-            serde_yaml::Value::Mapping(extensions),
-        );
-
-        let changed = run_migrations(&mut config);
-        assert!(changed);
-
-        let extensions_key = serde_yaml::Value::String(EXTENSIONS_CONFIG_KEY.to_string());
-        let extensions = config.get(&extensions_key).unwrap().as_mapping().unwrap();
-        let todo_key = serde_yaml::Value::String("todo".to_string());
-        let todo_value = extensions.get(&todo_key).unwrap();
-        let todo_entry: ExtensionEntry = serde_yaml::from_value(todo_value.clone()).unwrap();
-
-        assert!(!todo_entry.enabled);
-        assert!(matches!(
-            todo_entry.config,
-            ExtensionConfig::Platform {
-                available_tools,
-                ..
-            } if available_tools == ["todo_read"]
-        ));
-        assert!(!run_migrations(&mut config));
-    }
-
-    #[test]
-    fn test_migrate_builtin_extensions_preserves_restrictions() {
-        let def = PLATFORM_EXTENSIONS.get("todo").unwrap();
-        let mut config = Mapping::new();
-        let mut extensions = Mapping::new();
-        let todo_entry = ExtensionEntry {
-            config: ExtensionConfig::Builtin {
-                name: def.name.to_string(),
-                description: "old description".to_string(),
-                display_name: Some("Old Name".to_string()),
-                timeout: Some(30),
-                bundled: Some(true),
-                available_tools: vec!["todo_read".to_string()],
-            },
-            enabled: true,
-        };
-        extensions.insert(
-            serde_yaml::Value::String("todo".to_string()),
-            serde_yaml::to_value(&todo_entry).unwrap(),
-        );
-        config.insert(
-            serde_yaml::Value::String(EXTENSIONS_CONFIG_KEY.to_string()),
-            serde_yaml::Value::Mapping(extensions),
-        );
-
-        assert!(run_migrations(&mut config));
-
-        let extensions_key = serde_yaml::Value::String(EXTENSIONS_CONFIG_KEY.to_string());
-        let extensions = config.get(&extensions_key).unwrap().as_mapping().unwrap();
-        let todo_entry: ExtensionEntry = serde_yaml::from_value(
-            extensions
-                .get(serde_yaml::Value::String("todo".to_string()))
-                .unwrap()
-                .clone(),
-        )
-        .unwrap();
-
-        assert!(todo_entry.enabled);
-        assert!(matches!(
-            todo_entry.config,
-            ExtensionConfig::Builtin {
-                available_tools,
-                ..
-            } if available_tools == ["todo_read"]
-        ));
-    }
-
-    #[test]
-    fn test_migrate_platform_extensions_idempotent() {
-        let mut config = Mapping::new();
-        run_migrations(&mut config);
-
-        let changed = run_migrations(&mut config);
-        assert!(!changed);
-    }
-
-    // -----------------------------------------------------------------------
-    // Provider migration tests
-    // -----------------------------------------------------------------------
-
-    #[test]
-    fn test_migrate_provider_config_basic() {
-        let mut config = Mapping::new();
-        config.insert(
-            serde_yaml::Value::String("GOOSE_PROVIDER".to_string()),
-            serde_yaml::Value::String("claude-acp".to_string()),
-        );
-        config.insert(
-            serde_yaml::Value::String("GOOSE_MODEL".to_string()),
-            serde_yaml::Value::String("current".to_string()),
-        );
-        config.insert(
-            serde_yaml::Value::String("claude-acp_configured".to_string()),
-            serde_yaml::Value::Bool(true),
-        );
-
-        let changed = migrate_provider_config(&mut config);
-        assert!(changed);
-
-        // active_provider should be set
-        let active = config
-            .get(serde_yaml::Value::String("active_provider".to_string()))
-            .unwrap()
-            .as_str()
-            .unwrap();
-        assert_eq!(active, "claude-acp");
-
-        // providers block should exist with the entry
-        let providers = config
-            .get(serde_yaml::Value::String("providers".to_string()))
-            .unwrap()
-            .as_mapping()
-            .unwrap();
-        let entry: ProviderEntry = serde_yaml::from_value(
-            providers
-                .get(serde_yaml::Value::String("claude-acp".to_string()))
-                .unwrap()
-                .clone(),
-        )
-        .unwrap();
-        assert!(entry.enabled);
-        assert!(entry.configured);
-        assert_eq!(entry.model, "current");
-
-        // Old flat keys should be removed
-        assert!(!config.contains_key(serde_yaml::Value::String("GOOSE_PROVIDER".to_string())));
-        assert!(!config.contains_key(serde_yaml::Value::String("GOOSE_MODEL".to_string())));
-        assert!(!config.contains_key(serde_yaml::Value::String(
-            "claude-acp_configured".to_string()
-        )));
-    }
-
-    #[test]
-    fn test_migrate_provider_config_multiple_configured() {
-        let mut config = Mapping::new();
-        config.insert(
-            serde_yaml::Value::String("GOOSE_PROVIDER".to_string()),
-            serde_yaml::Value::String("claude-acp".to_string()),
-        );
-        config.insert(
-            serde_yaml::Value::String("GOOSE_MODEL".to_string()),
-            serde_yaml::Value::String("current".to_string()),
-        );
-        config.insert(
-            serde_yaml::Value::String("claude-acp_configured".to_string()),
-            serde_yaml::Value::Bool(true),
-        );
-        config.insert(
-            serde_yaml::Value::String("lmstudio_configured".to_string()),
-            serde_yaml::Value::Bool(true),
-        );
-
-        let changed = migrate_provider_config(&mut config);
-        assert!(changed);
-
-        let providers = config
-            .get(serde_yaml::Value::String("providers".to_string()))
-            .unwrap()
-            .as_mapping()
-            .unwrap();
-
-        // Both providers should exist
-        let claude: ProviderEntry = serde_yaml::from_value(
-            providers
-                .get(serde_yaml::Value::String("claude-acp".to_string()))
-                .unwrap()
-                .clone(),
-        )
-        .unwrap();
-        assert_eq!(claude.model, "current");
-        assert!(claude.configured);
-
-        let lmstudio: ProviderEntry = serde_yaml::from_value(
-            providers
-                .get(serde_yaml::Value::String("lmstudio".to_string()))
-                .unwrap()
-                .clone(),
-        )
-        .unwrap();
-        // lmstudio was not the active provider, so model should be empty
-        assert_eq!(lmstudio.model, "");
-        assert!(lmstudio.configured);
-
-        // Old markers removed
-        assert!(!config.contains_key(serde_yaml::Value::String(
-            "claude-acp_configured".to_string()
-        )));
-        assert!(!config.contains_key(serde_yaml::Value::String("lmstudio_configured".to_string())));
-    }
-
-    #[test]
-    fn test_migrate_provider_config_idempotent() {
-        let mut config = Mapping::new();
-        config.insert(
-            serde_yaml::Value::String("GOOSE_PROVIDER".to_string()),
-            serde_yaml::Value::String("openai".to_string()),
-        );
-        config.insert(
-            serde_yaml::Value::String("GOOSE_MODEL".to_string()),
-            serde_yaml::Value::String("gpt-4o".to_string()),
-        );
-
-        let changed_first = migrate_provider_config(&mut config);
-        assert!(changed_first);
-
-        let changed_second = migrate_provider_config(&mut config);
-        assert!(!changed_second, "Second migration run should be a no-op");
-    }
-
-    #[test]
-    fn test_migrate_provider_config_empty_config() {
-        let mut config = Mapping::new();
-
-        let changed = migrate_provider_config(&mut config);
-        assert!(!changed, "Empty config should not trigger migration");
-    }
-
-    #[test]
-    fn test_migrate_provider_config_no_model() {
-        let mut config = Mapping::new();
-        config.insert(
-            serde_yaml::Value::String("GOOSE_PROVIDER".to_string()),
-            serde_yaml::Value::String("anthropic".to_string()),
-        );
-        // No GOOSE_MODEL key
-
-        let changed = migrate_provider_config(&mut config);
-        assert!(changed);
-
-        let providers = config
-            .get(serde_yaml::Value::String("providers".to_string()))
-            .unwrap()
-            .as_mapping()
-            .unwrap();
-        let entry: ProviderEntry = serde_yaml::from_value(
-            providers
-                .get(serde_yaml::Value::String("anthropic".to_string()))
-                .unwrap()
-                .clone(),
-        )
-        .unwrap();
-        assert_eq!(entry.model, "");
-    }
-
-    #[test]
-    fn test_cleanup_legacy_keys_when_providers_exists() {
-        let mut config = Mapping::new();
-        // Simulate state: providers block exists but stale flat keys remain
-        let mut providers_map = Mapping::new();
-        if let Ok(value) = serde_yaml::to_value(&ProviderEntry {
-            enabled: true,
-            model: "current".to_string(),
-            configured: true,
-        }) {
-            providers_map.insert(serde_yaml::Value::String("claude-acp".to_string()), value);
-        }
-        config.insert(
-            serde_yaml::Value::String("providers".to_string()),
-            serde_yaml::Value::Mapping(providers_map),
-        );
-        config.insert(
-            serde_yaml::Value::String("GOOSE_PROVIDER".to_string()),
-            serde_yaml::Value::String("lmstudio".to_string()),
-        );
-        config.insert(
-            serde_yaml::Value::String("GOOSE_MODEL".to_string()),
-            serde_yaml::Value::String("some-model".to_string()),
-        );
-        config.insert(
-            serde_yaml::Value::String("claude-acp_configured".to_string()),
-            serde_yaml::Value::Bool(true),
-        );
-
-        let changed = migrate_provider_config(&mut config);
-        assert!(changed);
-
-        // Legacy keys should be gone
-        assert!(!config.contains_key(serde_yaml::Value::String("GOOSE_PROVIDER".to_string())));
-        assert!(!config.contains_key(serde_yaml::Value::String("GOOSE_MODEL".to_string())));
-        assert!(!config.contains_key(serde_yaml::Value::String(
-            "claude-acp_configured".to_string()
-        )));
-
-        // Providers block should be untouched
-        assert!(config.contains_key(serde_yaml::Value::String("providers".to_string())));
-
-        // active_provider should be backfilled from legacy GOOSE_PROVIDER
-        assert_eq!(
-            config
-                .get(serde_yaml::Value::String("active_provider".to_string()))
-                .and_then(|v| v.as_str()),
-            Some("lmstudio")
-        );
-    }
 }

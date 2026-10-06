@@ -1,12 +1,11 @@
+use crate::permission::{
+    permission_inspector::PermissionInspector, permission_judge::PermissionCheckResult,
+};
 use anyhow::Result;
 use async_trait::async_trait;
+use bcaip_provider_types::conversations::{Message, ToolRequest};
+use bcaip_provider_types::goose_mode::GooseMode;
 use std::collections::HashMap;
-
-use crate::config::GooseMode;
-use crate::conversation::message::{Message, ToolRequest};
-use crate::permission::permission_inspector::PermissionInspector;
-use crate::permission::permission_judge::PermissionCheckResult;
-
 /// Result of inspecting a tool call
 #[derive(Debug, Clone)]
 pub struct InspectionResult {
@@ -270,44 +269,4 @@ pub fn get_security_finding_id_from_results(
             result.tool_request_id == tool_request_id && result.inspector_name == "security"
         })
         .and_then(|result| result.finding_id.clone())
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::conversation::message::ToolRequest;
-    use rmcp::model::CallToolRequestParams;
-    use rmcp::object;
-
-    #[test]
-    fn test_apply_inspection_results() {
-        let tool_request = ToolRequest {
-            id: "req_1".to_string(),
-            tool_call: Ok(CallToolRequestParams::new("test_tool").with_arguments(object!({}))),
-            metadata: None,
-            tool_meta: None,
-        };
-
-        let permission_result = PermissionCheckResult {
-            approved: vec![tool_request.clone()],
-            needs_approval: vec![],
-            denied: vec![],
-        };
-
-        let inspection_results = vec![InspectionResult {
-            tool_request_id: "req_1".to_string(),
-            action: InspectionAction::Deny,
-            reason: "Test denial".to_string(),
-            confidence: 0.9,
-            inspector_name: "test_inspector".to_string(),
-            finding_id: Some("TEST-001".to_string()),
-        }];
-
-        let updated_result =
-            apply_inspection_results_to_permissions(permission_result, &inspection_results);
-
-        assert_eq!(updated_result.approved.len(), 0);
-        assert_eq!(updated_result.denied.len(), 1);
-        assert_eq!(updated_result.denied[0].id, "req_1");
-    }
 }

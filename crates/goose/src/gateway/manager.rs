@@ -1,16 +1,10 @@
-use std::collections::HashMap;
-use std::sync::Arc;
-
+use super::{Gateway, GatewayConfig, PairingState, PlatformUser};
+use super::{handler::GatewayHandler, pairing::PairingStore};
+use crate::{config::Config, execution::manager::AgentManager};
 use serde::{Deserialize, Serialize};
+use std::{collections::HashMap, sync::Arc};
 use tokio::sync::RwLock;
 use tokio_util::sync::CancellationToken;
-
-use crate::config::Config;
-use crate::execution::manager::AgentManager;
-
-use super::handler::GatewayHandler;
-use super::pairing::PairingStore;
-use super::{Gateway, GatewayConfig, PairingState, PlatformUser};
 
 const GATEWAY_CONFIGS_KEY: &str = "gateway_configs";
 

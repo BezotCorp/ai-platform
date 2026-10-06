@@ -1,9 +1,7 @@
 use serde::de::{DeserializeSeed, Deserializer, MapAccess, SeqAccess, Visitor};
 use serde::forward_to_deserialize_any;
-use serde_yaml::mapping::Iter as MappingIter;
-use serde_yaml::Value;
 use std::slice;
-
+use yaml_serde::{Value, mapping::Iter as MappingIter};
 pub(super) struct RecipeValueDeserializer<'de> {
     value: &'de Value,
 }
@@ -13,7 +11,7 @@ impl<'de> RecipeValueDeserializer<'de> {
         Self { value }
     }
 
-    fn deserialize_string_value<V>(self, visitor: V) -> Result<V::Value, serde_yaml::Error>
+    fn deserialize_string_value<V>(self, visitor: V) -> Result<V::Value, yaml_serde::Error>
     where
         V: Visitor<'de>,
     {
@@ -29,7 +27,7 @@ impl<'de> RecipeValueDeserializer<'de> {
 }
 
 impl<'de> Deserializer<'de> for RecipeValueDeserializer<'de> {
-    type Error = serde_yaml::Error;
+    type Error = yaml_serde::Error;
 
     fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where
@@ -171,7 +169,7 @@ struct RecipeSeqAccess<'de> {
 }
 
 impl<'de> SeqAccess<'de> for RecipeSeqAccess<'de> {
-    type Error = serde_yaml::Error;
+    type Error = yaml_serde::Error;
 
     fn next_element_seed<T>(&mut self, seed: T) -> Result<Option<T::Value>, Self::Error>
     where
@@ -194,7 +192,7 @@ struct RecipeMapAccess<'de> {
 }
 
 impl<'de> MapAccess<'de> for RecipeMapAccess<'de> {
-    type Error = serde_yaml::Error;
+    type Error = yaml_serde::Error;
 
     fn next_key_seed<K>(&mut self, seed: K) -> Result<Option<K::Value>, Self::Error>
     where

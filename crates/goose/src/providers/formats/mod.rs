@@ -1,22 +1,14 @@
-pub mod anthropic {
-    pub use goose_providers::formats::anthropic::*;
-}
 #[cfg(feature = "aws-providers")]
 pub mod bedrock;
-pub mod databricks {
-    pub use goose_providers::formats::databricks::*;
-}
 pub mod gcpvertexai;
 pub mod google {
+    use crate::config::Config;
     use anyhow::Result;
-    use goose_providers::conversation::message::Message;
-    pub use goose_providers::formats::google::*;
-    use goose_providers::model::ModelConfig;
+    use bcaip_provider_types::conversations::Message;
+    use bcaip_provider_types::formats::create_request_with_thinking_budget;
+    use bcaip_provider_types::model::ModelConfig;
     use rmcp::model::Tool;
     use serde_json::Value;
-
-    use crate::config::Config;
-
     pub fn create_request(
         model_config: &ModelConfig,
         system: &str,
@@ -28,10 +20,4 @@ pub mod google {
         let thinking_budget = Config::global().get_param("GEMINI25_THINKING_BUDGET").ok();
         create_request_with_thinking_budget(model_config, system, messages, tools, thinking_budget)
     }
-}
-pub mod openrouter {
-    pub use goose_providers::openrouter_format::*;
-}
-pub mod snowflake {
-    pub use goose_providers::formats::snowflake::*;
 }

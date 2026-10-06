@@ -24,7 +24,7 @@ On a default build, `goose roam` reports an unrecognized subcommand.
 :::
 
 Roaming is designed to be **embedded**: the transport is a standalone Rust crate
-(`goose-roaming`) with no dependency on goose's agent internals, the CLI exposes
+(`bcaip-roaming`) with no dependency on goose's agent internals, the CLI exposes
 it as `goose roam` commands, and there are wasm bindings for browser apps. If
 you build on goose — or just want an authenticated p2p ACP transport — you can
 use the same pieces directly. The web client (covered near the end) is a
@@ -204,8 +204,8 @@ imposes its own working directory, and authorizes the connection.
 
 ## Embedding roaming in your own app
 
-Everything above is built on the **`goose-roaming` crate**
-(`crates/goose-roaming`), and you can use it directly. The crate deliberately
+Everything above is built on the **`bcaip-roaming` crate**
+(`crates/bcaip-roaming`), and you can use it directly. The crate deliberately
 has **zero dependency on goose core** — it knows nothing about agents or
 sessions, only about identity, trust, and authenticated byte streams — so you
 can embed it in any Rust application, with or without goose.
@@ -238,8 +238,8 @@ The surface a consumer touches:
   for out-of-band verification.
 
 A minimal end-to-end example (condensed from
-`crates/goose-roaming/examples/echo_roundtrip.rs`, which runs both ends in one
-process — `cargo run -p goose-roaming --example echo_roundtrip`):
+`crates/bcaip-roaming/examples/echo_roundtrip.rs`, which runs both ends in one
+process — `cargo run -p bcaip-roaming --example echo_roundtrip`):
 
 ```rust
 use std::sync::Arc;

@@ -1,14 +1,15 @@
-use super::{
-    build_session_info, is_acp_visible_session_type, meta_string, GooseAcpAgent, ResultExt,
-    ACP_VISIBLE_SESSION_TYPES,
+use std::path;
+
+use crate::acp::response_builder::build_session_info;
+use crate::acp::server::server_informations::{
+    ACP_VISIBLE_SESSION_TYPES, GooseAcpAgent, ResultExt, is_acp_visible_session_type, meta_string,
 };
-use crate::session::session_manager::{
-    SessionListCursor, SessionListFilters, SessionListPageQuery, SessionType,
-};
+use crate::session::{SessionListCursor, SessionListFilters, SessionListPageQuery, SessionType};
+use agent_client_protocol::Error;
 use agent_client_protocol::schema::v1::{
     ListSessionsRequest, ListSessionsResponse, Meta, SessionInfo,
 };
-use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
+use base64::{Engine as _, engine::general_purpose::URL_SAFE_NO_PAD};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
@@ -33,21 +34,17 @@ struct SessionListCursorFilters {
     only_sessions_with_messages: bool,
 }
 
-fn invalid_session_list_cursor(message: &'static str) -> agent_client_protocol::Error {
-    agent_client_protocol::Error::invalid_params().data(message)
+fn invalid_session_list_cursor(message: &'static str) -> Error {
+    Error::invalid_params().data(message)
 }
 
-fn session_keyword_from_meta(
-    meta: Option<&Meta>,
-) -> Result<Option<String>, agent_client_protocol::Error> {
+fn session_keyword_from_meta(meta: Option<&Meta>) -> Result<Option<String>, Error> {
     Ok(meta_string(meta, "query")?
         .map(|keyword| keyword.trim().to_string())
         .filter(|keyword| !keyword.is_empty()))
 }
 
-fn session_types_from_meta(
-    meta: Option<&Meta>,
-) -> Result<Vec<SessionType>, agent_client_protocol::Error> {
+fn session_types_from_meta(meta: Option<&Meta>) -> Result<Vec<SessionType>, Error> {
     let Some(value) = meta.and_then(|meta| meta.get("types")) else {
         return Ok(ACP_VISIBLE_SESSION_TYPES.to_vec());
     };
@@ -57,8 +54,7 @@ fn session_types_from_meta(
 
     let session_types =
         serde_json::from_value::<Vec<SessionType>>(value.clone()).map_err(|_| {
-            agent_client_protocol::Error::invalid_params()
-                .data("types must be an array of session type strings")
+            Error::invalid_params().data("types must be an array of session type strings")
         })?;
     if session_types.is_empty() {
         Ok(ACP_VISIBLE_SESSION_TYPES.to_vec())
@@ -67,16 +63,15 @@ fn session_types_from_meta(
             .iter()
             .any(|session_type| !is_acp_visible_session_type(session_type))
         {
-            return Err(agent_client_protocol::Error::invalid_params()
-                .data("types may only include user, scheduled, or acp"));
+            return Err(
+                Error::invalid_params().data("types may only include user, scheduled, or acp")
+            );
         }
         Ok(session_types)
     }
 }
 
-fn include_last_message_snippet_from_meta(
-    meta: Option<&Meta>,
-) -> Result<bool, agent_client_protocol::Error> {
+fn include_last_message_snippet_from_meta(meta: Option<&Meta>) -> Result<bool, Error> {
     let Some(value) = meta.and_then(|meta| meta.get("goose")) else {
         return Ok(false);
     };
@@ -85,7 +80,7 @@ fn include_last_message_snippet_from_meta(
     }
 
     let Some(goose_meta) = value.as_object() else {
-        return Err(agent_client_protocol::Error::invalid_params().data("goose must be an object"));
+        return Err(Error::invalid_params().data("goose must be an object"));
     };
     let Some(value) = goose_meta.get("includeLastMessageSnippet") else {
         return Ok(false);
@@ -95,17 +90,16 @@ fn include_last_message_snippet_from_meta(
     }
 
     value.as_bool().ok_or_else(|| {
-        agent_client_protocol::Error::invalid_params()
-            .data("goose.includeLastMessageSnippet must be a boolean")
+        Error::invalid_params().data("goose.includeLastMessageSnippet must be a boolean")
     })
 }
 
 // bind cursors to the effective filters so they cannot be reused for a different list.
 fn session_list_filter_hash(
-    cwd: Option<&std::path::Path>,
+    cwd: Option<&path::Path>,
     session_types: &[SessionType],
     keyword: Option<&str>,
-) -> Result<String, agent_client_protocol::Error> {
+) -> Result<String, Error> {
     let mut session_type_names = session_types
         .iter()
         .map(ToString::to_string)
@@ -124,10 +118,10 @@ fn session_list_filter_hash(
 
 fn decode_session_list_cursor(
     cursor: Option<&str>,
-    cwd: Option<&std::path::Path>,
+    cwd: Option<&path::Path>,
     session_types: &[SessionType],
     keyword: Option<&str>,
-) -> Result<Option<SessionListCursor>, agent_client_protocol::Error> {
+) -> Result<Option<SessionListCursor>, Error> {
     let Some(cursor) = cursor else {
         return Ok(None);
     };
@@ -157,10 +151,10 @@ fn decode_session_list_cursor(
 
 fn encode_session_list_cursor(
     cursor: &SessionListCursor,
-    cwd: Option<&std::path::Path>,
+    cwd: Option<&path::Path>,
     session_types: &[SessionType],
     keyword: Option<&str>,
-) -> Result<String, agent_client_protocol::Error> {
+) -> Result<String, Error> {
     let token = SessionListCursorToken {
         sort_at: cursor.sort_at,
         session_id: cursor.session_id.clone(),
@@ -175,12 +169,11 @@ impl GooseAcpAgent {
     pub(super) async fn on_list_sessions(
         &self,
         req: ListSessionsRequest,
-    ) -> Result<ListSessionsResponse, agent_client_protocol::Error> {
-        if let Some(cwd) = req.cwd.as_deref() {
-            if !cwd.is_absolute() {
-                return Err(agent_client_protocol::Error::invalid_params()
-                    .data("cwd must be an absolute path"));
-            }
+    ) -> Result<ListSessionsResponse, Error> {
+        if let Some(cwd) = req.cwd.as_deref()
+            && !cwd.is_absolute()
+        {
+            return Err(Error::invalid_params().data("cwd must be an absolute path"));
         }
 
         let cwd = req.cwd.as_deref();
@@ -197,7 +190,7 @@ impl GooseAcpAgent {
 
         // ACP clients see their own (Acp) sessions plus legacy User/Scheduled ones.
         let page = self
-            .session_manager
+            .session_manager()
             .list_sessions_paged(SessionListPageQuery {
                 filters: SessionListFilters {
                     types: Some(&session_types),

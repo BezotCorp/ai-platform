@@ -1,25 +1,24 @@
 use rmcp::transport::TokioChildProcess;
 use std::io;
 #[cfg(target_os = "linux")]
-use std::sync::{mpsc, OnceLock};
-use tokio::process::ChildStderr;
-use tokio::process::Command;
-
+use std::sync::{OnceLock, mpsc};
+use tokio::process::{ChildStderr, Command};
 #[cfg(windows)]
 const CREATE_NO_WINDOW_FLAG: u32 = 0x08000000;
 
 #[cfg(target_os = "linux")]
 fn configure_parent_death_signal(command: &mut Command) {
-    let parent_pid = unsafe { libc::getpid() };
+    let parent_pid = rustix::process::getpid();
 
+    // SAFETY: the closure only calls async-signal-safe syscalls between fork and exec.
     unsafe {
         command.pre_exec(move || {
-            if libc::prctl(libc::PR_SET_PDEATHSIG, libc::SIGTERM) != 0 {
-                return Err(std::io::Error::last_os_error());
-            }
+            rustix::process::set_parent_process_death_signal(Some(rustix::process::Signal::TERM))?;
 
-            if libc::getppid() != parent_pid {
-                return Err(std::io::Error::from_raw_os_error(libc::ESRCH));
+            if rustix::process::getppid() != Some(parent_pid) {
+                return Err(std::io::Error::from_raw_os_error(
+                    rustix::io::Errno::SRCH.raw_os_error(),
+                ));
             }
 
             Ok(())

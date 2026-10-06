@@ -25,11 +25,13 @@
     "setup_method": "config_fields",
     "group": "additional",
     "docs_url": "https://github.com/AtomicBot-ai/Atomic-Chat?tab=readme-ov-file#readme",
-    "field_overrides": [{
-      "key": "ATOMIC_CHAT_HOST",
-      "label": "Host URL",
-      "placeholder": "http://localhost:1337",
-      "default_value": "http://localhost:1337"
-    }]
+    "field_overrides": [
+      {
+        "key": "ATOMIC_CHAT_HOST",
+        "label": "Host URL",
+        "placeholder": "http://localhost:1337",
+        "default_value": "http://localhost:1337"
+      }
+    ]
   }
 }

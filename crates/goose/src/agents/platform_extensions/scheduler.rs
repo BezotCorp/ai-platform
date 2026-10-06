@@ -1,18 +1,14 @@
 //! Exposes schedule management when Goose has a scheduler configured.
 
+use super::PlatformExtensionContext;
+use crate::agents::mcp_client::{Error, McpClientTrait};
+use crate::agents::platform_tools::{MANAGE_SCHEDULE_TOOL_NAME, manage_schedule_tool};
+use crate::agents::{schedule_tool::ScheduleTool, tool_execution::ToolCallContext};
 use rmcp::model::{
     CallToolResult, ContentBlock, Implementation, InitializeResult, ListToolsResult,
 };
 use rmcp::model::{JsonObject, ServerCapabilities};
 use tokio_util::sync::CancellationToken;
-
-use crate::agents::mcp_client::{Error, McpClientTrait};
-use crate::agents::platform_tools::{manage_schedule_tool, MANAGE_SCHEDULE_TOOL_NAME};
-use crate::agents::schedule_tool::ScheduleTool;
-use crate::agents::tool_execution::ToolCallContext;
-
-use super::PlatformExtensionContext;
-
 pub const EXTENSION_NAME: &str = "scheduler";
 pub const MANAGE_SCHEDULE_TOOL_NAME_COMPLETE: &str = "scheduler__manage_schedule";
 

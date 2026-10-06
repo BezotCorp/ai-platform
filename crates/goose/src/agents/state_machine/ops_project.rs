@@ -1,13 +1,11 @@
 //! Adds the selected project's instructions to inference prompts.
 
+use crate::agents::state_machine::effects::GooseEffect;
+use crate::session::Session;
 use anyhow::Result;
 use async_trait::async_trait;
-
-use crate::agents::state_machine::effects::GooseEffect;
-use crate::agents::state_machine::Operation;
-use crate::conversation::Conversation;
-use crate::session::Session;
-
+use bcaip_agent::operation::Operation;
+use bcaip_provider_types::conversations::Conversation;
 pub struct ProjectOperation;
 
 #[async_trait]

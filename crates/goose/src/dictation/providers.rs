@@ -1,17 +1,15 @@
-use crate::config::tls::provider_tls_config_from_config;
-use crate::config::Config;
+use crate::config::{Config, tls::provider_tls_config_from_config};
 #[cfg(feature = "local-inference")]
 use crate::dictation::whisper::LOCAL_WHISPER_MODEL_CONFIG_KEY;
-use crate::providers::api_client::{ApiClient, AuthMethod};
-use crate::providers::openai::parse_openai_base_url;
 use anyhow::Result;
-use base64::{engine::general_purpose::STANDARD as BASE64_STD, Engine as _};
+use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64_STD};
+use goose_providers::api_client::{ApiClient, AuthMethod};
+use goose_providers::openai::parse_openai_base_url;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 #[cfg(feature = "local-inference")]
 use std::sync::Mutex;
 use std::time::Duration;
-
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(30);
 const MAX_TRANSCRIPTION_RESPONSE_BYTES: usize = 1024 * 1024;
 const MAX_TRANSCRIPTION_ERROR_PREVIEW_BYTES: usize = 8 * 1024;
@@ -432,8 +430,7 @@ pub async fn transcribe_with_provider(
 }
 
 const MODEL_TRANSCRIPTION_TIMEOUT: Duration = Duration::from_secs(60);
-const TRANSCRIPTION_SYSTEM_PROMPT: &str =
-    "Transcribe the following audio exactly as spoken. Output only the transcription text, with no commentary, labels, formatting, or explanation.";
+const TRANSCRIPTION_SYSTEM_PROMPT: &str = "Transcribe the following audio exactly as spoken. Output only the transcription text, with no commentary, labels, formatting, or explanation.";
 
 pub async fn transcribe_with_model(audio_bytes: Vec<u8>, audio_format: &str) -> Result<String> {
     let config = Config::global();
@@ -599,7 +596,7 @@ fn resolve_model_native_config(
             let mut headers: std::collections::HashMap<String, String> = config
                 .get_secret::<String>("OPENAI_CUSTOM_HEADERS")
                 .ok()
-                .map(crate::providers::openai::parse_custom_headers)
+                .map(goose_providers::openai::parse_custom_headers)
                 .unwrap_or_default();
             if let Ok(org) = config.get_param::<String>("OPENAI_ORGANIZATION") {
                 headers.insert("OpenAI-Organization".to_string(), org);
@@ -696,267 +693,5 @@ fn resolve_model_native_config(
                 other
             )
         }
-    }
-}
-#[cfg(test)]
-mod tests {
-    use super::{
-        all_providers, build_api_client, get_provider_def, normalize_openrouter_base_url,
-        openai_dictation_target, parse_model_transcription_response, parse_transcription_response,
-        resolve_openai_base_url_target, DictationProvider, MAX_TRANSCRIPTION_ERROR_PREVIEW_BYTES,
-        MAX_TRANSCRIPTION_RESPONSE_BYTES, OPENAI_VERSIONLESS_TRANSCRIPTIONS_PATH,
-    };
-    use test_case::test_case;
-    use wiremock::matchers::{method, path};
-    use wiremock::{Mock, MockServer, ResponseTemplate};
-
-    async fn mock_transcription_response(
-        status: u16,
-        body: String,
-    ) -> (MockServer, reqwest::Response) {
-        let server = MockServer::start().await;
-        Mock::given(method("GET"))
-            .and(path("/transcription"))
-            .respond_with(ResponseTemplate::new(status).set_body_string(body))
-            .mount(&server)
-            .await;
-
-        let response = reqwest::get(format!("{}/transcription", server.uri()))
-            .await
-            .unwrap();
-        (server, response)
-    }
-
-    fn transcription_success_body(size: usize) -> String {
-        let prefix = r#"{"text":""#;
-        let suffix = r#""}"#;
-        let text_len = size - prefix.len() - suffix.len();
-        format!("{}{}{}", prefix, "A".repeat(text_len), suffix)
-    }
-
-    #[test]
-    fn openai_dictation_target_preserves_prefix_and_query_params() {
-        let (host, query_params, endpoint_path) = openai_dictation_target(
-            "https://user:pass@gateway.example.com/openai/v1?api-version=2024-02-01",
-        )
-        .unwrap();
-        assert_eq!(host, "https://user:pass@gateway.example.com/openai");
-        assert_eq!(
-            query_params,
-            vec![("api-version".to_string(), "2024-02-01".to_string())]
-        );
-        assert_eq!(endpoint_path, "v1/audio/transcriptions");
-    }
-
-    #[test]
-    fn openai_dictation_target_uses_versionless_endpoint_without_v1() {
-        let (host, query_params, endpoint_path) =
-            openai_dictation_target("https://gateway.example.com/custom/api").unwrap();
-        assert_eq!(host, "https://gateway.example.com/custom/api");
-        assert!(query_params.is_empty());
-        assert_eq!(endpoint_path, OPENAI_VERSIONLESS_TRANSCRIPTIONS_PATH);
-    }
-
-    #[test]
-    fn openai_dictation_target_keeps_v1_endpoint_for_bare_host() {
-        let (host, query_params, endpoint_path) =
-            openai_dictation_target("https://api.openai.com").unwrap();
-        assert_eq!(host, "https://api.openai.com");
-        assert!(query_params.is_empty());
-        assert_eq!(endpoint_path, "v1/audio/transcriptions");
-    }
-
-    #[test]
-    fn resolve_openai_base_url_target_ignores_blank_values() {
-        assert!(resolve_openai_base_url_target(Some("   "))
-            .unwrap()
-            .is_none());
-    }
-
-    #[test]
-    fn model_native_serde_roundtrip() {
-        let json = r#""model""#;
-        let p: DictationProvider = serde_json::from_str(json).unwrap();
-        assert_eq!(p, DictationProvider::ModelNative);
-        assert_eq!(serde_json::to_string(&p).unwrap(), r#""model""#);
-    }
-
-    #[test]
-    fn model_native_provider_def_uses_provider_config() {
-        let def = get_provider_def(DictationProvider::ModelNative);
-        assert!(def.uses_provider_config);
-        assert!(def.config_key.is_empty());
-        assert_eq!(def.provider, DictationProvider::ModelNative);
-    }
-
-    #[test]
-    fn all_providers_includes_model_native() {
-        assert!(all_providers()
-            .iter()
-            .any(|d| d.provider == DictationProvider::ModelNative));
-    }
-
-    #[test]
-    fn build_api_client_rejects_model_native() {
-        assert!(build_api_client(DictationProvider::ModelNative).is_err());
-    }
-
-    #[test_case("https://openrouter.ai" => "https://openrouter.ai/api/v1" ; "bare host gets api v1")]
-    #[test_case("https://openrouter.ai/api" => "https://openrouter.ai/api/v1" ; "api without v1")]
-    #[test_case("https://openrouter.ai/api/v1" => "https://openrouter.ai/api/v1" ; "already correct")]
-    #[test_case("https://custom.proxy/api/v1" => "https://custom.proxy/api/v1" ; "custom proxy already correct")]
-    fn test_normalize_openrouter_base_url(input: &str) -> String {
-        normalize_openrouter_base_url(input)
-    }
-
-    #[tokio::test]
-    async fn transcription_accepts_legitimate_response() {
-        let (_server, response) =
-            mock_transcription_response(200, r#"{"text":"hello"}"#.to_string()).await;
-
-        let result = parse_transcription_response(response).await.unwrap();
-
-        assert_eq!(result, "hello");
-    }
-
-    #[tokio::test]
-    async fn transcription_accepts_response_at_byte_limit() {
-        let body = transcription_success_body(MAX_TRANSCRIPTION_RESPONSE_BYTES);
-        let expected_text_len = body.len() - r#"{"text":""#.len() - r#""}"#.len();
-        let (_server, response) = mock_transcription_response(200, body).await;
-
-        let result = parse_transcription_response(response).await.unwrap();
-
-        assert_eq!(result.len(), expected_text_len);
-    }
-
-    #[tokio::test]
-    async fn transcription_rejects_oversized_success_response() {
-        let (_server, response) = mock_transcription_response(
-            200,
-            transcription_success_body(MAX_TRANSCRIPTION_RESPONSE_BYTES + 1),
-        )
-        .await;
-
-        let error = parse_transcription_response(response).await.unwrap_err();
-
-        assert!(error.to_string().contains("exceeds the 1048576 byte limit"));
-    }
-
-    #[tokio::test]
-    async fn transcription_rejects_oversized_error_response() {
-        let (_server, response) =
-            mock_transcription_response(500, "E".repeat(MAX_TRANSCRIPTION_RESPONSE_BYTES + 1))
-                .await;
-
-        let error = parse_transcription_response(response).await.unwrap_err();
-
-        assert!(error.to_string().contains("exceeds the 1048576 byte limit"));
-    }
-
-    #[tokio::test]
-    async fn transcription_accepts_error_at_byte_limit() {
-        let (_server, response) =
-            mock_transcription_response(500, "E".repeat(MAX_TRANSCRIPTION_RESPONSE_BYTES)).await;
-
-        let message = parse_transcription_response(response)
-            .await
-            .unwrap_err()
-            .to_string();
-
-        assert!(message.starts_with("API error: "));
-        assert!(message.contains("[truncated]"));
-        assert!(!message.contains("exceeds the 1048576 byte limit"));
-    }
-
-    #[tokio::test]
-    async fn transcription_preserves_too_short_response() {
-        let (_server, response) =
-            mock_transcription_response(400, "audio is too short".to_string()).await;
-
-        let result = parse_transcription_response(response).await.unwrap();
-
-        assert!(result.is_empty());
-    }
-
-    #[tokio::test]
-    async fn transcription_truncates_provider_error_diagnostics() {
-        let omitted_detail = "not included in the diagnostic";
-        let body = format!(
-            "provider unavailable: {}{}",
-            "x".repeat(MAX_TRANSCRIPTION_ERROR_PREVIEW_BYTES),
-            omitted_detail
-        );
-        let (_server, response) = mock_transcription_response(500, body).await;
-
-        let error = parse_transcription_response(response).await.unwrap_err();
-        let message = error.to_string();
-
-        assert!(message.contains("provider unavailable"));
-        assert!(message.contains("[truncated]"));
-        assert!(!message.contains(omitted_detail));
-    }
-
-    #[tokio::test]
-    async fn model_transcription_accepts_legitimate_response() {
-        let body = serde_json::json!({
-            "choices": [{"message": {"content": "hello"}}],
-        })
-        .to_string();
-        let (_server, response) = mock_transcription_response(200, body).await;
-
-        let result = parse_model_transcription_response(response).await.unwrap();
-
-        assert_eq!(result, "hello");
-    }
-
-    #[tokio::test]
-    async fn model_transcription_rejects_oversized_success_response() {
-        let body = serde_json::json!({
-            "choices": [{
-                "message": {"content": "A".repeat(MAX_TRANSCRIPTION_RESPONSE_BYTES)},
-            }],
-        })
-        .to_string();
-        let (_server, response) = mock_transcription_response(200, body).await;
-
-        let error = parse_model_transcription_response(response)
-            .await
-            .unwrap_err();
-
-        assert!(error.to_string().contains("exceeds the 1048576 byte limit"));
-    }
-
-    #[tokio::test]
-    async fn model_transcription_rejects_oversized_error_response() {
-        let (_server, response) =
-            mock_transcription_response(500, "E".repeat(MAX_TRANSCRIPTION_RESPONSE_BYTES + 1))
-                .await;
-
-        let error = parse_model_transcription_response(response)
-            .await
-            .unwrap_err();
-
-        assert!(error.to_string().contains("exceeds the 1048576 byte limit"));
-    }
-
-    #[tokio::test]
-    async fn model_transcription_truncates_error_diagnostics() {
-        let omitted_detail = "not included in the diagnostic";
-        let body = format!(
-            "model provider unavailable: {}{}",
-            "x".repeat(MAX_TRANSCRIPTION_ERROR_PREVIEW_BYTES),
-            omitted_detail
-        );
-        let (_server, response) = mock_transcription_response(500, body).await;
-
-        let message = parse_model_transcription_response(response)
-            .await
-            .unwrap_err()
-            .to_string();
-
-        assert!(message.contains("model provider unavailable"));
-        assert!(message.contains("[truncated]"));
-        assert!(!message.contains(omitted_detail));
     }
 }

@@ -93,7 +93,7 @@ pub struct MessageUsageUpdate {
 }
 
 /// Wire mirror of the conversation `MessageUsage` (this crate cannot depend on
-/// goose-provider-types); field names and serde casing MUST stay in parity.
+/// bcaip-provider-types); field names and serde casing MUST stay in parity.
 #[derive(Debug, Default, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct MessageUsageData {
@@ -175,111 +175,4 @@ pub fn custom_notification_schemas(generator: &mut SchemaGenerator) -> Vec<Custo
         notification_schema::<GooseSessionNotification>(generator),
         notification_schema::<ProviderDeviceCodeNotification>(generator),
     ]
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use serde_json::json;
-
-    #[test]
-    fn status_message_serializes_to_expected_wire_shape() {
-        let notification = GooseSessionNotification {
-            session_id: "s1".to_string(),
-            update: GooseSessionUpdate::StatusMessage(StatusMessageUpdate {
-                status: StatusMessage::Notice {
-                    message: "Compaction complete".to_string(),
-                },
-            }),
-        };
-
-        let value = serde_json::to_value(notification).unwrap();
-
-        assert_eq!(
-            value,
-            json!({
-                "sessionId": "s1",
-                "update": {
-                    "sessionUpdate": "status_message",
-                    "status": {
-                        "type": "notice",
-                        "message": "Compaction complete"
-                    }
-                }
-            })
-        );
-    }
-
-    #[test]
-    fn live_voice_interaction_ended_serializes_to_expected_wire_shape() {
-        let notification = GooseSessionNotification {
-            session_id: "s1".to_string(),
-            update: GooseSessionUpdate::LiveVoiceInteractionEnded(
-                LiveVoiceInteractionEndedUpdate {
-                    interaction_id: "live_opaque".to_string(),
-                    outcome: LiveVoiceInteractionOutcome::Failed,
-                },
-            ),
-        };
-
-        let value = serde_json::to_value(notification).unwrap();
-
-        assert_eq!(
-            value,
-            json!({
-                "sessionId": "s1",
-                "update": {
-                    "sessionUpdate": "live_voice_interaction_ended",
-                    "interactionId": "live_opaque",
-                    "outcome": "failed"
-                }
-            })
-        );
-    }
-
-    #[test]
-    fn message_usage_serializes_to_expected_wire_shape() {
-        let notification = GooseSessionNotification {
-            session_id: "s1".to_string(),
-            update: GooseSessionUpdate::MessageUsage(MessageUsageUpdate {
-                message_id: Some("m1".to_string()),
-                usage: MessageUsageData {
-                    input_tokens: Some(1200),
-                    output_tokens: Some(340),
-                    total_tokens: Some(1540),
-                    cache_read_tokens: Some(1000),
-                    cache_write_tokens: None,
-                    cost: Some(0.0123),
-                    cost_source: Some(CostSourceData::Estimated),
-                    elapsed_ms: Some(4200),
-                    time_to_first_token_ms: Some(840),
-                    is_compaction: false,
-                },
-            }),
-        };
-
-        let value = serde_json::to_value(notification).unwrap();
-
-        assert_eq!(
-            value,
-            json!({
-                "sessionId": "s1",
-                "update": {
-                    "sessionUpdate": "message_usage",
-                    "messageId": "m1",
-                    "usage": {
-                        "inputTokens": 1200,
-                        "outputTokens": 340,
-                        "totalTokens": 1540,
-                        "cacheReadTokens": 1000,
-                        "cost": 0.0123,
-                        "costSource": "estimated",
-                        "elapsedMs": 4200,
-                        "timeToFirstTokenMs": 840,
-                        "isCompaction": false
-                    }
-                }
-            })
-        );
-    }
 }

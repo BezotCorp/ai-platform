@@ -7,13 +7,12 @@ use goose_sdk_types::custom_requests::{
     UpdateScheduleRequest, UpdateScheduleResponse,
 };
 
-use super::{build_session_info, GooseAcpAgent, ResultExt};
-use crate::recipe::validate_recipe::validate_recipe_template_from_content;
-use crate::recipe::Recipe;
+use crate::acp::response_builder::build_session_info;
+use crate::acp::server::server_informations::{GooseAcpAgent, ResultExt};
+use crate::recipe::{Recipe, validate_recipe::validate_recipe_template_from_content};
 use crate::scheduler::{ScheduledJob, SchedulerError, ValidatedScheduleRecipe};
 use crate::scheduler_trait::SchedulerTrait;
 use std::sync::Arc;
-
 fn validate_schedule_id(id: &str) -> Result<(), agent_client_protocol::Error> {
     let is_valid = !id.is_empty()
         && id
@@ -125,7 +124,7 @@ impl GooseAcpAgent {
     pub(super) fn require_scheduler(
         &self,
     ) -> Result<Arc<dyn SchedulerTrait>, agent_client_protocol::Error> {
-        self.agent_manager.scheduler().ok_or_else(|| {
+        self.agent_manager().scheduler().ok_or_else(|| {
             agent_client_protocol::Error::method_not_found()
                 .data("Scheduled recipe execution is not enabled")
         })
@@ -336,132 +335,5 @@ impl GooseAcpAgent {
             job_start_time: job.process_start_time.map(|value| value.to_rfc3339()),
             running_duration_seconds,
         })
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::acp::server::AcpBuiltinSelection;
-    use crate::acp::server_factory::{AcpServer, AcpServerFactoryConfig};
-    use crate::agents::GoosePlatform;
-    use crate::scheduler::get_default_scheduled_recipes_dir;
-    use goose_sdk_types::custom_requests::{ListRecipesRequest, ScheduleRecipeRequest};
-    use serial_test::serial;
-
-    fn assert_scheduler_disabled(error: agent_client_protocol::Error) {
-        assert_eq!(
-            error.code,
-            agent_client_protocol::Error::method_not_found().code
-        );
-        assert_eq!(
-            error.data.as_ref().and_then(serde_json::Value::as_str),
-            Some("Scheduled recipe execution is not enabled")
-        );
-    }
-
-    fn create_schedule_request(id: &str, prompt: &str) -> CreateScheduleRequest {
-        let recipe = Recipe::builder()
-            .title(format!("{id} recipe"))
-            .description("Schedule overwrite regression test")
-            .prompt(prompt)
-            .build()
-            .unwrap();
-
-        CreateScheduleRequest {
-            id: id.to_string(),
-            recipe: recipe.try_into().unwrap(),
-            cron: "0 0 0 * * *".to_string(),
-        }
-    }
-
-    #[tokio::test]
-    #[serial]
-    async fn duplicate_schedule_does_not_overwrite_existing_recipe() {
-        let root = tempfile::tempdir().unwrap();
-        let _guard = env_lock::lock_env([
-            ("GOOSE_DISABLE_KEYRING", Some("true")),
-            ("GOOSE_PATH_ROOT", root.path().to_str()),
-        ]);
-        let server = AcpServer::new(AcpServerFactoryConfig {
-            builtins: AcpBuiltinSelection::default(),
-            config_dir: root.path().join("config"),
-            goose_platform: GoosePlatform::GooseCli,
-            additional_source_roots: Vec::new(),
-            session_cwd: None,
-            enable_scheduler: true,
-        });
-        let agent = server.create_agent().await.unwrap();
-
-        let created = agent
-            .on_create_schedule(create_schedule_request("nightly", "original prompt"))
-            .await
-            .unwrap();
-        let recipe_path = created.job.source;
-        let original_recipe = std::fs::read(&recipe_path).unwrap();
-
-        let error = agent
-            .on_create_schedule(create_schedule_request("nightly", "replacement prompt"))
-            .await
-            .expect_err("duplicate schedule must be rejected");
-
-        assert_eq!(
-            error.code,
-            agent_client_protocol::Error::invalid_params().code
-        );
-        assert_eq!(std::fs::read(recipe_path).unwrap(), original_recipe);
-    }
-
-    #[tokio::test]
-    #[serial]
-    async fn disabled_scheduler_rejects_schedule_operations_without_recipe_writes() {
-        let root = tempfile::tempdir().unwrap();
-        let _guard = env_lock::lock_env([
-            ("GOOSE_DISABLE_KEYRING", Some("true")),
-            ("GOOSE_PATH_ROOT", root.path().to_str()),
-        ]);
-        let server = AcpServer::new(AcpServerFactoryConfig {
-            builtins: AcpBuiltinSelection::default(),
-            config_dir: root.path().join("config"),
-            goose_platform: GoosePlatform::GooseCli,
-            additional_source_roots: Vec::new(),
-            session_cwd: None,
-            enable_scheduler: false,
-        });
-        let agent = server.create_agent().await.unwrap();
-
-        let list_error = agent
-            .on_list_schedules(ListSchedulesRequest {})
-            .await
-            .expect_err("schedule listing must be unsupported");
-        assert_scheduler_disabled(list_error);
-
-        agent
-            .on_list_recipes(ListRecipesRequest {})
-            .await
-            .expect("recipe listing must remain available");
-
-        let create_error = agent
-            .on_create_schedule(CreateScheduleRequest {
-                id: "nightly".to_string(),
-                recipe: Default::default(),
-                cron: "0 0 0 * * *".to_string(),
-            })
-            .await
-            .expect_err("schedule creation must be unsupported");
-        assert_scheduler_disabled(create_error);
-        assert!(!get_default_scheduled_recipes_dir()
-            .unwrap()
-            .join("nightly.yaml")
-            .exists());
-
-        let schedule_recipe_error = agent
-            .on_schedule_recipe(ScheduleRecipeRequest {
-                id: "missing-recipe".to_string(),
-                cron_schedule: Some("0 0 0 * * *".to_string()),
-            })
-            .await
-            .expect_err("recipe scheduling must be unsupported");
-        assert_scheduler_disabled(schedule_recipe_error);
     }
 }

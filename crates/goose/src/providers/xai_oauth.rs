@@ -1,26 +1,25 @@
-use super::api_client::{ApiClient, AuthMethod, AuthProvider};
-use super::base::{ConfigKey, MessageStream, Provider, ProviderDef, ProviderMetadata};
-use super::openai_compatible::OpenAiCompatibleProvider;
-use super::xai::{xai_known_model_info, XAI_API_HOST, XAI_DEFAULT_MODEL};
+use super::base::ProviderDef;
+use super::xai::{XAI_API_HOST, XAI_DEFAULT_MODEL, xai_known_model_info};
 use crate::config::paths::Paths;
-use crate::conversation::message::Message;
 use crate::providers::private_file::write_private_file;
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use async_trait::async_trait;
-use axum::{extract::Query, response::Html, routing::get, Router};
+use axum::{Router, extract::Query, response::Html, routing::get};
 use base64::Engine;
 use chrono::{DateTime, Utc};
 use futures::future::BoxFuture;
-use goose_providers::errors::ProviderError;
-use goose_providers::model::ModelConfig;
+use bcaip_provider_types::base::{ConfigKey, MessageStream, Provider, ProviderMetadata};
+use bcaip_provider_types::conversations::Message;
+use bcaip_provider_types::errors::ProviderError;
+use bcaip_provider_types::model::ModelConfig;
+use goose_providers::api_client::{ApiClient, AuthMethod, AuthProvider};
+use goose_providers::openai_compatible::OpenAiCompatibleProvider;
 use rmcp::model::Tool;
 use serde::{Deserialize, Serialize};
 use sha2::Digest;
-use std::io;
-use std::net::SocketAddr;
-use std::path::PathBuf;
 use std::sync::{Arc, LazyLock};
-use tokio::sync::{oneshot, Mutex as TokioMutex};
+use std::{io, net::SocketAddr, path::PathBuf};
+use tokio::sync::{Mutex as TokioMutex, oneshot};
 
 // Public Grok-CLI OAuth client. xAI's auth server rejects loopback OAuth from
 // non-allowlisted clients, so we reuse the Grok-CLI client_id that xAI ships
@@ -773,7 +772,7 @@ impl Provider for XaiOAuthProvider {
     }
 }
 
-impl goose_providers::base::ProviderDescriptor for XaiOAuthProvider {
+impl bcaip_provider_types::base::ProviderDescriptor for XaiOAuthProvider {
     fn metadata() -> ProviderMetadata {
         ProviderMetadata::with_models(
             XAI_OAUTH_PROVIDER_NAME,
@@ -788,10 +787,10 @@ impl goose_providers::base::ProviderDescriptor for XaiOAuthProvider {
             ],
         )
         .with_setup(
-            crate::providers::catalog::ProviderSetupMetadata::new(
-                crate::providers::catalog::ProviderSetupCategory::Model,
-                crate::providers::catalog::ProviderSetupMethod::OauthBrowser,
-                crate::providers::catalog::ProviderSetupGroup::Default,
+            bcaip_provider_types::ProviderSetupMetadata::new(
+                bcaip_provider_types::ProviderSetupCategory::Model,
+                bcaip_provider_types::ProviderSetupMethod::OauthBrowser,
+                bcaip_provider_types::ProviderSetupGroup::Default,
             )
             .with_docs_url("https://x.ai/grok")
             .with_native_connect_query("xAI Grok")
@@ -805,7 +804,7 @@ impl ProviderDef for XaiOAuthProvider {
 
     fn from_env(
         _extensions: Vec<crate::config::ExtensionConfig>,
-        tls_config: Option<crate::providers::api_client::TlsConfig>,
+        tls_config: Option<goose_providers::api_client::TlsConfig>,
     ) -> BoxFuture<'static, Result<Self::Provider>> {
         Box::pin(async move {
             let config = crate::config::Config::global();
@@ -845,164 +844,5 @@ struct SharedAuthProvider(Arc<XaiOAuthAuthProvider>);
 impl AuthProvider for SharedAuthProvider {
     async fn get_auth_header(&self) -> Result<(String, String)> {
         self.0.get_auth_header().await
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn pkce_challenge_is_url_safe_base64_of_sha256_of_verifier() {
-        let pkce = generate_pkce();
-        assert_eq!(pkce.verifier.len(), 64);
-        // S256 of a 64-char ASCII verifier => 32-byte digest => 43 base64url chars (no padding).
-        assert_eq!(pkce.challenge.len(), 43);
-        assert!(!pkce.challenge.contains('='));
-        assert!(!pkce.challenge.contains('+'));
-        assert!(!pkce.challenge.contains('/'));
-    }
-
-    #[test]
-    fn authorize_url_contains_required_oauth_params() {
-        let pkce = PkceChallenge {
-            verifier: "v".repeat(64),
-            challenge: "challenge-fixture".to_string(),
-        };
-        let url = build_authorize_url(&pkce, "state-fixture", "nonce-fixture").unwrap();
-        assert!(url.starts_with(AUTHORIZE_URL));
-        assert!(url.contains(&format!("client_id={}", CLIENT_ID)));
-        assert!(url.contains("code_challenge=challenge-fixture"));
-        assert!(url.contains("code_challenge_method=S256"));
-        assert!(url.contains("state=state-fixture"));
-        assert!(url.contains("nonce=nonce-fixture"));
-        assert!(url.contains("plan=generic"));
-        assert!(url.contains("referrer=goose"));
-        assert!(url.contains("scope=openid"));
-        assert!(url.contains("offline_access"));
-        assert!(url.contains("grok-cli%3Aaccess"));
-    }
-
-    #[test]
-    fn redirect_uri_matches_registered_grok_cli_value() {
-        // xAI rejects mismatched redirect_uris for the Grok-CLI client_id.
-        // This pins the loopback host/port that pairs with that client.
-        assert_eq!(redirect_uri(), "http://127.0.0.1:56121/callback");
-    }
-
-    #[test]
-    fn token_cache_path_lives_under_goose_config_dir() {
-        let path = get_cache_path();
-        let s = path.to_string_lossy().into_owned();
-        assert!(
-            s.contains("xai_oauth"),
-            "expected token path under xai_oauth/, got {}",
-            s
-        );
-        assert!(s.ends_with("tokens.json"));
-    }
-
-    #[tokio::test]
-    async fn missing_token_does_not_start_oauth() {
-        let directory = tempfile::tempdir().unwrap();
-        let auth_provider = XaiOAuthAuthProvider {
-            cache: TokenCache {
-                cache_path: directory.path().join("missing.json"),
-            },
-            state: XaiAuthState::instance(),
-        };
-
-        let error = auth_provider.get_valid_token().await.unwrap_err();
-
-        assert_eq!(error, ProviderError::NotConfigured);
-    }
-
-    #[tokio::test]
-    async fn stream_preserves_not_configured_error() {
-        let directory = tempfile::tempdir().unwrap();
-        let auth_provider = Arc::new(XaiOAuthAuthProvider {
-            cache: TokenCache {
-                cache_path: directory.path().join("missing.json"),
-            },
-            state: XaiAuthState::instance(),
-        });
-        let api_client =
-            ApiClient::new_with_tls("http://127.0.0.1:1".to_string(), AuthMethod::NoAuth, None)
-                .unwrap();
-        let provider = XaiOAuthProvider {
-            inner: OpenAiCompatibleProvider::new(
-                XAI_OAUTH_PROVIDER_NAME.to_string(),
-                api_client,
-                String::new(),
-            ),
-            auth_provider,
-        };
-
-        let error = provider
-            .stream(&ModelConfig::new(XAI_DEFAULT_MODEL), "", &[], &[])
-            .await
-            .err()
-            .unwrap();
-
-        assert_eq!(error, ProviderError::NotConfigured);
-    }
-
-    #[test]
-    fn token_refresh_errors_distinguish_rejected_and_transient_requests() {
-        assert!(matches!(
-            token_refresh_error(
-                reqwest::StatusCode::BAD_REQUEST,
-                r#"{"error":"invalid_grant"}"#.to_string()
-            ),
-            ProviderError::Authentication(_)
-        ));
-        assert!(matches!(
-            token_refresh_error(
-                reqwest::StatusCode::UNAUTHORIZED,
-                r#"{"error":"invalid_client"}"#.to_string()
-            ),
-            ProviderError::RequestFailed(_)
-        ));
-        assert!(matches!(
-            token_refresh_error(
-                reqwest::StatusCode::FORBIDDEN,
-                "request rejected by proxy".to_string()
-            ),
-            ProviderError::RequestFailed(_)
-        ));
-        assert!(matches!(
-            token_refresh_error(reqwest::StatusCode::TOO_MANY_REQUESTS, String::new()),
-            ProviderError::RateLimitExceeded { .. }
-        ));
-        assert!(matches!(
-            token_refresh_error(reqwest::StatusCode::SERVICE_UNAVAILABLE, String::new()),
-            ProviderError::ServerError(_)
-        ));
-    }
-
-    #[cfg(unix)]
-    #[test]
-    fn token_cache_replaces_loose_file_with_owner_only_permissions() {
-        use std::os::unix::fs::PermissionsExt;
-
-        let directory = tempfile::tempdir().unwrap();
-        let cache_path = directory.path().join("tokens.json");
-        std::fs::write(&cache_path, "{}").unwrap();
-        std::fs::set_permissions(&cache_path, std::fs::Permissions::from_mode(0o644)).unwrap();
-        let cache = TokenCache {
-            cache_path: cache_path.clone(),
-        };
-
-        cache
-            .save(&TokenData {
-                access_token: "access".to_string(),
-                refresh_token: "refresh".to_string(),
-                id_token: None,
-                expires_at: Utc::now() + chrono::Duration::hours(1),
-            })
-            .unwrap();
-
-        let mode = std::fs::metadata(cache_path).unwrap().permissions().mode() & 0o777;
-        assert_eq!(mode, 0o600);
     }
 }

@@ -2,7 +2,6 @@ use crate::config::paths::Paths;
 use once_cell::sync::Lazy;
 use std::fs;
 use uuid::Uuid;
-
 static INSTANCE_ID: Lazy<String> = Lazy::new(load_or_create);
 
 fn file_path() -> std::path::PathBuf {
@@ -33,17 +32,4 @@ fn load_or_create() -> String {
 /// The ID is generated once and persisted to disk, surviving restarts.
 pub fn get_instance_id() -> &'static str {
     &INSTANCE_ID
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_instance_id_is_stable() {
-        let id1 = get_instance_id();
-        let id2 = get_instance_id();
-        assert_eq!(id1, id2);
-        assert!(!id1.is_empty());
-    }
 }

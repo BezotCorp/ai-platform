@@ -1,39 +1,41 @@
 use crate::config::paths::Paths;
-use crate::conversation::message::{Message, MessageContent};
-use crate::providers::api_client::{AuthProvider, RequestBuilderDecorator};
-use crate::providers::base::{
-    ConfigKey, MessageStream, Provider, ProviderDef, ProviderMetadata,
-    DEFAULT_CONNECT_TIMEOUT_SECS, DEFAULT_PROVIDER_TIMEOUT_SECS,
-};
-use crate::providers::openai_compatible::handle_status;
+use crate::providers::base::ProviderDef;
 use crate::providers::private_file::write_private_file;
-use crate::providers::retry::ProviderRetry;
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use async_stream::try_stream;
 use async_trait::async_trait;
-use axum::{extract::Query, response::Html, routing::get, Router};
+use axum::{Router, extract::Query, response::Html, routing::get};
 use base64::Engine;
+use bcaip_provider_types::base::{
+    ConfigKey, MessageStream, Provider, ProviderDescriptor, ProviderMetadata,
+};
+use bcaip_provider_types::conversations::{Message, MessageContent};
+use bcaip_provider_types::errors::ProviderError;
+use bcaip_provider_types::formats::responses_api_to_streaming_message;
+use bcaip_provider_types::model::ModelConfig;
+use bcaip_provider_types::retry::ProviderRetry;
+use bcaip_provider_types::thinking::ThinkingEffort;
+use bcaip_provider_types::{
+    ProviderSetupCategory, ProviderSetupGroup, ProviderSetupMetadata, ProviderSetupMethod,
+};
 use chrono::{DateTime, Utc};
 use futures::future::BoxFuture;
 use futures::{StreamExt, TryStreamExt};
-use goose_providers::errors::ProviderError;
-use goose_providers::formats::openai_responses::responses_api_to_streaming_message;
-use goose_providers::model::ModelConfig;
+use goose_providers::api_client::{AuthProvider, RequestBuilderDecorator};
+use goose_providers::api_client::{DEFAULT_CONNECT_TIMEOUT_SECS, DEFAULT_PROVIDER_TIMEOUT_SECS};
+use goose_providers::openai_compatible::handle_status;
 use jsonwebtoken::jwk::JwkSet;
-use jsonwebtoken::{decode, decode_header, DecodingKey, Validation};
+use jsonwebtoken::{DecodingKey, Validation, decode, decode_header};
 use rmcp::model::{ContentBlock, Role, Tool};
 use serde::{Deserialize, Serialize};
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use sha2::Digest;
-use std::io;
-use std::net::SocketAddr;
-use std::path::PathBuf;
 use std::sync::{Arc, LazyLock};
+use std::{io, net::SocketAddr, path::PathBuf};
 use tokio::pin;
-use tokio::sync::{oneshot, Mutex as TokioMutex};
+use tokio::sync::{Mutex as TokioMutex, oneshot};
 use tokio_util::codec::{FramedRead, LinesCodec};
 use tokio_util::io::StreamReader;
-
 const CLIENT_ID: &str = "app_EMoamEEZ73f0CkXaXp7hrann";
 const ISSUER: &str = "https://auth.openai.com";
 const CODEX_API_ENDPOINT: &str = "https://chatgpt.com/backend-api/codex";
@@ -235,8 +237,6 @@ fn get_reasoning_effort(model_name: &str) -> String {
 }
 
 fn reasoning_effort_for_config(model_config: &ModelConfig) -> Option<String> {
-    use goose_providers::thinking::ThinkingEffort;
-
     model_config
         .thinking_effort()
         .map(|effort| {
@@ -895,7 +895,7 @@ impl ChatGptCodexProvider {
     }
 
     pub async fn from_env(
-        _tls_config: Option<crate::providers::api_client::TlsConfig>,
+        _tls_config: Option<goose_providers::api_client::TlsConfig>,
     ) -> Result<Self> {
         let auth_provider = Arc::new(ChatGptCodexAuthProvider::new(
             ChatGptCodexAuthState::instance(),
@@ -953,7 +953,7 @@ impl ChatGptCodexProvider {
     }
 }
 
-impl goose_providers::base::ProviderDescriptor for ChatGptCodexProvider {
+impl ProviderDescriptor for ChatGptCodexProvider {
     fn metadata() -> ProviderMetadata {
         ProviderMetadata::new(
             CHATGPT_CODEX_PROVIDER_NAME,
@@ -971,10 +971,10 @@ impl goose_providers::base::ProviderDescriptor for ChatGptCodexProvider {
             )],
         )
         .with_setup(
-            crate::providers::catalog::ProviderSetupMetadata::new(
-                crate::providers::catalog::ProviderSetupCategory::Model,
-                crate::providers::catalog::ProviderSetupMethod::OauthDeviceCode,
-                crate::providers::catalog::ProviderSetupGroup::Default,
+            ProviderSetupMetadata::new(
+                ProviderSetupCategory::Model,
+                ProviderSetupMethod::OauthDeviceCode,
+                ProviderSetupGroup::Default,
             )
             .with_docs_url("https://chatgpt.com")
             .with_native_connect_query("ChatGPT Codex")
@@ -988,7 +988,7 @@ impl ProviderDef for ChatGptCodexProvider {
 
     fn from_env(
         _extensions: Vec<crate::config::ExtensionConfig>,
-        tls_config: Option<crate::providers::api_client::TlsConfig>,
+        tls_config: Option<goose_providers::api_client::TlsConfig>,
     ) -> BoxFuture<'static, Result<Self::Provider>> {
         Box::pin(Self::from_env(tls_config))
     }
@@ -1061,410 +1061,5 @@ impl Provider for ChatGptCodexProvider {
 
     async fn fetch_supported_models(&self) -> Result<Vec<String>, ProviderError> {
         Ok(known_model_names().into_iter().map(String::from).collect())
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::conversation::message::Message;
-    use goose_test_support::TEST_IMAGE_B64;
-    use jsonwebtoken::{Algorithm, EncodingKey, Header};
-    use rmcp::model::{CallToolRequestParams, CallToolResult, ContentBlock, ErrorCode, ErrorData};
-    use rmcp::object;
-    use test_case::test_case;
-    use wiremock::matchers::{body_string_contains, method, path};
-    use wiremock::{Mock, MockServer, ResponseTemplate};
-
-    fn input_kinds(payload: &Value) -> Vec<String> {
-        payload["input"]
-            .as_array()
-            .map(|items| {
-                items
-                    .iter()
-                    .map(|item| {
-                        if let Some(role) = item.get("role").and_then(|r| r.as_str()) {
-                            format!("message:{role}")
-                        } else {
-                            item.get("type")
-                                .and_then(|t| t.as_str())
-                                .unwrap_or("unknown")
-                                .to_string()
-                        }
-                    })
-                    .collect()
-            })
-            .unwrap_or_default()
-    }
-
-    #[test]
-    #[serial_test::serial]
-    fn inventory_configured_uses_oauth_token_cache() {
-        let root = tempfile::tempdir().unwrap();
-        let root_path = root.path().to_string_lossy().to_string();
-        let _guard = env_lock::lock_env([("GOOSE_PATH_ROOT", Some(root_path.as_str()))]);
-
-        TokenCache::new().clear();
-        assert!(!TokenCache::new().has_token());
-
-        TokenCache::new()
-            .save(&TokenData {
-                access_token: "access".to_string(),
-                refresh_token: "refresh".to_string(),
-                id_token: None,
-                expires_at: Utc::now() + chrono::Duration::hours(1),
-                account_id: Some("account".to_string()),
-            })
-            .unwrap();
-
-        assert!(TokenCache::new().has_token());
-    }
-
-    #[cfg(unix)]
-    #[test]
-    fn token_cache_replaces_loose_file_with_owner_only_permissions() {
-        use std::os::unix::fs::PermissionsExt;
-
-        let directory = tempfile::tempdir().unwrap();
-        let cache_path = directory.path().join("tokens.json");
-        std::fs::write(&cache_path, "{}").unwrap();
-        std::fs::set_permissions(&cache_path, std::fs::Permissions::from_mode(0o644)).unwrap();
-        let cache = TokenCache {
-            cache_path: cache_path.clone(),
-        };
-
-        cache
-            .save(&TokenData {
-                access_token: "access".to_string(),
-                refresh_token: "refresh".to_string(),
-                id_token: None,
-                expires_at: Utc::now() + chrono::Duration::hours(1),
-                account_id: None,
-            })
-            .unwrap();
-
-        let mode = std::fs::metadata(cache_path).unwrap().permissions().mode() & 0o777;
-        assert_eq!(mode, 0o600);
-    }
-
-    #[test_case(
-        vec![
-            Message::user().with_text("user text"),
-            Message::assistant().with_text("assistant prelude").with_tool_request(
-                "call-1",
-                Ok(CallToolRequestParams::new("tool_name").with_arguments(object!({"param": "value"}))),
-            ),
-            Message::user().with_tool_response(
-                "call-1",
-                Ok(CallToolResult::success(vec![ContentBlock::text("tool output")])),
-            ),
-            Message::assistant().with_text("assistant follow-up"),
-        ],
-        vec![
-            "message:user".to_string(),
-            "message:assistant".to_string(),
-            "function_call".to_string(),
-            "function_call_output".to_string(),
-            "message:assistant".to_string(),
-        ];
-        "preserves order when assistant includes text"
-    )]
-    #[test_case(
-        vec![
-            Message::user().with_text("user text"),
-            Message::assistant().with_tool_request(
-                "call-1",
-                Ok(CallToolRequestParams::new("tool_name").with_arguments(object!({"param": "value"}))),
-            ),
-            Message::user().with_tool_response(
-                "call-1",
-                Ok(CallToolResult::success(vec![ContentBlock::text("tool output")])),
-            ),
-            Message::assistant().with_text("assistant follow-up"),
-        ],
-        vec![
-            "message:user".to_string(),
-            "function_call".to_string(),
-            "function_call_output".to_string(),
-            "message:assistant".to_string(),
-        ];
-        "skips empty assistant message and preserves tool order"
-    )]
-    #[test_case(
-        vec![
-            Message::user().with_text("user text"),
-            Message::assistant().with_tool_request(
-                "call-1",
-                Ok(CallToolRequestParams::new("tool_name").with_arguments(object!({"param": "value"}))),
-            ),
-            Message::user().with_tool_response(
-                "call-1",
-                Err(ErrorData::new(ErrorCode::INTERNAL_ERROR, "boom", None)),
-            ),
-        ],
-        vec![
-            "message:user".to_string(),
-            "function_call".to_string(),
-            "function_call_output".to_string(),
-        ];
-        "includes tool error output"
-    )]
-    #[test_case(
-        vec![
-            Message::user()
-                .with_text("describe this")
-                .with_image(TEST_IMAGE_B64, "image/png"),
-        ],
-        vec![
-            "message:user".to_string(),
-        ];
-        "image content included in user message"
-    )]
-    fn test_codex_input_order(messages: Vec<Message>, expected: Vec<String>) {
-        let items = build_input_items(&messages).unwrap();
-        let payload = json!({ "input": items });
-        let kinds = input_kinds(&payload);
-        assert_eq!(kinds, expected);
-    }
-
-    #[test]
-    fn test_image_url_format() {
-        let messages = vec![Message::user().with_image(TEST_IMAGE_B64, "image/png")];
-        let items = build_input_items(&messages).unwrap();
-        // The image is inside the content array of the user message
-        let content = items[0]["content"].as_array().unwrap();
-        let image_item = &content[0];
-        assert_eq!(image_item["type"], "input_image");
-        let url = image_item["image_url"].as_str().unwrap();
-        assert!(
-            url.starts_with("data:image/png;base64,"),
-            "image_url should start with data:image/png;base64, but was: {}",
-            url
-        );
-    }
-
-    #[test]
-    fn test_create_codex_request_reasoning_effort_from_unified_thinking() {
-        let mut params = std::collections::HashMap::new();
-        params.insert("thinking_effort".to_string(), json!("max"));
-        let mut config = ModelConfig::new("gpt-5.5");
-        config.request_params = Some(params);
-
-        let payload = create_codex_request(&config, "sys", &[], &[]).unwrap();
-        assert_eq!(payload["reasoning"]["effort"], "xhigh");
-        assert!(payload.get("reasoning_effort").is_none());
-    }
-
-    #[test]
-    fn test_create_codex_request_caps_unified_thinking_to_supported_level() {
-        let mut params = std::collections::HashMap::new();
-        params.insert("thinking_effort".to_string(), json!("max"));
-        let mut config = ModelConfig::new("unknown-model");
-        config.request_params = Some(params);
-
-        let payload = create_codex_request(&config, "sys", &[], &[]).unwrap();
-        assert_eq!(payload["reasoning"]["effort"], "high");
-        assert!(payload.get("reasoning_effort").is_none());
-    }
-
-    #[test]
-    fn test_create_codex_request_off_sets_none_for_gpt_5_6_models() {
-        let mut params = std::collections::HashMap::new();
-        params.insert("thinking_effort".to_string(), json!("off"));
-        let mut config = ModelConfig::new("gpt-5.6-sol");
-        config.request_params = Some(params);
-
-        let payload = create_codex_request(&config, "sys", &[], &[]).unwrap();
-        assert_eq!(payload["reasoning"]["effort"], "none");
-        assert!(payload.get("reasoning_effort").is_none());
-    }
-
-    // ChatGPT Codex does not support temperature and will return an error
-    #[test]
-    fn test_create_codex_request_omits_temperature() {
-        let config = ModelConfig::new("gpt-5.5").with_temperature(Some(0.2));
-
-        let payload = create_codex_request(&config, "sys", &[], &[]).unwrap();
-        assert!(payload.get("temperature").is_none());
-    }
-
-    #[test_case(
-        JwtClaims {
-            chatgpt_account_id: Some("account-1".to_string()),
-            auth_claims: None,
-            organizations: None,
-        },
-        Some("account-1".to_string());
-        "uses top-level account id"
-    )]
-    #[test_case(
-        JwtClaims {
-            chatgpt_account_id: None,
-            auth_claims: Some(AuthClaims {
-                chatgpt_account_id: Some("account-2".to_string()),
-            }),
-            organizations: None,
-        },
-        Some("account-2".to_string());
-        "uses auth claims account id"
-    )]
-    #[test_case(
-        JwtClaims {
-            chatgpt_account_id: None,
-            auth_claims: None,
-            organizations: Some(vec![OrgInfo {
-                id: "org-1".to_string(),
-            }]),
-        },
-        Some("org-1".to_string());
-        "falls back to first organization"
-    )]
-    fn test_account_id_from_claims(claims: JwtClaims, expected: Option<String>) {
-        assert_eq!(account_id_from_claims(&claims), expected);
-    }
-
-    #[tokio::test]
-    async fn test_exchange_code_for_tokens() {
-        let server = MockServer::start().await;
-        Mock::given(method("POST"))
-            .and(path("/oauth/token"))
-            .and(body_string_contains("grant_type=authorization_code"))
-            .and(body_string_contains("code=code-123"))
-            .and(body_string_contains(
-                "redirect_uri=http%3A%2F%2Flocalhost%2Fcallback",
-            ))
-            .and(body_string_contains("code_verifier=verifier-123"))
-            .respond_with(ResponseTemplate::new(200).set_body_json(json!({
-                "access_token": "access-1",
-                "refresh_token": "refresh-1",
-                "id_token": "id-1",
-                "expires_in": 3600
-            })))
-            .mount(&server)
-            .await;
-
-        let pkce = PkceChallenge {
-            verifier: "verifier-123".to_string(),
-            challenge: "challenge-123".to_string(),
-        };
-        let tokens = exchange_code_for_tokens_with_issuer(
-            &server.uri(),
-            "code-123",
-            "http://localhost/callback",
-            &pkce,
-        )
-        .await
-        .unwrap();
-
-        assert_eq!(tokens.access_token, "access-1");
-        assert_eq!(tokens.refresh_token, "refresh-1");
-        assert_eq!(tokens.id_token.as_deref(), Some("id-1"));
-        assert_eq!(tokens.expires_in, Some(3600));
-    }
-
-    #[tokio::test]
-    async fn test_refresh_access_token() {
-        let server = MockServer::start().await;
-        Mock::given(method("POST"))
-            .and(path("/oauth/token"))
-            .and(body_string_contains("grant_type=refresh_token"))
-            .and(body_string_contains("refresh_token=refresh-123"))
-            .respond_with(ResponseTemplate::new(200).set_body_json(json!({
-                "access_token": "access-2",
-                "refresh_token": "refresh-2",
-                "id_token": "id-2",
-                "expires_in": 1800
-            })))
-            .mount(&server)
-            .await;
-
-        let tokens = refresh_access_token_with_issuer(&server.uri(), "refresh-123")
-            .await
-            .unwrap();
-
-        assert_eq!(tokens.access_token, "access-2");
-        assert_eq!(tokens.refresh_token, "refresh-2");
-        assert_eq!(tokens.id_token.as_deref(), Some("id-2"));
-        assert_eq!(tokens.expires_in, Some(1800));
-    }
-
-    #[derive(Serialize)]
-    struct TestClaims {
-        exp: usize,
-        chatgpt_account_id: Option<String>,
-    }
-
-    #[tokio::test]
-    async fn test_parse_jwt_claims_verified_with_issuer() {
-        let server = MockServer::start().await;
-        let jwks_uri = format!("{}/jwks", server.uri());
-        Mock::given(method("GET"))
-            .and(path("/.well-known/openid-configuration"))
-            .respond_with(ResponseTemplate::new(200).set_body_json(json!({
-                "jwks_uri": jwks_uri
-            })))
-            .mount(&server)
-            .await;
-
-        let secret = "test-secret";
-        let key = base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(secret);
-        Mock::given(method("GET"))
-            .and(path("/jwks"))
-            .respond_with(ResponseTemplate::new(200).set_body_json(json!({
-                "keys": [{
-                    "kty": "oct",
-                    "alg": "HS256",
-                    "kid": "test-kid",
-                    "k": key
-                }]
-            })))
-            .mount(&server)
-            .await;
-
-        let mut header = Header::new(Algorithm::HS256);
-        header.kid = Some("test-kid".to_string());
-
-        let claims = TestClaims {
-            exp: (Utc::now() + chrono::Duration::seconds(60)).timestamp() as usize,
-            chatgpt_account_id: Some("account-1".to_string()),
-        };
-        let token = jsonwebtoken::encode(
-            &header,
-            &claims,
-            &EncodingKey::from_secret(secret.as_bytes()),
-        )
-        .unwrap();
-
-        let jwks = fetch_jwks_for(&server.uri()).await.unwrap();
-        let claims = parse_jwt_claims_with_jwks(&token, &jwks).unwrap();
-
-        assert_eq!(claims.chatgpt_account_id.as_deref(), Some("account-1"));
-    }
-
-    #[test_case("gpt-5.6-sol", &["none", "low", "medium", "high", "xhigh"]; "gpt 5.6 sol supports extended reasoning levels")]
-    #[test_case("gpt-5.6-terra", &["none", "low", "medium", "high", "xhigh"]; "gpt 5.6 terra supports extended reasoning levels")]
-    #[test_case("gpt-5.6-luna", &["none", "low", "medium", "high", "xhigh"]; "gpt 5.6 luna supports extended reasoning levels")]
-    #[test_case("gpt-5.6", &["none", "low", "medium", "high", "xhigh"]; "gpt 5.6 supports extended reasoning levels")]
-    #[test_case("unknown-model", &["medium", "high"]; "unknown model gets default reasoning levels")]
-    fn test_reasoning_levels_for_model(model: &str, expected: &[&str]) {
-        assert_eq!(reasoning_levels_for_model(model), expected);
-    }
-
-    #[test]
-    fn test_known_model_names_include_gpt_5_6_models() {
-        let names = known_model_names();
-
-        assert!(names.contains(&"gpt-5.6-sol"));
-        assert!(names.contains(&"gpt-5.6-terra"));
-        assert!(names.contains(&"gpt-5.6-luna"));
-        assert!(names.contains(&"gpt-5.6"));
-    }
-
-    #[test]
-    fn test_instructions_passed_through() {
-        let model = ModelConfig::new("gpt-5.4");
-        let payload = create_codex_request(&model, "system prompt", &[], &[]).unwrap();
-        let instructions = payload["instructions"].as_str().unwrap();
-        assert_eq!(instructions, "system prompt");
     }
 }

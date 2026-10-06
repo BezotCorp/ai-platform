@@ -1,5 +1,11 @@
-use super::*;
+use goose_sdk_types::custom_requests::{
+    CreateSourceRequest, CreateSourceResponse, DeleteSourceRequest, EmptyResponse,
+    ExportSourceRequest, ExportSourceResponse, ImportSourcesRequest, ImportSourcesResponse,
+    ListSourcesRequest, ListSourcesResponse, SourceScope, UpdateSourceRequest,
+    UpdateSourceResponse,
+};
 
+use crate::acp::server::server_informations::GooseAcpAgent;
 impl GooseAcpAgent {
     pub(super) async fn on_create_source(
         &self,
@@ -26,7 +32,7 @@ impl GooseAcpAgent {
             req.source_type,
             req.project_dir.as_deref(),
             req.include_project_sources,
-            &self.additional_source_roots,
+            self.additional_source_roots(),
         )?;
         Ok(ListSourcesResponse { sources })
     }
@@ -43,7 +49,7 @@ impl GooseAcpAgent {
             &req.content,
             crate::sources::UpdateSourceOptions {
                 properties: req.properties,
-                additional_roots: &self.additional_source_roots,
+                additional_roots: self.additional_source_roots(),
             },
         )?;
         Ok(UpdateSourceResponse { source })
@@ -56,7 +62,7 @@ impl GooseAcpAgent {
         crate::sources::delete_source_with_roots(
             req.source_type,
             &req.path,
-            &self.additional_source_roots,
+            self.additional_source_roots(),
         )?;
         Ok(EmptyResponse {})
     }
@@ -68,7 +74,7 @@ impl GooseAcpAgent {
         let (json, filename) = crate::sources::export_source_with_roots(
             req.source_type,
             &req.path,
-            &self.additional_source_roots,
+            self.additional_source_roots(),
         )?;
         Ok(ExportSourceResponse { json, filename })
     }

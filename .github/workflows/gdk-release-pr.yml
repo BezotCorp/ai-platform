@@ -7,12 +7,12 @@ on:
       - gdk-release-plz # Temporary: remove after validating this workflow
     paths:
       # BEGIN GDK CRATE PATHS
-      - "crates/goose-provider-types/**"
+      - "crates/bcaip-provider-types/**"
       - "crates/goose-sdk-types/**"
-      - "crates/goose-download-manager/**"
-      - "crates/goose-local-inference/**"
+      - "crates/bcaip-download-manager/**"
+      - "crates/bcaip-local-inference/**"
       - "crates/goose-providers/**"
-      - "crates/goose-agent/**"
+      - "crates/bcaip-agent/**"
       - "crates/goose-context-management/**"
       - "crates/goose-sdk/**"
       # END GDK CRATE PATHS

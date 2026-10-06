@@ -1,16 +1,11 @@
-use std::collections::HashMap;
-
-use rmcp::transport::ConfigureCommandExt;
-use tokio::io::AsyncReadExt;
-use tokio::process::Command;
-
 use super::super::container::Container;
 use super::super::extension::{ExtensionError, ExtensionResult, ProcessExit};
 use super::super::extension_malware_check;
 use super::super::mcp_client::{ConnectContext, McpClient};
-use crate::config::search_path::SearchPaths;
-use crate::subprocess::spawn_long_lived_mcp_subprocess;
-
+use crate::{config::search_path::SearchPaths, subprocess::spawn_long_lived_mcp_subprocess};
+use rmcp::transport::ConfigureCommandExt;
+use std::collections::HashMap;
+use tokio::{io::AsyncReadExt, process::Command};
 pub(super) async fn connect(
     cmd: &str,
     args: &[String],

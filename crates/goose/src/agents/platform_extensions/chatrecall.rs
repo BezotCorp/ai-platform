@@ -1,19 +1,18 @@
 use crate::agents::extension::PlatformExtensionContext;
 use crate::agents::mcp_client::{Error, McpClientTrait};
 use crate::agents::tool_execution::ToolCallContext;
-use crate::conversation::Conversation;
-use crate::session::session_manager::SessionType;
+use crate::session::SessionType;
 use anyhow::Result;
 use async_trait::async_trait;
+use bcaip_provider_types::conversations::Conversation;
 use indoc::indoc;
 use rmcp::model::{
     Annotations, CallToolResult, ContentBlock, Implementation, InitializeResult, JsonObject,
     ListToolsResult, Role, ServerCapabilities, TextContent, Tool, ToolAnnotations,
 };
-use schemars::{schema_for, JsonSchema};
+use schemars::{JsonSchema, schema_for};
 use serde::{Deserialize, Serialize};
 use tokio_util::sync::CancellationToken;
-
 pub static EXTENSION_NAME: &str = "chatrecall";
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
@@ -331,151 +330,5 @@ impl McpClientTrait for ChatRecallClient {
 
     fn get_info(&self) -> Option<&InitializeResult> {
         Some(&self.info)
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::config::GooseMode;
-    use crate::conversation::message::{Message, MessageContent, MessageMetadata};
-    use crate::session::SessionManager;
-    use std::sync::Arc;
-
-    fn annotated_text(text: &str, audience: Vec<Role>) -> MessageContent {
-        MessageContent::Text(
-            TextContent::new(text).with_annotations(Annotations::default().with_audience(audience)),
-        )
-    }
-
-    fn projected_tool_text(content: Vec<ContentBlock>, audience: Role) -> String {
-        let message =
-            Message::user().with_tool_response("chatrecall", Ok(CallToolResult::success(content)));
-        let projected = match audience {
-            Role::Assistant => message.agent_visible_content(),
-            Role::User => message.user_visible_content(),
-        };
-        let Some(MessageContent::ToolResponse(response)) = projected.content.first() else {
-            return String::new();
-        };
-        let Ok(result) = &response.tool_result else {
-            return String::new();
-        };
-
-        result
-            .content
-            .iter()
-            .filter_map(|content| content.as_text().map(|text| text.text.clone()))
-            .collect::<Vec<_>>()
-            .join("\n")
-    }
-
-    #[test]
-    fn loaded_excerpt_projects_audience_before_selecting_endpoints() {
-        let conversation = Conversation::new_unvalidated([
-            Message::user()
-                .with_text("hidden first row")
-                .with_metadata(MessageMetadata::user_only()),
-            Message::user()
-                .with_text("visible first")
-                .with_content(annotated_text("user-only first secret", vec![Role::User])),
-            Message::assistant().with_text("visible middle"),
-            Message::assistant()
-                .with_text("hidden last row")
-                .with_metadata(MessageMetadata::user_only()),
-            Message::user()
-                .with_text("visible last")
-                .with_content(annotated_text("user-only last secret", vec![Role::User])),
-        ]);
-
-        let (total, excerpt) = format_agent_visible_excerpt(&conversation).unwrap();
-
-        assert_eq!(total, 3);
-        assert!(excerpt.contains("visible first"));
-        assert!(excerpt.contains("visible last"));
-        assert!(!excerpt.contains("hidden first row"));
-        assert!(!excerpt.contains("hidden last row"));
-        assert!(!excerpt.contains("user-only first secret"));
-        assert!(!excerpt.contains("user-only last secret"));
-        let canonical_user_text = conversation
-            .user_visible_messages()
-            .iter()
-            .map(Message::as_concat_text)
-            .collect::<Vec<_>>()
-            .join("\n");
-        assert!(canonical_user_text.contains("user-only first secret"));
-        assert!(canonical_user_text.contains("user-only last secret"));
-    }
-
-    #[tokio::test]
-    async fn history_results_remain_agent_visible_without_becoming_user_visible() {
-        let temp_dir = tempfile::tempdir().unwrap();
-        let session_manager = Arc::new(SessionManager::new(temp_dir.path().to_path_buf()));
-        let current_session = session_manager
-            .create_session(
-                temp_dir.path().to_path_buf(),
-                "current".to_string(),
-                SessionType::User,
-                GooseMode::default(),
-            )
-            .await
-            .unwrap();
-        let target_session = session_manager
-            .create_session(
-                temp_dir.path().to_path_buf(),
-                "target".to_string(),
-                SessionType::User,
-                GooseMode::default(),
-            )
-            .await
-            .unwrap();
-        session_manager
-            .add_message(
-                &target_session.id,
-                &Message::assistant()
-                    .with_text("agent-only secret marker")
-                    .with_metadata(MessageMetadata::agent_only()),
-            )
-            .await
-            .unwrap();
-
-        let client = ChatRecallClient::new(PlatformExtensionContext {
-            extension_manager: None,
-            session_manager,
-            scheduler: None,
-            session: Some(Arc::new(current_session.clone())),
-            use_login_shell_path: false,
-        })
-        .unwrap();
-        let load_output = client
-            .handle_chatrecall(
-                &current_session.id,
-                Some(
-                    serde_json::json!({ "session_id": target_session.id })
-                        .as_object()
-                        .unwrap()
-                        .clone(),
-                ),
-            )
-            .await
-            .unwrap();
-        let search_output = client
-            .handle_chatrecall(
-                &current_session.id,
-                Some(
-                    serde_json::json!({ "query": "agent-only secret marker" })
-                        .as_object()
-                        .unwrap()
-                        .clone(),
-                ),
-            )
-            .await
-            .unwrap();
-
-        for output in [load_output, search_output] {
-            assert!(projected_tool_text(output.clone(), Role::Assistant)
-                .contains("agent-only secret marker"));
-            assert!(!projected_tool_text(output, Role::User).contains("agent-only secret marker"));
-        }
     }
 }

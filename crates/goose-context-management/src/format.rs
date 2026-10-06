@@ -1,6 +1,5 @@
-use goose_provider_types::conversation::message::{ActionRequiredData, Message, MessageContent};
+use bcaip_provider_types::conversations::{ActionRequiredData, Message, MessageContent};
 use rmcp::model::Role;
-
 pub fn format_message_for_compacting(msg: &Message) -> String {
     let content_parts: Vec<String> = msg
         .content

@@ -1,26 +1,25 @@
+use crate::config::{Config, ConfigError, ExtensionConfig};
+use crate::providers::base::ProviderDef;
 use anyhow::Result;
+use bcaip_provider_types::{ProviderSetupCategory, ProviderSetupGroup, ProviderSetupMetadata, ProviderSetupMethod};
+use bcaip_provider_types::base::{ProviderDescriptor, ProviderMetadata};
 use futures::future::BoxFuture;
 use goose_providers::api_client::TlsConfig;
-use goose_providers::base::ProviderDescriptor;
 use goose_providers::databricks::DatabricksProvider;
 use goose_providers::databricks_auth::{
     DatabricksAuth, DatabricksOauthTokenProvider, DatabricksRefreshHook,
     DatabricksSessionIdProvider, DatabricksTokenResolver,
 };
 use std::sync::Arc;
-
-use crate::config::{Config, ConfigError, ExtensionConfig};
-use crate::providers::base::ProviderDef;
-
 pub struct DatabricksProviderDef;
 
 impl ProviderDescriptor for DatabricksProviderDef {
-    fn metadata() -> goose_providers::base::ProviderMetadata {
+    fn metadata() -> ProviderMetadata {
         DatabricksProvider::metadata().with_setup(
-            crate::providers::catalog::ProviderSetupMetadata::new(
-                crate::providers::catalog::ProviderSetupCategory::Model,
-                crate::providers::catalog::ProviderSetupMethod::HostWithOauthFallback,
-                crate::providers::catalog::ProviderSetupGroup::Default,
+            ProviderSetupMetadata::new(
+                ProviderSetupCategory::Model,
+                ProviderSetupMethod::HostWithOauthFallback,
+                ProviderSetupGroup::Default,
             )
             .with_capabilities(false, true, false)
             .with_field(

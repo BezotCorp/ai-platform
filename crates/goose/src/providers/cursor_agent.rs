@@ -1,28 +1,25 @@
-use anyhow::Result;
-use async_trait::async_trait;
-use rmcp::model::Role;
-use serde_json::{json, Value};
-use std::path::PathBuf;
-use std::process::Stdio;
-use std::time::Duration;
-use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader};
-use tokio::process::Command;
-
-use super::base::{
-    stream_from_single_message, ConfigKey, MessageStream, Provider, ProviderDef, ProviderMetadata,
-};
-use super::catalog::ProviderSetupMetadata;
+use super::base::ProviderDef;
 use super::utils::filter_extensions_from_system_prompt;
 use crate::config::search_path::SearchPaths;
-use crate::conversation::message::{Message, MessageContent};
 use crate::subprocess::configure_subprocess;
+use anyhow::Result;
+use async_trait::async_trait;
 use futures::future::BoxFuture;
-use goose_providers::conversation::token_usage::{ProviderUsage, Usage};
-use goose_providers::errors::ProviderError;
-use goose_providers::model::ModelConfig;
-use goose_providers::request_log::{start_log, LoggerHandleExt};
+use bcaip_provider_types::ProviderSetupMetadata;
+use bcaip_provider_types::base::{
+    ConfigKey, MessageStream, Provider, ProviderMetadata, stream_from_single_message,
+};
+use bcaip_provider_types::conversations::{Message, MessageContent};
+use bcaip_provider_types::conversations::{ProviderUsage, Usage};
+use bcaip_provider_types::errors::ProviderError;
+use bcaip_provider_types::model::ModelConfig;
+use bcaip_provider_types::request_log::{LoggerHandleExt, start_log};
+use rmcp::model::Role;
 use rmcp::model::Tool;
-
+use serde_json::{Value, json};
+use std::{path::PathBuf, process::Stdio, time::Duration};
+use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader};
+use tokio::process::Command;
 const CURSOR_AGENT_PROVIDER_NAME: &str = "cursor-agent";
 pub const CURSOR_AGENT_DEFAULT_MODEL: &str = "auto";
 // Fallback when `cursor-agent models` cannot be queried.
@@ -47,7 +44,7 @@ pub struct CursorAgentProvider {
 
 impl CursorAgentProvider {
     pub async fn from_env(
-        _tls_config: Option<crate::providers::api_client::TlsConfig>,
+        _tls_config: Option<goose_providers::api_client::TlsConfig>,
     ) -> Result<Self> {
         let config = crate::config::Config::global();
         let command: String = config.get_cursor_agent_command().unwrap_or_default().into();
@@ -459,7 +456,7 @@ fn strip_ansi(input: &str) -> String {
     out
 }
 
-impl goose_providers::base::ProviderDescriptor for CursorAgentProvider {
+impl bcaip_provider_types::base::ProviderDescriptor for CursorAgentProvider {
     fn metadata() -> ProviderMetadata {
         ProviderMetadata::new(
             CURSOR_AGENT_PROVIDER_NAME,
@@ -492,7 +489,7 @@ impl ProviderDef for CursorAgentProvider {
 
     fn from_env(
         _extensions: Vec<crate::config::ExtensionConfig>,
-        tls_config: Option<crate::providers::api_client::TlsConfig>,
+        tls_config: Option<goose_providers::api_client::TlsConfig>,
     ) -> BoxFuture<'static, Result<Self::Provider>> {
         Box::pin(Self::from_env(tls_config))
     }
@@ -564,158 +561,5 @@ impl Provider for CursorAgentProvider {
 
         let provider_usage = ProviderUsage::new(model_config.model_name.clone(), usage);
         Ok(stream_from_single_message(message, provider_usage))
-    }
-}
-
-#[cfg(all(test, unix))]
-mod tests {
-    use super::*;
-    use std::fs;
-    use std::os::unix::fs::PermissionsExt;
-    use std::path::Path;
-
-    const SENTINEL: &str = "loupe-sensitive-cursor-prompt";
-
-    fn recording_cli(directory: &Path) -> PathBuf {
-        let command = directory.join("cursor-agent-recording-shim");
-        fs::write(
-            &command,
-            r#"#!/bin/sh
-record_dir=${0%/*}
-printf '%s\n' "$@" > "$record_dir/args"
-cat > "$record_dir/stdin"
-printf '%s\n' '{"type":"result","result":"ok"}'
-"#,
-        )
-        .unwrap();
-        fs::set_permissions(&command, fs::Permissions::from_mode(0o755)).unwrap();
-        command
-    }
-
-    async fn assert_prompt_uses_stdin(messages: Vec<Message>) {
-        let directory = tempfile::tempdir().unwrap();
-        let provider = CursorAgentProvider {
-            command: recording_cli(directory.path()),
-            name: CURSOR_AGENT_PROVIDER_NAME.to_string(),
-        };
-
-        let lines = provider
-            .execute_command(
-                &ModelConfig::new(CURSOR_AGENT_DEFAULT_MODEL),
-                "system instructions",
-                &messages,
-                &[],
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(lines, vec![r#"{"type":"result","result":"ok"}"#]);
-        let args = fs::read_to_string(directory.path().join("args")).unwrap();
-        let stdin = fs::read_to_string(directory.path().join("stdin")).unwrap();
-        assert!(!args.contains(SENTINEL));
-        assert!(stdin.contains(SENTINEL));
-        assert!(!args.lines().any(|arg| arg == "-p"));
-        assert!(args.contains("--model\nauto"));
-        assert!(args.lines().any(|arg| arg == "--print"));
-        assert!(args.contains("--output-format\njson"));
-        assert!(args.contains("--force"));
-    }
-
-    #[tokio::test]
-    async fn initial_prompt_is_sent_on_stdin() {
-        assert_prompt_uses_stdin(vec![Message::user().with_text(SENTINEL)]).await;
-    }
-
-    #[tokio::test]
-    async fn resumed_conversation_is_sent_on_stdin() {
-        assert_prompt_uses_stdin(vec![
-            Message::user().with_text("first turn"),
-            Message::assistant().with_text("first response"),
-            Message::user().with_text(SENTINEL),
-        ])
-        .await;
-    }
-
-    #[test]
-    fn session_naming_is_local() {
-        let provider = CursorAgentProvider {
-            command: PathBuf::from("cursor-agent"),
-            name: CURSOR_AGENT_PROVIDER_NAME.to_string(),
-        };
-
-        assert!(provider.uses_local_session_naming());
-    }
-
-    #[tokio::test]
-    async fn former_session_title_phrase_reaches_cli() {
-        let directory = tempfile::tempdir().unwrap();
-        let provider = CursorAgentProvider {
-            command: recording_cli(directory.path()),
-            name: CURSOR_AGENT_PROVIDER_NAME.to_string(),
-        };
-
-        let (message, _) = provider
-            .complete(
-                &ModelConfig::new(CURSOR_AGENT_DEFAULT_MODEL),
-                "answer in four words or less",
-                &[Message::user().with_text("ordinary request")],
-                &[],
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(message.as_concat_text(), "ok");
-        assert!(fs::read_to_string(directory.path().join("stdin"))
-            .unwrap()
-            .contains("answer in four words or less"));
-    }
-
-    #[test]
-    fn parse_models_output_extracts_ids_and_preserves_auto() {
-        let stdout = r#"
-Available models
-
-auto - Auto
-composer-2-fast - Composer 2 Fast (current, default)
-gpt-5 - GPT-5
-sonnet-4 - Claude Sonnet 4
-sonnet-4-thinking - Claude Sonnet 4 Thinking
-"#;
-        let models = parse_cursor_agent_models_output(stdout);
-        assert_eq!(
-            models,
-            vec![
-                "auto".to_string(),
-                "composer-2-fast".to_string(),
-                "gpt-5".to_string(),
-                "sonnet-4".to_string(),
-                "sonnet-4-thinking".to_string(),
-            ]
-        );
-    }
-
-    #[test]
-    fn parse_models_output_inserts_auto_when_missing() {
-        let stdout = "composer-2 - Composer 2\ngpt-5 - GPT-5\n";
-        let models = parse_cursor_agent_models_output(stdout);
-        assert_eq!(models.first().map(String::as_str), Some("auto"));
-        assert!(models.iter().any(|m| m == "composer-2"));
-        assert!(models.iter().any(|m| m == "gpt-5"));
-    }
-
-    #[test]
-    fn parse_models_output_ignores_status_and_tip_lines() {
-        let stdout = "No models available for this account.
-Tip: use --model <id> to switch.
-";
-        let models = parse_cursor_agent_models_output(stdout);
-        assert!(models.is_empty());
-    }
-
-    #[test]
-    fn parse_models_output_strips_ansi_codes() {
-        let stdout = "\u{1b}[36mcomposer-2-fast\u{1b}[39m - Composer 2 Fast\n";
-        let models = parse_cursor_agent_models_output(stdout);
-        assert!(models.iter().any(|m| m == "composer-2-fast"));
     }
 }

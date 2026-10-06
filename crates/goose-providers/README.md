@@ -1,23 +1,23 @@
 # goose-providers
 
 Provider implementations for goose. The trait they implement and the conversation
-types they exchange live in [`goose-provider-types`](../goose-provider-types),
+types they exchange live in [`bacaip-provider-types`](../bcaip-provider-types),
 which this crate re-exports — depend on this crate when you want working
 providers, and on the types crate when you only need the contract.
 
 ## Native providers
 
-| Module | Provider |
-| --- | --- |
-| `anthropic` | Anthropic |
-| `openai` | OpenAI |
-| `openai_compatible` | Any OpenAI-compatible endpoint |
-| `google` | Google Gemini |
-| `databricks`, `databricks_v2`, `databricks_auth` | Databricks, including OAuth |
-| `azure_foundry` | Azure AI Foundry |
-| `snowflake` | Snowflake Cortex |
-| `ollama` | Ollama |
-| `local_inference` | On-device models (requires `local-inference`) |
+| Module                                           | Provider                                      |
+| ------------------------------------------------ | --------------------------------------------- |
+| `anthropic`                                      | Anthropic                                     |
+| `openai`                                         | OpenAI                                        |
+| `openai_compatible`                              | Any OpenAI-compatible endpoint                |
+| `google`                                         | Google Gemini                                 |
+| `databricks`, `databricks_v2`, `databricks_auth` | Databricks, including OAuth                   |
+| `azure_foundry`                                  | Azure AI Foundry                              |
+| `snowflake`                                      | Snowflake Cortex                              |
+| `ollama`                                         | Ollama                                        |
+| `local_inference`                                | On-device models (requires `local-inference`) |
 
 ## Declarative providers
 
@@ -43,7 +43,7 @@ cargo run -p goose-providers --example streaming
 Default is `[]`.
 
 - **TLS (pick one):** `rustls-tls` or `native-tls`.
-- `local-inference` — pulls in [`goose-local-inference`](../goose-local-inference);
+- `local-inference` — pulls in [`bcaip-local-inference`](../bcaip-local-inference);
   `cuda`, `vulkan`, `mlx` select an accelerator and imply it.
 
 ## Shared plumbing

@@ -1,6 +1,5 @@
-use goose_providers::declarative::KeyResolver;
-
 use crate::config::{Config, ConfigError};
+use goose_providers::declarative::KeyResolver;
 
 pub struct ConfigKeyResolver<'a> {
     config: &'a Config,

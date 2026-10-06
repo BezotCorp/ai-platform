@@ -1,9 +1,9 @@
-use super::api_client::{ApiClient, AuthMethod};
-use super::base::{ConfigKey, ProviderDef, ProviderMetadata};
-use super::openai_compatible::OpenAiCompatibleProvider;
+use super::base::ProviderDef;
 use anyhow::Result;
 use futures::future::BoxFuture;
-
+use bcaip_provider_types::base::{ConfigKey, ProviderMetadata};
+use goose_providers::api_client::{ApiClient, AuthMethod};
+use goose_providers::openai_compatible::OpenAiCompatibleProvider;
 const GONDOLA_PROVIDER_NAME: &str = "gondola";
 pub const GONDOLA_API_HOST: &str = "https://api.gondola-ai.com/v1";
 pub const GONDOLA_DEFAULT_MODEL: &str = "deepseek-v4-flash";
@@ -24,7 +24,7 @@ pub const GONDOLA_DOC_URL: &str = "https://gondola-ai.com/guides";
 
 pub struct GondolaProvider;
 
-impl goose_providers::base::ProviderDescriptor for GondolaProvider {
+impl bcaip_provider_types::base::ProviderDescriptor for GondolaProvider {
     fn metadata() -> ProviderMetadata {
         ProviderMetadata::new(
             GONDOLA_PROVIDER_NAME,
@@ -39,8 +39,8 @@ impl goose_providers::base::ProviderDescriptor for GondolaProvider {
             ],
         )
         .with_setup(
-            crate::providers::catalog::ProviderSetupMetadata::api_key(
-                crate::providers::catalog::ProviderSetupGroup::Default,
+            bcaip_provider_types::ProviderSetupMetadata::api_key(
+                bcaip_provider_types::ProviderSetupGroup::Default,
             )
             .with_docs_url(GONDOLA_DOC_URL),
         )
@@ -52,7 +52,7 @@ impl ProviderDef for GondolaProvider {
 
     fn from_env(
         _extensions: Vec<crate::config::ExtensionConfig>,
-        tls_config: Option<crate::providers::api_client::TlsConfig>,
+        tls_config: Option<goose_providers::api_client::TlsConfig>,
     ) -> BoxFuture<'static, Result<OpenAiCompatibleProvider>> {
         Box::pin(async move {
             let config = crate::config::Config::global();

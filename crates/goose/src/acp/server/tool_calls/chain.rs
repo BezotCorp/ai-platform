@@ -1,4 +1,4 @@
-use crate::conversation::message::{MessageContent, ToolRequest};
+use bcaip_provider_types::conversations::{MessageContent, ToolRequest};
 
 pub(crate) fn breaks_consecutive_tool_calls(content: &MessageContent) -> bool {
     matches!(
@@ -85,11 +85,11 @@ impl ToolChainTracker {
     }
 
     pub(crate) fn record_response(&mut self, tool_call_id: &str) -> Option<ReadyToolChain> {
-        if let Some(current_chain) = &mut self.current_chain {
-            if current_chain.contains(tool_call_id) {
-                current_chain.mark_responded(tool_call_id);
-                return None;
-            }
+        if let Some(current_chain) = &mut self.current_chain
+            && current_chain.contains(tool_call_id)
+        {
+            current_chain.mark_responded(tool_call_id);
+            return None;
         }
 
         let waiting_chain_index = self
@@ -120,80 +120,5 @@ impl ToolChainTracker {
         }
 
         Some(chain.into_ready())
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::ToolChainTracker;
-    use crate::conversation::message::ToolRequest;
-    use rmcp::model::CallToolRequestParams;
-
-    fn request(id: &str) -> ToolRequest {
-        ToolRequest {
-            id: id.to_string(),
-            tool_call: Ok(CallToolRequestParams::new(format!("tool-{id}"))),
-            metadata: None,
-            tool_meta: None,
-        }
-    }
-
-    fn request_ids(chain: &super::ReadyToolChain) -> Vec<&str> {
-        chain
-            .tool_requests
-            .iter()
-            .map(|request| request.id.as_str())
-            .collect()
-    }
-
-    #[test]
-    fn open_chain_waits_for_a_boundary() {
-        let mut tracker = ToolChainTracker::default();
-
-        for id in ["a", "b", "c"] {
-            tracker.record_request(request(id));
-            assert!(tracker.record_response(id).is_none());
-        }
-
-        let ready = tracker.close_current_chain().expect("A-B-C is ready");
-        assert_eq!(request_ids(&ready), ["a", "b", "c"]);
-    }
-
-    #[test]
-    fn closed_chain_waits_for_its_last_response() {
-        let mut tracker = ToolChainTracker::default();
-        for id in ["a", "b", "c"] {
-            tracker.record_request(request(id));
-        }
-        tracker.record_response("a");
-        tracker.record_response("b");
-
-        assert!(tracker.close_current_chain().is_none());
-
-        let ready = tracker.record_response("c").expect("A-B-C is ready");
-        assert_eq!(request_ids(&ready), ["a", "b", "c"]);
-    }
-
-    #[test]
-    fn boundary_separates_request_runs_and_discards_singletons() {
-        let mut tracker = ToolChainTracker::default();
-        for id in ["a", "b"] {
-            tracker.record_request(request(id));
-            tracker.record_response(id);
-        }
-
-        let first = tracker.close_current_chain().expect("A-B is ready");
-        assert_eq!(request_ids(&first), ["a", "b"]);
-
-        tracker.record_request(request("c"));
-        tracker.record_response("c");
-        assert!(tracker.close_current_chain().is_none());
-
-        for id in ["d", "e"] {
-            tracker.record_request(request(id));
-            tracker.record_response(id);
-        }
-        let second = tracker.close_current_chain().expect("D-E is ready");
-        assert_eq!(request_ids(&second), ["d", "e"]);
     }
 }

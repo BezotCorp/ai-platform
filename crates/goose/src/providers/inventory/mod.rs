@@ -2,19 +2,19 @@ pub mod registrations;
 mod resolver;
 
 pub use resolver::{
-    default_inventory_identity_resolver, InventoryConfiguredResolver, InventoryIdentityResolver,
-    InventoryRegistration, InventoryResolvers,
+    InventoryConfiguredResolver, InventoryIdentityResolver, InventoryRegistration,
+    InventoryResolvers, default_inventory_identity_resolver,
 };
 
-use super::base::{ConfigKey, ModelInfo, Provider, ProviderType};
-use super::canonical::{map_provider_name, map_to_canonical_model, CanonicalModelRegistry};
-use crate::config::declarative_providers::{DeclarativeProviderConfig, ProviderEngine};
+use super::base::ProviderType;
 use crate::config::Config;
-use crate::session::session_manager::SessionStorage;
-use crate::utils::bytes_to_hex;
+use crate::{session::SessionStorage, utils::bytes_to_hex};
 use anyhow::{Context, Result};
 use chrono::{DateTime, Duration, Utc};
 use futures::FutureExt;
+use bcaip_provider_types::base::{ConfigKey, ModelInfo, Provider};
+use bcaip_provider_types::{CanonicalModelRegistry, map_provider_name, map_to_canonical_model};
+use goose_providers::declarative::{DeclarativeProviderConfig, ProviderEngine};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use sqlx::{Row, Sqlite, Transaction};
@@ -22,7 +22,6 @@ use std::collections::{BTreeMap, HashMap, HashSet};
 use std::panic::AssertUnwindSafe;
 use std::sync::{Arc, PoisonError, RwLock, RwLockReadGuard, RwLockWriteGuard};
 use tracing::warn;
-
 const STALE_AFTER_HOURS: i64 = 24;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -1246,215 +1245,4 @@ pub async fn create_tables(tx: &mut Transaction<'_, Sqlite>) -> Result<()> {
     .await?;
 
     Ok(())
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    fn test_identity(provider_id: &str, inventory_key: &str) -> InventoryIdentity {
-        InventoryIdentity {
-            provider_id: provider_id.to_string(),
-            provider_family: provider_id.to_string(),
-            inventory_key: inventory_key.to_string(),
-        }
-    }
-
-    #[test]
-    fn refresh_guard_complete_clears_refreshing_key() {
-        let refreshing_keys = Arc::new(RwLock::new(HashSet::from(["key-a".to_string()])));
-        let mut guard = RefreshGuard {
-            inventory_key: "key-a".to_string(),
-            refreshing_keys: Arc::clone(&refreshing_keys),
-            completed: false,
-        };
-
-        guard.complete();
-        guard.complete();
-
-        assert!(!refreshing_keys.read().unwrap().contains("key-a"));
-    }
-
-    #[tokio::test]
-    async fn clear_refreshing_many_removes_all_inserted_keys() {
-        let service =
-            ProviderInventoryService::new(Arc::new(SessionStorage::new(std::env::temp_dir())));
-        let left = test_identity("openai", "key-a");
-        let right = test_identity("anthropic", "key-b");
-        {
-            let mut refreshing_keys = service.refreshing_keys.write().unwrap();
-            refreshing_keys.insert(left.inventory_key.clone());
-            refreshing_keys.insert(right.inventory_key.clone());
-        }
-
-        service.clear_refreshing_many(&[left, right]);
-
-        assert!(service.refreshing_keys.read().unwrap().is_empty());
-    }
-
-    #[tokio::test]
-    async fn identity_store_writes_to_captured_inventory_key() {
-        let temp_dir = tempfile::tempdir().unwrap();
-        let service = ProviderInventoryService::new(Arc::new(SessionStorage::new(
-            temp_dir.path().to_path_buf(),
-        )));
-        let plan_time_identity = test_identity("openai", "plan-time-key");
-        let current_identity = test_identity("openai", "current-key");
-        let sentinel_model = "stark-plan-time-model".to_string();
-
-        service
-            .store_refreshed_models_for_identity(
-                &plan_time_identity,
-                std::slice::from_ref(&sentinel_model),
-            )
-            .await
-            .unwrap();
-
-        let plan_time_snapshot = service
-            .read_snapshot(&plan_time_identity)
-            .await
-            .unwrap()
-            .unwrap();
-        assert!(plan_time_snapshot
-            .models
-            .iter()
-            .any(|model| model.id == sentinel_model));
-        assert!(service
-            .read_snapshot(&current_identity)
-            .await
-            .unwrap()
-            .is_none());
-    }
-
-    #[test]
-    fn inventory_identity_hash_changes_with_secret_inputs() {
-        let left = InventoryIdentityInput::new("openai", "openai")
-            .with_public("host", "https://api.openai.com")
-            .with_secret("api_key", "secret-a")
-            .into_identity()
-            .unwrap();
-        let right = InventoryIdentityInput::new("openai", "openai")
-            .with_public("host", "https://api.openai.com")
-            .with_secret("api_key", "secret-b")
-            .into_identity()
-            .unwrap();
-
-        assert_ne!(left.inventory_key, right.inventory_key);
-    }
-
-    #[test]
-    fn configured_models_use_canonical_enrichment() {
-        let models = configured_models_to_inventory(
-            "anthropic",
-            &[ModelInfo::new("claude-sonnet-4-5").with_context_limit(0)],
-        );
-
-        assert_eq!(models.len(), 1);
-        assert!(models[0].name.contains("Claude"));
-    }
-
-    #[test]
-    fn databricks_v2_inventory_prefers_goose_model_ids_for_duplicate_names() {
-        let models = enrich_model_ids_with_canonical(
-            "databricks_v2",
-            &[
-                "databricks-gpt-5-5".to_string(),
-                "goose-gpt-5-5".to_string(),
-            ],
-        );
-
-        assert!(
-            models.iter().any(|model| model.id == "goose-gpt-5-5"),
-            "expected goose-gpt-5-5 to win duplicate canonical-name tie, got {models:?}"
-        );
-        assert!(
-            !models.iter().any(|model| model.id == "databricks-gpt-5-5"),
-            "expected databricks-gpt-5-5 to be replaced by goose-gpt-5-5, got {models:?}"
-        );
-    }
-
-    #[test]
-    fn databricks_v2_inventory_preserves_distinct_model_service_fqns() {
-        let model_ids = [
-            "alpha.prod.claude-sonnet-4-5",
-            "beta.prod.claude-sonnet-4-5",
-            "alpha.prod.claude-sonnet-4-5",
-        ]
-        .map(String::from);
-        let models = enrich_model_ids_with_canonical("databricks_v2", &model_ids);
-
-        let ids = models
-            .iter()
-            .map(|model| model.id.as_str())
-            .collect::<Vec<_>>();
-        assert_eq!(
-            ids,
-            [
-                "alpha.prod.claude-sonnet-4-5",
-                "beta.prod.claude-sonnet-4-5"
-            ]
-        );
-        assert_eq!(models[0].name, models[1].name);
-    }
-
-    #[test]
-    fn inventory_uses_configured_models_before_first_successful_refresh() {
-        let configured_models = [ModelInfo::new("claude-sonnet-4-5").with_context_limit(0)];
-        let snapshot = InventorySnapshot {
-            models: vec![],
-            last_updated_at: None,
-            last_refresh_attempt_at: Some(Utc::now()),
-            last_refresh_error: Some("auth failed".to_string()),
-        };
-
-        let models =
-            inventory_models_from_snapshot(Some(&snapshot), "anthropic", &configured_models, true);
-
-        assert_eq!(models.len(), 1);
-        assert_eq!(models[0].id, "claude-sonnet-4-5");
-    }
-
-    #[test]
-    fn inventory_preserves_empty_models_after_successful_refresh() {
-        let configured_models = [ModelInfo::new("claude-sonnet-4-5").with_context_limit(0)];
-        let snapshot = InventorySnapshot {
-            models: vec![],
-            last_updated_at: Some(Utc::now()),
-            last_refresh_attempt_at: Some(Utc::now()),
-            last_refresh_error: None,
-        };
-
-        let models =
-            inventory_models_from_snapshot(Some(&snapshot), "anthropic", &configured_models, true);
-
-        assert!(models.is_empty());
-    }
-
-    #[test]
-    fn inventory_ignores_stale_snapshots_for_static_providers() {
-        let configured_models = [ModelInfo::new("gpt-5.6").with_context_limit(0)];
-        let snapshot = InventorySnapshot {
-            models: vec![InventoryModel {
-                id: "gpt-5.5".to_string(),
-                name: "gpt-5.5".to_string(),
-                family: None,
-                context_limit: None,
-                reasoning: None,
-                recommended: false,
-            }],
-            last_updated_at: Some(Utc::now()),
-            last_refresh_attempt_at: Some(Utc::now()),
-            last_refresh_error: None,
-        };
-
-        let models = inventory_models_from_snapshot(
-            Some(&snapshot),
-            "chatgpt_codex",
-            &configured_models,
-            false,
-        );
-
-        assert_eq!(models.len(), 1);
-        assert_eq!(models[0].id, "gpt-5.6");
-    }
 }

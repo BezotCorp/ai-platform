@@ -1,22 +1,20 @@
+use crate::config;
 use crate::config::paths::Paths;
-use crate::config::GooseMode;
 use crate::providers::private_file::{private_file_target_path, write_private_file};
 use fs2::FileExt;
-use goose_providers::thinking::ThinkingEffort;
+use bcaip_provider_types::goose_mode::GooseMode;
+use bcaip_provider_types::thinking::ThinkingEffort;
 #[cfg(feature = "system-keyring")]
 use keyring::Entry;
 use once_cell::sync::OnceCell;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use serde_yaml::Mapping;
-use std::collections::HashMap;
-use std::env;
-use std::fs::OpenOptions;
-use std::io::Write;
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
+use std::{collections::HashMap, env, fs::OpenOptions, io::Write};
 use thiserror::Error;
-
+use yaml_serde::Mapping;
 fn write_secrets_file(path: &Path, content: &str) -> std::io::Result<()> {
     write_private_file(path, content)
 }
@@ -57,8 +55,8 @@ impl From<serde_json::Error> for ConfigError {
     }
 }
 
-impl From<serde_yaml::Error> for ConfigError {
-    fn from(err: serde_yaml::Error) -> Self {
+impl From<yaml_serde::Error> for ConfigError {
+    fn from(err: yaml_serde::Error) -> Self {
         ConfigError::DeserializeError(err.to_string())
     }
 }
@@ -149,15 +147,7 @@ pub(crate) enum SecretUpdate<V, R> {
 // Global instance
 static GLOBAL_CONFIG: OnceCell<Config> = OnceCell::new();
 
-#[cfg(test)]
-pub(crate) const TEST_SYSTEM_CONFIG_PATH_ENV: &str = "GOOSE_TEST_SYSTEM_CONFIG_PATH";
-
 fn system_config_path() -> PathBuf {
-    #[cfg(test)]
-    if let Some(path) = env::var_os(TEST_SYSTEM_CONFIG_PATH_ENV) {
-        return path.into();
-    }
-
     #[cfg(unix)]
     {
         PathBuf::from("/etc/goose/config.yaml")
@@ -184,7 +174,6 @@ fn metadata_is_symlink_or_reparse_point(metadata: &std::fs::Metadata) -> bool {
     #[cfg(windows)]
     {
         use std::os::windows::fs::MetadataExt;
-
         const FILE_ATTRIBUTE_REPARSE_POINT: u32 = 0x400;
         metadata.file_attributes() & FILE_ATTRIBUTE_REPARSE_POINT != 0
     }
@@ -213,9 +202,9 @@ impl Default for Config {
             secrets_cache: Arc::new(Mutex::new(None)),
         };
 
-        let keyring_disabled = env::var("GOOSE_DISABLE_KEYRING").is_ok()
+        let keyring_disabled = keyring_disabled_by_environment()
             || no_secrets_config
-                .get_param::<serde_yaml::Value>("GOOSE_DISABLE_KEYRING")
+                .get_param::<yaml_serde::Value>("GOOSE_DISABLE_KEYRING")
                 .is_ok_and(|v| keyring_disabled_value(&v));
         let secrets = secret_storage(&config_dir, keyring_disabled, default_keyring_service());
         Self {
@@ -303,10 +292,10 @@ macro_rules! config_value {
 }
 
 fn parse_yaml_content(content: &str) -> Result<Mapping, ConfigError> {
-    serde_yaml::from_str(content).map_err(|e| e.into())
+    yaml_serde::from_str(content).map_err(|e| e.into())
 }
 
-fn keyring_disabled_value(value: &serde_yaml::Value) -> bool {
+fn keyring_disabled_value(value: &yaml_serde::Value) -> bool {
     value.as_bool().unwrap_or(false) || value.as_str().is_some_and(|s| s == "true" || s == "1")
 }
 
@@ -314,14 +303,14 @@ const EXTENSIONS_KEY: &str = "extensions";
 const PROVIDERS_KEY: &str = "providers";
 
 pub fn merge_config_values(base: &mut Mapping, overlay: Mapping) {
-    let extensions_key = serde_yaml::Value::String(EXTENSIONS_KEY.to_string());
-    let providers_key = serde_yaml::Value::String(PROVIDERS_KEY.to_string());
+    let extensions_key = yaml_serde::Value::String(EXTENSIONS_KEY.to_string());
+    let providers_key = yaml_serde::Value::String(PROVIDERS_KEY.to_string());
 
     for (key, overlay_value) in overlay {
         if key == extensions_key {
             let base_ext = base
                 .entry(key.clone())
-                .or_insert_with(|| serde_yaml::Value::Mapping(Mapping::new()));
+                .or_insert_with(|| yaml_serde::Value::Mapping(Mapping::new()));
             if let (Some(base_map), Some(overlay_map)) =
                 (base_ext.as_mapping_mut(), overlay_value.as_mapping())
             {
@@ -332,7 +321,7 @@ pub fn merge_config_values(base: &mut Mapping, overlay: Mapping) {
         } else if key == providers_key {
             let base_prov = base
                 .entry(key.clone())
-                .or_insert_with(|| serde_yaml::Value::Mapping(Mapping::new()));
+                .or_insert_with(|| yaml_serde::Value::Mapping(Mapping::new()));
             if let (Some(base_map), Some(overlay_map)) =
                 (base_prov.as_mapping_mut(), overlay_value.as_mapping())
             {
@@ -365,6 +354,14 @@ fn merge_nested_entries(base: &mut Mapping, overlay: &Mapping) {
             }
         }
     }
+}
+
+/// Set once the system keyring has proven unusable, so later `Config` instances in this process
+/// go straight to file storage.
+static KEYRING_UNAVAILABLE: AtomicBool = AtomicBool::new(false);
+
+fn keyring_disabled_by_environment() -> bool {
+    env::var("GOOSE_DISABLE_KEYRING").is_ok() || KEYRING_UNAVAILABLE.load(Ordering::Relaxed)
 }
 
 /// Read the GOOSE_DISABLE_KEYRING flag from the config file.
@@ -430,7 +427,7 @@ impl Config {
     pub fn new<P: AsRef<Path>>(config_path: P, service: &str) -> Result<Self, ConfigError> {
         let config_path = config_path.as_ref().to_path_buf();
         let keyring_disabled =
-            env::var("GOOSE_DISABLE_KEYRING").is_ok() || keyring_disabled_in_config(&config_path);
+            keyring_disabled_by_environment() || keyring_disabled_in_config(&config_path);
         let config_dir = config_path
             .parent()
             .map(Path::to_path_buf)
@@ -510,10 +507,10 @@ impl Config {
             Mapping::new()
         });
 
-        if crate::config::migrations::run_migrations(&mut values) {
-            if let Err(e) = self.save_values(&values) {
-                tracing::warn!("Failed to save migrated config: {}", e);
-            }
+        if config::migrations::run_migrations(&mut values)
+            && let Err(e) = self.save_values(&values)
+        {
+            tracing::warn!("Failed to save migrated config: {}", e);
         }
 
         Ok(values)
@@ -540,7 +537,7 @@ impl Config {
             }
         }
 
-        crate::config::migrations::run_read_migrations(&mut merged);
+        config::migrations::run_read_migrations(&mut merged);
 
         Ok(merged)
     }
@@ -571,7 +568,7 @@ impl Config {
             merge_config_values(&mut merged, layer);
         }
 
-        crate::config::migrations::run_read_migrations(&mut merged);
+        config::migrations::run_read_migrations(&mut merged);
 
         Ok(merged)
     }
@@ -633,7 +630,7 @@ impl Config {
         let target_path = self.config_write_target_path()?;
 
         // Convert to YAML for storage
-        let yaml_value = serde_yaml::to_string(values)?;
+        let yaml_value = yaml_serde::to_string(values)?;
 
         if let Some(parent) = target_path.parent() {
             std::fs::create_dir_all(parent)
@@ -716,10 +713,10 @@ impl Config {
             return Ok(Value::Number(int_val.into()));
         }
 
-        if let Ok(float_val) = trimmed.parse::<f64>() {
-            if let Some(num) = serde_json::Number::from_f64(float_val) {
-                return Ok(Value::Number(num));
-            }
+        if let Ok(float_val) = trimmed.parse::<f64>()
+            && let Some(num) = serde_json::Number::from_f64(float_val)
+        {
+            return Ok(Value::Number(num));
         }
 
         Ok(Value::String(val.to_string()))
@@ -774,7 +771,7 @@ impl Config {
             .get(key)
             .ok_or_else(|| ConfigError::NotFound(key.to_string()))?;
 
-        match serde_yaml::from_value(value.clone()) {
+        match yaml_serde::from_value(value.clone()) {
             Ok(value) => Ok(value),
             Err(yaml_err) => {
                 let Some(string_value) = value.as_str() else {
@@ -812,7 +809,7 @@ impl Config {
             let Some(value) = values.get(key) else {
                 continue;
             };
-            source_values.push(serde_yaml::from_value(value.clone())?);
+            source_values.push(yaml_serde::from_value(value.clone())?);
         }
 
         Ok(source_values)
@@ -829,10 +826,10 @@ impl Config {
         let mut values = self.load_write_config()?;
         let current: T = values
             .get(key)
-            .and_then(|v| serde_yaml::from_value(v.clone()).ok())
+            .and_then(|v| yaml_serde::from_value(v.clone()).ok())
             .unwrap_or_default();
         let updated = f(current);
-        values.insert(serde_yaml::to_value(key)?, serde_yaml::to_value(updated)?);
+        values.insert(yaml_serde::to_value(key)?, yaml_serde::to_value(updated)?);
         self.save_values(&values)
     }
 
@@ -852,7 +849,7 @@ impl Config {
     pub fn set_param<V: Serialize>(&self, key: &str, value: V) -> Result<(), ConfigError> {
         let _guard = self.guard.lock().unwrap();
         let mut values = self.load_write_config()?;
-        values.insert(serde_yaml::to_value(key)?, serde_yaml::to_value(value)?);
+        values.insert(yaml_serde::to_value(key)?, yaml_serde::to_value(value)?);
         self.save_values(&values)
     }
 
@@ -865,7 +862,7 @@ impl Config {
         let _guard = self.guard.lock().unwrap();
         let mut values = self.load_write_config()?;
         for (key, value) in updates {
-            values.insert(serde_yaml::to_value(key)?, serde_yaml::to_value(value)?);
+            values.insert(yaml_serde::to_value(key)?, yaml_serde::to_value(value)?);
         }
         self.save_values(&values)
     }
@@ -1020,7 +1017,7 @@ impl Config {
                 }
             }
             SecretStorage::File { path } => {
-                let yaml_value = serde_yaml::to_string(values)?;
+                let yaml_value = yaml_serde::to_string(values)?;
                 write_secrets_file(path, &yaml_value)?;
             }
         }
@@ -1149,7 +1146,7 @@ impl Config {
     fn read_secrets_from_file(&self, path: &Path) -> Result<HashMap<String, Value>, ConfigError> {
         if path.exists() {
             let file_content = std::fs::read_to_string(path)?;
-            let yaml_value: serde_yaml::Value = serde_yaml::from_str(&file_content)?;
+            let yaml_value: yaml_serde::Value = yaml_serde::from_str(&file_content)?;
             let json_value: Value = serde_json::to_value(yaml_value)?;
             match json_value {
                 Value::Object(map) => Ok(map.into_iter().collect()),
@@ -1178,7 +1175,7 @@ impl Config {
     fn write_secrets_to_file(&self, values: &HashMap<String, Value>) -> Result<(), ConfigError> {
         std::fs::create_dir_all(Paths::config_dir())?;
         let path = Self::secrets_file_path();
-        let yaml_value = serde_yaml::to_string(values)?;
+        let yaml_value = yaml_serde::to_string(values)?;
         write_secrets_file(&path, &yaml_value)?;
         Ok(())
     }
@@ -1213,7 +1210,7 @@ impl Config {
         fallback_values: Option<&HashMap<String, Value>>,
     ) -> Result<T, ConfigError> {
         if self.is_keyring_availability_error(&keyring_err.to_string()) {
-            std::env::set_var("GOOSE_DISABLE_KEYRING", "1");
+            KEYRING_UNAVAILABLE.store(true, Ordering::Relaxed);
             tracing::warn!("Keyring unavailable. Using file storage for secrets.");
 
             if let Some(values) = fallback_values {
@@ -1273,7 +1270,7 @@ impl Config {
                 let value = values
                     .get("GOOSE_MODE")
                     .ok_or_else(|| ConfigError::NotFound("GOOSE_MODE".to_string()))?;
-                Ok(serde_yaml::from_value(value.clone())?)
+                Ok(yaml_serde::from_value(value.clone())?)
             }
             Err(env::VarError::NotUnicode(_)) => Err(ConfigError::DeserializeError(
                 "GOOSE_MODE contains non-Unicode data".to_string(),
@@ -1360,14 +1357,14 @@ impl Config {
     }
 
     fn legacy_thinking_effort(&self) -> Option<ThinkingEffort> {
-        if let Ok(value) = self.get_param::<String>("CLAUDE_THINKING_TYPE") {
-            if let Some(effort) = match value.to_lowercase().as_str() {
+        if let Ok(value) = self.get_param::<String>("CLAUDE_THINKING_TYPE")
+            && let Some(effort) = match value.to_lowercase().as_str() {
                 "adaptive" | "enabled" => Some(ThinkingEffort::High),
                 "disabled" => Some(ThinkingEffort::Off),
                 _ => None,
-            } {
-                return Some(effort);
             }
+        {
+            return Some(effort);
         }
 
         if let Ok(enabled) = self.get_param::<bool>("CLAUDE_THINKING_ENABLED") {
@@ -1378,10 +1375,10 @@ impl Config {
             });
         }
 
-        if let Ok(value) = self.get_param::<String>("GEMINI3_THINKING_LEVEL") {
-            if let Some(effort) = Self::legacy_gemini3_thinking_effort(&value) {
-                return Some(effort);
-            }
+        if let Ok(value) = self.get_param::<String>("GEMINI3_THINKING_LEVEL")
+            && let Some(effort) = Self::legacy_gemini3_thinking_effort(&value)
+        {
+            return Some(effort);
         }
 
         None
@@ -1405,12 +1402,11 @@ fn find_workspace_or_exe_root() -> Option<PathBuf> {
     let mut path = exe;
     while let Some(parent) = path.parent() {
         let cargo_toml = parent.join("Cargo.toml");
-        if cargo_toml.exists() {
-            if let Ok(content) = std::fs::read_to_string(&cargo_toml) {
-                if content.contains("[workspace]") {
-                    return Some(parent.to_path_buf());
-                }
-            }
+        if cargo_toml.exists()
+            && let Ok(content) = std::fs::read_to_string(&cargo_toml)
+            && content.contains("[workspace]")
+        {
+            return Some(parent.to_path_buf());
         }
         path = parent.to_path_buf();
     }
@@ -1435,1517 +1431,4 @@ pub fn load_init_config_from_workspace() -> Result<Mapping, ConfigError> {
 
     let init_content = std::fs::read_to_string(&init_config_path)?;
     parse_yaml_content(&init_content)
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use serial_test::serial;
-    use tempfile::{NamedTempFile, TempDir};
-    #[test]
-    fn test_basic_config() -> Result<(), ConfigError> {
-        let config = new_test_config();
-
-        // Set a simple string value
-        config.set_param("test_key", "test_value")?;
-
-        // Test simple string retrieval
-        let value: String = config.get_param("test_key")?;
-        assert_eq!(value, "test_value");
-
-        // Test with environment variable override
-        std::env::set_var("TEST_KEY", "env_value");
-        let value: String = config.get_param("test_key")?;
-        assert_eq!(value, "env_value");
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_complex_type() -> Result<(), ConfigError> {
-        #[derive(Deserialize, Debug, PartialEq)]
-        struct TestStruct {
-            field1: String,
-            field2: i32,
-        }
-
-        let config = new_test_config();
-
-        // Set a complex value
-        config.set_param(
-            "complex_key",
-            serde_json::json!({
-                "field1": "hello",
-                "field2": 42
-            }),
-        )?;
-
-        let value: TestStruct = config.get_param("complex_key")?;
-        assert_eq!(value.field1, "hello");
-        assert_eq!(value.field2, 42);
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_missing_value() {
-        let config = new_test_config();
-
-        let result: Result<String, ConfigError> = config.get_param("nonexistent_key");
-        assert!(matches!(result, Err(ConfigError::NotFound(_))));
-    }
-
-    #[test]
-    fn test_get_param_reads_numeric_yaml_as_u64() -> Result<(), ConfigError> {
-        let _guard = env_lock::lock_env([("XXX_TIMEOUT", None::<&str>)]);
-        let config = new_test_config();
-
-        config.set_param("XXX_TIMEOUT", 300_u64)?;
-
-        let value: u64 = config.get_param("XXX_TIMEOUT")?;
-        assert_eq!(value, 300);
-        Ok(())
-    }
-
-    #[test]
-    fn test_get_param_reads_quoted_numeric_yaml_as_u64() -> Result<(), ConfigError> {
-        let _guard = env_lock::lock_env([("XXX_TIMEOUT", None::<&str>)]);
-        let config = new_test_config();
-
-        config.set_param("XXX_TIMEOUT", "300")?;
-
-        let value: u64 = config.get_param("XXX_TIMEOUT")?;
-        assert_eq!(value, 300);
-        Ok(())
-    }
-
-    #[test]
-    fn test_get_param_reads_quoted_numeric_yaml_as_string() -> Result<(), ConfigError> {
-        let _guard = env_lock::lock_env([("XXX_TIMEOUT", None::<&str>)]);
-        let config = new_test_config();
-
-        config.set_param("XXX_TIMEOUT", "300")?;
-
-        let value: String = config.get_param("XXX_TIMEOUT")?;
-        assert_eq!(value, "300");
-        Ok(())
-    }
-
-    #[test]
-    fn test_get_param_rejects_invalid_string_as_u64() -> Result<(), ConfigError> {
-        let _guard = env_lock::lock_env([("XXX_TIMEOUT", None::<&str>)]);
-        let config = new_test_config();
-
-        config.set_param("XXX_TIMEOUT", "invalid")?;
-
-        let result: Result<u64, ConfigError> = config.get_param("XXX_TIMEOUT");
-        assert!(matches!(result, Err(ConfigError::DeserializeError(_))));
-        Ok(())
-    }
-
-    #[test]
-    fn test_yaml_formatting() -> Result<(), ConfigError> {
-        let config_file = NamedTempFile::new().unwrap();
-        let secrets_file = NamedTempFile::new().unwrap();
-        let config = Config::new_with_file_secrets(config_file.path(), secrets_file.path())?;
-
-        config.set_param("key1", "value1")?;
-        config.set_param("key2", 42)?;
-
-        // Read the file directly to check YAML formatting
-        let content = std::fs::read_to_string(config_file.path())?;
-        assert!(content.contains("key1: value1"));
-        assert!(content.contains("key2: 42"));
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_value_management() -> Result<(), ConfigError> {
-        let config = new_test_config();
-
-        config.set_param("test_key", "test_value")?;
-        config.set_param("another_key", 42)?;
-        config.set_param("third_key", true)?;
-
-        let _values = config.load()?;
-
-        let result: Result<String, ConfigError> = config.get_param("key");
-        assert!(matches!(result, Err(ConfigError::NotFound(_))));
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_file_based_secrets_management() -> Result<(), ConfigError> {
-        let config = new_test_config();
-
-        config.set_secret("key", &"value")?;
-
-        let value: String = config.get_secret("key")?;
-        assert_eq!(value, "value");
-
-        config.delete_secret("key")?;
-
-        let result: Result<String, ConfigError> = config.get_secret("key");
-        assert!(matches!(result, Err(ConfigError::NotFound(_))));
-
-        Ok(())
-    }
-
-    #[test]
-    #[serial]
-    fn test_secret_management() -> Result<(), ConfigError> {
-        let config = new_test_config();
-
-        // Test setting and getting a simple secret
-        config.set_secret("api_key", &Value::String("secret123".to_string()))?;
-        let value: String = config.get_secret("api_key")?;
-        assert_eq!(value, "secret123");
-
-        // Test environment variable override
-        std::env::set_var("API_KEY", "env_secret");
-        let value: String = config.get_secret("api_key")?;
-        assert_eq!(value, "env_secret");
-        std::env::remove_var("API_KEY");
-
-        // Test deleting a secret
-        config.delete_secret("api_key")?;
-        let result: Result<String, ConfigError> = config.get_secret("api_key");
-        assert!(matches!(result, Err(ConfigError::NotFound(_))));
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_multiple_secrets() -> Result<(), ConfigError> {
-        let config = new_test_config();
-
-        // Set multiple secrets
-        config.set_secret("key1", &Value::String("secret1".to_string()))?;
-        config.set_secret("key2", &Value::String("secret2".to_string()))?;
-
-        // Verify both exist
-        let value1: String = config.get_secret("key1")?;
-        let value2: String = config.get_secret("key2")?;
-        assert_eq!(value1, "secret1");
-        assert_eq!(value2, "secret2");
-
-        // Delete one secret
-        config.delete_secret("key1")?;
-
-        // Verify key1 is gone but key2 remains
-        let result1: Result<String, ConfigError> = config.get_secret("key1");
-        let value2: String = config.get_secret("key2")?;
-        assert!(matches!(result1, Err(ConfigError::NotFound(_))));
-        assert_eq!(value2, "secret2");
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_secret_mutation_does_not_restore_deleted_secret() -> Result<(), ConfigError> {
-        let directory = TempDir::new().unwrap();
-        let config_path = directory.path().join("config.yaml");
-        let secrets_path = directory.path().join("secrets.yaml");
-        let first = Config::new_with_file_secrets(&config_path, &secrets_path)?;
-        let second = Config::new_with_file_secrets(&config_path, &secrets_path)?;
-
-        first.set_secret("revoked", &"old-token")?;
-        first.set_secret("retained", &"retained-value")?;
-        let _: String = first.get_secret("revoked")?;
-
-        second.delete_secret("revoked")?;
-        first.set_secret("new", &"new-value")?;
-
-        let current = Config::new_with_file_secrets(&config_path, &secrets_path)?;
-        assert!(matches!(
-            current.get_secret::<String>("revoked"),
-            Err(ConfigError::NotFound(_))
-        ));
-        assert_eq!(current.get_secret::<String>("retained")?, "retained-value");
-        assert_eq!(current.get_secret::<String>("new")?, "new-value");
-
-        Ok(())
-    }
-
-    #[cfg(unix)]
-    #[test]
-    fn test_secret_mutation_atomically_replaces_storage_file() -> Result<(), ConfigError> {
-        use std::io::Read;
-        use std::os::unix::fs::MetadataExt;
-
-        let directory = TempDir::new().unwrap();
-        let config_path = directory.path().join("config.yaml");
-        let secrets_path = directory.path().join("secrets.yaml");
-        let config = Config::new_with_file_secrets(&config_path, &secrets_path)?;
-
-        config.set_secret("key", &"old-value")?;
-        let mut old_file = std::fs::File::open(&secrets_path)?;
-        let old_inode = old_file.metadata()?.ino();
-
-        config.set_secret("key", &"new-value")?;
-
-        assert_ne!(std::fs::metadata(&secrets_path)?.ino(), old_inode);
-        let mut old_contents = String::new();
-        old_file.read_to_string(&mut old_contents)?;
-        let old_values: HashMap<String, Value> = serde_yaml::from_str(&old_contents)?;
-        assert_eq!(
-            old_values.get("key"),
-            Some(&Value::String("old-value".into()))
-        );
-        assert_eq!(config.get_secret::<String>("key")?, "new-value");
-
-        Ok(())
-    }
-
-    #[cfg(unix)]
-    #[test]
-    fn test_secret_mutation_lock_uses_resolved_storage_target() -> Result<(), ConfigError> {
-        use std::os::unix::fs::symlink;
-
-        let directory = TempDir::new().unwrap();
-        let config_path = directory.path().join("config.yaml");
-        let secrets_path = directory.path().join("secrets.yaml");
-        let secrets_alias = directory.path().join("secrets-alias.yaml");
-        std::fs::write(&secrets_path, "{}\n")?;
-        symlink("secrets.yaml", &secrets_alias)?;
-
-        let direct = Config::new_with_file_secrets(&config_path, &secrets_path)?;
-        let aliased = Config::new_with_file_secrets(&config_path, &secrets_alias)?;
-
-        assert_eq!(
-            direct.secrets_mutation_lock_path()?,
-            aliased.secrets_mutation_lock_path()?
-        );
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_secret_reads_remain_cached_across_instances() -> Result<(), ConfigError> {
-        let directory = TempDir::new().unwrap();
-        let config_path = directory.path().join("config.yaml");
-        let secrets_path = directory.path().join("secrets.yaml");
-        let first = Config::new_with_file_secrets(&config_path, &secrets_path)?;
-        let second = Config::new_with_file_secrets(&config_path, &secrets_path)?;
-
-        first.set_secret("key", &"initial")?;
-        assert_eq!(first.get_secret::<String>("key")?, "initial");
-
-        second.set_secret("key", &"updated")?;
-        assert_eq!(first.get_secret::<String>("key")?, "initial");
-
-        first.invalidate_secrets_cache();
-        assert_eq!(first.get_secret::<String>("key")?, "updated");
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_concurrent_writes() -> Result<(), ConfigError> {
-        use std::sync::{Arc, Barrier, Mutex};
-        use std::thread;
-
-        let config = Arc::new(new_test_config());
-        let barrier = Arc::new(Barrier::new(3)); // For 3 concurrent threads
-        let values = Arc::new(Mutex::new(Mapping::new()));
-        let mut handles = vec![];
-
-        // Initialize with empty values
-        config.save_values(&Default::default())?;
-
-        // Spawn 3 threads that will try to write simultaneously
-        for i in 0..3 {
-            let config = Arc::clone(&config);
-            let barrier = Arc::clone(&barrier);
-            let values = Arc::clone(&values);
-            let handle = thread::spawn(move || -> Result<(), ConfigError> {
-                // Wait for all threads to reach this point
-                barrier.wait();
-
-                // Get the lock and update values
-                let mut values = values.lock().unwrap();
-                values.insert(
-                    serde_yaml::to_value(format!("key{}", i)).unwrap(),
-                    serde_yaml::to_value(format!("value{}", i)).unwrap(),
-                );
-
-                // Write all values
-                config.save_values(&values)?;
-                Ok(())
-            });
-            handles.push(handle);
-        }
-
-        // Wait for all threads to complete
-        for handle in handles {
-            handle.join().unwrap()?;
-        }
-
-        // Verify all values were written correctly
-        let final_values = config.all_values()?;
-
-        // Print the final values for debugging
-        println!("Final values: {:?}", final_values);
-
-        // Check that our 3 keys are present (migrations may add additional keys like "extensions")
-        for i in 0..3 {
-            let key = format!("key{}", i);
-            let value = format!("value{}", i);
-            assert!(
-                final_values.contains_key(&key),
-                "Missing key {} in final values",
-                key
-            );
-            assert_eq!(
-                final_values.get(&key).unwrap(),
-                &Value::String(value),
-                "Incorrect value for key {}",
-                key
-            );
-        }
-
-        Ok(())
-    }
-
-    #[test]
-    #[cfg(unix)]
-    fn test_write_follows_symlink() -> Result<(), ConfigError> {
-        use std::os::unix::fs as unix_fs;
-
-        let dir = TempDir::new().unwrap();
-        let target_path = dir.path().join("real_config.yaml");
-        let symlink_path = dir.path().join("config.yaml");
-
-        std::fs::write(&target_path, "{}\n")?;
-        unix_fs::symlink(&target_path, &symlink_path)?;
-
-        let secrets_file = NamedTempFile::new().unwrap();
-        let config = Config::new_with_file_secrets(&symlink_path, secrets_file.path())?;
-
-        config.set_param("key1", "value1")?;
-
-        let meta = std::fs::symlink_metadata(&symlink_path)?;
-        assert!(
-            meta.file_type().is_symlink(),
-            "config path should remain a symlink"
-        );
-
-        let content = std::fs::read_to_string(&symlink_path)?;
-        assert!(content.contains("key1: value1"));
-
-        let content = std::fs::read_to_string(&target_path)?;
-        assert!(content.contains("key1: value1"));
-
-        Ok(())
-    }
-
-    #[test]
-    #[cfg(unix)]
-    fn test_write_fails_on_long_symlink_chain() -> Result<(), ConfigError> {
-        use std::os::unix::fs as unix_fs;
-
-        let dir = TempDir::new().unwrap();
-        let target_path = dir.path().join("real_config.yaml");
-        std::fs::write(&target_path, "{}\n")?;
-
-        // config.yaml -> link1.yaml -> real_config.yaml
-        // We only allow following one symlink hop. If there's another symlink, we should fail
-        // rather than overwrite the intermediate symlink.
-        let config_symlink = dir.path().join("config.yaml");
-        let link1 = dir.path().join("link1.yaml");
-        unix_fs::symlink(&target_path, &link1)?;
-        unix_fs::symlink(&link1, &config_symlink)?;
-
-        let secrets_file = NamedTempFile::new().unwrap();
-        let config = Config::new_with_file_secrets(&config_symlink, secrets_file.path())?;
-
-        let err = config.set_param("key1", "value1").unwrap_err();
-        assert!(
-            err.to_string().contains("Too many symlink levels"),
-            "unexpected error: {err}"
-        );
-
-        let meta = std::fs::symlink_metadata(&config_symlink)?;
-        assert!(
-            meta.file_type().is_symlink(),
-            "config path should remain a symlink"
-        );
-        let meta = std::fs::symlink_metadata(&link1)?;
-        assert!(
-            meta.file_type().is_symlink(),
-            "intermediate link should remain a symlink"
-        );
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_corrupt_config_skipped_on_read() -> Result<(), ConfigError> {
-        let config_file = NamedTempFile::new().unwrap();
-        let secrets_file = NamedTempFile::new().unwrap();
-        let config = Config::new_with_file_secrets(config_file.path(), secrets_file.path())?;
-
-        std::fs::write(config_file.path(), "invalid: yaml: content: [unclosed")?;
-
-        // Reads skip corrupt files gracefully
-        let values = config.all_values()?;
-        assert!(values.is_empty() || !values.contains_key("key1"));
-
-        // A write starts fresh (corrupt content is discarded)
-        config.set_param("recovery_key", "value")?;
-        let reloaded = config.all_values()?;
-        assert!(reloaded.contains_key("recovery_key"));
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_missing_config_created_on_write() -> Result<(), ConfigError> {
-        let config_file = NamedTempFile::new().unwrap();
-        let secrets_file = NamedTempFile::new().unwrap();
-        let config_path = config_file.path().to_path_buf();
-        let config = Config::new_with_file_secrets(&config_path, secrets_file.path())?;
-
-        std::fs::remove_file(&config_path)?;
-        assert!(!config_path.exists());
-
-        // Reads return empty when file is missing
-        let values = config.all_values()?;
-        assert!(values.is_empty() || !values.contains_key("key1"));
-
-        // A write creates the file
-        config.set_param("new_key", "new_value")?;
-        assert!(config_path.exists());
-
-        let file_content = std::fs::read_to_string(&config_path)?;
-        let parsed: serde_yaml::Value = serde_yaml::from_str(&file_content)?;
-        assert!(parsed.is_mapping());
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_atomic_write_prevents_corruption() -> Result<(), ConfigError> {
-        let config_file = NamedTempFile::new().unwrap();
-        let secrets_file = NamedTempFile::new().unwrap();
-        let config = Config::new_with_file_secrets(config_file.path(), secrets_file.path())?;
-
-        // Set initial values
-        config.set_param("key1", "value1")?;
-
-        // Verify the config file exists and is valid
-        assert!(config_file.path().exists());
-        let content = std::fs::read_to_string(config_file.path())?;
-        assert!(serde_yaml::from_str::<serde_yaml::Value>(&content).is_ok());
-
-        // The temp file should not exist after successful write
-        let temp_path = config_file.path().with_extension("tmp");
-        assert!(!temp_path.exists(), "Temporary file should be cleaned up");
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_env_var_parsing_strings() -> Result<(), ConfigError> {
-        // Test unquoted strings
-        let value = Config::parse_env_value("ANTHROPIC")?;
-        assert_eq!(value, Value::String("ANTHROPIC".to_string()));
-
-        // Test strings with spaces
-        let value = Config::parse_env_value("hello world")?;
-        assert_eq!(value, Value::String("hello world".to_string()));
-
-        // Test JSON quoted strings
-        let value = Config::parse_env_value("\"ANTHROPIC\"")?;
-        assert_eq!(value, Value::String("ANTHROPIC".to_string()));
-
-        // Test empty string
-        let value = Config::parse_env_value("")?;
-        assert_eq!(value, Value::String("".to_string()));
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_env_var_parsing_numbers() -> Result<(), ConfigError> {
-        // Test integers
-        let value = Config::parse_env_value("42")?;
-        assert_eq!(value, Value::Number(42.into()));
-
-        let value = Config::parse_env_value("-123")?;
-        assert_eq!(value, Value::Number((-123).into()));
-
-        // Test floats
-        let value = Config::parse_env_value("3.41")?;
-        assert!(matches!(value, Value::Number(_)));
-        if let Value::Number(n) = value {
-            assert_eq!(n.as_f64().unwrap(), 3.41);
-        }
-
-        let value = Config::parse_env_value("0.01")?;
-        assert!(matches!(value, Value::Number(_)));
-        if let Value::Number(n) = value {
-            assert_eq!(n.as_f64().unwrap(), 0.01);
-        }
-
-        // Test zero
-        let value = Config::parse_env_value("0")?;
-        assert_eq!(value, Value::Number(0.into()));
-
-        let value = Config::parse_env_value("0.0")?;
-        assert!(matches!(value, Value::Number(_)));
-        if let Value::Number(n) = value {
-            assert_eq!(n.as_f64().unwrap(), 0.0);
-        }
-
-        // Test numbers starting with decimal point
-        let value = Config::parse_env_value(".5")?;
-        assert!(matches!(value, Value::Number(_)));
-        if let Value::Number(n) = value {
-            assert_eq!(n.as_f64().unwrap(), 0.5);
-        }
-
-        let value = Config::parse_env_value(".00001")?;
-        assert!(matches!(value, Value::Number(_)));
-        if let Value::Number(n) = value {
-            assert_eq!(n.as_f64().unwrap(), 0.00001);
-        }
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_env_var_parsing_booleans() -> Result<(), ConfigError> {
-        // Test true variants
-        let value = Config::parse_env_value("true")?;
-        assert_eq!(value, Value::Bool(true));
-
-        let value = Config::parse_env_value("True")?;
-        assert_eq!(value, Value::Bool(true));
-
-        let value = Config::parse_env_value("TRUE")?;
-        assert_eq!(value, Value::Bool(true));
-
-        // Test false variants
-        let value = Config::parse_env_value("false")?;
-        assert_eq!(value, Value::Bool(false));
-
-        let value = Config::parse_env_value("False")?;
-        assert_eq!(value, Value::Bool(false));
-
-        let value = Config::parse_env_value("FALSE")?;
-        assert_eq!(value, Value::Bool(false));
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_env_var_parsing_json() -> Result<(), ConfigError> {
-        // Test JSON objects
-        let value = Config::parse_env_value("{\"host\": \"localhost\", \"port\": 8080}")?;
-        assert!(matches!(value, Value::Object(_)));
-        if let Value::Object(obj) = value {
-            assert_eq!(
-                obj.get("host"),
-                Some(&Value::String("localhost".to_string()))
-            );
-            assert_eq!(obj.get("port"), Some(&Value::Number(8080.into())));
-        }
-
-        // Test JSON arrays
-        let value = Config::parse_env_value("[1, 2, 3]")?;
-        assert!(matches!(value, Value::Array(_)));
-        if let Value::Array(arr) = value {
-            assert_eq!(arr.len(), 3);
-            assert_eq!(arr[0], Value::Number(1.into()));
-            assert_eq!(arr[1], Value::Number(2.into()));
-            assert_eq!(arr[2], Value::Number(3.into()));
-        }
-
-        // Test JSON null
-        let value = Config::parse_env_value("null")?;
-        assert_eq!(value, Value::Null);
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_env_var_parsing_edge_cases() -> Result<(), ConfigError> {
-        // Test whitespace handling
-        let value = Config::parse_env_value(" 42 ")?;
-        assert_eq!(value, Value::Number(42.into()));
-
-        let value = Config::parse_env_value(" true ")?;
-        assert_eq!(value, Value::Bool(true));
-
-        // Test strings that look like numbers but aren't
-        let value = Config::parse_env_value("123abc")?;
-        assert_eq!(value, Value::String("123abc".to_string()));
-
-        let value = Config::parse_env_value("abc123")?;
-        assert_eq!(value, Value::String("abc123".to_string()));
-
-        // Test strings that look like booleans but aren't
-        let value = Config::parse_env_value("truthy")?;
-        assert_eq!(value, Value::String("truthy".to_string()));
-
-        let value = Config::parse_env_value("falsy")?;
-        assert_eq!(value, Value::String("falsy".to_string()));
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_env_var_parsing_numeric_edge_cases() -> Result<(), ConfigError> {
-        // Test leading zeros (should be treated as integers, not octal)
-        let value = Config::parse_env_value("007")?;
-        assert_eq!(value, Value::Number(7.into()));
-
-        // Test large numbers
-        let value = Config::parse_env_value("9223372036854775807")?; // i64::MAX
-        assert_eq!(value, Value::Number(9223372036854775807i64.into()));
-
-        // Test scientific notation (JSON parsing should handle this correctly)
-        let value = Config::parse_env_value("1e10")?;
-        assert!(matches!(value, Value::Number(_)));
-        if let Value::Number(n) = value {
-            assert_eq!(n.as_f64().unwrap(), 1e10);
-        }
-
-        // Test infinity (should be treated as string)
-        let value = Config::parse_env_value("inf")?;
-        assert_eq!(value, Value::String("inf".to_string()));
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_env_var_with_config_integration() -> Result<(), ConfigError> {
-        let config = new_test_config();
-
-        // Test string environment variable (the original issue case)
-        std::env::set_var("PROVIDER", "ANTHROPIC");
-        let value: String = config.get_param("provider")?;
-        assert_eq!(value, "ANTHROPIC");
-
-        // Test number environment variable
-        std::env::set_var("PORT", "8080");
-        let value: i32 = config.get_param("port")?;
-        assert_eq!(value, 8080);
-
-        // Test boolean environment variable
-        std::env::set_var("ENABLED", "true");
-        let value: bool = config.get_param("enabled")?;
-        assert!(value);
-
-        // Test JSON object environment variable
-        std::env::set_var("CONFIG", "{\"debug\": true, \"level\": 5}");
-        #[derive(Deserialize, Debug, PartialEq)]
-        struct TestConfig {
-            debug: bool,
-            level: i32,
-        }
-        let value: TestConfig = config.get_param("config")?;
-        assert!(value.debug);
-        assert_eq!(value.level, 5);
-
-        // Clean up
-        std::env::remove_var("PROVIDER");
-        std::env::remove_var("PORT");
-        std::env::remove_var("ENABLED");
-        std::env::remove_var("CONFIG");
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_env_var_precedence_over_config_file() -> Result<(), ConfigError> {
-        let config = new_test_config();
-
-        // Set value in config file
-        config.set_param("test_precedence", "file_value")?;
-
-        // Verify file value is returned when no env var
-        let value: String = config.get_param("test_precedence")?;
-        assert_eq!(value, "file_value");
-
-        // Set environment variable
-        std::env::set_var("TEST_PRECEDENCE", "env_value");
-
-        // Environment variable should take precedence
-        let value: String = config.get_param("test_precedence")?;
-        assert_eq!(value, "env_value");
-
-        // Clean up
-        std::env::remove_var("TEST_PRECEDENCE");
-
-        Ok(())
-    }
-
-    #[test]
-    fn get_secrets_primary_from_env_uses_env_for_secondary() {
-        let _guard = env_lock::lock_env([
-            ("TEST_PRIMARY", Some("primary_env")),
-            ("TEST_SECONDARY", Some("secondary_env")),
-        ]);
-        let config = new_test_config();
-        let secrets = config
-            .get_secrets("TEST_PRIMARY", &["TEST_SECONDARY"])
-            .unwrap();
-
-        assert_eq!(secrets["TEST_PRIMARY"], "primary_env");
-        assert_eq!(secrets["TEST_SECONDARY"], "secondary_env");
-    }
-
-    #[test]
-    fn get_secrets_primary_from_secret_uses_secret_for_secondary() {
-        let _guard = env_lock::lock_env([("TEST_PRIMARY", None::<&str>), ("TEST_SECONDARY", None)]);
-        let config = new_test_config();
-        config
-            .set_secret("TEST_PRIMARY", &"primary_secret")
-            .unwrap();
-        config
-            .set_secret("TEST_SECONDARY", &"secondary_secret")
-            .unwrap();
-
-        let secrets = config
-            .get_secrets("TEST_PRIMARY", &["TEST_SECONDARY"])
-            .unwrap();
-
-        assert_eq!(secrets["TEST_PRIMARY"], "primary_secret");
-        assert_eq!(secrets["TEST_SECONDARY"], "secondary_secret");
-    }
-
-    #[test]
-    fn get_secrets_primary_missing_returns_error() {
-        let _guard = env_lock::lock_env([("TEST_PRIMARY", None::<&str>)]);
-        let config = new_test_config();
-
-        let result = config.get_secrets("TEST_PRIMARY", &[]);
-
-        assert!(matches!(result, Err(ConfigError::NotFound(_))));
-    }
-
-    fn new_test_config() -> Config {
-        let config_file = NamedTempFile::new().unwrap();
-        let secrets_file = NamedTempFile::new().unwrap();
-        Config::new_with_file_secrets(config_file.path(), secrets_file.path()).unwrap()
-    }
-
-    /// Create a test config where `base_content` is a lower-priority layer
-    /// and the actual writable config is a separate (initially empty) file.
-    fn new_test_config_with_base(base_content: &str) -> (Config, NamedTempFile) {
-        let base_file = NamedTempFile::new().unwrap();
-        let config_file = NamedTempFile::new().unwrap();
-        let secrets_file = NamedTempFile::new().unwrap();
-        std::fs::write(base_file.path(), base_content).unwrap();
-        let config = Config::new_with_config_paths(
-            vec![
-                base_file.path().to_path_buf(),
-                config_file.path().to_path_buf(),
-            ],
-            secrets_file.path(),
-        )
-        .unwrap();
-        (config, base_file)
-    }
-
-    #[test]
-    fn test_defaults_fallback_when_key_not_in_config() -> Result<(), ConfigError> {
-        let (config, _defaults) =
-            new_test_config_with_base("SECURITY_PROMPT_ENABLED: true\nsome_key: default_val");
-
-        // Key only in defaults → returns defaults value
-        let value: bool = config.get_param("SECURITY_PROMPT_ENABLED")?;
-        assert!(value);
-
-        let value: String = config.get_param("some_key")?;
-        assert_eq!(value, "default_val");
-
-        Ok(())
-    }
-
-    #[test]
-    #[serial]
-    fn test_full_precedence_env_over_config_over_defaults() -> Result<(), ConfigError> {
-        let (config, _defaults) = new_test_config_with_base("my_key: from_defaults");
-
-        // Only defaults → returns defaults
-        let value: String = config.get_param("my_key")?;
-        assert_eq!(value, "from_defaults");
-
-        // Config file overrides defaults
-        config.set_param("my_key", "from_config")?;
-        let value: String = config.get_param("my_key")?;
-        assert_eq!(value, "from_config");
-
-        // Env var overrides config file (and defaults)
-        std::env::set_var("MY_KEY", "from_env");
-        let value: String = config.get_param("my_key")?;
-        assert_eq!(value, "from_env");
-        std::env::remove_var("MY_KEY");
-
-        // After removing env var, config file value is back
-        let value: String = config.get_param("my_key")?;
-        assert_eq!(value, "from_config");
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_missing_key_returns_not_found() {
-        let config = new_test_config();
-
-        let result: Result<String, ConfigError> = config.get_param("nonexistent_key");
-        assert!(matches!(result, Err(ConfigError::NotFound(_))));
-    }
-
-    #[test]
-    fn test_lower_priority_values_not_persisted_on_write() -> Result<(), ConfigError> {
-        let (config, _base) = new_test_config_with_base("base_key: base_value");
-
-        // Read a value from the base layer (should work)
-        let value: String = config.get_param("base_key")?;
-        assert_eq!(value, "base_value");
-
-        // Write a different key to the user config
-        config.set_param("user_key", "user_value")?;
-
-        // Read user config file directly - should NOT contain base_key
-        let config_path = PathBuf::from(config.path());
-        let file_content = std::fs::read_to_string(&config_path)?;
-        assert!(
-            !file_content.contains("base_key"),
-            "Base layer values should not be persisted to user config on write"
-        );
-        assert!(
-            file_content.contains("user_key"),
-            "User's key should be in config file"
-        );
-
-        // But reading via get_param should still return the base value
-        let value: String = config.get_param("base_key")?;
-        assert_eq!(value, "base_value");
-
-        Ok(())
-    }
-
-    #[test]
-    #[cfg(unix)]
-    fn test_secrets_file_created_with_restricted_permissions() -> Result<(), ConfigError> {
-        use std::os::unix::fs::PermissionsExt;
-
-        let dir = TempDir::new().unwrap();
-        let config_file = NamedTempFile::new().unwrap();
-        let secrets_path = dir.path().join("secrets.yaml");
-
-        let config = Config::new_with_file_secrets(config_file.path(), &secrets_path)?;
-        config.set_secret("key", &"value")?;
-
-        let mode = std::fs::metadata(&secrets_path)?.permissions().mode() & 0o777;
-        assert_eq!(mode, 0o600);
-
-        Ok(())
-    }
-
-    #[test]
-    #[cfg(unix)]
-    fn test_existing_secrets_file_permissions_tightened_on_write() -> Result<(), ConfigError> {
-        use std::os::unix::fs::PermissionsExt;
-
-        let dir = TempDir::new().unwrap();
-        let config_file = NamedTempFile::new().unwrap();
-        let secrets_path = dir.path().join("secrets.yaml");
-        std::fs::write(&secrets_path, "existing: old\n")?;
-        std::fs::set_permissions(&secrets_path, std::fs::Permissions::from_mode(0o644))?;
-
-        let config = Config::new_with_file_secrets(config_file.path(), &secrets_path)?;
-        config.set_secret("key", &"value")?;
-
-        let value: String = config.get_secret("key")?;
-        assert_eq!(value, "value");
-        let mode = std::fs::metadata(&secrets_path)?.permissions().mode() & 0o777;
-        assert_eq!(mode, 0o600);
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_merge_config_values_basic_override() {
-        let mut base = Mapping::new();
-        base.insert(
-            serde_yaml::Value::String("key1".into()),
-            serde_yaml::Value::String("base_value".into()),
-        );
-        base.insert(
-            serde_yaml::Value::String("key2".into()),
-            serde_yaml::Value::String("keep_me".into()),
-        );
-
-        let mut overlay = Mapping::new();
-        overlay.insert(
-            serde_yaml::Value::String("key1".into()),
-            serde_yaml::Value::String("overlay_value".into()),
-        );
-        overlay.insert(
-            serde_yaml::Value::String("key3".into()),
-            serde_yaml::Value::String("new_value".into()),
-        );
-
-        merge_config_values(&mut base, overlay);
-
-        assert_eq!(base.get("key1").unwrap().as_str().unwrap(), "overlay_value");
-        assert_eq!(base.get("key2").unwrap().as_str().unwrap(), "keep_me");
-        assert_eq!(base.get("key3").unwrap().as_str().unwrap(), "new_value");
-    }
-
-    #[test]
-    fn test_merge_extensions_append_new() {
-        let mut base = Mapping::new();
-        let mut base_ext = Mapping::new();
-        let mut ext_a = Mapping::new();
-        ext_a.insert(
-            serde_yaml::Value::String("enabled".into()),
-            serde_yaml::Value::Bool(true),
-        );
-        ext_a.insert(
-            serde_yaml::Value::String("type".into()),
-            serde_yaml::Value::String("builtin".into()),
-        );
-        base_ext.insert(
-            serde_yaml::Value::String("ext_a".into()),
-            serde_yaml::Value::Mapping(ext_a),
-        );
-        base.insert(
-            serde_yaml::Value::String("extensions".into()),
-            serde_yaml::Value::Mapping(base_ext),
-        );
-
-        let mut overlay = Mapping::new();
-        let mut overlay_ext = Mapping::new();
-        let mut ext_b = Mapping::new();
-        ext_b.insert(
-            serde_yaml::Value::String("enabled".into()),
-            serde_yaml::Value::Bool(true),
-        );
-        ext_b.insert(
-            serde_yaml::Value::String("type".into()),
-            serde_yaml::Value::String("stdio".into()),
-        );
-        overlay_ext.insert(
-            serde_yaml::Value::String("ext_b".into()),
-            serde_yaml::Value::Mapping(ext_b),
-        );
-        overlay.insert(
-            serde_yaml::Value::String("extensions".into()),
-            serde_yaml::Value::Mapping(overlay_ext),
-        );
-
-        merge_config_values(&mut base, overlay);
-
-        let extensions = base.get("extensions").unwrap().as_mapping().unwrap();
-        assert!(extensions.contains_key("ext_a"));
-        assert!(extensions.contains_key("ext_b"));
-        // ext_a should be unchanged
-        let a = extensions.get("ext_a").unwrap().as_mapping().unwrap();
-        assert!(a.get("enabled").unwrap().as_bool().unwrap());
-    }
-
-    #[test]
-    fn test_merge_extensions_partial_override() {
-        // Base has ext_a enabled with several fields
-        let mut base = Mapping::new();
-        let mut base_ext = Mapping::new();
-        let mut ext_a = Mapping::new();
-        ext_a.insert(
-            serde_yaml::Value::String("enabled".into()),
-            serde_yaml::Value::Bool(true),
-        );
-        ext_a.insert(
-            serde_yaml::Value::String("type".into()),
-            serde_yaml::Value::String("builtin".into()),
-        );
-        ext_a.insert(
-            serde_yaml::Value::String("name".into()),
-            serde_yaml::Value::String("My Extension".into()),
-        );
-        base_ext.insert(
-            serde_yaml::Value::String("my_ext".into()),
-            serde_yaml::Value::Mapping(ext_a),
-        );
-        base.insert(
-            serde_yaml::Value::String("extensions".into()),
-            serde_yaml::Value::Mapping(base_ext),
-        );
-
-        // Overlay just disables it with a partial entry
-        let mut overlay = Mapping::new();
-        let mut overlay_ext = Mapping::new();
-        let mut ext_override = Mapping::new();
-        ext_override.insert(
-            serde_yaml::Value::String("enabled".into()),
-            serde_yaml::Value::Bool(false),
-        );
-        overlay_ext.insert(
-            serde_yaml::Value::String("my_ext".into()),
-            serde_yaml::Value::Mapping(ext_override),
-        );
-        overlay.insert(
-            serde_yaml::Value::String("extensions".into()),
-            serde_yaml::Value::Mapping(overlay_ext),
-        );
-
-        merge_config_values(&mut base, overlay);
-
-        let extensions = base.get("extensions").unwrap().as_mapping().unwrap();
-        let my_ext = extensions.get("my_ext").unwrap().as_mapping().unwrap();
-
-        // enabled should be overridden to false
-        assert!(!my_ext.get("enabled").unwrap().as_bool().unwrap());
-        // Other fields should be preserved
-        assert_eq!(my_ext.get("type").unwrap().as_str().unwrap(), "builtin");
-        assert_eq!(
-            my_ext.get("name").unwrap().as_str().unwrap(),
-            "My Extension"
-        );
-    }
-
-    #[test]
-    fn test_multi_path_config_loading() -> Result<(), ConfigError> {
-        let base_file = NamedTempFile::new().unwrap();
-        let user_file = NamedTempFile::new().unwrap();
-        let secrets_file = NamedTempFile::new().unwrap();
-
-        // Base (system) config
-        std::fs::write(
-            base_file.path(),
-            "GOOSE_PROVIDER: openai\nGOOSE_MODEL: gpt-4\n",
-        )
-        .unwrap();
-
-        // User config overrides model
-        std::fs::write(user_file.path(), "GOOSE_MODEL: gpt-4o\n").unwrap();
-
-        let config = Config::new_with_config_paths(
-            vec![
-                base_file.path().to_path_buf(),
-                user_file.path().to_path_buf(),
-            ],
-            secrets_file.path(),
-        )?;
-
-        // GOOSE_MODEL should be overridden by later config
-        let model: String = config.get_param("GOOSE_MODEL")?;
-        assert_eq!(model, "gpt-4o");
-
-        // GOOSE_PROVIDER should still come from base
-        let provider: String = config.get_param("GOOSE_PROVIDER")?;
-        assert_eq!(provider, "openai");
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_extension_merge_across_configs() -> Result<(), ConfigError> {
-        let base_file = NamedTempFile::new().unwrap();
-        let local_file = NamedTempFile::new().unwrap();
-        let secrets_file = NamedTempFile::new().unwrap();
-
-        // System config (lower priority) has developer extension enabled
-        std::fs::write(
-            base_file.path(),
-            r#"
-extensions:
-  developer:
-    enabled: true
-    type: builtin
-    name: Developer
-    description: "Core developer tools"
-"#,
-        )
-        .unwrap();
-
-        // User config (higher priority / write target) disables developer and adds a new extension
-        std::fs::write(
-            local_file.path(),
-            r#"
-extensions:
-  developer:
-    enabled: false
-  my_custom_ext:
-    enabled: true
-    type: stdio
-    name: MyCustom
-    cmd: /usr/bin/my-ext
-"#,
-        )
-        .unwrap();
-
-        // local_file is last = write target and highest priority
-        let config = Config::new_with_config_paths(
-            vec![
-                base_file.path().to_path_buf(),
-                local_file.path().to_path_buf(),
-            ],
-            secrets_file.path(),
-        )?;
-
-        let values = config.load()?;
-        let extensions = values.get("extensions").unwrap().as_mapping().unwrap();
-
-        // developer should be disabled (user config overrides system)
-        let dev = extensions.get("developer").unwrap().as_mapping().unwrap();
-        assert!(!dev.get("enabled").unwrap().as_bool().unwrap());
-        // Fields from the system config should be preserved via merge
-        assert!(dev.get("name").is_some());
-
-        // my_custom_ext should be present from user config
-        let custom = extensions
-            .get("my_custom_ext")
-            .unwrap()
-            .as_mapping()
-            .unwrap();
-        assert!(custom.get("enabled").unwrap().as_bool().unwrap());
-        assert_eq!(custom.get("type").unwrap().as_str().unwrap(), "stdio");
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_three_config_layers_ordered() -> Result<(), ConfigError> {
-        let system_file = NamedTempFile::new().unwrap();
-        let user_file = NamedTempFile::new().unwrap();
-        let local_file = NamedTempFile::new().unwrap();
-        let secrets_file = NamedTempFile::new().unwrap();
-
-        std::fs::write(system_file.path(), "key: system\n").unwrap();
-        std::fs::write(user_file.path(), "key: user\n").unwrap();
-        std::fs::write(local_file.path(), "key: local\n").unwrap();
-
-        let config = Config::new_with_config_paths(
-            vec![
-                system_file.path().to_path_buf(),
-                user_file.path().to_path_buf(),
-                local_file.path().to_path_buf(),
-            ],
-            secrets_file.path(),
-        )?;
-
-        let value: String = config.get_param("key")?;
-        assert_eq!(value, "local");
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_missing_config_path_is_skipped() -> Result<(), ConfigError> {
-        let config_file = NamedTempFile::new().unwrap();
-        let secrets_file = NamedTempFile::new().unwrap();
-
-        std::fs::write(config_file.path(), "key: base\n").unwrap();
-
-        let config = Config::new_with_config_paths(
-            vec![
-                PathBuf::from("/tmp/nonexistent_goose_config.yaml"),
-                config_file.path().to_path_buf(),
-            ],
-            secrets_file.path(),
-        )?;
-
-        let value: String = config.get_param("key")?;
-        assert_eq!(value, "base");
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_merge_providers_append_new() {
-        let mut base = Mapping::new();
-        let mut base_prov = Mapping::new();
-        let mut prov_a = Mapping::new();
-        prov_a.insert(
-            serde_yaml::Value::String("enabled".into()),
-            serde_yaml::Value::Bool(true),
-        );
-        prov_a.insert(
-            serde_yaml::Value::String("model".into()),
-            serde_yaml::Value::String("gpt-4o".into()),
-        );
-        prov_a.insert(
-            serde_yaml::Value::String("configured".into()),
-            serde_yaml::Value::Bool(true),
-        );
-        base_prov.insert(
-            serde_yaml::Value::String("openai".into()),
-            serde_yaml::Value::Mapping(prov_a),
-        );
-        base.insert(
-            serde_yaml::Value::String("providers".into()),
-            serde_yaml::Value::Mapping(base_prov),
-        );
-
-        let mut overlay = Mapping::new();
-        let mut overlay_prov = Mapping::new();
-        let mut prov_b = Mapping::new();
-        prov_b.insert(
-            serde_yaml::Value::String("enabled".into()),
-            serde_yaml::Value::Bool(true),
-        );
-        prov_b.insert(
-            serde_yaml::Value::String("model".into()),
-            serde_yaml::Value::String("claude-3-opus".into()),
-        );
-        prov_b.insert(
-            serde_yaml::Value::String("configured".into()),
-            serde_yaml::Value::Bool(true),
-        );
-        overlay_prov.insert(
-            serde_yaml::Value::String("anthropic".into()),
-            serde_yaml::Value::Mapping(prov_b),
-        );
-        overlay.insert(
-            serde_yaml::Value::String("providers".into()),
-            serde_yaml::Value::Mapping(overlay_prov),
-        );
-
-        merge_config_values(&mut base, overlay);
-
-        let providers = base.get("providers").unwrap().as_mapping().unwrap();
-        assert!(providers.contains_key("openai"));
-        assert!(providers.contains_key("anthropic"));
-        // openai should be unchanged
-        let a = providers.get("openai").unwrap().as_mapping().unwrap();
-        assert!(a.get("enabled").unwrap().as_bool().unwrap());
-        assert_eq!(a.get("model").unwrap().as_str().unwrap(), "gpt-4o");
-    }
-
-    #[test]
-    fn test_merge_providers_partial_override() {
-        let mut base = Mapping::new();
-        let mut base_prov = Mapping::new();
-        let mut prov = Mapping::new();
-        prov.insert(
-            serde_yaml::Value::String("enabled".into()),
-            serde_yaml::Value::Bool(true),
-        );
-        prov.insert(
-            serde_yaml::Value::String("model".into()),
-            serde_yaml::Value::String("gpt-4o".into()),
-        );
-        prov.insert(
-            serde_yaml::Value::String("configured".into()),
-            serde_yaml::Value::Bool(true),
-        );
-        base_prov.insert(
-            serde_yaml::Value::String("openai".into()),
-            serde_yaml::Value::Mapping(prov),
-        );
-        base.insert(
-            serde_yaml::Value::String("providers".into()),
-            serde_yaml::Value::Mapping(base_prov),
-        );
-
-        // Overlay just changes the model
-        let mut overlay = Mapping::new();
-        let mut overlay_prov = Mapping::new();
-        let mut prov_override = Mapping::new();
-        prov_override.insert(
-            serde_yaml::Value::String("model".into()),
-            serde_yaml::Value::String("gpt-4o-mini".into()),
-        );
-        overlay_prov.insert(
-            serde_yaml::Value::String("openai".into()),
-            serde_yaml::Value::Mapping(prov_override),
-        );
-        overlay.insert(
-            serde_yaml::Value::String("providers".into()),
-            serde_yaml::Value::Mapping(overlay_prov),
-        );
-
-        merge_config_values(&mut base, overlay);
-
-        let providers = base.get("providers").unwrap().as_mapping().unwrap();
-        let openai = providers.get("openai").unwrap().as_mapping().unwrap();
-
-        // model should be overridden
-        assert_eq!(
-            openai.get("model").unwrap().as_str().unwrap(),
-            "gpt-4o-mini"
-        );
-        // Other fields should be preserved
-        assert!(openai.get("enabled").unwrap().as_bool().unwrap());
-        assert!(openai.get("configured").unwrap().as_bool().unwrap());
-    }
-
-    #[test]
-    fn get_goose_context_limit_reads_env() {
-        let _guard = env_lock::lock_env([("GOOSE_CONTEXT_LIMIT", Some("4096"))]);
-        let config = new_test_config();
-
-        assert_eq!(config.get_goose_context_limit().unwrap(), Some(4096));
-    }
-
-    #[test]
-    fn get_goose_context_limit_reads_quoted_yaml_value() {
-        let _guard = env_lock::lock_env([("GOOSE_CONTEXT_LIMIT", None::<&str>)]);
-        let config = new_test_config();
-        config.set_param("GOOSE_CONTEXT_LIMIT", "200000").unwrap();
-
-        assert_eq!(config.get_goose_context_limit().unwrap(), Some(200_000));
-    }
-
-    #[test]
-    fn get_goose_context_limit_returns_none_when_not_set() {
-        let _guard = env_lock::lock_env([("GOOSE_CONTEXT_LIMIT", None::<&str>)]);
-        let config = new_test_config();
-
-        assert_eq!(config.get_goose_context_limit().unwrap(), None);
-    }
-
-    #[test]
-    fn get_goose_context_limit_rejects_zero() {
-        let _guard = env_lock::lock_env([("GOOSE_CONTEXT_LIMIT", Some("0"))]);
-        let config = new_test_config();
-
-        assert!(matches!(
-            config.get_goose_context_limit().unwrap_err(),
-            ConfigError::DeserializeError(_)
-        ));
-    }
-
-    #[test]
-    fn get_goose_max_tokens_reads_env() {
-        let _guard = env_lock::lock_env([("GOOSE_MAX_TOKENS", Some("4096"))]);
-        let config = new_test_config();
-
-        assert_eq!(config.get_goose_max_tokens().unwrap(), Some(4096));
-    }
-
-    #[test]
-    fn get_goose_max_tokens_returns_none_when_not_set() {
-        let _guard = env_lock::lock_env([("GOOSE_MAX_TOKENS", None::<&str>)]);
-        let config = new_test_config();
-
-        assert_eq!(config.get_goose_max_tokens().unwrap(), None);
-    }
-
-    #[test]
-    fn get_goose_max_tokens_rejects_invalid_values() {
-        for value in ["not_a_number", "0", "-100"] {
-            let _guard = env_lock::lock_env([("GOOSE_MAX_TOKENS", Some(value))]);
-            let config = new_test_config();
-
-            assert!(matches!(
-                config.get_goose_max_tokens().unwrap_err(),
-                ConfigError::DeserializeError(_)
-            ));
-        }
-    }
-
-    #[test]
-    fn get_goose_docs_root_reads_config_file() {
-        let _guard = env_lock::lock_env([("GOOSE_DOCS_ROOT", None::<&str>)]);
-        let config = new_test_config();
-        config
-            .set_param("GOOSE_DOCS_ROOT", "/tmp/goose-docs")
-            .unwrap();
-
-        assert_eq!(
-            config.get_goose_docs_root().unwrap(),
-            Some("/tmp/goose-docs".to_string())
-        );
-    }
-
-    #[test]
-    fn get_goose_docs_root_reads_env_value() {
-        let _guard = env_lock::lock_env([("GOOSE_DOCS_ROOT", Some("/tmp/env-docs"))]);
-        let config = new_test_config();
-
-        assert_eq!(
-            config.get_goose_docs_root().unwrap(),
-            Some("/tmp/env-docs".to_string())
-        );
-    }
-
-    #[test]
-    fn get_goose_docs_root_returns_none_when_unset() {
-        let _guard = env_lock::lock_env([("GOOSE_DOCS_ROOT", None::<&str>)]);
-        let config = new_test_config();
-
-        assert_eq!(config.get_goose_docs_root().unwrap(), None);
-    }
-
-    #[test]
-    fn get_goose_docs_root_ignores_blank_value() {
-        let _guard = env_lock::lock_env([("GOOSE_DOCS_ROOT", None::<&str>)]);
-        let config = new_test_config();
-        config.set_param("GOOSE_DOCS_ROOT", "   ").unwrap();
-
-        assert_eq!(config.get_goose_docs_root().unwrap(), None);
-    }
-
-    #[test]
-    fn get_goose_thinking_effort_reads_env() {
-        let _guard = env_lock::lock_env([
-            ("GOOSE_THINKING_EFFORT", Some("high")),
-            ("CLAUDE_THINKING_TYPE", None::<&str>),
-            ("CLAUDE_THINKING_ENABLED", None::<&str>),
-            ("GEMINI3_THINKING_LEVEL", None::<&str>),
-        ]);
-        let config = new_test_config();
-
-        assert_eq!(
-            config.get_goose_thinking_effort(),
-            Some(ThinkingEffort::High)
-        );
-    }
-
-    #[test]
-    fn get_goose_thinking_effort_uses_legacy_claude_fallback() {
-        for value in ["enabled", "adaptive"] {
-            let _guard = env_lock::lock_env([
-                ("GOOSE_THINKING_EFFORT", None::<&str>),
-                ("CLAUDE_THINKING_TYPE", Some(value)),
-                ("CLAUDE_THINKING_ENABLED", None::<&str>),
-                ("GEMINI3_THINKING_LEVEL", None::<&str>),
-            ]);
-            let config = new_test_config();
-
-            assert_eq!(
-                config.get_goose_thinking_effort(),
-                Some(ThinkingEffort::High)
-            );
-        }
-    }
-
-    #[test]
-    fn get_goose_thinking_effort_uses_legacy_gemini3_fallback() {
-        let _guard = env_lock::lock_env([
-            ("GOOSE_THINKING_EFFORT", None::<&str>),
-            ("CLAUDE_THINKING_TYPE", None::<&str>),
-            ("CLAUDE_THINKING_ENABLED", None::<&str>),
-            ("GEMINI3_THINKING_LEVEL", Some("high")),
-        ]);
-        let config = new_test_config();
-
-        assert_eq!(
-            config.get_goose_thinking_effort(),
-            Some(ThinkingEffort::High)
-        );
-    }
-
-    #[test]
-    fn legacy_gemini3_thinking_level_mapping() {
-        assert_eq!(
-            Config::legacy_gemini3_thinking_effort("low"),
-            Some(ThinkingEffort::Low)
-        );
-        assert_eq!(
-            Config::legacy_gemini3_thinking_effort("high"),
-            Some(ThinkingEffort::High)
-        );
-        assert_eq!(Config::legacy_gemini3_thinking_effort("auto"), None);
-    }
 }

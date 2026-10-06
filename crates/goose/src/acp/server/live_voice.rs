@@ -1,11 +1,35 @@
-use super::*;
-use crate::live_voice::{
-    wait_for_completion, LiveMainAgent, LiveVoiceError, LiveVoiceInteractionCompletion,
-    LiveVoiceInteractionId, LiveVoiceTranscriptPublisher, StartLiveVoiceInteractionResult,
-    WebRtcOffer,
+use crate::acp::server::message_meta::content_chunk_for_message;
+use crate::acp::server::server_informations::{
+    ActiveRunDropGuard, GooseAcpAgent, SessionAgentTarget, message_usage_update,
+    use_state_machine_from_meta,
 };
-use futures::FutureExt;
-
+use crate::acp::{server::tool_notifications, tool_call_notifier::ToolCallNotifier};
+use crate::agents::{Agent, SessionConfig};
+use crate::live_voice::{
+    LiveMainAgent, LiveVoiceError, LiveVoiceInteractionCompletion, LiveVoiceInteractionId,
+    LiveVoiceTranscriptPublisher, StartLiveVoiceInteractionResult, wait_for_completion,
+};
+use crate::session::Session;
+use agent_client_protocol::schema::v1::{
+    ContentBlock, SessionId, SessionNotification, SessionUpdate, TextContent,
+};
+use agent_client_protocol::{Client, ConnectionTo};
+use futures::future::BoxFuture;
+use futures::{FutureExt, StreamExt};
+use bcaip_provider_types::conversations::{Message, MessageContent};
+use goose_providers::live_voice_provider::WebRtcOffer;
+use goose_sdk_types::custom_notifications::{
+    GooseSessionNotification, GooseSessionUpdate, LiveVoiceInteractionEndedUpdate,
+    LiveVoiceInteractionOutcome,
+};
+use goose_sdk_types::custom_requests::{
+    EmptyResponse, LiveVoiceAvailabilityRequest, LiveVoiceAvailabilityResponse,
+    LiveVoiceStartRequest, LiveVoiceStartResponse, LiveVoiceStatus, LiveVoiceStopRequest,
+};
+use rmcp::model::Role;
+use std::{collections::HashMap, sync::Arc};
+use tokio_util::sync::CancellationToken;
+use uuid::Uuid;
 const LIVE_DELEGATION_INSTRUCTION: &str = concat!(
     "You support a live conversation. Treat the latest delegated input as an update to this session's earlier context. ",
     "Voice transcripts may be incomplete. If required information is missing, ask a brief clarification instead of guessing. ",
@@ -18,7 +42,7 @@ impl GooseAcpAgent {
         &self,
         session_id: &str,
     ) -> Result<Session, agent_client_protocol::Error> {
-        self.session_manager
+        self.session_manager()
             .get_session(session_id, false)
             .await
             .map_err(|_| {
@@ -45,7 +69,7 @@ impl GooseAcpAgent {
         };
         Ok(
             match self
-                .live_voice
+                .live_voice()
                 .availability(req.session_id.as_deref(), mode)
             {
                 Ok(()) => LiveVoiceAvailabilityResponse {
@@ -73,7 +97,7 @@ impl GooseAcpAgent {
         let session_id = req.session_id.clone();
         let session = self.load_live_voice_session(&session_id).await?;
         let reservation = self
-            .live_voice
+            .live_voice()
             .reserve_interaction(&session_id, session.goose_mode)
             .map_err(map_live_voice_error)?;
         let transcript_publisher = Self::live_transcript_publisher(cx, &req.session_id);
@@ -82,10 +106,10 @@ impl GooseAcpAgent {
             .await
             .map_err(|error| agent_client_protocol::Error::internal_error().data(error))?;
         let main_agent = self.live_main_agent(cx, agent);
-        let start = self.live_voice.start_interaction(
+        let start = self.live_voice().start_interaction(
             reservation,
             offer,
-            self.session_manager.clone(),
+            self.session_manager().clone(),
             transcript_publisher,
             main_agent,
         );
@@ -163,7 +187,7 @@ impl GooseAcpAgent {
     ) {
         let interaction_id = interaction.interaction_id.clone();
         let completion_rx = interaction.completion_rx.clone();
-        let live_voice = self.live_voice.clone();
+        let live_voice = self.live_voice().clone();
         let connection = cx.clone();
         let notify_interaction_ended = self.supports_goose_custom_notifications();
         tokio::spawn(async move {
@@ -173,8 +197,8 @@ impl GooseAcpAgent {
                     let _ = live_voice.stop_interaction(&session_id, &interaction_id).await;
                 }
                 completion = wait_for_completion(completion_rx) => {
-                    if notify_interaction_ended {
-                        if let Ok(completion) = completion {
+                    if notify_interaction_ended
+                        && let Ok(completion) = completion {
                             let outcome = match completion {
                                 LiveVoiceInteractionCompletion::Stopped => LiveVoiceInteractionOutcome::Stopped,
                                 LiveVoiceInteractionCompletion::Failed => LiveVoiceInteractionOutcome::Failed,
@@ -187,7 +211,6 @@ impl GooseAcpAgent {
                                 }),
                             });
                         }
-                    }
                 }
             }
         });
@@ -199,7 +222,7 @@ impl GooseAcpAgent {
     ) -> Result<EmptyResponse, agent_client_protocol::Error> {
         self.load_live_voice_session(&req.session_id).await?;
         let interaction_id = LiveVoiceInteractionId(req.interaction_id);
-        self.live_voice
+        self.live_voice()
             .stop_interaction(&req.session_id, &interaction_id)
             .await
             .map_err(map_live_voice_error)?;
@@ -216,7 +239,7 @@ impl GooseAcpAgent {
         let cancel_token = CancellationToken::new();
         let run_id = format!("run_{}", Uuid::new_v4());
         if self
-            .active_runs
+            .active_runs()
             .start_live_delegation(
                 &session_id,
                 run_id.clone(),
@@ -228,7 +251,7 @@ impl GooseAcpAgent {
             return Err("Goose is already working on a task.".into());
         }
         let run_guard = ActiveRunDropGuard {
-            registry: self.active_runs.clone(),
+            registry: self.active_runs().clone(),
             session_id: session_id.clone(),
             run_id: run_id.clone(),
             cancel_token: cancel_token.clone(),
@@ -289,7 +312,7 @@ impl GooseAcpAgent {
                 return "The task was cancelled.".into();
             }
             match event {
-                Ok(crate::agents::AgentEvent::Message(message)) => {
+                Ok(bcaip_agent::events::AgentEvent::Message(message)) => {
                     let is_user_visible = message.is_user_visible();
                     let is_visible_assistant = message.role == Role::Assistant && is_user_visible;
                     let projected_message = message.user_visible_content();
@@ -336,14 +359,17 @@ impl GooseAcpAgent {
                         }
                     }
                 }
-                Ok(crate::agents::AgentEvent::McpNotification((request_id, notification))) => {
+                Ok(bcaip_agent::events::AgentEvent::McpNotification((
+                    request_id,
+                    notification,
+                ))) => {
                     if let Some(update) =
                         tool_notifications::tool_notification_update(request_id, notification)
                     {
                         let _ = ToolCallNotifier::new(&cx, &acp_session_id).send_update(update);
                     }
                 }
-                Ok(crate::agents::AgentEvent::MessageUsage { message_id, usage }) => {
+                Ok(bcaip_agent::events::AgentEvent::MessageUsage { message_id, usage }) => {
                     if self.supports_goose_custom_notifications() {
                         let _ = cx.send_notification(GooseSessionNotification {
                             session_id: session_id.clone(),
@@ -378,7 +404,7 @@ impl GooseAcpAgent {
         session_id: &str,
         input: String,
     ) -> Result<String, String> {
-        let Some((_, agent)) = self.active_runs.agent_run(session_id) else {
+        let Some((_, agent)) = self.active_runs().agent_run(session_id) else {
             return Err("The task could not receive the latest instruction.".into());
         };
         agent

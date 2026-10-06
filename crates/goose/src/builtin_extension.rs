@@ -1,7 +1,5 @@
 use once_cell::sync::Lazy;
-use std::collections::HashMap;
-use std::sync::RwLock;
-
+use std::{collections::HashMap, sync::RwLock};
 pub type SpawnServerFn = fn(tokio::io::DuplexStream, tokio::io::DuplexStream);
 
 static BUILTIN_REGISTRY: Lazy<RwLock<HashMap<&'static str, SpawnServerFn>>> =

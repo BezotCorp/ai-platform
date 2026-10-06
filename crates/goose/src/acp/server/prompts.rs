@@ -1,5 +1,9 @@
-use super::*;
+use crate::acp::server::server_informations::GooseAcpAgent;
 use crate::prompt_template::{get_template, list_templates, reset_template, save_template};
+use goose_sdk_types::custom_requests::{
+    GetPromptRequest, GetPromptResponse, ListPromptsRequest, ListPromptsResponse,
+    PromptOperationResponse, PromptTemplateEntry, ResetPromptRequest, SavePromptRequest,
+};
 
 impl GooseAcpAgent {
     pub(super) async fn on_list_prompts(

@@ -1,12 +1,12 @@
+//mod.rs need to have only module declarations and public exports. So review and extract
 pub mod edit;
 pub mod image;
 pub mod shell;
 mod shell_output_streaming;
 pub mod tree;
 
-use crate::agents::extension::PlatformExtensionContext;
 use crate::agents::mcp_client::{Error, McpClientTrait};
-use crate::agents::ToolCallContext;
+use crate::agents::{ToolCallContext, extension::PlatformExtensionContext};
 use anyhow::Result;
 use async_trait::async_trait;
 use edit::{EditTools, FileEditParams, FileWriteParams};
@@ -16,9 +16,9 @@ use rmcp::model::{
     Annotations, CallToolResult, ContentBlock, Implementation, InitializeResult, JsonObject,
     ListToolsResult, ServerCapabilities, TextContent, Tool, ToolAnnotations,
 };
-use schemars::{schema_for, JsonSchema};
+use schemars::{JsonSchema, schema_for};
 use serde_json::Value;
-use shell::{shell_display_name, ShellOutput, ShellParams, ShellTool};
+use shell::{ShellOutput, ShellParams, ShellTool, shell_display_name};
 use std::sync::Arc;
 use tokio_util::sync::CancellationToken;
 use tree::{TreeParams, TreeTool};
@@ -258,148 +258,5 @@ impl McpClientTrait for DeveloperClient {
 
     fn get_info(&self) -> Option<&InitializeResult> {
         Some(&self.info)
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::session::SessionManager;
-    use rmcp::model::ContentBlock;
-    use rmcp::object;
-    use std::fs;
-
-    #[test]
-    fn developer_tools_are_flat() {
-        let names: Vec<String> = DeveloperClient::get_tools()
-            .into_iter()
-            .map(|t| t.name.to_string())
-            .collect();
-
-        assert_eq!(names, vec!["write", "edit", "shell", "tree", "read_image"]);
-    }
-
-    #[test]
-    fn read_image_annotations_reflect_network_access() {
-        let read_image = DeveloperClient::get_tools()
-            .into_iter()
-            .find(|tool| tool.name == "read_image")
-            .unwrap();
-        let annotations = read_image.annotations.unwrap();
-
-        assert_eq!(annotations.read_only_hint, Some(false));
-        assert_eq!(annotations.open_world_hint, Some(true));
-    }
-
-    fn test_context(data_dir: std::path::PathBuf) -> PlatformExtensionContext {
-        PlatformExtensionContext {
-            extension_manager: None,
-            session_manager: Arc::new(SessionManager::new(data_dir)),
-            scheduler: None,
-            session: None,
-            use_login_shell_path: false,
-        }
-    }
-
-    fn first_text(result: &CallToolResult) -> &str {
-        match &result.content[0] {
-            ContentBlock::Text(text) => &text.text,
-            _ => panic!("expected text content"),
-        }
-    }
-
-    #[tokio::test]
-    async fn developer_client_uses_working_dir_for_file_tools() {
-        let temp = tempfile::tempdir().unwrap();
-        let client = DeveloperClient::new(test_context(temp.path().join("sessions"))).unwrap();
-        let cwd = temp.path().join("workspace");
-        fs::create_dir_all(&cwd).unwrap();
-
-        let ctx = ToolCallContext::new("session".to_owned(), Some(cwd.clone()), None);
-        let write = client
-            .call_tool(
-                &ctx,
-                "write",
-                Some(object!({
-                    "path": "notes.txt",
-                    "content": "first line"
-                })),
-                CancellationToken::new(),
-            )
-            .await
-            .unwrap();
-        assert_eq!(write.is_error, Some(false));
-        assert_eq!(
-            fs::read_to_string(cwd.join("notes.txt")).unwrap(),
-            "first line"
-        );
-
-        let edit = client
-            .call_tool(
-                &ctx,
-                "edit",
-                Some(object!({
-                    "path": "notes.txt",
-                    "before": "first",
-                    "after": "updated"
-                })),
-                CancellationToken::new(),
-            )
-            .await
-            .unwrap();
-        assert_eq!(edit.is_error, Some(false));
-        assert_eq!(
-            fs::read_to_string(cwd.join("notes.txt")).unwrap(),
-            "updated line"
-        );
-    }
-
-    #[cfg(not(windows))]
-    #[tokio::test]
-    async fn developer_client_passes_session_id_to_shell_tool() {
-        let temp = tempfile::tempdir().unwrap();
-        let client = DeveloperClient::new(test_context(temp.path().join("sessions"))).unwrap();
-        let ctx = ToolCallContext::new("session-789".to_owned(), None, None);
-
-        let result = client
-            .call_tool(
-                &ctx,
-                "shell",
-                Some(object!({
-                    "command": "printenv AGENT_SESSION_ID"
-                })),
-                CancellationToken::new(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(result.is_error, Some(false));
-        assert_eq!(first_text(&result), "session-789");
-    }
-
-    #[cfg(not(windows))]
-    #[tokio::test]
-    async fn developer_client_uses_working_dir_for_shell_tool() {
-        let temp = tempfile::tempdir().unwrap();
-        let client = DeveloperClient::new(test_context(temp.path().join("sessions"))).unwrap();
-        let cwd = temp.path().join("workspace");
-        fs::create_dir_all(&cwd).unwrap();
-
-        let ctx = ToolCallContext::new("session".to_owned(), Some(cwd.clone()), None);
-        let result = client
-            .call_tool(
-                &ctx,
-                "shell",
-                Some(object!({
-                    "command": "pwd"
-                })),
-                CancellationToken::new(),
-            )
-            .await
-            .unwrap();
-        assert_eq!(result.is_error, Some(false));
-        let observed = std::fs::canonicalize(first_text(&result)).unwrap();
-        let expected = std::fs::canonicalize(&cwd).unwrap();
-        assert_eq!(observed, expected);
     }
 }

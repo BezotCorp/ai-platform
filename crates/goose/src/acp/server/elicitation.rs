@@ -1,18 +1,14 @@
-use std::sync::Arc;
-
+use crate::{action_required_manager::ElicitationOutcome, session::SessionManager};
 use agent_client_protocol::schema::v1::{
-    CreateElicitationRequest, CreateElicitationResponse, ElicitationAction as AcpElicitationAction,
-    ElicitationFormMode, ElicitationSchema, ElicitationSessionScope, Meta, SessionId,
-    CLIENT_METHOD_NAMES,
+    CLIENT_METHOD_NAMES, CreateElicitationRequest, CreateElicitationResponse,
+    ElicitationAction as AcpElicitationAction, ElicitationFormMode, ElicitationSchema,
+    ElicitationSessionScope, Meta, SessionId,
 };
 use agent_client_protocol::{
     Client, ConnectionTo, JsonRpcMessage, JsonRpcRequest, JsonRpcResponse, UntypedMessage,
 };
+use std::sync::Arc;
 use tracing::warn;
-
-use crate::action_required_manager::ElicitationOutcome;
-use crate::session::SessionManager;
-
 impl super::GooseAcpAgent {
     pub(super) async fn handle_form_elicitation(
         &self,
@@ -68,7 +64,7 @@ impl super::GooseAcpAgent {
                 "ACP URL elicitation is not supported"
             );
             record_acp_elicitation_response(
-                &self.session_manager,
+                self.session_manager(),
                 &session_id,
                 &elicitation_id,
                 ElicitationOutcome::Cancel,
@@ -82,7 +78,7 @@ impl super::GooseAcpAgent {
                 Ok(schema) => schema,
                 Err(error) => {
                     record_acp_elicitation_response(
-                        &self.session_manager,
+                        self.session_manager(),
                         &session_id,
                         &elicitation_id,
                         ElicitationOutcome::Cancel,
@@ -101,7 +97,7 @@ impl super::GooseAcpAgent {
         )
         .meta(meta);
 
-        let callback_session_manager = Arc::clone(&self.session_manager);
+        let callback_session_manager = Arc::clone(self.session_manager());
         let callback_session_id = session_id.clone();
         let callback_elicitation_id = elicitation_id.clone();
         if let Err(error) = cx
@@ -132,7 +128,7 @@ impl super::GooseAcpAgent {
             })
         {
             record_acp_elicitation_response(
-                &self.session_manager,
+                self.session_manager(),
                 &session_id,
                 &elicitation_id,
                 ElicitationOutcome::Cancel,
@@ -146,7 +142,7 @@ impl super::GooseAcpAgent {
 
     async fn cancel_form_elicitation(&self, session_id: &str, elicitation_id: &str) {
         record_acp_elicitation_response(
-            &self.session_manager,
+            self.session_manager(),
             session_id,
             elicitation_id,
             ElicitationOutcome::Cancel,

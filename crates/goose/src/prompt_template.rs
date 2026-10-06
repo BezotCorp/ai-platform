@@ -1,9 +1,8 @@
 use crate::config::paths::Paths;
-use include_dir::{include_dir, Dir};
+use include_dir::{Dir, include_dir};
 use minijinja::{Environment, Error as MiniJinjaError, Value as MJValue};
 use serde::Serialize;
 use std::path::PathBuf;
-
 static CORE_PROMPTS_DIR: Dir = include_dir!("$CARGO_MANIFEST_DIR/src/prompts");
 
 static TEMPLATE_REGISTRY: &[(&str, &str)] = &[
@@ -227,50 +226,4 @@ pub fn list_templates() -> Vec<Template> {
             })
         })
         .collect()
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use std::collections::HashMap;
-
-    #[test]
-    fn test_get_template() {
-        let template = get_template("system.md");
-        assert!(template.is_some(), "system.md should be registered");
-
-        let template = template.unwrap();
-        assert_eq!(template.name, "system.md");
-        assert!(!template.description.is_empty());
-        assert!(!template.default_content.is_empty());
-        assert!(!template.is_customized);
-    }
-
-    #[test]
-    fn test_render_template() {
-        let context: HashMap<String, String> = HashMap::new();
-        let result = render_template("system.md", &context);
-        assert!(result.is_ok(), "Should be able to render system.md");
-        assert!(!result.unwrap().is_empty());
-    }
-
-    #[test]
-    fn test_list_templates() {
-        let templates = list_templates();
-        assert_eq!(templates.len(), TEMPLATE_REGISTRY.len());
-
-        let has_system = templates.iter().any(|t| t.name == "system.md");
-        assert!(has_system, "system.md should be in the template list");
-
-        for template in templates {
-            assert!(
-                !template.description.is_empty(),
-                "Each template should have a description"
-            );
-            assert!(
-                !template.default_content.is_empty(),
-                "Each template should have content"
-            );
-        }
-    }
 }

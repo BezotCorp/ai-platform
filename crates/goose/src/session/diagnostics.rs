@@ -1,13 +1,11 @@
-use crate::config::base::Config;
-use crate::config::extensions::get_enabled_extensions;
-use crate::config::paths::Paths;
-use crate::prompt_template::list_templates;
-use crate::providers::utils::LOGS_TO_KEEP;
-use crate::session::SessionManager;
+use crate::{
+    config::{base::Config, extensions::get_enabled_extensions, paths::Paths},
+    prompt_template::list_templates,
+    providers::utils::LOGS_TO_KEEP,
+    session::SessionManager,
+};
 use serde::{Deserialize, Serialize};
-use std::fs;
-use std::path::PathBuf;
-
+use std::{fs, path::PathBuf};
 const LLM_LOG_MAX_BYTES: usize = 2 * 1024 * 1024;
 const CONFIG_MAX_BYTES: usize = 256 * 1024;
 const CLI_LOG_TAIL_LINES: usize = 400;

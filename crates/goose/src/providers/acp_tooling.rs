@@ -1,7 +1,6 @@
 use crate::config::search_path::SearchPaths;
 use anyhow::Result;
 use std::path::PathBuf;
-
 pub fn acp_adapter_installed(command: &str) -> bool {
     resolve_acp_command(command).is_ok()
 }

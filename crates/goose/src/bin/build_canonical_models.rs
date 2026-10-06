@@ -8,14 +8,13 @@
 ///   cargo run --bin build_canonical_models --no-check   # Build only, skip checker
 ///
 use anyhow::{Context, Result};
+use bcaip_provider_types::ModelMapping;
 use clap::Parser;
 use goose::providers::create_with_named_model;
-use goose_providers::canonical::ModelMapping;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::path::PathBuf;
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct ProviderMetadata {
     pub id: String,
@@ -317,7 +316,7 @@ impl MappingReport {
 
 fn data_file_path(filename: &str) -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../goose-provider-types/src/canonical/data")
+        .join("../bcaip-provider-types/src/canonical/data")
         .join(filename)
 }
 
@@ -407,7 +406,7 @@ fn collect_provider_metadata(
 
 async fn build_canonical_models() -> Result<()> {
     let json = fetch_models_dev().await?;
-    let registry = goose_providers::canonical::models_dev::from_models_dev(&json.to_string())?;
+    let registry = bcaip_provider_types::from_models_dev(&json.to_string())?;
     let output_path = data_file_path("canonical_models.json");
     registry.to_file(&output_path)?;
     println!(
@@ -515,10 +514,10 @@ async fn check_canonical_mappings() -> Result<()> {
 
     let output_path = data_file_path("canonical_mapping_report.json");
 
-    if output_path.exists() {
-        if let Ok(previous) = MappingReport::load_from_file(&output_path) {
-            report.compare_with_previous(&previous);
-        }
+    if output_path.exists()
+        && let Ok(previous) = MappingReport::load_from_file(&output_path)
+    {
+        report.compare_with_previous(&previous);
     }
 
     report.save_to_file(&output_path)?;

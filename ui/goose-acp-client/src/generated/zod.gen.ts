@@ -3,102 +3,86 @@
  * Do not edit manually.
  */
 
-import * as z from "zod";
+import * as z from 'zod';
 
 export const httpHeaderSchema = z
   .object({
-    name: z.string().describe("The name of the HTTP header."),
-    value: z.string().describe("The value to set for the HTTP header."),
+    name: z.string().describe('The name of the HTTP header.'),
+    value: z.string().describe('The value to set for the HTTP header.'),
     _meta: z
       .record(z.string(), z.unknown())
       .nullish()
       .describe(
-        "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+        'The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)',
       ),
   })
-  .describe("An HTTP header to set when making requests to the MCP server.");
+  .describe('An HTTP header to set when making requests to the MCP server.');
 
 export const mcpServerHttpSchema = z
   .object({
-    name: z
-      .string()
-      .describe("Human-readable name identifying this MCP server."),
-    url: z.string().describe("URL to the MCP server."),
-    headers: z
-      .array(httpHeaderSchema)
-      .describe("HTTP headers to set when making requests to the MCP server."),
+    name: z.string().describe('Human-readable name identifying this MCP server.'),
+    url: z.string().describe('URL to the MCP server.'),
+    headers: z.array(httpHeaderSchema).describe('HTTP headers to set when making requests to the MCP server.'),
     _meta: z
       .record(z.string(), z.unknown())
       .nullish()
       .describe(
-        "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+        'The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)',
       ),
-    type: z.enum(["http"]),
+    type: z.enum(['http']),
   })
-  .describe("HTTP transport configuration for MCP.");
+  .describe('HTTP transport configuration for MCP.');
 
 export const mcpServerSseSchema = z
   .object({
-    name: z
-      .string()
-      .describe("Human-readable name identifying this MCP server."),
-    url: z.string().describe("URL to the MCP server."),
-    headers: z
-      .array(httpHeaderSchema)
-      .describe("HTTP headers to set when making requests to the MCP server."),
+    name: z.string().describe('Human-readable name identifying this MCP server.'),
+    url: z.string().describe('URL to the MCP server.'),
+    headers: z.array(httpHeaderSchema).describe('HTTP headers to set when making requests to the MCP server.'),
     _meta: z
       .record(z.string(), z.unknown())
       .nullish()
       .describe(
-        "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+        'The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)',
       ),
-    type: z.enum(["sse"]),
+    type: z.enum(['sse']),
   })
-  .describe("SSE transport configuration for MCP.");
+  .describe('SSE transport configuration for MCP.');
 
 export const envVariableSchema = z
   .object({
-    name: z.string().describe("The name of the environment variable."),
-    value: z
-      .string()
-      .describe("The value to set for the environment variable."),
+    name: z.string().describe('The name of the environment variable.'),
+    value: z.string().describe('The value to set for the environment variable.'),
     _meta: z
       .record(z.string(), z.unknown())
       .nullish()
       .describe(
-        "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+        'The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)',
       ),
   })
-  .describe("An environment variable to set when launching an MCP server.");
+  .describe('An environment variable to set when launching an MCP server.');
 
 export const mcpServerStdioSchema = z
   .object({
-    name: z
-      .string()
-      .describe("Human-readable name identifying this MCP server."),
-    command: z.string().describe("Absolute path to the MCP server executable."),
-    args: z
-      .array(z.string())
-      .describe("Command-line arguments to pass to the MCP server."),
-    env: z
-      .array(envVariableSchema)
-      .describe("Environment variables to set when launching the MCP server."),
+    name: z.string().describe('Human-readable name identifying this MCP server.'),
+    command: z.string().describe('Absolute path to the MCP server executable.'),
+    args: z.array(z.string()).describe('Command-line arguments to pass to the MCP server.'),
+    env: z.array(envVariableSchema).describe('Environment variables to set when launching the MCP server.'),
     _meta: z
       .record(z.string(), z.unknown())
       .nullish()
       .describe(
-        "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+        'The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)',
       ),
   })
-  .describe("Stdio transport configuration for MCP.");
+  .describe('Stdio transport configuration for MCP.');
 
 export const mcpServerSchema = z
   .union([mcpServerHttpSchema, mcpServerSseSchema, mcpServerStdioSchema])
   .describe(
-    "Configuration for connecting to an MCP (Model Context Protocol) server.\n\nMCP servers provide tools and context that the agent can use when\nprocessing prompts.\n\nSee protocol docs: [MCP Servers](https://agentclientprotocol.com/protocol/session-setup#mcp-servers)",
+    'Configuration for connecting to an MCP (Model Context Protocol) server.\n\nMCP servers provide tools and context that the agent can use when\nprocessing prompts.\n\nSee protocol docs: [MCP Servers](https://agentclientprotocol.com/protocol/session-setup#mcp-servers)',
   );
 
-export const gooseExtensionSchema = z.discriminatedUnion("type", [
+export const gooseExtensionSchema = z.discriminatedUnion('type', [
   z.strictObject({
     name: z.string(),
     description: z.string().nullish(),
@@ -108,10 +92,8 @@ export const gooseExtensionSchema = z.discriminatedUnion("type", [
     available_tools: z
       .array(z.string())
       .nullish()
-      .describe(
-        "Tool allowlist for this extension. Omit this field to allow all tools.",
-      ),
-    type: z.enum(["builtin"]),
+      .describe('Tool allowlist for this extension. Omit this field to allow all tools.'),
+    type: z.enum(['builtin']),
   }),
   z.strictObject({
     name: z.string(),
@@ -121,41 +103,26 @@ export const gooseExtensionSchema = z.discriminatedUnion("type", [
     available_tools: z
       .array(z.string())
       .nullish()
-      .describe(
-        "Tool allowlist for this extension. Omit this field to allow all tools.",
-      ),
-    type: z.enum(["platform"]),
+      .describe('Tool allowlist for this extension. Omit this field to allow all tools.'),
+    type: z.enum(['platform']),
   }),
   z.strictObject({
     server: mcpServerSchema.describe(
-      "Configuration for connecting to an MCP (Model Context Protocol) server.\n\nMCP servers provide tools and context that the agent can use when\nprocessing prompts.\n\nSee protocol docs: [MCP Servers](https://agentclientprotocol.com/protocol/session-setup#mcp-servers)",
+      'Configuration for connecting to an MCP (Model Context Protocol) server.\n\nMCP servers provide tools and context that the agent can use when\nprocessing prompts.\n\nSee protocol docs: [MCP Servers](https://agentclientprotocol.com/protocol/session-setup#mcp-servers)',
     ),
     envKeys: z.array(z.string()).optional(),
     description: z.string().nullish(),
     timeout: z.int().min(0).nullish(),
     socket: z.string().nullish(),
-    clientId: z
-      .string()
-      .nullish()
-      .describe(
-        "Pre-registered OAuth client ID for the server's authorization server.",
-      ),
-    clientSecretKey: z
-      .string()
-      .nullish()
-      .describe("Name of the env/secret key holding the OAuth client secret."),
-    scopes: z
-      .array(z.string())
-      .optional()
-      .describe("OAuth scopes to request with `client_id`."),
+    clientId: z.string().nullish().describe("Pre-registered OAuth client ID for the server's authorization server."),
+    clientSecretKey: z.string().nullish().describe('Name of the env/secret key holding the OAuth client secret.'),
+    scopes: z.array(z.string()).optional().describe('OAuth scopes to request with `client_id`.'),
     bundled: z.boolean().nullish(),
     available_tools: z
       .array(z.string())
       .nullish()
-      .describe(
-        "Tool allowlist for this extension. Omit this field to allow all tools.",
-      ),
-    type: z.enum(["mcp"]),
+      .describe('Tool allowlist for this extension. Omit this field to allow all tools.'),
+    type: z.enum(['mcp']),
   }),
 ]);
 
@@ -164,32 +131,27 @@ export const addSessionExtensionRequestUnstableSchema = z
     sessionId: z.string(),
     extension: gooseExtensionSchema,
   })
-  .describe("Add an extension to an active session.");
+  .describe('Add an extension to an active session.');
 
-export const emptyResponseSchema = z
-  .object({})
-  .describe("Empty success response for operations that return no data.");
+export const emptyResponseSchema = z.object({}).describe('Empty success response for operations that return no data.');
 
 export const removeSessionExtensionRequestUnstableSchema = z
   .object({
     sessionId: z.string(),
     extensionKey: z.string(),
   })
-  .describe("Remove an extension from an active session.");
+  .describe('Remove an extension from an active session.');
 
 export const getToolsRequestUnstableSchema = z
   .object({
     sessionId: z.string(),
-    extensionName: z
-      .string()
-      .nullish()
-      .describe("Filter tools to those belonging to this extension."),
+    extensionName: z.string().nullish().describe('Filter tools to those belonging to this extension.'),
   })
-  .describe("List all tools available in a session.");
+  .describe('List all tools available in a session.');
 
 export const toolPermissionLevelSchema = z
-  .enum(["always_allow", "ask_before", "never_allow"])
-  .describe("Permission level for a tool.");
+  .enum(['always_allow', 'ask_before', 'never_allow'])
+  .describe('Permission level for a tool.');
 
 export const toolListItemSchema = z
   .object({
@@ -200,28 +162,26 @@ export const toolListItemSchema = z
     inputSchema: z.unknown(),
     outputSchema: z.unknown().optional(),
   })
-  .describe("A single tool item returned by the tools list endpoint.");
+  .describe('A single tool item returned by the tools list endpoint.');
 
 export const getToolsResponseUnstableSchema = z
   .object({
     tools: z.array(toolListItemSchema),
   })
-  .describe("Tools response.");
+  .describe('Tools response.');
 
 export const toolPermissionEntrySchema = z
   .object({
     toolName: z.string(),
-    permission: toolPermissionLevelSchema.describe(
-      "Permission level for a tool.",
-    ),
+    permission: toolPermissionLevelSchema.describe('Permission level for a tool.'),
   })
-  .describe("A single tool permission entry.");
+  .describe('A single tool permission entry.');
 
 export const setToolPermissionsRequestUnstableSchema = z
   .object({
     toolPermissions: z.array(toolPermissionEntrySchema),
   })
-  .describe("Set permission levels for one or more tools.");
+  .describe('Set permission levels for one or more tools.');
 
 export const setToolPermissionsResponseUnstableSchema = z.object({});
 
@@ -232,7 +192,7 @@ export const gooseToolCallRequestUnstableSchema = z
     name: z.string(),
     arguments: z.unknown().optional(),
   })
-  .describe("Call a tool from an extension.");
+  .describe('Call a tool from an extension.');
 
 export const gooseToolCallResponseUnstableSchema = z
   .object({
@@ -241,7 +201,7 @@ export const gooseToolCallResponseUnstableSchema = z
     isError: z.boolean(),
     _meta: z.unknown().optional(),
   })
-  .describe("Tool call response.");
+  .describe('Tool call response.');
 
 export const readResourceRequestUnstableSchema = z
   .object({
@@ -249,24 +209,19 @@ export const readResourceRequestUnstableSchema = z
     uri: z.string(),
     extensionName: z.string(),
   })
-  .describe("Read a resource from an extension.");
+  .describe('Read a resource from an extension.');
 
 export const readResourceResponseUnstableSchema = z
   .object({
-    result: z
-      .unknown()
-      .optional()
-      .describe(
-        "The resource result from the extension (MCP ReadResourceResult).",
-      ),
+    result: z.unknown().optional().describe('The resource result from the extension (MCP ReadResourceResult).'),
   })
-  .describe("Resource read response.");
+  .describe('Resource read response.');
 
 export const appsListRequestUnstableSchema = z
   .object({
     sessionId: z.string().nullish(),
   })
-  .describe("List available goose apps, optionally scoped to a session.");
+  .describe('List available goose apps, optionally scoped to a session.');
 
 export const appsListResponseUnstableSchema = z.object({
   apps: z.array(z.unknown()).optional().default([]),
@@ -276,7 +231,7 @@ export const appsExportRequestUnstableSchema = z
   .object({
     name: z.string(),
   })
-  .describe("Export a goose app as HTML.");
+  .describe('Export a goose app as HTML.');
 
 export const appsExportResponseUnstableSchema = z.object({
   html: z.string(),
@@ -286,7 +241,7 @@ export const appsImportRequestUnstableSchema = z
   .object({
     html: z.string(),
   })
-  .describe("Import a goose app from HTML.");
+  .describe('Import a goose app from HTML.');
 
 export const appsImportResponseUnstableSchema = z.object({
   name: z.string(),
@@ -297,7 +252,7 @@ export const appsDeleteRequestUnstableSchema = z
   .object({
     name: z.string(),
   })
-  .describe("Delete a goose app by name.");
+  .describe('Delete a goose app by name.');
 
 export const appsDeleteResponseUnstableSchema = z.object({
   name: z.string(),
@@ -309,19 +264,19 @@ export const updateWorkingDirRequestUnstableSchema = z
     sessionId: z.string(),
     workingDir: z.string(),
   })
-  .describe("Update the working directory for a session.");
+  .describe('Update the working directory for a session.');
 
 export const sessionSystemPromptModeSchema = z
-  .union([z.enum(["set"]), z.enum(["append"])])
-  .describe("How a session system prompt update should be applied.");
+  .union([z.enum(['set']), z.enum(['append'])])
+  .describe('How a session system prompt update should be applied.');
 
 export const setSessionSystemPromptRequestUnstableSchema = z
   .object({
     sessionId: z.string(),
     mode: sessionSystemPromptModeSchema
       .optional()
-      .default("append")
-      .describe("How a session system prompt update should be applied."),
+      .default('append')
+      .describe('How a session system prompt update should be applied.'),
     key: z.string().nullish(),
     text: z.string(),
   })
@@ -330,38 +285,26 @@ export const setSessionSystemPromptRequestUnstableSchema = z
   );
 
 export const roleSchema = z
-  .union([z.enum(["assistant"]), z.enum(["user"])])
-  .describe("The sender or recipient of messages and data in a conversation.");
+  .union([z.enum(['assistant']), z.enum(['user'])])
+  .describe('The sender or recipient of messages and data in a conversation.');
 
 export const annotationsSchema = z
   .object({
     audience: z
       .array(roleSchema)
       .nullish()
-      .describe(
-        "Intended recipients for this content, such as the user or assistant.",
-      ),
-    lastModified: z
-      .string()
-      .nullish()
-      .describe(
-        "Timestamp indicating when the underlying resource was last modified.",
-      ),
-    priority: z
-      .number()
-      .nullish()
-      .describe(
-        "Relative importance of this content when clients choose what to surface.",
-      ),
+      .describe('Intended recipients for this content, such as the user or assistant.'),
+    lastModified: z.string().nullish().describe('Timestamp indicating when the underlying resource was last modified.'),
+    priority: z.number().nullish().describe('Relative importance of this content when clients choose what to surface.'),
     _meta: z
       .record(z.string(), z.unknown())
       .nullish()
       .describe(
-        "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+        'The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)',
       ),
   })
   .describe(
-    "Optional annotations for the client. The client can use annotations to inform how objects are used or displayed",
+    'Optional annotations for the client. The client can use annotations to inform how objects are used or displayed',
   );
 
 export const textContentSchema = z
@@ -369,190 +312,137 @@ export const textContentSchema = z
     annotations: z
       .union([annotationsSchema, z.null()])
       .optional()
-      .describe(
-        "Optional annotations that help clients decide how to display or route this content.",
-      ),
-    text: z.string().describe("Text payload carried by this content block."),
+      .describe('Optional annotations that help clients decide how to display or route this content.'),
+    text: z.string().describe('Text payload carried by this content block.'),
     _meta: z
       .record(z.string(), z.unknown())
       .nullish()
       .describe(
-        "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+        'The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)',
       ),
   })
-  .describe("Text provided to or from an LLM.");
+  .describe('Text provided to or from an LLM.');
 
 export const imageContentSchema = z
   .object({
     annotations: z
       .union([annotationsSchema, z.null()])
       .optional()
-      .describe(
-        "Optional annotations that help clients decide how to display or route this content.",
-      ),
-    data: z.string().describe("Base64-encoded media payload."),
-    mimeType: z
-      .string()
-      .describe("MIME type describing the encoded media payload."),
-    uri: z
-      .string()
-      .nullish()
-      .describe("URI associated with this resource or media payload."),
+      .describe('Optional annotations that help clients decide how to display or route this content.'),
+    data: z.string().describe('Base64-encoded media payload.'),
+    mimeType: z.string().describe('MIME type describing the encoded media payload.'),
+    uri: z.string().nullish().describe('URI associated with this resource or media payload.'),
     _meta: z
       .record(z.string(), z.unknown())
       .nullish()
       .describe(
-        "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+        'The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)',
       ),
   })
-  .describe("An image provided to or from an LLM.");
+  .describe('An image provided to or from an LLM.');
 
 export const audioContentSchema = z
   .object({
     annotations: z
       .union([annotationsSchema, z.null()])
       .optional()
-      .describe(
-        "Optional annotations that help clients decide how to display or route this content.",
-      ),
-    data: z.string().describe("Base64-encoded media payload."),
-    mimeType: z
-      .string()
-      .describe("MIME type describing the encoded media payload."),
+      .describe('Optional annotations that help clients decide how to display or route this content.'),
+    data: z.string().describe('Base64-encoded media payload.'),
+    mimeType: z.string().describe('MIME type describing the encoded media payload.'),
     _meta: z
       .record(z.string(), z.unknown())
       .nullish()
       .describe(
-        "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+        'The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)',
       ),
   })
-  .describe("Audio provided to or from an LLM.");
+  .describe('Audio provided to or from an LLM.');
 
 export const resourceLinkSchema = z
   .object({
     annotations: z
       .union([annotationsSchema, z.null()])
       .optional()
-      .describe(
-        "Optional annotations that help clients decide how to display or route this content.",
-      ),
-    description: z
-      .string()
-      .nullish()
-      .describe(
-        "Optional human-readable details shown with this protocol object.",
-      ),
-    mimeType: z
-      .string()
-      .nullish()
-      .describe("MIME type describing the encoded media payload."),
-    name: z
-      .string()
-      .describe("Human-readable name shown for this protocol object."),
-    size: z
-      .int()
-      .nullish()
-      .describe("Optional size of the linked resource in bytes, if known."),
-    title: z
-      .string()
-      .nullish()
-      .describe("Optional display title for end-user UI."),
-    uri: z
-      .string()
-      .describe("URI associated with this resource or media payload."),
+      .describe('Optional annotations that help clients decide how to display or route this content.'),
+    description: z.string().nullish().describe('Optional human-readable details shown with this protocol object.'),
+    mimeType: z.string().nullish().describe('MIME type describing the encoded media payload.'),
+    name: z.string().describe('Human-readable name shown for this protocol object.'),
+    size: z.int().nullish().describe('Optional size of the linked resource in bytes, if known.'),
+    title: z.string().nullish().describe('Optional display title for end-user UI.'),
+    uri: z.string().describe('URI associated with this resource or media payload.'),
     _meta: z
       .record(z.string(), z.unknown())
       .nullish()
       .describe(
-        "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+        'The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)',
       ),
   })
-  .describe(
-    "A resource that the server is capable of reading, included in a prompt or tool call result.",
-  );
+  .describe('A resource that the server is capable of reading, included in a prompt or tool call result.');
 
 export const textResourceContentsSchema = z
   .object({
-    mimeType: z
-      .string()
-      .nullish()
-      .describe("MIME type describing the encoded media payload."),
-    text: z.string().describe("Text payload carried by this content block."),
-    uri: z
-      .string()
-      .describe("URI associated with this resource or media payload."),
+    mimeType: z.string().nullish().describe('MIME type describing the encoded media payload.'),
+    text: z.string().describe('Text payload carried by this content block.'),
+    uri: z.string().describe('URI associated with this resource or media payload.'),
     _meta: z
       .record(z.string(), z.unknown())
       .nullish()
       .describe(
-        "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+        'The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)',
       ),
   })
-  .describe("Text-based resource contents.");
+  .describe('Text-based resource contents.');
 
 export const blobResourceContentsSchema = z
   .object({
-    blob: z
-      .string()
-      .describe("Base64-encoded bytes for a binary resource payload."),
-    mimeType: z
-      .string()
-      .nullish()
-      .describe("MIME type describing the encoded media payload."),
-    uri: z
-      .string()
-      .describe("URI associated with this resource or media payload."),
+    blob: z.string().describe('Base64-encoded bytes for a binary resource payload.'),
+    mimeType: z.string().nullish().describe('MIME type describing the encoded media payload.'),
+    uri: z.string().describe('URI associated with this resource or media payload.'),
     _meta: z
       .record(z.string(), z.unknown())
       .nullish()
       .describe(
-        "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+        'The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)',
       ),
   })
-  .describe("Binary resource contents.");
+  .describe('Binary resource contents.');
 
 export const embeddedResourceResourceSchema = z
   .union([textResourceContentsSchema, blobResourceContentsSchema])
-  .describe("Resource content that can be embedded in a message.");
+  .describe('Resource content that can be embedded in a message.');
 
 export const embeddedResourceSchema = z
   .object({
     annotations: z
       .union([annotationsSchema, z.null()])
       .optional()
-      .describe(
-        "Optional annotations that help clients decide how to display or route this content.",
-      ),
-    resource: embeddedResourceResourceSchema.describe(
-      "Embedded resource payload, either text or binary data.",
-    ),
+      .describe('Optional annotations that help clients decide how to display or route this content.'),
+    resource: embeddedResourceResourceSchema.describe('Embedded resource payload, either text or binary data.'),
     _meta: z
       .record(z.string(), z.unknown())
       .nullish()
       .describe(
-        "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+        'The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)',
       ),
   })
-  .describe(
-    "The contents of a resource, embedded into a prompt or tool call result.",
-  );
+  .describe('The contents of a resource, embedded into a prompt or tool call result.');
 
 export const contentBlockSchema = z
-  .discriminatedUnion("type", [
+  .discriminatedUnion('type', [
     textContentSchema.extend({
-      type: z.enum(["TextContent"]),
+      type: z.enum(['TextContent']),
     }),
     imageContentSchema.extend({
-      type: z.enum(["ImageContent"]),
+      type: z.enum(['ImageContent']),
     }),
     audioContentSchema.extend({
-      type: z.enum(["AudioContent"]),
+      type: z.enum(['AudioContent']),
     }),
     resourceLinkSchema.extend({
-      type: z.enum(["ResourceLink"]),
+      type: z.enum(['ResourceLink']),
     }),
     embeddedResourceSchema.extend({
-      type: z.enum(["EmbeddedResource"]),
+      type: z.enum(['EmbeddedResource']),
     }),
   ])
   .describe(
@@ -565,16 +455,14 @@ export const steerSessionRequestUnstableSchema = z
     prompt: z.array(contentBlockSchema).optional().default([]),
     expectedRunId: z.string(),
   })
-  .describe(
-    "Add user input to the currently active prompt without starting a new prompt.",
-  );
+  .describe('Add user input to the currently active prompt without starting a new prompt.');
 
 export const steerSessionResponseUnstableSchema = z.object({
   runId: z.string(),
   messageId: z
     .string()
     .describe(
-      "Stable id of the queued steer message. The same id later appears as\n`messageId` on the streamed `UserMessageChunk` (with `_meta.goose.steer`),\nletting clients correlate a queued steer with its pickup.",
+      'Stable id of the queued steer message. The same id later appears as\n`messageId` on the streamed `UserMessageChunk` (with `_meta.goose.steer`),\nletting clients correlate a queued steer with its pickup.',
     ),
 });
 
@@ -583,9 +471,9 @@ export const liveVoiceAvailabilityRequestUnstableSchema = z
     sessionId: z.string().nullish(),
     _meta: z.record(z.string(), z.unknown()).nullish(),
   })
-  .describe("Ask whether a new or existing chat can enter direct Live voice.");
+  .describe('Ask whether a new or existing chat can enter direct Live voice.');
 
-export const liveVoiceStatusSchema = z.enum(["ready", "unavailable"]);
+export const liveVoiceStatusSchema = z.enum(['ready', 'unavailable']);
 
 export const liveVoiceAvailabilityResponseUnstableSchema = z.object({
   status: liveVoiceStatusSchema,
@@ -598,7 +486,7 @@ export const liveVoiceStartRequestUnstableSchema = z
     offerSdp: z.string(),
     _meta: z.record(z.string(), z.unknown()).nullish(),
   })
-  .describe("Get a diagnostic report for a session.");
+  .describe('Get a diagnostic report for a session.');
 
 export const liveVoiceStartResponseUnstableSchema = z.object({
   interactionId: z.string(),
@@ -610,20 +498,18 @@ export const liveVoiceStopRequestUnstableSchema = z.object({
   interactionId: z.string(),
 });
 
-export const diagnosticsReportLevelSchema = z.enum(["summary", "full"]);
+export const diagnosticsReportLevelSchema = z.enum(['summary', 'full']);
 
 export const diagnosticsGetRequestUnstableSchema = z.object({
   sessionId: z.string(),
-  level: diagnosticsReportLevelSchema.optional().default("summary"),
+  level: diagnosticsReportLevelSchema.optional().default('summary'),
 });
 
 export const diagnosticsGetResponseUnstableSchema = z.object({
   report: z.unknown(),
 });
 
-export const listPromptsRequestUnstableSchema = z
-  .object({})
-  .describe("List all available goose prompt templates.");
+export const listPromptsRequestUnstableSchema = z.object({}).describe('List all available goose prompt templates.');
 
 export const promptTemplateEntrySchema = z
   .object({
@@ -633,9 +519,7 @@ export const promptTemplateEntrySchema = z
     userContent: z.string().nullish(),
     isCustomized: z.boolean(),
   })
-  .describe(
-    "Information about a prompt template, including its default content and customization status.",
-  );
+  .describe('Information about a prompt template, including its default content and customization status.');
 
 export const listPromptsResponseUnstableSchema = z.object({
   prompts: z.array(promptTemplateEntrySchema),
@@ -645,7 +529,7 @@ export const getPromptRequestUnstableSchema = z
   .object({
     name: z.string(),
   })
-  .describe("Read a goose prompt template.");
+  .describe('Read a goose prompt template.');
 
 export const getPromptResponseUnstableSchema = z.object({
   name: z.string(),
@@ -659,7 +543,7 @@ export const savePromptRequestUnstableSchema = z
     name: z.string(),
     content: z.string(),
   })
-  .describe("Save a custom goose prompt template.");
+  .describe('Save a custom goose prompt template.');
 
 export const promptOperationResponseUnstableSchema = z.object({
   message: z.string(),
@@ -669,11 +553,11 @@ export const resetPromptRequestUnstableSchema = z
   .object({
     name: z.string(),
   })
-  .describe("Reset a goose prompt template to its default content.");
+  .describe('Reset a goose prompt template to its default content.');
 
 export const getConfigExtensionsRequestUnstableSchema = z
   .object({})
-  .describe("List configured extensions and any warnings.");
+  .describe('List configured extensions and any warnings.');
 
 export const gooseExtensionEntrySchema = z.object({
   extension: gooseExtensionSchema,
@@ -686,7 +570,7 @@ export const getConfigExtensionsResponseUnstableSchema = z
     extensions: z.array(gooseExtensionEntrySchema),
     warnings: z.array(z.string()).optional().default([]),
   })
-  .describe("List configured extensions and any warnings.");
+  .describe('List configured extensions and any warnings.');
 
 export const addConfigExtensionRequestUnstableSchema = z
   .object({
@@ -699,24 +583,20 @@ export const removeConfigExtensionRequestUnstableSchema = z
   .object({
     configKey: z.string(),
   })
-  .describe(
-    "Remove a persisted extension from the user's global goose config.",
-  );
+  .describe("Remove a persisted extension from the user's global goose config.");
 
 export const setConfigExtensionEnabledRequestUnstableSchema = z
   .object({
     configKey: z.string(),
     enabled: z.boolean(),
   })
-  .describe(
-    "Set the `enabled` flag for a persisted extension in the user's global goose config.",
-  );
+  .describe("Set the `enabled` flag for a persisted extension in the user's global goose config.");
 
 export const getSessionExtensionsRequestUnstableSchema = z
   .object({
     sessionId: z.string(),
   })
-  .describe("List extensions enabled for an active session.");
+  .describe('List extensions enabled for an active session.');
 
 export const sessionExtensionEntrySchema = z.object({
   extension: gooseExtensionSchema,
@@ -733,11 +613,9 @@ export const listProvidersRequestUnstableSchema = z
       .array(z.string())
       .optional()
       .default([])
-      .describe("Only return entries for these providers. Empty means all."),
+      .describe('Only return entries for these providers. Empty means all.'),
   })
-  .describe(
-    "List providers with setup metadata and the current model inventory snapshot.",
-  );
+  .describe('List providers with setup metadata and the current model inventory snapshot.');
 
 export const providerConfigKeySchema = z.object({
   name: z.string(),
@@ -751,114 +629,57 @@ export const providerConfigKeySchema = z.object({
 
 export const providerInventoryModelDtoSchema = z
   .object({
-    id: z.string().describe("Model identifier as the provider knows it."),
-    name: z.string().describe("Human-readable display name."),
-    family: z.string().nullish().describe("Model family for grouping in UI."),
-    contextLimit: z
-      .int()
-      .min(0)
-      .nullish()
-      .describe("Context window size in tokens."),
-    reasoning: z
-      .boolean()
-      .nullish()
-      .describe("Whether the model supports reasoning/extended thinking."),
+    id: z.string().describe('Model identifier as the provider knows it.'),
+    name: z.string().describe('Human-readable display name.'),
+    family: z.string().nullish().describe('Model family for grouping in UI.'),
+    contextLimit: z.int().min(0).nullish().describe('Context window size in tokens.'),
+    reasoning: z.boolean().nullish().describe('Whether the model supports reasoning/extended thinking.'),
     recommended: z
       .boolean()
       .optional()
       .default(false)
-      .describe(
-        "Whether this model should appear in the compact recommended picker.",
-      ),
+      .describe('Whether this model should appear in the compact recommended picker.'),
   })
-  .describe("A single model in provider inventory.");
+  .describe('A single model in provider inventory.');
 
 export const providerInventoryEntryDtoSchema = z
   .object({
-    providerId: z.string().describe("Provider identifier."),
-    providerName: z.string().describe("Human-readable provider name."),
-    description: z
-      .string()
-      .describe("Description of the provider's capabilities."),
-    defaultModel: z
-      .string()
-      .describe("The default/recommended model for this provider."),
-    configured: z
-      .boolean()
-      .describe("Whether Goose has enough configuration to use this provider."),
-    available: z
-      .boolean()
-      .describe(
-        "Whether the provider's external runtime or required configuration is available.",
-      ),
+    providerId: z.string().describe('Provider identifier.'),
+    providerName: z.string().describe('Human-readable provider name.'),
+    description: z.string().describe("Description of the provider's capabilities."),
+    defaultModel: z.string().describe('The default/recommended model for this provider.'),
+    configured: z.boolean().describe('Whether Goose has enough configuration to use this provider.'),
+    available: z.boolean().describe("Whether the provider's external runtime or required configuration is available."),
     providerType: z
       .string()
-      .describe(
-        "Provider classification such as `Preferred`, `Builtin`, `Declarative`, or `Custom`.",
-      ),
-    acp: z
-      .boolean()
-      .optional()
-      .default(false)
-      .describe("Whether this provider communicates through ACP."),
-    visibleInSetup: z
-      .boolean()
-      .describe(
-        "Whether this provider should appear in normal provider setup UIs.",
-      ),
-    deprecated: z
-      .boolean()
-      .describe("Whether this provider is retained only for compatibility."),
-    replacement: z
-      .string()
-      .nullish()
-      .describe("Preferred replacement for a deprecated provider."),
-    configKeys: z
-      .array(providerConfigKeySchema)
-      .describe("Required configuration keys and setup metadata."),
-    setupSteps: z
-      .array(z.string())
-      .describe("Step-by-step setup instructions, when present."),
-    supportsRefresh: z
-      .boolean()
-      .describe("Whether this provider supports background inventory refresh."),
-    refreshing: z
-      .boolean()
-      .describe("Whether a refresh is currently in flight."),
-    models: z
-      .array(providerInventoryModelDtoSchema)
-      .describe("The list of available models."),
-    lastUpdatedAt: z
-      .string()
-      .nullish()
-      .describe("When this entry was last successfully refreshed (ISO 8601)."),
-    lastRefreshAttemptAt: z
-      .string()
-      .nullish()
-      .describe("When a refresh was most recently attempted (ISO 8601)."),
-    lastRefreshError: z
-      .string()
-      .nullish()
-      .describe("The last refresh failure message, if any."),
-    stale: z
-      .boolean()
-      .describe("Whether we believe this data may be outdated."),
+      .describe('Provider classification such as `Preferred`, `Builtin`, `Declarative`, or `Custom`.'),
+    acp: z.boolean().optional().default(false).describe('Whether this provider communicates through ACP.'),
+    visibleInSetup: z.boolean().describe('Whether this provider should appear in normal provider setup UIs.'),
+    deprecated: z.boolean().describe('Whether this provider is retained only for compatibility.'),
+    replacement: z.string().nullish().describe('Preferred replacement for a deprecated provider.'),
+    configKeys: z.array(providerConfigKeySchema).describe('Required configuration keys and setup metadata.'),
+    setupSteps: z.array(z.string()).describe('Step-by-step setup instructions, when present.'),
+    supportsRefresh: z.boolean().describe('Whether this provider supports background inventory refresh.'),
+    refreshing: z.boolean().describe('Whether a refresh is currently in flight.'),
+    models: z.array(providerInventoryModelDtoSchema).describe('The list of available models.'),
+    lastUpdatedAt: z.string().nullish().describe('When this entry was last successfully refreshed (ISO 8601).'),
+    lastRefreshAttemptAt: z.string().nullish().describe('When a refresh was most recently attempted (ISO 8601).'),
+    lastRefreshError: z.string().nullish().describe('The last refresh failure message, if any.'),
+    stale: z.boolean().describe('Whether we believe this data may be outdated.'),
   })
-  .describe("Provider inventory entry.");
+  .describe('Provider inventory entry.');
 
 export const listProvidersResponseUnstableSchema = z
   .object({
     entries: z.array(providerInventoryEntryDtoSchema),
   })
-  .describe("Provider list response.");
+  .describe('Provider list response.');
 
 export const providerSupportedModelsListRequestUnstableSchema = z
   .object({
     providerId: z.string(),
   })
-  .describe(
-    "List the raw model identifiers returned by a provider's live supported-models API.",
-  );
+  .describe("List the raw model identifiers returned by a provider's live supported-models API.");
 
 export const providerSupportedModelsListResponseUnstableSchema = z.object({
   providerId: z.string(),
@@ -869,9 +690,7 @@ export const providerCatalogListRequestUnstableSchema = z
   .object({
     format: z.string().nullish(),
   })
-  .describe(
-    "List custom-provider catalog entries. Omit `format` to list all formats.",
-  );
+  .describe('List custom-provider catalog entries. Omit `format` to list all formats.');
 
 export const providerTemplateCatalogEntryDtoSchema = z.object({
   providerId: z.string(),
@@ -889,20 +708,20 @@ export const providerCatalogListResponseUnstableSchema = z.object({
 
 export const providerSetupCatalogListRequestUnstableSchema = z
   .object({})
-  .describe("List provider setup catalog entries");
+  .describe('List provider setup catalog entries');
 
-export const providerSetupCategoryDtoSchema = z.enum(["agent", "model"]);
+export const providerSetupCategoryDtoSchema = z.enum(['agent', 'model']);
 
 export const providerSetupMethodDtoSchema = z.enum([
-  "none",
-  "single_api_key",
-  "config_fields",
-  "host_with_oauth_fallback",
-  "oauth_browser",
-  "oauth_device_code",
-  "cloud_credentials",
-  "local",
-  "cli_auth",
+  'none',
+  'single_api_key',
+  'config_fields',
+  'host_with_oauth_fallback',
+  'oauth_browser',
+  'oauth_device_code',
+  'cloud_credentials',
+  'local',
+  'cli_auth',
 ]);
 
 export const providerSetupFieldDtoSchema = z.object({
@@ -914,17 +733,13 @@ export const providerSetupFieldDtoSchema = z.object({
   defaultValue: z.string().nullish(),
 });
 
-export const providerSetupGroupDtoSchema = z.enum(["default", "additional"]);
+export const providerSetupGroupDtoSchema = z.enum(['default', 'additional']);
 
 export const providerSetupCatalogEntryDtoSchema = z.object({
   providerId: z.string(),
   name: z.string(),
   category: providerSetupCategoryDtoSchema,
-  acp: z
-    .boolean()
-    .optional()
-    .default(false)
-    .describe("Whether this provider communicates through ACP."),
+  acp: z.boolean().optional().default(false).describe('Whether this provider communicates through ACP.'),
   description: z.string(),
   setupMethod: providerSetupMethodDtoSchema,
   nativeConnectQuery: z.string().nullish(),
@@ -947,7 +762,7 @@ export const providerCatalogTemplateRequestUnstableSchema = z
   .object({
     providerId: z.string(),
   })
-  .describe("Return the editable template for one catalog provider.");
+  .describe('Return the editable template for one catalog provider.');
 
 export const providerTemplateCapabilitiesDtoSchema = z.object({
   toolCall: z.boolean(),
@@ -994,9 +809,7 @@ export const customProviderCreateRequestUnstableSchema = z
     preservesThinking: z.boolean().nullish(),
     toolshim: z.boolean(),
   })
-  .describe(
-    "Create a custom provider backed by goose's declarative provider store.",
-  );
+  .describe("Create a custom provider backed by goose's declarative provider store.");
 
 export const providerConfigStatusDtoSchema = z.object({
   providerId: z.string(),
@@ -1004,10 +817,10 @@ export const providerConfigStatusDtoSchema = z.object({
 });
 
 export const refreshProviderInventorySkipReasonDtoSchema = z.enum([
-  "unknown_provider",
-  "not_configured",
-  "does_not_support_refresh",
-  "already_refreshing",
+  'unknown_provider',
+  'not_configured',
+  'does_not_support_refresh',
+  'already_refreshing',
 ]);
 
 export const refreshProviderInventorySkipDtoSchema = z.object({
@@ -1017,30 +830,26 @@ export const refreshProviderInventorySkipDtoSchema = z.object({
 
 export const refreshProviderInventoryResponseUnstableSchema = z
   .object({
-    started: z.array(z.string()).describe("Which providers will be refreshed."),
+    started: z.array(z.string()).describe('Which providers will be refreshed.'),
     skipped: z
       .array(refreshProviderInventorySkipDtoSchema)
       .optional()
       .default([])
-      .describe("Which providers were skipped and why."),
+      .describe('Which providers were skipped and why.'),
   })
-  .describe("Refresh acknowledgement.");
+  .describe('Refresh acknowledgement.');
 
 export const customProviderCreateResponseUnstableSchema = z.object({
   providerId: z.string(),
   status: providerConfigStatusDtoSchema,
-  refresh: refreshProviderInventoryResponseUnstableSchema.describe(
-    "Refresh acknowledgement.",
-  ),
+  refresh: refreshProviderInventoryResponseUnstableSchema.describe('Refresh acknowledgement.'),
 });
 
 export const customProviderReadRequestUnstableSchema = z
   .object({
     providerId: z.string(),
   })
-  .describe(
-    "Read a declarative provider config. Custom configs are editable; bundled configs are read-only.",
-  );
+  .describe('Read a declarative provider config. Custom configs are editable; bundled configs are read-only.');
 
 export const customProviderConfigDtoSchema = z.object({
   providerId: z.string(),
@@ -1081,31 +890,23 @@ export const customProviderUpdateRequestUnstableSchema = z
     preservesThinking: z.boolean().nullish(),
     toolshim: z.boolean(),
   })
-  .describe(
-    "Update a custom provider backed by goose's declarative provider store.",
-  );
+  .describe("Update a custom provider backed by goose's declarative provider store.");
 
 export const customProviderUpdateResponseUnstableSchema = z.object({
   providerId: z.string(),
   status: providerConfigStatusDtoSchema,
-  refresh: refreshProviderInventoryResponseUnstableSchema.describe(
-    "Refresh acknowledgement.",
-  ),
+  refresh: refreshProviderInventoryResponseUnstableSchema.describe('Refresh acknowledgement.'),
 });
 
 export const customProviderDeleteRequestUnstableSchema = z
   .object({
     providerId: z.string(),
   })
-  .describe(
-    "Delete a custom provider from goose's declarative provider store.",
-  );
+  .describe("Delete a custom provider from goose's declarative provider store.");
 
 export const customProviderDeleteResponseUnstableSchema = z.object({
   providerId: z.string(),
-  refresh: refreshProviderInventoryResponseUnstableSchema.describe(
-    "Refresh acknowledgement.",
-  ),
+  refresh: refreshProviderInventoryResponseUnstableSchema.describe('Refresh acknowledgement.'),
 });
 
 export const refreshProviderInventoryRequestUnstableSchema = z
@@ -1114,17 +915,15 @@ export const refreshProviderInventoryRequestUnstableSchema = z
       .array(z.string())
       .optional()
       .default([])
-      .describe("Which providers to refresh. Empty means all known providers."),
+      .describe('Which providers to refresh. Empty means all known providers.'),
   })
-  .describe("Trigger a background refresh of provider inventories.");
+  .describe('Trigger a background refresh of provider inventories.');
 
 export const providerReadinessCheckRequestUnstableSchema = z
   .object({
     providerId: z.string(),
   })
-  .describe(
-    "Check whether an ACP provider can initialize and create a session.",
-  );
+  .describe('Check whether an ACP provider can initialize and create a session.');
 
 export const providerReadinessCheckResponseUnstableSchema = z.object({
   providerId: z.string(),
@@ -1136,7 +935,7 @@ export const providerConfigReadRequestUnstableSchema = z
   .object({
     providerId: z.string(),
   })
-  .describe("Read saved configuration field values for one provider.");
+  .describe('Read saved configuration field values for one provider.');
 
 export const providerConfigFieldValueDtoSchema = z.object({
   key: z.string(),
@@ -1154,9 +953,7 @@ export const providerConfigStatusRequestUnstableSchema = z
   .object({
     providerIds: z.array(z.string()).optional().default([]),
   })
-  .describe(
-    "Return provider configured statuses. Empty provider_ids means all providers.",
-  );
+  .describe('Return provider configured statuses. Empty provider_ids means all providers.');
 
 export const providerConfigStatusResponseUnstableSchema = z.object({
   statuses: z.array(providerConfigStatusDtoSchema),
@@ -1172,47 +969,32 @@ export const providerConfigSaveRequestUnstableSchema = z
     providerId: z.string(),
     fields: z.array(providerConfigFieldUpdateSchema),
   })
-  .describe(
-    "Save provider configuration fields and start an inventory refresh when supported.",
-  );
+  .describe('Save provider configuration fields and start an inventory refresh when supported.');
 
 export const providerConfigChangeResponseUnstableSchema = z.object({
   status: providerConfigStatusDtoSchema,
-  refresh: refreshProviderInventoryResponseUnstableSchema.describe(
-    "Refresh acknowledgement.",
-  ),
+  refresh: refreshProviderInventoryResponseUnstableSchema.describe('Refresh acknowledgement.'),
 });
 
 export const providerConfigDeleteRequestUnstableSchema = z
   .object({
     providerId: z.string(),
   })
-  .describe(
-    "Delete provider configuration fields and start an inventory refresh when supported.",
-  );
+  .describe('Delete provider configuration fields and start an inventory refresh when supported.');
 
 export const providerConfigAuthenticateRequestUnstableSchema = z
   .object({
     providerId: z.string(),
   })
-  .describe(
-    "Run a provider-owned native authentication flow and start an inventory refresh when supported.",
-  );
+  .describe('Run a provider-owned native authentication flow and start an inventory refresh when supported.');
 
 export const providerSecretsListRequestUnstableSchema = z
   .object({})
-  .describe("List provider credentials stored locally by goose.");
+  .describe('List provider credentials stored locally by goose.');
 
-export const providerSecretStorageDtoSchema = z.enum([
-  "secret_store",
-  "provider_cache",
-]);
+export const providerSecretStorageDtoSchema = z.enum(['secret_store', 'provider_cache']);
 
-export const providerSecretStatusDtoSchema = z.enum([
-  "valid",
-  "expired",
-  "unknown",
-]);
+export const providerSecretStatusDtoSchema = z.enum(['valid', 'expired', 'unknown']);
 
 export const providerSecretDtoSchema = z.object({
   id: z.string(),
@@ -1237,16 +1019,14 @@ export const providerSecretDeleteRequestUnstableSchema = z
   .object({
     id: z.string(),
   })
-  .describe("Delete a locally stored provider credential by id.");
+  .describe('Delete a locally stored provider credential by id.');
 
 export const canonicalModelInfoRequestUnstableSchema = z
   .object({
     provider: z.string(),
     model: z.string(),
   })
-  .describe(
-    "Look up canonical (bundled-registry) model info for a provider/model pair.",
-  );
+  .describe('Look up canonical (bundled-registry) model info for a provider/model pair.');
 
 export const canonicalModelInfoDtoSchema = z.object({
   provider: z.string(),
@@ -1266,20 +1046,18 @@ export const canonicalModelInfoResponseUnstableSchema = z.object({
 });
 
 export const preferenceKeySchema = z.enum([
-  "autoCompactThreshold",
-  "gooseThinkingEffort",
-  "voiceAutoSubmitPhrases",
-  "voiceDictationProvider",
-  "voiceDictationPreferredMic",
+  'autoCompactThreshold',
+  'gooseThinkingEffort',
+  'voiceAutoSubmitPhrases',
+  'voiceDictationProvider',
+  'voiceDictationPreferredMic',
 ]);
 
 export const preferencesReadRequestUnstableSchema = z
   .object({
     keys: z.array(preferenceKeySchema).optional().default([]),
   })
-  .describe(
-    "Read allowlisted user preferences. Empty `keys` means all supported preferences.",
-  );
+  .describe('Read allowlisted user preferences. Empty `keys` means all supported preferences.');
 
 export const preferenceValueSchema = z.object({
   key: preferenceKeySchema,
@@ -1294,14 +1072,14 @@ export const preferencesSaveRequestUnstableSchema = z
   .object({
     values: z.array(preferenceValueSchema).optional().default([]),
   })
-  .describe("Save allowlisted user preferences.");
+  .describe('Save allowlisted user preferences.');
 
 export const configReadRequestUnstableSchema = z
   .object({
     key: z.string(),
     isSecret: z.boolean().optional().default(false),
   })
-  .describe("Read one goose configuration value.");
+  .describe('Read one goose configuration value.');
 
 export const configReadResponseUnstableSchema = z.object({
   value: z.unknown().optional(),
@@ -1313,18 +1091,18 @@ export const configUpsertRequestUnstableSchema = z
     value: z.unknown(),
     isSecret: z.boolean().optional().default(false),
   })
-  .describe("Create or replace one goose configuration value.");
+  .describe('Create or replace one goose configuration value.');
 
 export const configRemoveRequestUnstableSchema = z
   .object({
     key: z.string(),
     isSecret: z.boolean().optional().default(false),
   })
-  .describe("Remove one goose configuration value.");
+  .describe('Remove one goose configuration value.');
 
 export const configReadAllRequestUnstableSchema = z
   .object({})
-  .describe("Read all non-secret goose configuration values.");
+  .describe('Read all non-secret goose configuration values.');
 
 export const configReadAllResponseUnstableSchema = z.object({
   config: z.record(z.string(), z.unknown()),
@@ -1332,7 +1110,7 @@ export const configReadAllResponseUnstableSchema = z.object({
 
 export const defaultsReadRequestUnstableSchema = z
   .object({})
-  .describe("Read goose default provider and model configuration.");
+  .describe('Read goose default provider and model configuration.');
 
 export const defaultsReadResponseUnstableSchema = z.object({
   providerId: z.string().nullish(),
@@ -1344,15 +1122,15 @@ export const defaultsSaveRequestUnstableSchema = z
     providerId: z.string(),
     modelId: z.string().nullish(),
   })
-  .describe("Save goose default provider and model configuration.");
+  .describe('Save goose default provider and model configuration.');
 
 export const defaultsClearRequestUnstableSchema = z
   .object({})
-  .describe("Clear goose default provider and model configuration.");
+  .describe('Clear goose default provider and model configuration.');
 
 export const onboardingImportSourceKindSchema = z
-  .enum(["goose_config", "claude_desktop"])
-  .describe("Sources that onboarding knows how to discover and import.");
+  .enum(['goose_config', 'claude_desktop'])
+  .describe('Sources that onboarding knows how to discover and import.');
 
 export const onboardingImportScanRequestUnstableSchema = z
   .object({
@@ -1360,11 +1138,9 @@ export const onboardingImportScanRequestUnstableSchema = z
       .array(onboardingImportSourceKindSchema)
       .optional()
       .default([])
-      .describe("Empty means all supported import sources."),
+      .describe('Empty means all supported import sources.'),
   })
-  .describe(
-    "Scan for existing goose and compatible app data that onboarding can import.",
-  );
+  .describe('Scan for existing goose and compatible app data that onboarding can import.');
 
 export const onboardingImportCountsSchema = z.object({
   providers: z.int().min(0),
@@ -1377,9 +1153,7 @@ export const onboardingImportCountsSchema = z.object({
 
 export const onboardingImportCandidateSchema = z.object({
   id: z.string(),
-  sourceKind: onboardingImportSourceKindSchema.describe(
-    "Sources that onboarding knows how to discover and import.",
-  ),
+  sourceKind: onboardingImportSourceKindSchema.describe('Sources that onboarding knows how to discover and import.'),
   displayName: z.string(),
   path: z.string(),
   counts: onboardingImportCountsSchema,
@@ -1395,39 +1169,37 @@ export const onboardingImportApplyRequestUnstableSchema = z
     candidateIds: z.array(z.string()).optional().default([]),
     enableImportedExtensions: z.boolean().optional().default(false),
   })
-  .describe("Import selected onboarding candidates.");
+  .describe('Import selected onboarding candidates.');
 
 export const onboardingImportApplyResponseUnstableSchema = z.object({
   imported: onboardingImportCountsSchema,
   skipped: onboardingImportCountsSchema,
   warnings: z.array(z.string()).optional().default([]),
-  providerDefaults: z
-    .union([defaultsReadResponseUnstableSchema, z.null()])
-    .optional(),
+  providerDefaults: z.union([defaultsReadResponseUnstableSchema, z.null()]).optional(),
 });
 
-export const sessionExportFormatSchema = z.enum(["json", "markdown"]);
+export const sessionExportFormatSchema = z.enum(['json', 'markdown']);
 
 export const exportSessionRequestUnstableSchema = z
   .object({
     sessionId: z.string(),
-    format: sessionExportFormatSchema.optional().default("json"),
+    format: sessionExportFormatSchema.optional().default('json'),
   })
-  .describe("Export a session as a JSON or markdown string.");
+  .describe('Export a session as a JSON or markdown string.');
 
 export const exportSessionResponseUnstableSchema = z
   .object({
     data: z.string(),
   })
   .describe(
-    "Export session response — raw JSON of the goose session with `conversation`,\nor a markdown transcript when `format` is `markdown`.",
+    'Export session response — raw JSON of the goose session with `conversation`,\nor a markdown transcript when `format` is `markdown`.',
   );
 
 export const importSessionRequestUnstableSchema = z
   .object({
     input: z.string(),
   })
-  .describe("Import a session from a serialized session JSON string.");
+  .describe('Import a session from a serialized session JSON string.');
 
 export const importSessionResponseUnstableSchema = z
   .object({
@@ -1436,11 +1208,9 @@ export const importSessionResponseUnstableSchema = z
     updatedAt: z.string().nullish(),
     messageCount: z.int().min(0),
   })
-  .describe(
-    "Import session response — metadata about the newly created session.",
-  );
+  .describe('Import session response — metadata about the newly created session.');
 
-export const recipeExtensionDtoSchema = z.discriminatedUnion("type", [
+export const recipeExtensionDtoSchema = z.discriminatedUnion('type', [
   z.strictObject({
     name: z.string(),
     description: z.string().nullish(),
@@ -1450,10 +1220,8 @@ export const recipeExtensionDtoSchema = z.discriminatedUnion("type", [
     available_tools: z
       .array(z.string())
       .nullish()
-      .describe(
-        "Tool allowlist for this extension. Omit this field to allow all tools.",
-      ),
-    type: z.enum(["builtin"]),
+      .describe('Tool allowlist for this extension. Omit this field to allow all tools.'),
+    type: z.enum(['builtin']),
   }),
   z.strictObject({
     name: z.string(),
@@ -1463,10 +1231,8 @@ export const recipeExtensionDtoSchema = z.discriminatedUnion("type", [
     available_tools: z
       .array(z.string())
       .nullish()
-      .describe(
-        "Tool allowlist for this extension. Omit this field to allow all tools.",
-      ),
-    type: z.enum(["platform"]),
+      .describe('Tool allowlist for this extension. Omit this field to allow all tools.'),
+    type: z.enum(['platform']),
   }),
   z.strictObject({
     name: z.string(),
@@ -1481,10 +1247,8 @@ export const recipeExtensionDtoSchema = z.discriminatedUnion("type", [
     available_tools: z
       .array(z.string())
       .nullish()
-      .describe(
-        "Tool allowlist for this extension. Omit this field to allow all tools.",
-      ),
-    type: z.enum(["stdio"]),
+      .describe('Tool allowlist for this extension. Omit this field to allow all tools.'),
+    type: z.enum(['stdio']),
   }),
   z.strictObject({
     name: z.string(),
@@ -1495,28 +1259,15 @@ export const recipeExtensionDtoSchema = z.discriminatedUnion("type", [
     headers: z.record(z.string(), z.string()).optional(),
     timeout: z.int().min(0).nullish(),
     socket: z.string().nullish(),
-    client_id: z
-      .string()
-      .nullish()
-      .describe(
-        "Pre-registered OAuth client ID for the server's authorization server.",
-      ),
-    client_secret_key: z
-      .string()
-      .nullish()
-      .describe("Name of the env/secret key holding the OAuth client secret."),
-    scopes: z
-      .array(z.string())
-      .optional()
-      .describe("OAuth scopes to request with `client_id`."),
+    client_id: z.string().nullish().describe("Pre-registered OAuth client ID for the server's authorization server."),
+    client_secret_key: z.string().nullish().describe('Name of the env/secret key holding the OAuth client secret.'),
+    scopes: z.array(z.string()).optional().describe('OAuth scopes to request with `client_id`.'),
     bundled: z.boolean().nullish(),
     available_tools: z
       .array(z.string())
       .nullish()
-      .describe(
-        "Tool allowlist for this extension. Omit this field to allow all tools.",
-      ),
-    type: z.enum(["streamable_http"]),
+      .describe('Tool allowlist for this extension. Omit this field to allow all tools.'),
+    type: z.enum(['streamable_http']),
   }),
 ]);
 
@@ -1532,20 +1283,9 @@ export const recipeAuthorDtoSchema = z.object({
   metadata: z.string().nullish(),
 });
 
-export const recipeParameterInputTypeDtoSchema = z.enum([
-  "string",
-  "number",
-  "boolean",
-  "date",
-  "file",
-  "select",
-]);
+export const recipeParameterInputTypeDtoSchema = z.enum(['string', 'number', 'boolean', 'date', 'file', 'select']);
 
-export const recipeParameterRequirementDtoSchema = z.enum([
-  "required",
-  "optional",
-  "user_prompt",
-]);
+export const recipeParameterRequirementDtoSchema = z.enum(['required', 'optional', 'user_prompt']);
 
 export const recipeParameterDtoSchema = z.object({
   key: z.string(),
@@ -1570,7 +1310,7 @@ export const subRecipeDtoSchema = z.object({
 
 export const recipeSuccessCheckDtoSchema = z.strictObject({
   command: z.string(),
-  type: z.enum(["shell"]),
+  type: z.enum(['shell']),
 });
 
 export const recipeRetryConfigDtoSchema = z.object({
@@ -1582,7 +1322,7 @@ export const recipeRetryConfigDtoSchema = z.object({
 });
 
 export const recipeDtoSchema = z.object({
-  version: z.string().optional().default("1.0.0"),
+  version: z.string().optional().default('1.0.0'),
   title: z.string(),
   description: z.string(),
   instructions: z.string().nullish(),
@@ -1601,7 +1341,7 @@ export const encodeRecipeRequestUnstableSchema = z
   .object({
     recipe: recipeDtoSchema,
   })
-  .describe("Encode a recipe as a goose deep link.");
+  .describe('Encode a recipe as a goose deep link.');
 
 export const encodeRecipeResponseUnstableSchema = z.object({
   deeplink: z.string(),
@@ -1611,7 +1351,7 @@ export const decodeRecipeRequestUnstableSchema = z
   .object({
     deeplink: z.string(),
   })
-  .describe("Decode a goose deep link into a recipe.");
+  .describe('Decode a goose deep link into a recipe.');
 
 export const decodeRecipeResponseUnstableSchema = z.object({
   recipe: recipeDtoSchema,
@@ -1621,15 +1361,13 @@ export const scanRecipeRequestUnstableSchema = z
   .object({
     recipe: recipeDtoSchema,
   })
-  .describe("Scan a recipe for security warnings.");
+  .describe('Scan a recipe for security warnings.');
 
 export const scanRecipeResponseUnstableSchema = z.object({
   has_security_warnings: z.boolean(),
 });
 
-export const listRecipesRequestUnstableSchema = z
-  .object({})
-  .describe("List recipes in the local recipe library.");
+export const listRecipesRequestUnstableSchema = z.object({}).describe('List recipes in the local recipe library.');
 
 export const recipeListEntryDtoSchema = z.object({
   id: z.string(),
@@ -1648,7 +1386,7 @@ export const deleteRecipeRequestUnstableSchema = z
   .object({
     id: z.string(),
   })
-  .describe("Delete a recipe from the local recipe library.");
+  .describe('Delete a recipe from the local recipe library.');
 
 export const scheduleRecipeRequestUnstableSchema = z
   .object({
@@ -1669,7 +1407,7 @@ export const saveRecipeRequestUnstableSchema = z
     recipe: recipeDtoSchema,
     id: z.string().nullish(),
   })
-  .describe("Save a recipe to the local recipe library.");
+  .describe('Save a recipe to the local recipe library.');
 
 export const saveRecipeResponseUnstableSchema = z.object({
   id: z.string(),
@@ -1681,7 +1419,7 @@ export const parseRecipeRequestUnstableSchema = z
   .object({
     content: z.string(),
   })
-  .describe("Parse serialized recipe content.");
+  .describe('Parse serialized recipe content.');
 
 export const parseRecipeResponseUnstableSchema = z.object({
   recipe: recipeDtoSchema,
@@ -1691,15 +1429,13 @@ export const recipeToYamlRequestUnstableSchema = z
   .object({
     recipe: recipeDtoSchema,
   })
-  .describe("Serialize a recipe as YAML.");
+  .describe('Serialize a recipe as YAML.');
 
 export const recipeToYamlResponseUnstableSchema = z.object({
   yaml: z.string(),
 });
 
-export const listSchedulesRequestUnstableSchema = z
-  .object({})
-  .describe("List scheduled recipe jobs.");
+export const listSchedulesRequestUnstableSchema = z.object({}).describe('List scheduled recipe jobs.');
 
 export const scheduledJobDtoSchema = z.object({
   id: z.string(),
@@ -1721,44 +1457,34 @@ export const listScheduleSessionsRequestUnstableSchema = z
     scheduleId: z.string(),
     limit: z.int().min(0),
   })
-  .describe("List recent sessions created by a scheduled recipe job.");
+  .describe('List recent sessions created by a scheduled recipe job.');
 
 export const sessionIdSchema = z
   .string()
   .describe(
-    "A unique identifier for a conversation session between a client and agent.\n\nSessions maintain their own context, conversation history, and state,\nallowing multiple independent interactions with the same agent.\n\nSee protocol docs: [Session ID](https://agentclientprotocol.com/protocol/session-setup#session-id)",
+    'A unique identifier for a conversation session between a client and agent.\n\nSessions maintain their own context, conversation history, and state,\nallowing multiple independent interactions with the same agent.\n\nSee protocol docs: [Session ID](https://agentclientprotocol.com/protocol/session-setup#session-id)',
   );
 
 export const sessionInfoSchema = z
   .object({
-    sessionId: sessionIdSchema.describe("Unique identifier for the session"),
-    cwd: z
-      .string()
-      .describe(
-        "The working directory for this session. Must be an absolute path.",
-      ),
+    sessionId: sessionIdSchema.describe('Unique identifier for the session'),
+    cwd: z.string().describe('The working directory for this session. Must be an absolute path.'),
     additionalDirectories: z
       .array(z.string())
       .optional()
       .describe(
-        "Additional workspace roots reported for this session. Each path must be absolute.\n\nWhen present, this is the complete ordered additional-root list reported\nby the Agent. Omitted and empty values are equivalent: the response\nreports no additional roots.",
+        'Additional workspace roots reported for this session. Each path must be absolute.\n\nWhen present, this is the complete ordered additional-root list reported\nby the Agent. Omitted and empty values are equivalent: the response\nreports no additional roots.',
       ),
-    title: z
-      .string()
-      .nullish()
-      .describe("Human-readable title for the session"),
-    updatedAt: z
-      .string()
-      .nullish()
-      .describe("ISO 8601 timestamp of last activity"),
+    title: z.string().nullish().describe('Human-readable title for the session'),
+    updatedAt: z.string().nullish().describe('ISO 8601 timestamp of last activity'),
     _meta: z
       .record(z.string(), z.unknown())
       .nullish()
       .describe(
-        "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+        'The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)',
       ),
   })
-  .describe("Information about a session returned by session/list");
+  .describe('Information about a session returned by session/list');
 
 export const listScheduleSessionsResponseUnstableSchema = z.object({
   sessions: z.array(sessionInfoSchema),
@@ -1770,7 +1496,7 @@ export const createScheduleRequestUnstableSchema = z
     recipe: recipeDtoSchema,
     cron: z.string(),
   })
-  .describe("Create a scheduled recipe job.");
+  .describe('Create a scheduled recipe job.');
 
 export const createScheduleResponseUnstableSchema = z.object({
   job: scheduledJobDtoSchema,
@@ -1780,26 +1506,26 @@ export const deleteScheduleRequestUnstableSchema = z
   .object({
     scheduleId: z.string(),
   })
-  .describe("Delete a scheduled recipe job.");
+  .describe('Delete a scheduled recipe job.');
 
 export const pauseScheduleRequestUnstableSchema = z
   .object({
     scheduleId: z.string(),
   })
-  .describe("Pause a scheduled recipe job.");
+  .describe('Pause a scheduled recipe job.');
 
 export const unpauseScheduleRequestUnstableSchema = z
   .object({
     scheduleId: z.string(),
   })
-  .describe("Resume a paused scheduled recipe job.");
+  .describe('Resume a paused scheduled recipe job.');
 
 export const updateScheduleRequestUnstableSchema = z
   .object({
     scheduleId: z.string(),
     cron: z.string(),
   })
-  .describe("Update the cron expression for a scheduled recipe job.");
+  .describe('Update the cron expression for a scheduled recipe job.');
 
 export const updateScheduleResponseUnstableSchema = z.object({
   job: scheduledJobDtoSchema,
@@ -1809,9 +1535,9 @@ export const runScheduleNowRequestUnstableSchema = z
   .object({
     scheduleId: z.string(),
   })
-  .describe("Run a scheduled recipe job immediately.");
+  .describe('Run a scheduled recipe job immediately.');
 
-export const runScheduleNowStatusSchema = z.enum(["completed", "cancelled"]);
+export const runScheduleNowStatusSchema = z.enum(['completed', 'cancelled']);
 
 export const runScheduleNowResponseUnstableSchema = z.object({
   status: runScheduleNowStatusSchema,
@@ -1822,7 +1548,7 @@ export const killRunningJobRequestUnstableSchema = z
   .object({
     jobId: z.string(),
   })
-  .describe("Stop a currently running scheduled job.");
+  .describe('Stop a currently running scheduled job.');
 
 export const killRunningJobResponseUnstableSchema = z.object({
   message: z.string(),
@@ -1832,7 +1558,7 @@ export const inspectRunningJobRequestUnstableSchema = z
   .object({
     jobId: z.string(),
   })
-  .describe("Inspect the current state of a running scheduled job.");
+  .describe('Inspect the current state of a running scheduled job.');
 
 export const inspectRunningJobResponseUnstableSchema = z.object({
   running: z.boolean(),
@@ -1845,14 +1571,10 @@ export const getSessionInfoRequestUnstableSchema = z
   .object({
     sessionId: z.string(),
   })
-  .describe(
-    "Return list-style metadata for a single session without loading the conversation.",
-  );
+  .describe('Return list-style metadata for a single session without loading the conversation.');
 
 export const getSessionInfoResponseUnstableSchema = z.object({
-  session: sessionInfoSchema.describe(
-    "Information about a session returned by session/list",
-  ),
+  session: sessionInfoSchema.describe('Information about a session returned by session/list'),
 });
 
 export const truncateSessionConversationRequestUnstableSchema = z
@@ -1860,84 +1582,75 @@ export const truncateSessionConversationRequestUnstableSchema = z
     sessionId: z.string(),
     truncateFrom: z.int(),
   })
-  .describe(
-    "Truncate a session conversation from the given message timestamp onward.",
-  );
+  .describe('Truncate a session conversation from the given message timestamp onward.');
 
 export const updateSessionProjectRequestUnstableSchema = z
   .object({
     sessionId: z.string(),
     projectId: z.string().nullish(),
   })
-  .describe("Update the project association for a session.");
+  .describe('Update the project association for a session.');
 
 export const renameSessionRequestUnstableSchema = z
   .object({
     sessionId: z.string(),
     title: z.string(),
   })
-  .describe("Rename a session.");
+  .describe('Rename a session.');
 
 export const archiveSessionRequestUnstableSchema = z
   .object({
     sessionId: z.string(),
   })
-  .describe("Archive a session (soft delete).");
+  .describe('Archive a session (soft delete).');
 
 export const unarchiveSessionRequestUnstableSchema = z
   .object({
     sessionId: z.string(),
   })
-  .describe("Unarchive a previously archived session.");
+  .describe('Unarchive a previously archived session.');
 
 export const sourceTypeSchema = z
-  .enum(["skill", "builtinSkill", "recipe", "subrecipe", "agent", "project"])
-  .describe("The type of source entity.");
+  .enum(['skill', 'builtinSkill', 'recipe', 'subrecipe', 'agent', 'project'])
+  .describe('The type of source entity.');
 
 export const sourceScopeSchema = z
-  .discriminatedUnion("scope", [
+  .discriminatedUnion('scope', [
     z.strictObject({
-      scope: z.enum(["global"]),
+      scope: z.enum(['global']),
     }),
     z.strictObject({
       projectDir: z.string(),
-      scope: z.enum(["projectDir"]),
+      scope: z.enum(['projectDir']),
     }),
     z.strictObject({
       projectId: z.string(),
-      scope: z.enum(["projectId"]),
+      scope: z.enum(['projectId']),
     }),
   ])
-  .describe("Target scope for creating or importing sources.");
+  .describe('Target scope for creating or importing sources.');
 
 export const createSourceRequestUnstableSchema = z
   .object({
-    type: sourceTypeSchema.describe("The type of source entity."),
+    type: sourceTypeSchema.describe('The type of source entity.'),
     name: z.string(),
     description: z.string(),
     content: z.string(),
-    target: sourceScopeSchema.describe(
-      "Target scope for creating or importing sources.",
-    ),
-    properties: z
-      .record(z.string(), z.unknown())
-      .optional()
-      .describe("Arbitrary key/value metadata."),
+    target: sourceScopeSchema.describe('Target scope for creating or importing sources.'),
+    properties: z.record(z.string(), z.unknown()).optional().describe('Arbitrary key/value metadata.'),
   })
-  .describe(
-    "Create a new source in an explicit target scope (global or project-scoped).",
-  );
+  .describe('Create a new source in an explicit target scope (global or project-scoped).');
 
 export const sourceEntrySchema = z
   .object({
-    type: sourceTypeSchema.describe("The type of source entity."),
+    type: sourceTypeSchema.describe('The type of source entity.'),
     name: z.string(),
     description: z.string(),
     content: z.string(),
     path: z
       .string()
       .describe(
-        "Stable on-disk path identifying this source. Pass it back to\nupdate/delete/export to operate on this entry. Skills use the directory\ncontaining `SKILL.md`; projects use the project file path; built-in\nskills use `builtin://skills/<name>` synthetic paths.",
+        'Stable on-disk path identifying this source. Pass it back to\nupdate/delete/export to operate on this entry. Skills use the directory\ncontaining `SKILL.md`; projects use the project file path; built-in\nskills use `builtin://skills/<name>` synthetic paths.',
       ),
     global: z
       .boolean()
@@ -1949,28 +1662,28 @@ export const sourceEntrySchema = z
       .optional()
       .default(false)
       .describe(
-        "True when this source can be modified through source CRUD methods.\nClient-provided bundled sources are returned as read-only.",
+        'True when this source can be modified through source CRUD methods.\nClient-provided bundled sources are returned as read-only.',
       ),
     supportingFiles: z
       .array(z.string())
       .optional()
       .describe(
-        "Paths (absolute) of additional files that live alongside the source.\nOnly skills currently populate this; empty for other source types.",
+        'Paths (absolute) of additional files that live alongside the source.\nOnly skills currently populate this; empty for other source types.',
       ),
     properties: z
       .record(z.string(), z.unknown())
       .optional()
       .describe(
-        "Arbitrary key/value pairs for type-specific metadata (e.g. icon, color,\npreferredProvider for projects). Stored in the frontmatter.",
+        'Arbitrary key/value pairs for type-specific metadata (e.g. icon, color,\npreferredProvider for projects). Stored in the frontmatter.',
       ),
   })
   .describe(
-    "A source discovered by Goose. Filesystem sources use an on-disk path;\nbuilt-in sources use a stable synthetic path. Sources may be either\n`global` (shared across all projects) or project-specific.",
+    'A source discovered by Goose. Filesystem sources use an on-disk path;\nbuilt-in sources use a stable synthetic path. Sources may be either\n`global` (shared across all projects) or project-specific.',
   );
 
 export const createSourceResponseUnstableSchema = z.object({
   source: sourceEntrySchema.describe(
-    "A source discovered by Goose. Filesystem sources use an on-disk path;\nbuilt-in sources use a stable synthetic path. Sources may be either\n`global` (shared across all projects) or project-specific.",
+    'A source discovered by Goose. Filesystem sources use an on-disk path;\nbuilt-in sources use a stable synthetic path. Sources may be either\n`global` (shared across all projects) or project-specific.',
   ),
 });
 
@@ -1983,11 +1696,11 @@ export const listSourcesRequestUnstableSchema = z
       .optional()
       .default(false)
       .describe(
-        "When true, also scan the working directories of all known projects for\nproject-scoped sources (e.g. skills stored under `{workingDir}/.agents/skills/`).",
+        'When true, also scan the working directories of all known projects for\nproject-scoped sources (e.g. skills stored under `{workingDir}/.agents/skills/`).',
       ),
   })
   .describe(
-    "List discovered sources.\n\nIf `type` is omitted or `skill`, this lists filesystem/plugin skills only.\nBoth global and project-scoped skills are included when `project_dir` is\nset. If `type` is `builtinSkill`, this lists shipped read-only built-in\nskills.",
+    'List discovered sources.\n\nIf `type` is omitted or `skill`, this lists filesystem/plugin skills only.\nBoth global and project-scoped skills are included when `project_dir` is\nset. If `type` is `builtinSkill`, this lists shipped read-only built-in\nskills.',
   );
 
 export const listSourcesResponseUnstableSchema = z.object({
@@ -1999,19 +1712,17 @@ export const listAgentMentionsRequestUnstableSchema = z
     cwd: z.string().nullish(),
     sessionId: z.string().nullish(),
   })
-  .describe("List user-facing agent mention targets for `@` autocomplete.");
+  .describe('List user-facing agent mention targets for `@` autocomplete.');
 
 export const agentMentionSchema = z
   .object({
     name: z.string(),
     description: z.string(),
-    sourceType: sourceTypeSchema.describe("The type of source entity."),
+    sourceType: sourceTypeSchema.describe('The type of source entity.'),
     sourcePath: z.string().nullish(),
     mention: z.string(),
   })
-  .describe(
-    "A user-facing `@` mention target backed by an agent, recipe, or subrecipe source.",
-  );
+  .describe('A user-facing `@` mention target backed by an agent, recipe, or subrecipe source.');
 
 export const listAgentMentionsResponseUnstableSchema = z.object({
   agents: z.array(agentMentionSchema),
@@ -2022,49 +1733,37 @@ export const listSlashCommandsRequestUnstableSchema = z
     cwd: z.string().nullish(),
     sessionId: z.string().nullish(),
   })
-  .describe("List slash commands available for `/` autocomplete.");
+  .describe('List slash commands available for `/` autocomplete.');
 
 export const unstructuredCommandInputSchema = z
   .object({
-    hint: z
-      .string()
-      .describe("A hint to display when the input hasn't been provided yet"),
+    hint: z.string().describe("A hint to display when the input hasn't been provided yet"),
     _meta: z
       .record(z.string(), z.unknown())
       .nullish()
       .describe(
-        "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+        'The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)',
       ),
   })
-  .describe(
-    "All text that was typed after the command name is provided as input.",
-  );
+  .describe('All text that was typed after the command name is provided as input.');
 
-export const availableCommandInputSchema =
-  unstructuredCommandInputSchema.describe(
-    "The input specification for a command.",
-  );
+export const availableCommandInputSchema = unstructuredCommandInputSchema.describe(
+  'The input specification for a command.',
+);
 
 export const availableCommandSchema = z
   .object({
-    name: z
-      .string()
-      .describe("Command name (e.g., `create_plan`, `research_codebase`)."),
-    description: z
-      .string()
-      .describe("Human-readable description of what the command does."),
-    input: z
-      .union([availableCommandInputSchema, z.null()])
-      .optional()
-      .describe("Input for the command if required"),
+    name: z.string().describe('Command name (e.g., `create_plan`, `research_codebase`).'),
+    description: z.string().describe('Human-readable description of what the command does.'),
+    input: z.union([availableCommandInputSchema, z.null()]).optional().describe('Input for the command if required'),
     _meta: z
       .record(z.string(), z.unknown())
       .nullish()
       .describe(
-        "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+        'The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)',
       ),
   })
-  .describe("Information about a command.");
+  .describe('Information about a command.');
 
 export const listSlashCommandsResponseUnstableSchema = z.object({
   availableCommands: z.array(availableCommandSchema),
@@ -2072,7 +1771,7 @@ export const listSlashCommandsResponseUnstableSchema = z.object({
 
 export const updateSourceRequestUnstableSchema = z
   .object({
-    type: sourceTypeSchema.describe("The type of source entity."),
+    type: sourceTypeSchema.describe('The type of source entity.'),
     path: z.string(),
     name: z.string(),
     description: z.string(),
@@ -2084,29 +1783,27 @@ export const updateSourceRequestUnstableSchema = z
         "When `Some`, replaces all stored properties on the source. When\n`None` (or omitted), the source's existing properties are\npreserved. Callers that don't model the full property bag (e.g.\nthe skills editor, which only edits name/description/content)\nshould omit this so per-skill metadata isn't silently erased.",
       ),
   })
-  .describe(
-    "Update an existing source's name, description, and content by absolute path.",
-  );
+  .describe("Update an existing source's name, description, and content by absolute path.");
 
 export const updateSourceResponseUnstableSchema = z.object({
   source: sourceEntrySchema.describe(
-    "A source discovered by Goose. Filesystem sources use an on-disk path;\nbuilt-in sources use a stable synthetic path. Sources may be either\n`global` (shared across all projects) or project-specific.",
+    'A source discovered by Goose. Filesystem sources use an on-disk path;\nbuilt-in sources use a stable synthetic path. Sources may be either\n`global` (shared across all projects) or project-specific.',
   ),
 });
 
 export const deleteSourceRequestUnstableSchema = z
   .object({
-    type: sourceTypeSchema.describe("The type of source entity."),
+    type: sourceTypeSchema.describe('The type of source entity.'),
     path: z.string(),
   })
-  .describe("Delete a source and its on-disk directory by absolute path.");
+  .describe('Delete a source and its on-disk directory by absolute path.');
 
 export const exportSourceRequestUnstableSchema = z
   .object({
-    type: sourceTypeSchema.describe("The type of source entity."),
+    type: sourceTypeSchema.describe('The type of source entity.'),
     path: z.string(),
   })
-  .describe("Export a source at an absolute path as a portable JSON payload.");
+  .describe('Export a source at an absolute path as a portable JSON payload.');
 
 export const exportSourceResponseUnstableSchema = z.object({
   json: z.string(),
@@ -2116,12 +1813,10 @@ export const exportSourceResponseUnstableSchema = z.object({
 export const importSourcesRequestUnstableSchema = z
   .object({
     data: z.string(),
-    target: sourceScopeSchema.describe(
-      "Target scope for creating or importing sources.",
-    ),
+    target: sourceScopeSchema.describe('Target scope for creating or importing sources.'),
   })
   .describe(
-    "Import a source from a JSON export payload produced by `_goose/unstable/sources/export`.\nThe imported source is written into the explicit target scope; on name\ncollisions a `-imported` suffix is appended.",
+    'Import a source from a JSON export payload produced by `_goose/unstable/sources/export`.\nThe imported source is written into the explicit target scope; on name\ncollisions a `-imported` suffix is appended.',
   );
 
 export const importSourcesResponseUnstableSchema = z.object({
@@ -2130,23 +1825,21 @@ export const importSourcesResponseUnstableSchema = z.object({
 
 export const dictationTranscribeRequestUnstableSchema = z
   .object({
-    audio: z.string().describe("Base64-encoded audio data"),
+    audio: z.string().describe('Base64-encoded audio data'),
     mimeType: z.string().describe('MIME type (e.g. "audio/wav", "audio/webm")'),
-    provider: z
-      .string()
-      .describe('Provider to use: "openai", "groq", "elevenlabs", or "local"'),
+    provider: z.string().describe('Provider to use: "openai", "groq", "elevenlabs", or "local"'),
   })
-  .describe("Transcribe audio via a dictation provider.");
+  .describe('Transcribe audio via a dictation provider.');
 
 export const dictationTranscribeResponseUnstableSchema = z
   .object({
     text: z.string(),
   })
-  .describe("Transcription result.");
+  .describe('Transcription result.');
 
 export const dictationConfigRequestUnstableSchema = z
   .object({})
-  .describe("Get the configuration status of all dictation providers.");
+  .describe('Get the configuration status of all dictation providers.');
 
 export const dictationModelOptionSchema = z.object({
   id: z.string(),
@@ -2167,17 +1860,17 @@ export const dictationProviderStatusEntrySchema = z
     selectedModel: z.string().nullish(),
     availableModels: z.array(dictationModelOptionSchema).optional().default([]),
   })
-  .describe("Per-provider configuration status.");
+  .describe('Per-provider configuration status.');
 
 export const dictationConfigResponseUnstableSchema = z
   .object({
     providers: z.record(z.string(), dictationProviderStatusEntrySchema),
   })
-  .describe("Dictation config response — map of provider name to status.");
+  .describe('Dictation config response — map of provider name to status.');
 
 export const dictationModelsListRequestUnstableSchema = z
   .object({})
-  .describe("List available local Whisper models with their download status.");
+  .describe('List available local Whisper models with their download status.');
 
 export const dictationLocalModelStatusSchema = z.object({
   id: z.string(),
@@ -2197,13 +1890,13 @@ export const dictationModelDownloadRequestUnstableSchema = z
   .object({
     modelId: z.string(),
   })
-  .describe("Kick off a background download of a local Whisper model.");
+  .describe('Kick off a background download of a local Whisper model.');
 
 export const dictationModelDownloadProgressRequestUnstableSchema = z
   .object({
     modelId: z.string(),
   })
-  .describe("Poll the progress of an in-flight download.");
+  .describe('Poll the progress of an in-flight download.');
 
 export const dictationDownloadProgressSchema = z.object({
   bytesDownloaded: z.int().min(0),
@@ -2211,9 +1904,7 @@ export const dictationDownloadProgressSchema = z.object({
   progressPercent: z.number(),
   status: z
     .string()
-    .describe(
-      'serde lowercase of DownloadStatus: "downloading" | "completed" | "failed" | "cancelled"',
-    ),
+    .describe('serde lowercase of DownloadStatus: "downloading" | "completed" | "failed" | "cancelled"'),
   error: z.string().nullish(),
 });
 
@@ -2221,30 +1912,26 @@ export const dictationModelDownloadProgressResponseUnstableSchema = z.object({
   progress: z
     .union([dictationDownloadProgressSchema, z.null()])
     .optional()
-    .describe("None when no download is active for this model id."),
+    .describe('None when no download is active for this model id.'),
 });
 
 export const dictationModelCancelRequestUnstableSchema = z
   .object({
     modelId: z.string(),
   })
-  .describe("Cancel an in-flight download.");
+  .describe('Cancel an in-flight download.');
 
 export const dictationModelDeleteRequestUnstableSchema = z
   .object({
     modelId: z.string(),
   })
-  .describe("Delete a downloaded local Whisper model from disk.");
+  .describe('Delete a downloaded local Whisper model from disk.');
 
 export const localInferenceModelsListRequestUnstableSchema = z
   .object({})
-  .describe("List locally available inference models.");
+  .describe('List locally available inference models.');
 
-export const localInferenceDownloadStateSchema = z.enum([
-  "NotDownloaded",
-  "Downloading",
-  "Downloaded",
-]);
+export const localInferenceDownloadStateSchema = z.enum(['NotDownloaded', 'Downloading', 'Downloaded']);
 
 export const localInferenceModelDownloadStatusDtoSchema = z.object({
   state: localInferenceDownloadStateSchema,
@@ -2254,9 +1941,9 @@ export const localInferenceModelDownloadStatusDtoSchema = z.object({
   speedBps: z.int().min(0).nullish(),
 });
 
-export const localInferenceSamplingConfigSchema = z.discriminatedUnion("type", [
+export const localInferenceSamplingConfigSchema = z.discriminatedUnion('type', [
   z.strictObject({
-    type: z.enum(["Greedy"]),
+    type: z.enum(['Greedy']),
   }),
   z.strictObject({
     temperature: z.number(),
@@ -2264,33 +1951,29 @@ export const localInferenceSamplingConfigSchema = z.discriminatedUnion("type", [
     topP: z.number(),
     minP: z.number(),
     seed: z.int().min(0).nullish(),
-    type: z.enum(["Temperature"]),
+    type: z.enum(['Temperature']),
   }),
   z.strictObject({
     tau: z.number(),
     eta: z.number(),
     seed: z.int().min(0).nullish(),
-    type: z.enum(["MirostatV2"]),
+    type: z.enum(['MirostatV2']),
   }),
 ]);
 
-export const localInferenceToolCallingModeSchema = z.enum([
-  "auto",
-  "force_native",
-  "force_emulated",
-]);
+export const localInferenceToolCallingModeSchema = z.enum(['auto', 'force_native', 'force_emulated']);
 
-export const localInferenceChatTemplateSchema = z.discriminatedUnion("type", [
+export const localInferenceChatTemplateSchema = z.discriminatedUnion('type', [
   z.strictObject({
-    type: z.enum(["embedded"]),
+    type: z.enum(['embedded']),
   }),
   z.strictObject({
     name: z.string(),
-    type: z.enum(["builtin"]),
+    type: z.enum(['builtin']),
   }),
   z.strictObject({
     template: z.string(),
-    type: z.enum(["custom_inline"]),
+    type: z.enum(['custom_inline']),
   }),
 ]);
 
@@ -2299,15 +1982,13 @@ export const localInferenceModelSettingsDtoSchema = z.object({
   contextSize: z.int().min(0).nullish(),
   maxOutputTokens: z.int().min(0).nullish(),
   draftModel: z.string().nullish(),
-  sampling: localInferenceSamplingConfigSchema
-    .optional()
-    .default({
-      type: "Temperature",
-      temperature: 0.800000011920929,
-      topK: 40,
-      topP: 0.949999988079071,
-      minP: 0.05000000074505806,
-    }),
+  sampling: localInferenceSamplingConfigSchema.optional().default({
+    type: 'Temperature',
+    temperature: 0.800000011920929,
+    topK: 40,
+    topP: 0.949999988079071,
+    minP: 0.05000000074505806,
+  }),
   repeatPenalty: z.number(),
   repeatLastN: z.int(),
   frequencyPenalty: z.number(),
@@ -2317,10 +1998,8 @@ export const localInferenceModelSettingsDtoSchema = z.object({
   useMlock: z.boolean(),
   flashAttention: z.boolean().nullish(),
   nThreads: z.int().nullish(),
-  toolCalling: localInferenceToolCallingModeSchema.optional().default("auto"),
-  chatTemplate: localInferenceChatTemplateSchema
-    .optional()
-    .default({ type: "embedded" }),
+  toolCalling: localInferenceToolCallingModeSchema.optional().default('auto'),
+  chatTemplate: localInferenceChatTemplateSchema.optional().default({ type: 'embedded' }),
   enableThinking: z.boolean(),
   visionCapable: z.boolean(),
   imageTokenEstimate: z.int().min(0),
@@ -2338,9 +2017,7 @@ export const localInferenceModelDtoSchema = z.object({
   isLoaded: z.boolean(),
   settings: localInferenceModelSettingsDtoSchema,
   visionCapable: z.boolean(),
-  mmprojStatus: z
-    .union([localInferenceModelDownloadStatusDtoSchema, z.null()])
-    .optional(),
+  mmprojStatus: z.union([localInferenceModelDownloadStatusDtoSchema, z.null()]).optional(),
 });
 
 export const localInferenceModelsListResponseUnstableSchema = z.object({
@@ -2353,7 +2030,7 @@ export const localInferenceModelDownloadRequestUnstableSchema = z
     backendId: z.string().nullish(),
     variantId: z.string().nullish(),
   })
-  .describe("Download a model for local inference.");
+  .describe('Download a model for local inference.');
 
 export const localInferenceModelDownloadResponseUnstableSchema = z.object({
   modelId: z.string(),
@@ -2363,7 +2040,7 @@ export const localInferenceModelDownloadProgressRequestUnstableSchema = z
   .object({
     modelId: z.string(),
   })
-  .describe("Get the progress of a local model download.");
+  .describe('Get the progress of a local model download.');
 
 export const localInferenceDownloadProgressDtoSchema = z.object({
   modelId: z.string(),
@@ -2377,36 +2054,33 @@ export const localInferenceDownloadProgressDtoSchema = z.object({
   taskExited: z.boolean(),
 });
 
-export const localInferenceModelDownloadProgressResponseUnstableSchema =
-  z.object({
-    progress: z
-      .union([localInferenceDownloadProgressDtoSchema, z.null()])
-      .optional(),
-  });
+export const localInferenceModelDownloadProgressResponseUnstableSchema = z.object({
+  progress: z.union([localInferenceDownloadProgressDtoSchema, z.null()]).optional(),
+});
 
 export const localInferenceModelDownloadCancelRequestUnstableSchema = z
   .object({
     modelId: z.string(),
   })
-  .describe("Cancel a local model download.");
+  .describe('Cancel a local model download.');
 
 export const localInferenceModelDeleteRequestUnstableSchema = z
   .object({
     modelId: z.string(),
   })
-  .describe("Delete a downloaded local inference model.");
+  .describe('Delete a downloaded local inference model.');
 
 export const localInferenceModelEvictRequestUnstableSchema = z
   .object({
     modelId: z.string(),
   })
-  .describe("Evict a local inference model from memory.");
+  .describe('Evict a local inference model from memory.');
 
 export const localInferenceModelSettingsReadRequestUnstableSchema = z
   .object({
     modelId: z.string(),
   })
-  .describe("Read the sampling settings for a local inference model.");
+  .describe('Read the sampling settings for a local inference model.');
 
 export const localInferenceModelSettingsReadResponseUnstableSchema = z.object({
   settings: localInferenceModelSettingsDtoSchema,
@@ -2417,20 +2091,18 @@ export const localInferenceModelSettingsUpdateRequestUnstableSchema = z
     modelId: z.string(),
     settings: localInferenceModelSettingsDtoSchema,
   })
-  .describe("Update the sampling settings for a local inference model.");
+  .describe('Update the sampling settings for a local inference model.');
 
-export const localInferenceModelSettingsUpdateResponseUnstableSchema = z.object(
-  {
-    settings: localInferenceModelSettingsDtoSchema,
-  },
-);
+export const localInferenceModelSettingsUpdateResponseUnstableSchema = z.object({
+  settings: localInferenceModelSettingsDtoSchema,
+});
 
 export const localInferenceHuggingFaceSearchRequestUnstableSchema = z
   .object({
     query: z.string(),
     limit: z.int().min(0).nullish(),
   })
-  .describe("Search Hugging Face for local inference models.");
+  .describe('Search Hugging Face for local inference models.');
 
 export const localInferenceHfGgufFileDtoSchema = z.object({
   filename: z.string(),
@@ -2462,10 +2134,7 @@ export const localInferenceHfModelInfoDtoSchema = z.object({
   modelName: z.string(),
   downloads: z.int().min(0),
   ggufFiles: z.array(localInferenceHfGgufFileDtoSchema).optional().default([]),
-  variants: z
-    .array(localInferenceHfModelVariantDtoSchema)
-    .optional()
-    .default([]),
+  variants: z.array(localInferenceHfModelVariantDtoSchema).optional().default([]),
 });
 
 export const localInferenceHuggingFaceSearchResponseUnstableSchema = z.object({
@@ -2476,25 +2145,23 @@ export const localInferenceHuggingFaceRepoVariantsRequestUnstableSchema = z
   .object({
     repoId: z.string(),
   })
-  .describe("List downloadable variants of a Hugging Face model repository.");
+  .describe('List downloadable variants of a Hugging Face model repository.');
 
-export const localInferenceHuggingFaceRepoVariantsResponseUnstableSchema =
-  z.object({
-    variants: z.array(localInferenceHfModelVariantDtoSchema),
-    recommendedIndex: z.int().min(0).nullish(),
-    availableMemoryBytes: z.int().min(0),
-    downloadedQuants: z.array(z.string()),
-    downloadedVariants: z.array(z.string()),
-  });
+export const localInferenceHuggingFaceRepoVariantsResponseUnstableSchema = z.object({
+  variants: z.array(localInferenceHfModelVariantDtoSchema),
+  recommendedIndex: z.int().min(0).nullish(),
+  availableMemoryBytes: z.int().min(0),
+  downloadedQuants: z.array(z.string()),
+  downloadedVariants: z.array(z.string()),
+});
 
 export const localInferenceBuiltinChatTemplatesListRequestUnstableSchema = z
   .object({})
-  .describe("List built-in chat templates for local inference.");
+  .describe('List built-in chat templates for local inference.');
 
-export const localInferenceBuiltinChatTemplatesListResponseUnstableSchema =
-  z.object({
-    templates: z.array(z.string()),
-  });
+export const localInferenceBuiltinChatTemplatesListResponseUnstableSchema = z.object({
+  templates: z.array(z.string()),
+});
 
 export const sessionUsageUpdateSchema = z
   .object({
@@ -2504,16 +2171,16 @@ export const sessionUsageUpdateSchema = z
     accumulatedOutputTokens: z.int().min(0),
     accumulatedCost: z.number().nullish(),
   })
-  .describe("Streaming context-window usage update for a session.");
+  .describe('Streaming context-window usage update for a session.');
 
-export const statusMessageSchema = z.discriminatedUnion("type", [
+export const statusMessageSchema = z.discriminatedUnion('type', [
   z.strictObject({
     message: z.string(),
-    type: z.enum(["notice"]),
+    type: z.enum(['notice']),
   }),
   z.strictObject({
     message: z.string(),
-    type: z.enum(["progress"]),
+    type: z.enum(['progress']),
   }),
 ]);
 
@@ -2522,12 +2189,12 @@ export const statusMessageUpdateSchema = z
     status: statusMessageSchema,
   })
   .describe(
-    "Live UI/session status. This is not conversation transcript content, and\nshould not be persisted or replayed as history.",
+    'Live UI/session status. This is not conversation transcript content, and\nshould not be persisted or replayed as history.',
   );
 
 export const costSourceDataSchema = z
-  .union([z.enum(["provider_reported"]), z.enum(["estimated"])])
-  .describe("Wire mirror of the conversation `CostSource`.");
+  .union([z.enum(['provider_reported']), z.enum(['estimated'])])
+  .describe('Wire mirror of the conversation `CostSource`.');
 
 export const messageUsageDataSchema = z
   .object({
@@ -2542,34 +2209,30 @@ export const messageUsageDataSchema = z
       .int()
       .min(0)
       .nullish()
-      .describe(
-        "Wall-clock generation time, used by the client for a tokens/sec readout.",
-      ),
+      .describe('Wall-clock generation time, used by the client for a tokens/sec readout.'),
     timeToFirstTokenMs: z.int().min(0).nullish(),
     isCompaction: z
       .boolean()
       .optional()
       .default(false)
-      .describe(
-        "Usage from a compaction/summarization call rather than a normal turn.",
-      ),
+      .describe('Usage from a compaction/summarization call rather than a normal turn.'),
   })
   .describe(
-    "Wire mirror of the conversation `MessageUsage` (this crate cannot depend on\ngoose-provider-types); field names and serde casing MUST stay in parity.",
+    'Wire mirror of the conversation `MessageUsage` (this crate cannot depend on\nbcaip-provider-types); field names and serde casing MUST stay in parity.',
   );
 
 export const messageUsageUpdateSchema = z
   .object({
     messageId: z.string().nullish(),
     usage: messageUsageDataSchema.describe(
-      "Wire mirror of the conversation `MessageUsage` (this crate cannot depend on\ngoose-provider-types); field names and serde casing MUST stay in parity.",
+      'Wire mirror of the conversation `MessageUsage` (this crate cannot depend on\nbcaip-provider-types); field names and serde casing MUST stay in parity.',
     ),
   })
   .describe(
     "Per-message token usage/cost/timing, keyed by the message id used for\nchunk matching. Sent live after a turn's messages and on replay.",
   );
 
-export const liveVoiceInteractionOutcomeSchema = z.enum(["stopped", "failed"]);
+export const liveVoiceInteractionOutcomeSchema = z.enum(['stopped', 'failed']);
 
 export const liveVoiceInteractionEndedUpdateSchema = z.object({
   interactionId: z.string(),
@@ -2577,18 +2240,18 @@ export const liveVoiceInteractionEndedUpdateSchema = z.object({
 });
 
 export const gooseSessionUpdateSchema = z
-  .discriminatedUnion("sessionUpdate", [
+  .discriminatedUnion('sessionUpdate', [
     sessionUsageUpdateSchema.extend({
-      sessionUpdate: z.enum(["usage_update"]),
+      sessionUpdate: z.enum(['usage_update']),
     }),
     statusMessageUpdateSchema.extend({
-      sessionUpdate: z.enum(["status_message"]),
+      sessionUpdate: z.enum(['status_message']),
     }),
     messageUsageUpdateSchema.extend({
-      sessionUpdate: z.enum(["message_usage"]),
+      sessionUpdate: z.enum(['message_usage']),
     }),
     liveVoiceInteractionEndedUpdateSchema.extend({
-      sessionUpdate: z.enum(["live_voice_interaction_ended"]),
+      sessionUpdate: z.enum(['live_voice_interaction_ended']),
     }),
   ])
   .describe(
@@ -2614,7 +2277,7 @@ export const providerDeviceCodeNotificationUnstableSchema = z
     expiresIn: z.int().min(0),
   })
   .describe(
-    "Dedicated provider notification for OAuth device-code flow.\nSent during provider authentication when the ACP client supports\n`goose.customNotifications` — avoids a fake empty session ID.",
+    'Dedicated provider notification for OAuth device-code flow.\nSent during provider authentication when the ACP client supports\n`goose.customNotifications` — avoids a fake empty session ID.',
   );
 
 export const requestRecipeParamsUnstableSchema = z
@@ -2625,10 +2288,10 @@ export const requestRecipeParamsUnstableSchema = z
   })
   .describe("Ask the client to provide values for a recipe's parameters.");
 
-export const recipeParamsActionSchema = z.enum(["submit", "cancel"]);
+export const recipeParamsActionSchema = z.enum(['submit', 'cancel']);
 
 export const recipeParamsResponseUnstableSchema = z.object({
-  action: recipeParamsActionSchema.optional().default("submit"),
+  action: recipeParamsActionSchema.optional().default('submit'),
   values: z.record(z.string(), z.string()).optional().default({}),
 });
 
@@ -2855,10 +2518,7 @@ export const extNotificationSchema = z.object({
   method: z.string(),
   params: z
     .union([
-      z.union([
-        gooseSessionNotificationUnstableSchema,
-        providerDeviceCodeNotificationUnstableSchema,
-      ]),
+      z.union([gooseSessionNotificationUnstableSchema, providerDeviceCodeNotificationUnstableSchema]),
       z.object({}),
     ])
     .optional(),
@@ -2873,9 +2533,7 @@ export const extAgentRequestSchema = z.object({
 export const extAgentResponseSchema = z.union([
   z.object({
     id: z.string(),
-    result: z
-      .union([recipeParamsResponseUnstableSchema, z.unknown()])
-      .optional(),
+    result: z.union([recipeParamsResponseUnstableSchema, z.unknown()]).optional(),
   }),
   z.object({
     error: z.object({

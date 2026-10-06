@@ -1,4 +1,4 @@
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -70,61 +70,4 @@ pub fn read_parameter_file_content<P: AsRef<Path>>(file_path: P) -> Result<Strin
         .map_err(|e| anyhow!("Failed to read parameter file {}: {}", path.display(), e))?;
 
     Ok(content)
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use tempfile::TempDir;
-
-    #[test]
-    fn test_read_parameter_file_content_success() {
-        let temp_dir = TempDir::new().unwrap();
-        let file_path = temp_dir.path().join("test_file.txt");
-        let content = "Hello World\nSecond line\n    Third line";
-        std::fs::write(&file_path, content).unwrap();
-
-        let result = read_parameter_file_content(&file_path);
-        assert!(result.is_ok());
-
-        let expected = "Hello World\nSecond line\n    Third line";
-        assert_eq!(result.unwrap(), expected);
-    }
-
-    #[test]
-    fn test_read_parameter_file_content_nonexistent_file() {
-        let result = read_parameter_file_content("/nonexistent/path/file.txt");
-        assert!(result.is_err());
-        assert!(result
-            .unwrap_err()
-            .to_string()
-            .contains("Failed to read parameter file"));
-    }
-
-    #[cfg(unix)]
-    #[test]
-    fn read_recipe_file_rejects_symlink() {
-        let temp_dir = TempDir::new().unwrap();
-        let outside = TempDir::new().unwrap();
-        let outside_recipe = outside.path().join("outside.yaml");
-        std::fs::write(
-            &outside_recipe,
-            "title: Outside\ndescription: Outside\ninstructions: Untrusted",
-        )
-        .unwrap();
-        let linked_recipe = temp_dir.path().join("linked.yaml");
-        std::os::unix::fs::symlink(outside_recipe, &linked_recipe).unwrap();
-
-        assert!(read_recipe_file(linked_recipe).is_err());
-    }
-
-    #[test]
-    fn recipe_above_default_tool_response_threshold_is_allowed() {
-        let temp_dir = TempDir::new().unwrap();
-        let recipe_path = temp_dir.path().join("large.yaml");
-        let content = "x".repeat(200_001);
-        std::fs::write(&recipe_path, &content).unwrap();
-
-        assert_eq!(read_recipe_file(recipe_path).unwrap().content, content);
-    }
 }

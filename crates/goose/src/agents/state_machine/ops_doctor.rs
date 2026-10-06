@@ -1,17 +1,15 @@
 //! Runs session diagnostics and feeds repair context back into the turn.
 
-use anyhow::{anyhow, Result};
-use async_trait::async_trait;
-use rmcp::model::Role;
-
-use crate::agents::state_machine::{
-    applied, messages_since_kickoff, not_applicable, yielded_with, ConversationEffect, Emitter,
-    GooseEffect, Operation, OperationResult, SlashCommand,
-};
-use crate::conversation::message::Message;
-use crate::conversation::Conversation;
+use crate::agents::state_machine::GooseEffect;
 use crate::session::Session;
-
+use anyhow::{Result, anyhow};
+use async_trait::async_trait;
+use bcaip_agent::operation::{
+    ConversationEffect, Emitter, Operation, OperationResult, SlashCommand, applied,
+    messages_since_kickoff, not_applicable, yielded_with,
+};
+use bcaip_provider_types::conversations::{Conversation, Message};
+use rmcp::model::Role;
 pub struct DoctorOperation;
 
 #[async_trait]

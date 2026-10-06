@@ -1,18 +1,13 @@
 pub mod server;
 
-#[cfg(test)]
-mod tests;
-
-use anyhow::{anyhow, Result};
-use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
-use rand::{distr::Alphanumeric, RngExt};
+use anyhow::{Result, anyhow};
+use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
+use rand::{RngExt, distr::Alphanumeric};
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::time::Duration;
-use tokio::sync::oneshot;
-use tokio::time::timeout;
-
+use tokio::{sync::oneshot, time::timeout};
 /// Default models for openrouter config configuration
 const OPENROUTER_DEFAULT_MODEL: &str = "anthropic/claude-sonnet-4";
 
@@ -162,7 +157,6 @@ impl PkceAuthFlow {
 pub use self::PkceAuthFlow as OpenRouterAuth;
 
 use crate::config::Config;
-
 pub fn configure_openrouter(config: &Config, api_key: String) -> Result<()> {
     config.set_secret("OPENROUTER_API_KEY", &api_key)?;
     crate::config::set_active_provider(

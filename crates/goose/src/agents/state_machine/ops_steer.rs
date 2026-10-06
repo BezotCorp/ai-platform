@@ -1,22 +1,18 @@
 //! Adds queued user guidance when the agent is between model and tool turns.
 
-use std::collections::VecDeque;
-use std::sync::Arc;
-
-use anyhow::Result;
-use async_trait::async_trait;
-use tokio::sync::Mutex;
-
 use crate::agents::state_machine::effects::GooseEffect;
-use crate::agents::state_machine::{
-    applied, ends_turn, last_effective_role, messages_since_kickoff, not_applicable, Emitter,
-    Operation, OperationResult,
-};
-use crate::conversation::message::Message;
-use crate::conversation::{Conversation, EffectiveRole};
 use crate::hooks::{HookContext, HookEvent, HookManager};
 use crate::session::Session;
-
+use anyhow::Result;
+use async_trait::async_trait;
+use bcaip_agent::operation::{
+    Emitter, Operation, OperationResult, applied, ends_turn, last_effective_role,
+    messages_since_kickoff, not_applicable,
+};
+use bcaip_provider_types::conversations::Message;
+use bcaip_provider_types::conversations::{Conversation, EffectiveRole};
+use std::{collections::VecDeque, sync::Arc};
+use tokio::sync::Mutex;
 pub(crate) type SteerQueue = Arc<Mutex<VecDeque<Message>>>;
 
 pub struct SteerOperation {

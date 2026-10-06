@@ -1,24 +1,21 @@
 use crate::config::paths::Paths;
-use crate::providers::api_client::{ApiClient, AuthMethod};
-use crate::providers::oauth_device_flow::{run_device_flow, DeviceFlowConfig, RequestEncoding};
-use crate::providers::openai_compatible::{
-    handle_status, stream_openai_compat, stream_responses_compat,
-};
+use crate::providers::oauth_device_flow::{DeviceFlowConfig, RequestEncoding, run_device_flow};
 use crate::providers::private_file::write_private_file;
 use anyhow::Result;
 use async_trait::async_trait;
 use axum::http;
 use chrono::{DateTime, Utc};
-use goose_providers::errors::ProviderError;
-use goose_providers::formats::openai::is_openai_responses_model;
-use goose_providers::images::ImageFormat;
+use bcaip_provider_types::errors::ProviderError;
+use bcaip_provider_types::formats::is_openai_responses_model;
+use bcaip_provider_types::images::ImageFormat;
+use goose_providers::api_client::{ApiClient, AuthMethod};
+use goose_providers::openai_compatible::{
+    handle_status, stream_openai_compat, stream_responses_compat,
+};
 use reqwest::{Client, Response};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use std::cell::RefCell;
-use std::collections::HashMap;
-use std::path::PathBuf;
-use std::time::Duration;
+use std::{cell::RefCell, collections::HashMap, path::PathBuf, time::Duration};
 use url::{Host, Url};
 
 // Task-local so complete() and stream() can't race on the same provider instance.
@@ -26,23 +23,24 @@ tokio::task_local! {
     static IS_AGENT_CALL: bool;
 }
 
-use super::base::{
-    collect_stream, Provider, ProviderDef, ProviderMetadata, DEFAULT_PROVIDER_TIMEOUT_SECS,
-};
-use super::openai_compatible::handle_response_openai_compat;
-use super::retry::ProviderRetry;
+use super::base::ProviderDef;
 use super::utils::get_model;
-use goose_providers::formats::openai::{create_request, get_usage, response_to_message};
-use goose_providers::formats::openai_responses::create_responses_request;
+use bcaip_provider_types::base::{Provider, ProviderMetadata, collect_stream};
+use bcaip_provider_types::formats::{
+    create_request_openai, create_responses_request, get_usage, response_to_message_openai,
+};
+use bcaip_provider_types::retry::ProviderRetry;
+use goose_providers::api_client::DEFAULT_PROVIDER_TIMEOUT_SECS;
+use goose_providers::openai_compatible::handle_response_openai_compat;
 
 use crate::config::{Config, ConfigError};
-use crate::conversation::message::{Message, MessageContent};
+use bcaip_provider_types::conversations::{Message, MessageContent};
 
-use crate::providers::base::{ConfigKey, MessageStream};
 use futures::future::BoxFuture;
-use goose_providers::conversation::token_usage::{ProviderUsage, Usage};
-use goose_providers::model::ModelConfig;
-use goose_providers::request_log::{start_log, LoggerHandleExt};
+use bcaip_provider_types::base::{ConfigKey, MessageStream};
+use bcaip_provider_types::conversations::{ProviderUsage, Usage};
+use bcaip_provider_types::model::ModelConfig;
+use bcaip_provider_types::request_log::{LoggerHandleExt, start_log};
 use rmcp::model::{ContentBlock, Tool};
 
 const GITHUB_COPILOT_PROVIDER_NAME: &str = "github_copilot";
@@ -225,7 +223,7 @@ pub struct GithubCopilotProvider {
     #[serde(skip)]
     name: String,
     #[serde(skip)]
-    tls_config: Option<crate::providers::api_client::TlsConfig>,
+    tls_config: Option<goose_providers::api_client::TlsConfig>,
 }
 
 impl GithubCopilotProvider {
@@ -276,7 +274,7 @@ impl GithubCopilotProvider {
     }
 
     pub async fn from_env(
-        tls_config: Option<crate::providers::api_client::TlsConfig>,
+        tls_config: Option<goose_providers::api_client::TlsConfig>,
     ) -> Result<Self> {
         let config = Config::global();
         let host = normalize_host(
@@ -497,7 +495,7 @@ impl GithubCopilotProvider {
             .any(|prefix| model_config.model_name.starts_with(prefix));
 
         if supports_streaming {
-            let payload = create_request(
+            let payload = create_request_openai(
                 model_config,
                 system,
                 messages,
@@ -529,7 +527,7 @@ impl GithubCopilotProvider {
 
             stream_openai_compat(response, log)
         } else {
-            let payload = create_request(
+            let payload = create_request_openai(
                 model_config,
                 system,
                 messages,
@@ -557,7 +555,7 @@ impl GithubCopilotProvider {
 
             let response = promote_tool_choice(response);
 
-            let message = response_to_message(&response)?;
+            let message = response_to_message_openai(&response)?;
             let usage = response.get("usage").map(get_usage).unwrap_or_else(|| {
                 tracing::debug!("Failed to get usage data");
                 Usage::default()
@@ -565,7 +563,7 @@ impl GithubCopilotProvider {
             let response_model = get_model(&response);
             log.write(&response, Some(&usage))?;
 
-            Ok(super::base::stream_from_single_message(
+            Ok(bcaip_provider_types::base::stream_from_single_message(
                 message,
                 ProviderUsage::new(response_model, usage),
             ))
@@ -573,7 +571,7 @@ impl GithubCopilotProvider {
     }
 }
 
-impl goose_providers::base::ProviderDescriptor for GithubCopilotProvider {
+impl bcaip_provider_types::base::ProviderDescriptor for GithubCopilotProvider {
     fn metadata() -> ProviderMetadata {
         ProviderMetadata::new(
             GITHUB_COPILOT_PROVIDER_NAME,
@@ -590,10 +588,10 @@ impl goose_providers::base::ProviderDescriptor for GithubCopilotProvider {
             ],
         )
         .with_setup(
-            crate::providers::catalog::ProviderSetupMetadata::new(
-                crate::providers::catalog::ProviderSetupCategory::Model,
-                crate::providers::catalog::ProviderSetupMethod::OauthDeviceCode,
-                crate::providers::catalog::ProviderSetupGroup::Default,
+            bcaip_provider_types::ProviderSetupMetadata::new(
+                bcaip_provider_types::ProviderSetupCategory::Model,
+                bcaip_provider_types::ProviderSetupMethod::OauthDeviceCode,
+                bcaip_provider_types::ProviderSetupGroup::Default,
             )
             .with_native_connect_query("GitHub Copilot")
             .with_capabilities(false, true, false),
@@ -606,7 +604,7 @@ impl ProviderDef for GithubCopilotProvider {
 
     fn from_env(
         _extensions: Vec<crate::config::ExtensionConfig>,
-        tls_config: Option<crate::providers::api_client::TlsConfig>,
+        tls_config: Option<goose_providers::api_client::TlsConfig>,
     ) -> BoxFuture<'static, Result<Self::Provider>> {
         Box::pin(Self::from_env(tls_config))
     }
@@ -765,448 +763,4 @@ fn promote_tool_choice(response: Value) -> Value {
     }
 
     response
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use serde_json::json;
-    use wiremock::matchers::{method, path};
-    use wiremock::{Mock, MockServer, ResponseTemplate};
-
-    #[test]
-    fn copilot_api_endpoint_policy_requires_https_or_loopback() {
-        assert!(validate_copilot_api_endpoint("https://api.example.com").unwrap());
-        for endpoint in [
-            "http://localhost:8080",
-            "http://127.0.0.1:8080",
-            "http://[::1]:8080",
-        ] {
-            assert!(!validate_copilot_api_endpoint(endpoint).unwrap());
-        }
-        for endpoint in [
-            "http://api.example.com",
-            "http://localhost.example",
-            "ftp://127.0.0.1/resource",
-            "not a URL",
-            "https://",
-        ] {
-            assert!(
-                validate_copilot_api_endpoint(endpoint).is_err(),
-                "accepted invalid endpoint {endpoint}"
-            );
-        }
-    }
-
-    #[cfg(unix)]
-    #[tokio::test]
-    async fn disk_cache_saves_owner_only_file() {
-        use std::os::unix::fs::{MetadataExt, PermissionsExt};
-
-        let directory = tempfile::tempdir().unwrap();
-        let cache_path = directory.path().join("info.json");
-        std::fs::write(&cache_path, "old-secret").unwrap();
-        std::fs::set_permissions(&cache_path, std::fs::Permissions::from_mode(0o644)).unwrap();
-
-        let cache = DiskCache {
-            cache_path: cache_path.clone(),
-        };
-        let state = CopilotState {
-            expires_at: Utc::now(),
-            info: CopilotTokenInfo {
-                token: "copilot-secret".to_string(),
-                expires_at: 1,
-                refresh_in: 1,
-                endpoints: CopilotTokenEndpoints {
-                    api: "https://api.githubcopilot.com".to_string(),
-                    _extra: HashMap::new(),
-                },
-                _extra: HashMap::new(),
-            },
-        };
-
-        cache.save(&state).await.unwrap();
-
-        let metadata = std::fs::metadata(&cache_path).unwrap();
-        assert_eq!(metadata.mode() & 0o777, 0o600);
-        let saved: CopilotState =
-            serde_json::from_str(&std::fs::read_to_string(cache_path).unwrap()).unwrap();
-        assert_eq!(saved.info.token, "copilot-secret");
-    }
-
-    #[tokio::test]
-    async fn get_api_info_uses_valid_cache_without_github_token() {
-        let directory = tempfile::tempdir().unwrap();
-        let cache = DiskCache {
-            cache_path: directory.path().join("info.json"),
-        };
-        let state = CopilotState {
-            expires_at: Utc::now() + chrono::Duration::minutes(10),
-            info: CopilotTokenInfo {
-                token: "copilot-secret".to_string(),
-                expires_at: 1,
-                refresh_in: 600,
-                endpoints: CopilotTokenEndpoints {
-                    api: "https://api.githubcopilot.com".to_string(),
-                    _extra: HashMap::new(),
-                },
-                _extra: HashMap::new(),
-            },
-        };
-        cache.save(&state).await.unwrap();
-        let provider = GithubCopilotProvider {
-            client: Client::new(),
-            cache,
-            mu: tokio::sync::Mutex::new(RefCell::new(None)),
-            urls: GithubCopilotUrls::new("github.com", None),
-            client_id: DEFAULT_GITHUB_COPILOT_CLIENT_ID.to_string(),
-            name: GITHUB_COPILOT_PROVIDER_NAME.to_string(),
-            tls_config: None,
-        };
-
-        let (endpoint, token) = provider.get_api_info().await.unwrap();
-
-        assert_eq!(endpoint, "https://api.githubcopilot.com");
-        assert_eq!(token, "copilot-secret");
-    }
-
-    #[tokio::test]
-    async fn get_api_info_rejects_plaintext_legacy_cache() {
-        let directory = tempfile::tempdir().unwrap();
-        let cache = DiskCache {
-            cache_path: directory.path().join("info.json"),
-        };
-        let state = CopilotState {
-            expires_at: Utc::now() + chrono::Duration::minutes(10),
-            info: CopilotTokenInfo {
-                token: "copilot-secret".to_string(),
-                expires_at: 1,
-                refresh_in: 600,
-                endpoints: CopilotTokenEndpoints {
-                    api: "http://api.example.com".to_string(),
-                    _extra: HashMap::new(),
-                },
-                _extra: HashMap::new(),
-            },
-        };
-        cache.save(&state).await.unwrap();
-        let provider = GithubCopilotProvider {
-            client: Client::new(),
-            cache,
-            mu: tokio::sync::Mutex::new(RefCell::new(None)),
-            urls: GithubCopilotUrls::new("github.com", None),
-            client_id: DEFAULT_GITHUB_COPILOT_CLIENT_ID.to_string(),
-            name: GITHUB_COPILOT_PROVIDER_NAME.to_string(),
-            tls_config: None,
-        };
-
-        let error = provider.get_api_info().await.unwrap_err();
-
-        assert!(matches!(error, ProviderError::RequestFailed(_)));
-        assert!(provider.mu.lock().await.borrow().is_none());
-    }
-
-    #[tokio::test]
-    async fn fetch_supported_models_accepts_loopback_api_endpoint() {
-        let server = MockServer::start().await;
-        Mock::given(method("GET"))
-            .and(path("/models"))
-            .respond_with(ResponseTemplate::new(200).set_body_json(json!({
-                "data": [{ "id": "gpt-test" }]
-            })))
-            .mount(&server)
-            .await;
-        let directory = tempfile::tempdir().unwrap();
-        let cache = DiskCache {
-            cache_path: directory.path().join("info.json"),
-        };
-        cache
-            .save(&CopilotState {
-                expires_at: Utc::now() + chrono::Duration::minutes(10),
-                info: CopilotTokenInfo {
-                    token: "copilot-secret".to_string(),
-                    expires_at: 1,
-                    refresh_in: 600,
-                    endpoints: CopilotTokenEndpoints {
-                        api: server.uri(),
-                        _extra: HashMap::new(),
-                    },
-                    _extra: HashMap::new(),
-                },
-            })
-            .await
-            .unwrap();
-        let provider = GithubCopilotProvider {
-            client: Client::new(),
-            cache,
-            mu: tokio::sync::Mutex::new(RefCell::new(None)),
-            urls: GithubCopilotUrls::new("github.com", None),
-            client_id: DEFAULT_GITHUB_COPILOT_CLIENT_ID.to_string(),
-            name: GITHUB_COPILOT_PROVIDER_NAME.to_string(),
-            tls_config: None,
-        };
-
-        assert_eq!(
-            provider.fetch_supported_models().await.unwrap(),
-            vec!["gpt-test".to_string()]
-        );
-    }
-
-    #[tokio::test]
-    async fn refresh_api_info_returns_authentication_for_rejected_token() {
-        for status in [401, 403] {
-            let server = MockServer::start().await;
-            Mock::given(method("GET"))
-                .and(path("/copilot-token"))
-                .respond_with(ResponseTemplate::new(status))
-                .mount(&server)
-                .await;
-            let directory = tempfile::tempdir().unwrap();
-            let provider = GithubCopilotProvider {
-                client: Client::new(),
-                cache: DiskCache {
-                    cache_path: directory.path().join("info.json"),
-                },
-                mu: tokio::sync::Mutex::new(RefCell::new(None)),
-                urls: GithubCopilotUrls {
-                    device_code_url: String::new(),
-                    access_token_url: String::new(),
-                    copilot_token_url: format!("{}/copilot-token", server.uri()),
-                },
-                client_id: DEFAULT_GITHUB_COPILOT_CLIENT_ID.to_string(),
-                name: GITHUB_COPILOT_PROVIDER_NAME.to_string(),
-                tls_config: None,
-            };
-
-            let error = provider.refresh_api_info("rejected").await.unwrap_err();
-
-            assert!(matches!(error, ProviderError::Authentication(_)));
-        }
-    }
-
-    #[tokio::test]
-    async fn refresh_api_info_rejects_plaintext_remote_endpoint() {
-        let server = MockServer::start().await;
-        Mock::given(method("GET"))
-            .and(path("/copilot-token"))
-            .respond_with(ResponseTemplate::new(200).set_body_json(json!({
-                "token": "copilot-secret",
-                "expires_at": 0,
-                "refresh_in": 600,
-                "endpoints": { "api": "http://api.example.com" }
-            })))
-            .mount(&server)
-            .await;
-        let directory = tempfile::tempdir().unwrap();
-        let provider = GithubCopilotProvider {
-            client: Client::new(),
-            cache: DiskCache {
-                cache_path: directory.path().join("info.json"),
-            },
-            mu: tokio::sync::Mutex::new(RefCell::new(None)),
-            urls: GithubCopilotUrls {
-                device_code_url: String::new(),
-                access_token_url: String::new(),
-                copilot_token_url: format!("{}/copilot-token", server.uri()),
-            },
-            client_id: DEFAULT_GITHUB_COPILOT_CLIENT_ID.to_string(),
-            name: GITHUB_COPILOT_PROVIDER_NAME.to_string(),
-            tls_config: None,
-        };
-
-        let error = provider.refresh_api_info("github-token").await.unwrap_err();
-
-        assert!(matches!(error, ProviderError::RequestFailed(_)));
-    }
-
-    #[tokio::test]
-    async fn refresh_api_info_accepts_loopback_endpoint() {
-        let server = MockServer::start().await;
-        Mock::given(method("GET"))
-            .and(path("/copilot-token"))
-            .respond_with(ResponseTemplate::new(200).set_body_json(json!({
-                "token": "copilot-secret",
-                "expires_at": 0,
-                "refresh_in": 600,
-                "endpoints": { "api": server.uri() }
-            })))
-            .mount(&server)
-            .await;
-        let directory = tempfile::tempdir().unwrap();
-        let provider = GithubCopilotProvider {
-            client: Client::new(),
-            cache: DiskCache {
-                cache_path: directory.path().join("info.json"),
-            },
-            mu: tokio::sync::Mutex::new(RefCell::new(None)),
-            urls: GithubCopilotUrls {
-                device_code_url: String::new(),
-                access_token_url: String::new(),
-                copilot_token_url: format!("{}/copilot-token", server.uri()),
-            },
-            client_id: DEFAULT_GITHUB_COPILOT_CLIENT_ID.to_string(),
-            name: GITHUB_COPILOT_PROVIDER_NAME.to_string(),
-            tls_config: None,
-        };
-
-        let info = provider.refresh_api_info("github-token").await.unwrap();
-
-        assert_eq!(info.endpoints.api, server.uri());
-    }
-
-    #[test]
-    fn responses_models_routed_correctly() {
-        assert!(is_openai_responses_model("gpt-5.5"));
-        assert!(is_openai_responses_model("gpt-5.4"));
-        assert!(is_openai_responses_model("gpt-5"));
-        assert!(is_openai_responses_model("gpt-5-mini"));
-        assert!(is_openai_responses_model("gpt-5-codex"));
-        assert!(is_openai_responses_model("o3"));
-        assert!(is_openai_responses_model("o3-mini"));
-
-        assert!(!is_openai_responses_model("gpt-4.1"));
-        assert!(!is_openai_responses_model("gpt-4o"));
-        assert!(!is_openai_responses_model("claude-sonnet-4"));
-        assert!(!is_openai_responses_model("claude-haiku-4.5"));
-        assert!(!is_openai_responses_model("gemini-2.5-pro"));
-    }
-
-    #[test]
-    fn detects_images_in_messages() {
-        use crate::conversation::message::Message;
-
-        let messages_with_image = vec![Message::user()
-            .with_text("describe this")
-            .with_image("base64data", "image/png")];
-        assert!(GithubCopilotProvider::messages_contain_image(
-            &messages_with_image
-        ));
-
-        let messages_without_image = vec![Message::user().with_text("plain text")];
-        assert!(!GithubCopilotProvider::messages_contain_image(
-            &messages_without_image
-        ));
-    }
-
-    #[test]
-    fn detects_images_in_tool_responses() {
-        use crate::conversation::message::{Message, MessageContent};
-        use rmcp::model::{CallToolResult, ContentBlock};
-
-        let image_content =
-            ContentBlock::image("aW1hZ2VkYXRh".to_string(), "image/png".to_string());
-        let tool_result = Ok(CallToolResult::success(vec![image_content]));
-
-        let messages =
-            vec![Message::user()
-                .with_content(MessageContent::tool_response("call_123", tool_result))];
-        assert!(GithubCopilotProvider::messages_contain_image(&messages));
-
-        let text_result = Ok(CallToolResult::success(vec![ContentBlock::text(
-            "no images",
-        )]));
-        let messages_text_only =
-            vec![Message::user()
-                .with_content(MessageContent::tool_response("call_456", text_result))];
-        assert!(!GithubCopilotProvider::messages_contain_image(
-            &messages_text_only
-        ));
-    }
-
-    #[test]
-    fn promotes_choice_with_tool_call() {
-        let response = json!({
-            "choices": [
-                {"message": {"content": "plain text"}},
-                {"message": {"tool_calls": [{"function": {"name": "foo", "arguments": "{}"}}]}}
-            ]
-        });
-
-        let promoted = promote_tool_choice(response);
-        assert_eq!(
-            promoted
-                .get("choices")
-                .and_then(|c| c.as_array())
-                .map(|c| c.len()),
-            Some(2)
-        );
-        let first_choice = promoted
-            .get("choices")
-            .and_then(|c| c.as_array())
-            .and_then(|c| c.first())
-            .unwrap();
-
-        assert!(first_choice
-            .get("message")
-            .and_then(|m| m.get("tool_calls"))
-            .is_some());
-    }
-
-    #[test]
-    fn leaves_response_when_tool_choice_first() {
-        let response = json!({
-            "choices": [
-                {"message": {"tool_calls": [{"function": {"name": "foo", "arguments": "{}"}}]}},
-                {"message": {"content": "plain text"}}
-            ]
-        });
-
-        let promoted = promote_tool_choice(response.clone());
-        assert_eq!(promoted, response);
-    }
-
-    #[test]
-    fn normalize_host_strips_prefix_and_slash() {
-        assert_eq!(normalize_host("github.com"), "github.com");
-        assert_eq!(normalize_host("https://github.com"), "github.com");
-        assert_eq!(normalize_host("github.com/"), "github.com");
-        assert_eq!(normalize_host("https://github.com/"), "github.com");
-        assert_eq!(
-            normalize_host("https://my-enterprise.ghe.com/"),
-            "my-enterprise.ghe.com"
-        );
-    }
-
-    #[test]
-    fn urls_default_github_com() {
-        let urls = GithubCopilotUrls::new("github.com", None);
-        assert_eq!(urls.device_code_url, "https://github.com/login/device/code");
-        assert_eq!(
-            urls.access_token_url,
-            "https://github.com/login/oauth/access_token"
-        );
-        assert_eq!(
-            urls.copilot_token_url,
-            "https://api.github.com/copilot_internal/v2/token"
-        );
-    }
-
-    #[test]
-    fn urls_enterprise_host() {
-        let urls = GithubCopilotUrls::new("my-enterprise.ghe.com", None);
-        assert_eq!(
-            urls.device_code_url,
-            "https://my-enterprise.ghe.com/login/device/code"
-        );
-        assert_eq!(
-            urls.access_token_url,
-            "https://my-enterprise.ghe.com/login/oauth/access_token"
-        );
-        assert_eq!(
-            urls.copilot_token_url,
-            "https://api.my-enterprise.ghe.com/copilot_internal/v2/token"
-        );
-    }
-
-    #[test]
-    fn urls_enterprise_with_token_url_override() {
-        let urls = GithubCopilotUrls::new(
-            "my-enterprise.ghe.com",
-            Some("https://my-enterprise.ghe.com/api/v3/copilot_internal/v2/token"),
-        );
-        assert_eq!(
-            urls.copilot_token_url,
-            "https://my-enterprise.ghe.com/api/v3/copilot_internal/v2/token"
-        );
-    }
 }

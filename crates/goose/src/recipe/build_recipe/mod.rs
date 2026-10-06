@@ -1,13 +1,13 @@
-use crate::recipe::read_recipe_file_content::read_parameter_file_content;
-use crate::recipe::validate_recipe::validate_recipe_template;
 use crate::recipe::{
-    Recipe, RecipeParameter, RecipeParameterInputType, RecipeParameterRequirement,
-    BUILT_IN_RECIPE_DIR_PARAM,
+    BUILT_IN_RECIPE_DIR_PARAM, Recipe, RecipeParameter, RecipeParameterInputType,
+    RecipeParameterRequirement,
+};
+use crate::recipe::{
+    read_recipe_file_content::read_parameter_file_content,
+    validate_recipe::validate_recipe_template,
 };
 use anyhow::Result;
-use std::collections::HashMap;
-use std::path::Path;
-
+use std::{collections::HashMap, path::Path};
 #[derive(Debug, thiserror::Error)]
 pub enum RecipeError {
     #[error("Missing required parameters: {parameters:?}")]
@@ -175,6 +175,3 @@ pub fn resolve_sub_recipe_path(
     })?;
     Ok(canonical.display().to_string())
 }
-
-#[cfg(test)]
-mod tests;

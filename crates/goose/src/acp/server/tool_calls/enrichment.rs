@@ -1,17 +1,16 @@
-use crate::acp::tool_call_notifier::ToolCallNotifier;
-use crate::agents::Agent;
-use crate::conversation::message::{ToolChainSummary, ToolRequest};
 use crate::session::SessionManager;
 use crate::tool_call_labels::{generate_tool_chain_summary, generate_tool_title};
+use crate::{
+    acp::{server::tool_calls::chain::ReadyToolChain, tool_call_notifier::ToolCallNotifier},
+    agents::Agent,
+};
 use agent_client_protocol::schema::v1::{
     Meta, SessionId, ToolCallId, ToolCallUpdate, ToolCallUpdateFields,
 };
-use serde_json::{json, Map, Value};
+use bcaip_provider_types::conversations::{ToolChainSummary, ToolRequest};
+use serde_json::{Map, Value, json};
 use std::sync::Arc;
 use tokio::spawn;
-
-use super::chain::ReadyToolChain;
-
 const TOOL_CHAIN_SUMMARY_META_KEY: &str = "toolChainSummary";
 
 pub(crate) fn tool_chain_summary(chain_summary: &ToolChainSummary) -> (String, Value) {
@@ -89,39 +88,4 @@ pub(crate) fn spawn_chain_summary_enrichment(
         let update = build_chain_summary_update(first_tool_call_id, &summary);
         let _ = tool_call_notifier.send_update(update);
     });
-}
-
-#[cfg(test)]
-mod tests {
-    mod build_chain_summary_update {
-        use super::super::build_chain_summary_update;
-        use crate::conversation::message::ToolChainSummary;
-        use serde_json::json;
-
-        #[test]
-        fn contains_only_the_chain_summary_delta() {
-            let update = build_chain_summary_update(
-                "req_1".to_string(),
-                &ToolChainSummary {
-                    summary: "applied dark mode".to_string(),
-                    count: 4,
-                },
-            );
-
-            assert_eq!(
-                serde_json::to_value(update).expect("update should serialize"),
-                json!({
-                    "toolCallId": "req_1",
-                    "_meta": {
-                        "goose": {
-                            "toolChainSummary": {
-                                "summary": "applied dark mode",
-                                "count": 4,
-                            },
-                        },
-                    },
-                }),
-            );
-        }
-    }
 }

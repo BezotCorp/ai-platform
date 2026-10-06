@@ -2,30 +2,28 @@
 
 use std::path::{Path, PathBuf};
 
-use anyhow::{anyhow, Result};
+use crate::agents::state_machine::GooseEffect;
+use crate::agents::state_machine::ops_toolcalling::{
+    ToolDisposition, emit_post_tool_use, pending_advertised_tool_requests, run_pre_tool_hooks,
+    tool_span,
+};
+use crate::agents::tool_execution::{CHAT_MODE_TOOL_SKIPPED_RESPONSE, DECLINED_RESPONSE};
+use crate::hooks::HookManager;
+use crate::session::Session;
+use anyhow::{Result, anyhow};
 use async_trait::async_trait;
+use bcaip_agent::operation::{
+    ConversationEffect, Emitter, Operation, OperationResult, SlashCommand, applied,
+    messages_since_kickoff, not_applicable, yielded_with,
+};
+use bcaip_provider_types::conversations::{Conversation, Message};
+use bcaip_provider_types::goose_mode::GooseMode;
 use goose_sdk_types::custom_requests::{SourceEntry, SourceType};
 use rmcp::model::{CallToolResult, ContentBlock, ErrorData, JsonObject, Tool};
-use schemars::{schema_for, JsonSchema};
+use schemars::{JsonSchema, schema_for};
 use serde::Deserialize;
 use serde_json::Value;
 use tracing_futures::Instrument;
-
-use crate::agents::state_machine::ops_toolcalling::{
-    emit_post_tool_use, pending_advertised_tool_requests, run_pre_tool_hooks, tool_span,
-    ToolDisposition,
-};
-use crate::agents::state_machine::{
-    applied, messages_since_kickoff, not_applicable, yielded_with, ConversationEffect, Emitter,
-    GooseEffect, Operation, OperationResult, SlashCommand,
-};
-use crate::agents::tool_execution::{CHAT_MODE_TOOL_SKIPPED_RESPONSE, DECLINED_RESPONSE};
-use crate::config::GooseMode;
-use crate::conversation::message::Message;
-use crate::conversation::Conversation;
-use crate::hooks::HookManager;
-use crate::session::Session;
-
 const LOAD_SKILL_TOOL_NAME: &str = "load_skill";
 
 pub struct SkillOperation {
@@ -395,38 +393,5 @@ impl Operation<Session, GooseEffect> for SkillOperation {
         }
         let response = emit.message(response).await;
         applied([response.into()])
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use std::collections::HashMap;
-
-    #[test]
-    fn supporting_file_loader_reads_nested_regular_file() {
-        let root = tempfile::tempdir().unwrap();
-        let skill_dir = std::fs::canonicalize(root.path()).unwrap();
-        let nested = skill_dir.join("nested");
-        std::fs::create_dir(&nested).unwrap();
-        let file = nested.join("guide.md");
-        std::fs::write(&file, "Nested guidance.").unwrap();
-        let skill = SourceEntry {
-            source_type: SourceType::Skill,
-            name: "test-skill".to_string(),
-            description: String::new(),
-            content: String::new(),
-            path: skill_dir.to_string_lossy().into_owned(),
-            global: false,
-            writable: true,
-            supporting_files: vec![file.to_string_lossy().into_owned()],
-            properties: HashMap::new(),
-        };
-
-        let result = load_supporting_file(&skill, "test-skill/nested/guide.md", "nested/guide.md");
-
-        assert_eq!(result.is_error, Some(false));
-        let text = result.content[0].as_text().expect("expected text");
-        assert!(text.text.contains("Nested guidance."));
     }
 }

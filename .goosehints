@@ -2,7 +2,7 @@ This is a rust project with crates in the crates dir:
 goose: the main code for goose, contains all the core logic
 goose-bench: bench marking
 goose-cli: the command line interface, use goose crate
-goose-mcp: the mcp servers that ship with goose. the developer sub system is of special interest
+bcaip-mcp: the mcp servers that ship with goose. the developer sub system is of special interest
 goose-server: the server that supports the desktop (electron) app. also known as goosed
 
 ui/desktop has an electron app in typescript.

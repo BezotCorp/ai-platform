@@ -154,13 +154,13 @@ jobs:
           cargo install wasm-bindgen-cli --version "$version" --locked
 
       - name: Check wasm32 build
-        run: cargo check --locked --target wasm32-unknown-unknown -p goose-agent -p goose-provider-types
+        run: cargo check --locked --target wasm32-unknown-unknown -p bcaip-agent -p bcaip-provider-types
         env:
           CARGO_INCREMENTAL: "0"
           RUSTFLAGS: "-D warnings"
 
       - name: Run agent loop on wasm32
-        run: cargo test --locked --target wasm32-unknown-unknown -p goose-agent --test wasm
+        run: cargo test --locked --target wasm32-unknown-unknown -p bcaip-agent --test wasm
         env:
           CARGO_INCREMENTAL: "0"
           RUSTFLAGS: "-D warnings"
@@ -264,9 +264,9 @@ jobs:
         run: |
           gnome-keyring-daemon --components=secrets --daemonize --unlock <<< 'foobar'
           export CARGO_INCREMENTAL=0
-          cargo test -p goose-roaming
-          cargo build -p goose-cli --features roaming
-          cargo test -p goose-cli --features roaming --test roam_acp_client
+          cargo test -p bcaip-roaming
+          cargo build -p bcaip-cli --features roaming
+          cargo test -p bcaip-cli --features roaming --test roam_acp_client
         env:
           RUST_MIN_STACK: 8388608
 

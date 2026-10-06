@@ -1,23 +1,21 @@
+//mod.rs need to have only module declarations and public exports. So review and extract
 pub mod auth;
 #[cfg(any(feature = "rustls-tls", feature = "native-tls"))]
 pub mod tls;
 
-use std::sync::Arc;
-
 use agent_client_protocol_http::{AcpHttpServer, CorsOptions, ServerOptions};
 use axum::{
+    Router,
     extract::{Request, State},
-    http::{header, HeaderName, HeaderValue, Method, StatusCode},
+    http::{HeaderName, HeaderValue, Method, StatusCode, header},
     middleware::Next,
     response::Response,
     routing::get,
-    Router,
 };
+use std::sync::Arc;
 use tower_http::cors::{AllowOrigin, Any, CorsLayer};
 
-use crate::acp::server::GooseAgentConnection;
-use crate::acp::server_factory::AcpServer;
-
+use crate::acp::{server::GooseAgentConnection, server_factory::AcpServer};
 // The upstream ACP HTTP server only supports exact origin allowlists for
 // WebSocket upgrades; Goose applies its richer loopback predicate before this.
 const UPSTREAM_WS_ALLOWED_ORIGIN: &str = "http://goose.local";
@@ -133,10 +131,10 @@ async fn enforce_websocket_origin(
     next: Next,
 ) -> Result<Response, StatusCode> {
     if is_websocket_upgrade(&request) {
-        if let Some(origin) = request.headers().get(header::ORIGIN) {
-            if !policy.origin_allowed(origin) {
-                return Err(StatusCode::FORBIDDEN);
-            }
+        if let Some(origin) = request.headers().get(header::ORIGIN)
+            && !policy.origin_allowed(origin)
+        {
+            return Err(StatusCode::FORBIDDEN);
         }
 
         request.headers_mut().insert(

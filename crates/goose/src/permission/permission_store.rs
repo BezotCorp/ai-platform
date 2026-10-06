@@ -1,11 +1,10 @@
 use crate::config::paths::Paths;
-use crate::conversation::message::ToolRequest;
 use anyhow::Result;
 use blake3::Hasher;
 use chrono::Utc;
+use bcaip_provider_types::conversations::ToolRequest;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-use std::time::Duration;
+use std::{collections::HashMap, time::Duration};
 use std::{fs::File, path::PathBuf};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

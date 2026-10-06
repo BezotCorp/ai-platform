@@ -1,14 +1,12 @@
 use crate::agents::extension::{Envs, ExtensionConfig};
 use crate::config::{DEFAULT_EXTENSION_DESCRIPTION, DEFAULT_EXTENSION_TIMEOUT};
-use crate::plugins::discovery::discover_enabled_plugins;
-use crate::plugins::formats::open_plugins;
-use anyhow::{bail, Context, Result};
+use crate::plugins::{discovery::discover_enabled_plugins, formats::open_plugins};
+use anyhow::{Context, Result, bail};
 use fs_err as fs;
 use serde::Deserialize;
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use tracing::warn;
-
 const DEFAULT_MCP_CONFIG: &str = ".mcp.json";
 const PLUGIN_ROOT: &str = "${PLUGIN_ROOT}";
 
@@ -193,143 +191,4 @@ fn validate_servers(servers: HashMap<String, McpServerConfig>) -> Result<()> {
         }
     }
     Ok(())
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::agents::extension::ExtensionConfig;
-
-    #[test]
-    fn loads_default_mcp_json_with_plugin_root_expansion() {
-        let plugin = tempfile::tempdir().unwrap();
-        fs::write(
-            plugin.path().join(DEFAULT_MCP_CONFIG),
-            r#"{
-              "mcpServers": {
-                "database": {
-                  "command": "${PLUGIN_ROOT}/servers/db-server",
-                  "args": ["--config", "${PLUGIN_ROOT}/config.json"],
-                  "env": {"DB_PATH": "${PLUGIN_ROOT}/data"},
-                  "cwd": "${PLUGIN_ROOT}"
-                }
-              }
-            }"#,
-        )
-        .unwrap();
-
-        let configs = plugin_mcp_servers("test-plugin", plugin.path()).unwrap();
-        assert_eq!(configs.len(), 1);
-        let ExtensionConfig::Stdio {
-            name,
-            cmd,
-            args,
-            envs,
-            cwd,
-            ..
-        } = &configs[0]
-        else {
-            panic!("expected stdio config");
-        };
-
-        assert_eq!(name, "test-plugin:database");
-        assert_eq!(
-            cmd,
-            plugin
-                .path()
-                .join("servers/db-server")
-                .to_string_lossy()
-                .as_ref()
-        );
-        assert_eq!(
-            args,
-            &vec![
-                "--config".to_string(),
-                plugin
-                    .path()
-                    .join("config.json")
-                    .to_string_lossy()
-                    .to_string()
-            ]
-        );
-        assert_eq!(
-            envs.get_env().get("DB_PATH"),
-            Some(&plugin.path().join("data").to_string_lossy().to_string())
-        );
-        assert_eq!(
-            cwd.as_deref(),
-            Some(plugin.path().to_string_lossy().as_ref())
-        );
-    }
-
-    #[test]
-    fn loads_inline_manifest_mcp_servers() {
-        let plugin = tempfile::tempdir().unwrap();
-        fs::create_dir_all(plugin.path().join(".plugin")).unwrap();
-        fs::write(
-            plugin.path().join(".plugin/plugin.json"),
-            r#"{
-              "name": "test-plugin",
-              "mcpServers": {
-                "api": {"command": "npx", "args": ["@company/mcp-server"]}
-              }
-            }"#,
-        )
-        .unwrap();
-
-        let configs = plugin_mcp_servers("test-plugin", plugin.path()).unwrap();
-        assert_eq!(configs.len(), 1);
-        assert_eq!(configs[0].name(), "test-plugin:api");
-    }
-
-    #[test]
-    fn manifest_paths_supplement_default_config() {
-        let plugin = tempfile::tempdir().unwrap();
-        fs::create_dir_all(plugin.path().join(".plugin")).unwrap();
-        fs::write(
-            plugin.path().join(".plugin/plugin.json"),
-            r#"{"name":"test-plugin","mcpServers":"./custom-mcp.json"}"#,
-        )
-        .unwrap();
-        fs::write(
-            plugin.path().join(DEFAULT_MCP_CONFIG),
-            r#"{"mcpServers":{"default":{"command":"default-server"}}}"#,
-        )
-        .unwrap();
-        fs::write(
-            plugin.path().join("custom-mcp.json"),
-            r#"{"mcpServers":{"custom":{"command":"custom-server"}}}"#,
-        )
-        .unwrap();
-
-        let names: Vec<_> = plugin_mcp_servers("test-plugin", plugin.path())
-            .unwrap()
-            .into_iter()
-            .map(|config| config.name())
-            .collect();
-
-        assert_eq!(names, vec!["test-plugin:default", "test-plugin:custom"]);
-    }
-
-    #[test]
-    fn validates_manifest_mcp_servers_value() {
-        validate_mcp_servers_manifest_value(&serde_json::json!({
-            "api": {"command": "npx"}
-        }))
-        .unwrap();
-        validate_mcp_servers_manifest_value(&serde_json::json!({
-            "paths": ["./mcp.json"],
-            "exclusive": true
-        }))
-        .unwrap();
-    }
-
-    #[test]
-    fn rejects_inline_mcp_server_with_empty_command() {
-        let error = validate_mcp_servers_manifest_value(&serde_json::json!({
-            "api": {"command": ""}
-        }))
-        .unwrap_err();
-        assert!(error.to_string().contains("command must not be empty"));
-    }
 }

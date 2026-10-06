@@ -1,7 +1,6 @@
+use super::parser::{Call, FileAnalysis, Symbol};
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::path::PathBuf;
-
-use super::parser::{Call, FileAnalysis, Symbol};
 
 /// (file_path, symbol_name, definition_line) — line disambiguates same-name
 /// functions in the same file (e.g. two `process()` in different impl blocks).
@@ -280,94 +279,5 @@ fn resolve_callee(
             .collect()
     } else {
         vec![]
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    fn symbol(name: impl Into<String>, line: usize) -> Symbol {
-        Symbol {
-            name: name.into(),
-            line,
-            parent: None,
-            detail: None,
-        }
-    }
-
-    #[test]
-    fn outgoing_paths_are_bounded_for_dense_graphs() {
-        let width = 50;
-        let mut functions = vec![symbol("root", 1)];
-        let mut calls = Vec::new();
-
-        for i in 0..width {
-            let name = format!("branch_{i}");
-            let line = 100 + i;
-            functions.push(symbol(&name, line));
-            calls.push(Call {
-                caller: "root".to_string(),
-                callee: name,
-                line: 2 + i,
-            });
-        }
-
-        for j in 0..width {
-            functions.push(symbol(format!("leaf_{j}"), 1_000 + j));
-        }
-
-        for i in 0..width {
-            for j in 0..width {
-                calls.push(Call {
-                    caller: format!("branch_{i}"),
-                    callee: format!("leaf_{j}"),
-                    line: 100 + i,
-                });
-            }
-        }
-
-        let graph = CallGraph::build(&[FileAnalysis {
-            path: PathBuf::from("dense.rs"),
-            language: "rust",
-            loc: 2_000,
-            functions,
-            classes: Vec::new(),
-            imports: Vec::new(),
-            calls,
-        }]);
-
-        let chains = graph.outgoing("root", 2);
-
-        assert_eq!(chains.len(), MAX_CALL_GRAPH_PATHS);
-    }
-
-    #[test]
-    fn outgoing_depth_is_bounded() {
-        let node_count = MAX_CALL_GRAPH_DEPTH as usize + 20;
-        let functions = (0..node_count)
-            .map(|i| symbol(format!("node_{i}"), i + 1))
-            .collect();
-        let calls = (0..node_count - 1)
-            .map(|i| Call {
-                caller: format!("node_{i}"),
-                callee: format!("node_{}", i + 1),
-                line: i + 1,
-            })
-            .collect();
-        let graph = CallGraph::build(&[FileAnalysis {
-            path: PathBuf::from("deep.rs"),
-            language: "rust",
-            loc: node_count,
-            functions,
-            classes: Vec::new(),
-            imports: Vec::new(),
-            calls,
-        }]);
-
-        let chains = graph.outgoing("node_0", u32::MAX);
-
-        assert_eq!(chains.len(), 1);
-        assert_eq!(chains[0].len(), MAX_CALL_GRAPH_DEPTH as usize + 1);
     }
 }

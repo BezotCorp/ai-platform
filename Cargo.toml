@@ -1,9 +1,5 @@
 [workspace]
-members = [
-    "crates/*",
-    "tools/typescript-analyzer",
-    "tools/typescript-fixer",
-]
+members = ["crates/*", "tools/typescript-analyzer", "tools/typescript-fixer"]
 resolver = "3"
 
 [workspace.package]

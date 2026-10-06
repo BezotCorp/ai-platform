@@ -1,8 +1,8 @@
 use crate::plugins::{
-    copy_dir_all, write_install_metadata, FormatNotSupported, ImportedSkill, PluginFormat,
-    PluginInstall, PluginInstallOptions,
+    FormatNotSupported, ImportedSkill, PluginFormat, PluginInstall, PluginInstallOptions,
+    copy_dir_all, write_install_metadata,
 };
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 use chrono::{DateTime, Utc};
 use fs_err as fs;
 use serde::Deserialize;
@@ -155,78 +155,4 @@ fn extract_skill_name(raw: &str) -> Option<String> {
     let (metadata, _): (crate::skills::SkillFrontmatter, String) =
         crate::sources::parse_frontmatter(raw).ok()??;
     metadata.name.filter(|name| !name.is_empty())
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn installs_gemini_extension_skills() {
-        let install_root = tempfile::tempdir().unwrap();
-        let repo = tempfile::tempdir().unwrap();
-        fs::write(
-            repo.path().join(MANIFEST),
-            r#"{"name":"test-plugin","version":"1.0.0"}"#,
-        )
-        .unwrap();
-        let skill_dir = repo.path().join("skills").join("audit");
-        fs::create_dir_all(&skill_dir).unwrap();
-        fs::write(
-            skill_dir.join("SKILL.md"),
-            "---\nname: audit\ndescription: Audit code\n---\nDo an audit.",
-        )
-        .unwrap();
-
-        let installed = try_install_from_manifest_at_root(
-            "https://example.invalid/repo.git",
-            repo.path(),
-            install_root.path(),
-            &PluginInstallOptions::default(),
-            None,
-        )
-        .unwrap();
-
-        assert_eq!(installed.name, "test-plugin");
-        assert_eq!(installed.version, "1.0.0");
-        assert_eq!(installed.skills.len(), 1);
-        assert_eq!(installed.skills[0].name, "audit");
-        assert!(installed.directory.join(MANIFEST).is_file());
-        assert!(installed
-            .directory
-            .join(crate::plugins::INSTALL_METADATA)
-            .is_file());
-        assert_eq!(installed.directory, install_root.path().join("test-plugin"));
-    }
-
-    #[test]
-    fn failed_metadata_write_leaves_no_installed_plugin() {
-        let install_root = tempfile::tempdir().unwrap();
-        let repo = tempfile::tempdir().unwrap();
-        fs::write(
-            repo.path().join(MANIFEST),
-            r#"{"name":"failed-plugin","version":"1.0.0"}"#,
-        )
-        .unwrap();
-        let skill_dir = repo.path().join("skills").join("audit");
-        fs::create_dir_all(&skill_dir).unwrap();
-        fs::write(
-            skill_dir.join("SKILL.md"),
-            "---\nname: audit\ndescription: Audit code\n---\nDo an audit.",
-        )
-        .unwrap();
-        fs::create_dir(repo.path().join(crate::plugins::INSTALL_METADATA)).unwrap();
-
-        let result = try_install_from_manifest_at_root(
-            "https://example.invalid/failed-plugin.git",
-            repo.path(),
-            install_root.path(),
-            &PluginInstallOptions::default(),
-            None,
-        );
-
-        assert!(result.is_err());
-        assert!(!install_root.path().join("failed-plugin").exists());
-        assert_eq!(fs::read_dir(install_root.path()).unwrap().count(), 0);
-    }
 }

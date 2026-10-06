@@ -1,11 +1,9 @@
+use super::resource::McpAppResource;
 use crate::agents::ExtensionManager;
 use rmcp::model::ErrorData;
 use serde::{Deserialize, Serialize};
 use tokio_util::sync::CancellationToken;
 use tracing::warn;
-
-use super::resource::McpAppResource;
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct WindowProps {
@@ -38,7 +36,6 @@ impl GooseApp {
 
     pub fn from_html(html: &str) -> Result<Self, String> {
         use regex::Regex;
-
         let metadata_re = Regex::new(&format!(
             r#"(?s)<script type="{}"[^>]*>\s*(.*?)\s*</script>"#,
             regex::escape(Self::METADATA_SCRIPT_TYPE)

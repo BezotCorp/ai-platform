@@ -1,7 +1,6 @@
 use super::base::Config;
 use anyhow::Result;
 use std::collections::HashMap;
-
 /// It is the ground truth for init experiments. The experiment names in users' experiment list but not
 /// in the list will be remove from user list; The experiment names in the ground-truth list but not
 /// in users' experiment list will be added to user list with default value false;

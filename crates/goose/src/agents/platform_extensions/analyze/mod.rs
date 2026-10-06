@@ -1,3 +1,4 @@
+//mod.rs need to have only module declarations and public exports. So review and extract
 pub mod format;
 pub mod graph;
 pub mod languages;
@@ -16,12 +17,11 @@ use rmcp::model::{
     CallToolResult, ContentBlock, Implementation, InitializeResult, JsonObject, ListToolsResult,
     ServerCapabilities, Tool, ToolAnnotations,
 };
-use schemars::{schema_for, JsonSchema};
+use schemars::{JsonSchema, schema_for};
 use serde::Deserialize;
 use serde_json::Value;
 use std::path::{Path, PathBuf};
 use tokio_util::sync::CancellationToken;
-
 pub static EXTENSION_NAME: &str = "analyze";
 
 #[derive(Debug, Deserialize, JsonSchema)]
@@ -263,183 +263,5 @@ impl McpClientTrait for AnalyzeClient {
 
     fn get_info(&self) -> Option<&InitializeResult> {
         Some(&self.info)
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::session::SessionManager;
-    use rmcp::model::ContentBlock;
-    use std::fs;
-    use std::sync::Arc;
-    use tempfile::tempdir;
-
-    fn ctx() -> PlatformExtensionContext {
-        PlatformExtensionContext {
-            extension_manager: None,
-            session_manager: Arc::new(SessionManager::new(std::env::temp_dir())),
-            scheduler: None,
-            session: None,
-            use_login_shell_path: false,
-        }
-    }
-
-    fn text(result: &CallToolResult) -> &str {
-        match &result.content[0] {
-            ContentBlock::Text(t) => &t.text,
-            _ => panic!("expected text"),
-        }
-    }
-
-    #[tokio::test]
-    async fn structure_mode() {
-        let tmp = tempdir().unwrap();
-        fs::write(
-            tmp.path().join("lib.rs"),
-            "use std::io;\nfn read() {}\nfn write() {}\nstruct Buffer;\n",
-        )
-        .unwrap();
-        fs::write(
-            tmp.path().join("app.py"),
-            "import os\nclass App:\n    pass\ndef main():\n    pass\ndef run():\n    pass\n",
-        )
-        .unwrap();
-
-        let client = AnalyzeClient::new(ctx()).unwrap();
-        let result = client.analyze(
-            AnalyzeParams {
-                path: tmp.path().to_str().unwrap().into(),
-                focus: None,
-                max_depth: 3,
-                follow_depth: 2,
-                force: false,
-            },
-            tmp.path().to_path_buf(),
-        );
-        let out = text(&result);
-
-        assert!(out.contains("2 files"));
-        assert!(out.contains("F"));
-        assert!(out.contains("lib.rs"));
-        assert!(out.contains("app.py"));
-        assert!(out.contains("rust"));
-        assert!(out.contains("python"));
-    }
-
-    #[tokio::test]
-    async fn semantic_mode() {
-        let tmp = tempdir().unwrap();
-        let file = tmp.path().join("demo.rs");
-        fs::write(
-            &file,
-            r#"
-use std::collections::HashMap;
-use std::io;
-
-struct Config;
-
-fn validate(x: i32) -> bool { x > 0 }
-fn process() {
-    validate(1);
-    validate(2);
-    validate(3);
-    validate(4);
-    helper();
-}
-fn helper() { validate(0); }
-"#,
-        )
-        .unwrap();
-
-        let client = AnalyzeClient::new(ctx()).unwrap();
-        let result = client.analyze(
-            AnalyzeParams {
-                path: file.to_str().unwrap().into(),
-                focus: None,
-                max_depth: 3,
-                follow_depth: 2,
-                force: false,
-            },
-            file.clone(),
-        );
-        let out = text(&result);
-
-        // Functions listed with signatures and line numbers
-        assert!(out.contains("F:"));
-        assert!(out.contains("validate("));
-        assert!(out.contains("process:"));
-        assert!(out.contains("helper"));
-        // Struct
-        assert!(out.contains("C:"));
-        assert!(out.contains("Config:"));
-        // Imports
-        assert!(out.contains("I:"));
-        assert!(out.contains("std::collections::HashMap"));
-        // validate called 5 times (>3) → •5
-        assert!(out.contains("validate(") && out.contains("•5"));
-    }
-
-    #[tokio::test]
-    async fn focused_mode() {
-        let tmp = tempdir().unwrap();
-        fs::write(tmp.path().join("a.rs"), "fn process() { validate(1); }\n").unwrap();
-        fs::write(tmp.path().join("b.rs"), "fn validate() { process(); }\n").unwrap();
-
-        let client = AnalyzeClient::new(ctx()).unwrap();
-        let result = client.analyze(
-            AnalyzeParams {
-                path: tmp.path().to_str().unwrap().into(),
-                focus: Some("process".into()),
-                max_depth: 3,
-                follow_depth: 2,
-                force: false,
-            },
-            tmp.path().to_path_buf(),
-        );
-        let out = text(&result);
-
-        assert!(out.contains("FOCUS: process"));
-        assert!(out.contains("DEF"));
-        assert!(out.contains("IN") || out.contains("OUT"));
-        assert!(out.contains("files analyzed"));
-    }
-
-    #[tokio::test]
-    async fn error_and_edge() {
-        let client = AnalyzeClient::new(ctx()).unwrap();
-
-        // Nonexistent path
-        let result = client.analyze(
-            AnalyzeParams {
-                path: "/no/such/path".into(),
-                focus: None,
-                max_depth: 3,
-                follow_depth: 2,
-                force: false,
-            },
-            PathBuf::from("/no/such/path"),
-        );
-        assert_eq!(result.is_error, Some(true));
-        assert!(text(&result).contains("path not found"));
-
-        // Empty directory → 0 files
-        let tmp = tempdir().unwrap();
-        let result = client.analyze(
-            AnalyzeParams {
-                path: tmp.path().to_str().unwrap().into(),
-                focus: None,
-                max_depth: 3,
-                follow_depth: 2,
-                force: false,
-            },
-            tmp.path().to_path_buf(),
-        );
-        assert!(text(&result).contains("0 files"));
-
-        // Size guard
-        let big = "x".repeat(60_000);
-        assert!(format::check_size(&big, false).is_err());
-        assert!(format::check_size(&big, true).is_ok());
     }
 }

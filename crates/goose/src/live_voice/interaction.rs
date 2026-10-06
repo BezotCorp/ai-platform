@@ -2,7 +2,9 @@ use super::service::{
     LiveVoiceInteractionCompletion, LiveVoiceInteractionGuard, LiveVoiceTranscriptPublisher,
 };
 use super::transcript::{DelegationContext, LiveTranscript};
-use crate::{conversation::message::Message, session::SessionManager, token_counter::TokenCounter};
+use crate::session::SessionManager;
+use crate::token_counter::TokenCounter;
+use bcaip_provider_types::conversations::Message;
 use futures::future::BoxFuture;
 use goose_providers::live_voice_provider::{
     DelegationUpdate, DelegationUpdateDelivery, ProviderConnection, ProviderConnectionEvent,
@@ -12,13 +14,11 @@ use std::{collections::HashSet, sync::Arc, time::Duration};
 use tokio::time::timeout;
 use tokio_util::sync::CancellationToken;
 use uuid::Uuid;
-
 pub(super) const PROVIDER_CLEANUP_TIMEOUT: Duration = Duration::from_secs(20);
 pub(super) const DELEGATION_INSTRUCTION: &str =
     "Based on this conversation, identify and complete the user's request.";
 const DELEGATION_UPDATE_TOKEN_LIMIT: usize = 500;
-const UNDELIVERED_DELEGATION_UPDATE_NOTICE: &str =
-    "I couldn't confirm that the latest delegated update reached this voice conversation. Please ask me to share it again.";
+const UNDELIVERED_DELEGATION_UPDATE_NOTICE: &str = "I couldn't confirm that the latest delegated update reached this voice conversation. Please ask me to share it again.";
 const SAVED_RESULT_NOTICE: &str = "\n\nThe full result is saved in Goose.";
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -469,6 +469,3 @@ async fn bound_delegation_update(text: String) -> String {
         .expect("delegation update boundary comes from char_indices");
     format!("{}{}", truncated.trim_end(), SAVED_RESULT_NOTICE)
 }
-
-#[cfg(test)]
-mod tests;

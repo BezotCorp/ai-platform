@@ -4,7 +4,6 @@ use std::path::{Path, PathBuf};
 use rmcp::model::{Annotations, CallToolResult, ContentBlock, TextContent};
 use schemars::JsonSchema;
 use serde::Deserialize;
-
 const NO_MATCH_PREVIEW_LINES: usize = 20;
 
 #[derive(Debug, Deserialize, JsonSchema)]
@@ -74,16 +73,16 @@ impl EditTools {
     ) -> CallToolResult {
         let path = resolve_path(&params.path, working_dir);
 
-        if let Some(parent) = path.parent() {
-            if !parent.as_os_str().is_empty() && !parent.exists() {
-                if let Err(error) = fs::create_dir_all(parent) {
-                    return CallToolResult::error(vec![visible_text(format!(
-                        "Failed to create directory {}: {}",
-                        parent.display(),
-                        error
-                    ))]);
-                }
-            }
+        if let Some(parent) = path.parent()
+            && !parent.as_os_str().is_empty()
+            && !parent.exists()
+            && let Err(error) = fs::create_dir_all(parent)
+        {
+            return CallToolResult::error(vec![visible_text(format!(
+                "Failed to create directory {}: {}",
+                parent.display(),
+                error
+            ))]);
         }
 
         let is_new = !path.exists();
@@ -275,238 +274,4 @@ fn build_file_preview(content: &str, max_lines: usize) -> String {
     }
 
     preview
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use rmcp::model::ContentBlock;
-    use std::fs;
-    use tempfile::TempDir;
-    use test_case::test_case;
-
-    fn setup() -> TempDir {
-        tempfile::tempdir().unwrap()
-    }
-
-    fn extract_text(result: &CallToolResult) -> &str {
-        match &result.content[0] {
-            ContentBlock::Text(text) => &text.text,
-            _ => panic!("expected text"),
-        }
-    }
-
-    #[test_case(None, None, "line1\nline2\nline3" ; "full content")]
-    #[test_case(Some(2), None, "line2\nline3" ; "from line 2")]
-    #[test_case(None, Some(2), "line1\nline2\n" ; "limit 2")]
-    #[test_case(Some(2), Some(1), "line2\n" ; "line 2 limit 1")]
-    #[test_case(Some(99), None, "" ; "beyond eof")]
-    fn test_apply_line_limit(line: Option<u32>, limit: Option<u32>, expected: &str) {
-        assert_eq!(
-            apply_line_limit("line1\nline2\nline3", line, limit),
-            expected
-        );
-    }
-
-    #[test]
-    fn test_file_read() {
-        let dir = setup();
-        let path = dir.path().join("read.txt");
-        fs::write(&path, "line1\nline2\nline3").unwrap();
-        let tools = EditTools::new();
-
-        let result = tools.file_read_with_cwd(
-            FileReadParams {
-                path: path.to_string_lossy().to_string(),
-                line: None,
-                limit: None,
-            },
-            None,
-        );
-
-        assert!(!result.is_error.unwrap_or(false));
-        assert_eq!(extract_text(&result), "line1\nline2\nline3");
-    }
-
-    #[test]
-    fn test_file_read_partial() {
-        let dir = setup();
-        let path = dir.path().join("read.txt");
-        fs::write(&path, "line1\nline2\nline3").unwrap();
-        let tools = EditTools::new();
-
-        let result = tools.file_read_with_cwd(
-            FileReadParams {
-                path: path.to_string_lossy().to_string(),
-                line: Some(2),
-                limit: Some(1),
-            },
-            None,
-        );
-
-        assert!(!result.is_error.unwrap_or(false));
-        assert_eq!(extract_text(&result), "line2\n");
-    }
-
-    #[test]
-    fn test_file_write_new() {
-        let dir = setup();
-        let path = dir.path().join("new_file.txt");
-        let tools = EditTools::new();
-
-        let result = tools.file_write(FileWriteParams {
-            path: path.to_string_lossy().to_string(),
-            content: "Hello, world!\nLine 2".to_string(),
-        });
-
-        assert!(!result.is_error.unwrap_or(false));
-        assert!(path.exists());
-        assert_eq!(fs::read_to_string(&path).unwrap(), "Hello, world!\nLine 2");
-    }
-
-    #[test]
-    fn test_file_write_overwrite() {
-        let dir = setup();
-        let path = dir.path().join("existing.txt");
-        fs::write(&path, "old content").unwrap();
-        let tools = EditTools::new();
-
-        let result = tools.file_write(FileWriteParams {
-            path: path.to_string_lossy().to_string(),
-            content: "new content".to_string(),
-        });
-
-        assert!(!result.is_error.unwrap_or(false));
-        assert_eq!(fs::read_to_string(&path).unwrap(), "new content");
-    }
-
-    #[test]
-    fn test_file_write_creates_dirs() {
-        let dir = setup();
-        let path = dir.path().join("a/b/c/file.txt");
-        let tools = EditTools::new();
-
-        let result = tools.file_write(FileWriteParams {
-            path: path.to_string_lossy().to_string(),
-            content: "nested".to_string(),
-        });
-
-        assert!(!result.is_error.unwrap_or(false));
-        assert!(path.exists());
-    }
-
-    #[test]
-    fn test_file_edit_single_match() {
-        let dir = setup();
-        let path = dir.path().join("edit.txt");
-        fs::write(&path, "fn foo() {\n    println!(\"hello\");\n}").unwrap();
-        let tools = EditTools::new();
-
-        let result = tools.file_edit(FileEditParams {
-            path: path.to_string_lossy().to_string(),
-            before: "println!(\"hello\");".to_string(),
-            after: "println!(\"world\");".to_string(),
-        });
-
-        assert!(!result.is_error.unwrap_or(false));
-        let content = fs::read_to_string(&path).unwrap();
-        assert!(content.contains("println!(\"world\");"));
-        assert!(!content.contains("println!(\"hello\");"));
-    }
-
-    #[test]
-    fn test_file_edit_no_match() {
-        let dir = setup();
-        let path = dir.path().join("edit.txt");
-        fs::write(&path, "some content").unwrap();
-        let tools = EditTools::new();
-
-        let result = tools.file_edit(FileEditParams {
-            path: path.to_string_lossy().to_string(),
-            before: "nonexistent".to_string(),
-            after: "replacement".to_string(),
-        });
-
-        assert!(result.is_error.unwrap_or(false));
-        let text = extract_text(&result);
-        assert!(text.contains("No match found"));
-        assert!(text.contains("File preview:"));
-        assert!(text.contains("some content"));
-    }
-
-    #[test]
-    fn test_file_edit_multiple_matches() {
-        let dir = setup();
-        let path = dir.path().join("edit.txt");
-        fs::write(&path, "foo\nbar\nfoo\nbaz").unwrap();
-        let tools = EditTools::new();
-
-        let result = tools.file_edit(FileEditParams {
-            path: path.to_string_lossy().to_string(),
-            before: "foo".to_string(),
-            after: "qux".to_string(),
-        });
-
-        assert!(result.is_error.unwrap_or(false));
-        assert_eq!(fs::read_to_string(&path).unwrap(), "foo\nbar\nfoo\nbaz");
-    }
-
-    #[test]
-    fn test_file_edit_delete() {
-        let dir = setup();
-        let path = dir.path().join("edit.txt");
-        fs::write(&path, "keep\ndelete me\nkeep").unwrap();
-        let tools = EditTools::new();
-
-        let result = tools.file_edit(FileEditParams {
-            path: path.to_string_lossy().to_string(),
-            before: "\ndelete me".to_string(),
-            after: "".to_string(),
-        });
-
-        assert!(!result.is_error.unwrap_or(false));
-        assert_eq!(fs::read_to_string(&path).unwrap(), "keep\nkeep");
-    }
-
-    #[test]
-    fn test_file_write_resolves_relative_paths_from_working_dir() {
-        let dir = setup();
-        let tools = EditTools::new();
-
-        let result = tools.file_write_with_cwd(
-            FileWriteParams {
-                path: "relative.txt".to_string(),
-                content: "relative write".to_string(),
-            },
-            Some(dir.path()),
-        );
-
-        assert!(!result.is_error.unwrap_or(false));
-        assert_eq!(
-            fs::read_to_string(dir.path().join("relative.txt")).unwrap(),
-            "relative write"
-        );
-    }
-
-    #[test]
-    fn test_file_edit_resolves_relative_paths_from_working_dir() {
-        let dir = setup();
-        fs::write(dir.path().join("relative-edit.txt"), "before").unwrap();
-        let tools = EditTools::new();
-
-        let result = tools.file_edit_with_cwd(
-            FileEditParams {
-                path: "relative-edit.txt".to_string(),
-                before: "before".to_string(),
-                after: "after".to_string(),
-            },
-            Some(dir.path()),
-        );
-
-        assert!(!result.is_error.unwrap_or(false));
-        assert_eq!(
-            fs::read_to_string(dir.path().join("relative-edit.txt")).unwrap(),
-            "after"
-        );
-    }
 }

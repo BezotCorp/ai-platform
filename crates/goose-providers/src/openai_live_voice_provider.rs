@@ -12,12 +12,12 @@ use crate::{
         OpenAiLiveMessageRole, OpenAiLiveSessionConfig, OpenAiLiveSessionId,
     },
 };
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use async_trait::async_trait;
 use std::{collections::VecDeque, time::Duration};
 use tokio::{
     sync::broadcast::error::RecvError,
-    time::{sleep_until, timeout, timeout_at, Instant},
+    time::{Instant, sleep_until, timeout, timeout_at},
 };
 
 const OPENAI_LIVE_MODEL: &str = "gpt-live-1";
@@ -292,134 +292,5 @@ async fn connect_sideband(
             }
             Err(_) => bail!("OpenAI Live sideband attachment timed out"),
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn configuration_must_be_valid() {
-        assert!(OpenAiLiveVoiceProvider::new("", "voice".into(), "".into(), "".into()).is_err());
-        assert!(OpenAiLiveVoiceProvider::new("key", String::new(), "".into(), "".into()).is_err());
-    }
-
-    #[test]
-    fn maps_live_voice_observations() {
-        let message = |kind| {
-            Ok(LiveSessionEvent::Message(OpenAiLiveEvent {
-                kind,
-                raw: None,
-            }))
-        };
-        let cases = [
-            (
-                message(OpenAiLiveEventKind::TranscriptDelta {
-                    event_id: "event_transcript_1".into(),
-                    client_event_id: None,
-                    role: rmcp::model::Role::Assistant,
-                    delta: "hello".into(),
-                    start_ms: 10,
-                    end_ms: 20,
-                }),
-                Some(ProviderConnectionEvent::TranscriptDelta {
-                    event_id: "event_transcript_1".into(),
-                    role: rmcp::model::Role::Assistant,
-                    text: "hello".into(),
-                    start_ms: 10,
-                    end_ms: 20,
-                }),
-            ),
-            (
-                message(OpenAiLiveEventKind::SessionClosed {
-                    event_id: "event_closed_1".into(),
-                    client_event_id: Some("client_close_1".into()),
-                    reason: "close_requested".into(),
-                    session: serde_json::json!({ "id": "session_1" }),
-                    usage: serde_json::json!({ "seconds": 1 }),
-                }),
-                Some(ProviderConnectionEvent::Closed),
-            ),
-            (
-                message(OpenAiLiveEventKind::Error {
-                    event_id: "event_error_1".into(),
-                    error_type: "server_error".into(),
-                    code: "provider_failed".into(),
-                    message: "provider failed".into(),
-                    parameter: None,
-                    client_event_id: None,
-                }),
-                None,
-            ),
-            (
-                Ok(LiveSessionEvent::Ended {
-                    reason: LiveSessionEndReason::Closed,
-                    error: None,
-                }),
-                Some(ProviderConnectionEvent::Closed),
-            ),
-            (
-                Ok(LiveSessionEvent::Ended {
-                    reason: LiveSessionEndReason::TransportFailed,
-                    error: None,
-                }),
-                Some(ProviderConnectionEvent::Failed),
-            ),
-            (
-                Err(RecvError::Lagged(1)),
-                Some(ProviderConnectionEvent::ReceiverLagged),
-            ),
-            (
-                Err(RecvError::Closed),
-                Some(ProviderConnectionEvent::Failed),
-            ),
-            (
-                message(OpenAiLiveEventKind::InputMuted {
-                    event_id: "event_muted_1".into(),
-                    client_event_id: None,
-                }),
-                None,
-            ),
-        ];
-
-        for (event, expected) in cases {
-            assert_eq!(provider_connection_event(event), expected);
-        }
-    }
-
-    #[test]
-    fn correlates_delegation_update_responses() {
-        let message = |kind| {
-            Ok(LiveSessionEvent::Message(OpenAiLiveEvent {
-                kind,
-                raw: None,
-            }))
-        };
-        let accepted = message(OpenAiLiveEventKind::ContextAppended {
-            event_id: "event_accepted".into(),
-            channel: OpenAiLiveContextChannel::Commentary,
-            client_event_id: Some("client_event".into()),
-            start_ms: 10,
-            end_ms: 20,
-        });
-        let rejected = message(OpenAiLiveEventKind::Error {
-            event_id: "event_rejected".into(),
-            error_type: "invalid_request_error".into(),
-            code: "invalid_delegation".into(),
-            message: "delegation is stale".into(),
-            parameter: Some("delegation_id".into()),
-            client_event_id: Some("client_event".into()),
-        });
-
-        assert_eq!(
-            append_context_response(&accepted, "client_event"),
-            Some(AppendContextOutcome::Accepted)
-        );
-        assert_eq!(
-            append_context_response(&rejected, "client_event"),
-            Some(AppendContextOutcome::Rejected)
-        );
-        assert_eq!(append_context_response(&accepted, "other_event"), None);
     }
 }

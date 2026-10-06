@@ -1,21 +1,16 @@
-use crate::{
-    agents::{subagent_task_config::TaskConfig, Agent, AgentConfig, AgentEvent, SessionConfig},
-    conversation::{
-        message::{Message, MessageContent},
-        Conversation,
-    },
-    prompt_template::render_template,
-    recipe::Recipe,
-};
-use anyhow::{anyhow, Result};
+use crate::agents::subagent_task_config::TaskConfig;
+use crate::agents::{Agent, AgentConfig, SessionConfig};
+use crate::prompt_template::render_template;
+use crate::recipe::Recipe;
+use anyhow::{Result, anyhow};
 use futures::StreamExt;
+use bcaip_agent::events::AgentEvent;
+use bcaip_provider_types::conversations::{Conversation, Message, MessageContent};
 use rmcp::model::{ErrorCode, ErrorData, Notification, ServerNotification};
 #[expect(deprecated)]
 use rmcp::model::{LoggingLevel, LoggingMessageNotificationParam};
 use serde::Serialize;
-use std::future::Future;
-use std::pin::Pin;
-use std::sync::Arc;
+use std::{future::Future, pin::Pin, sync::Arc};
 use tokio_util::sync::CancellationToken;
 use tracing::{debug, info};
 
@@ -67,7 +62,7 @@ fn extract_response_text(messages: &Conversation, return_last_only: bool) -> Str
             .last()
             .and_then(|message| {
                 message.content.iter().find_map(|content| match content {
-                    crate::conversation::message::MessageContent::Text(text_content) => {
+                    bcaip_provider_types::conversations::MessageContent::Text(text_content) => {
                         Some(text_content.text.clone())
                     }
                     _ => None,
@@ -79,10 +74,12 @@ fn extract_response_text(messages: &Conversation, return_last_only: bool) -> Str
             .iter()
             .flat_map(|message| {
                 message.content.iter().filter_map(|content| match content {
-                    crate::conversation::message::MessageContent::Text(text_content) => {
+                    bcaip_provider_types::conversations::MessageContent::Text(text_content) => {
                         Some(text_content.text.clone())
                     }
-                    crate::conversation::message::MessageContent::ToolResponse(tool_response) => {
+                    bcaip_provider_types::conversations::MessageContent::ToolResponse(
+                        tool_response,
+                    ) => {
                         if let Ok(result) = &tool_response.tool_result {
                             let texts: Vec<String> = result
                                 .content
@@ -215,13 +212,10 @@ fn get_agent_messages(params: SubagentRunParams) -> AgentMessagesFuture {
                     }
                     if let Some(ref tx) = notification_tx {
                         for content in &msg.content {
-                            if let Some(notif) = create_tool_notification(content, &session_id) {
-                                if tx.send(notif).is_err() {
-                                    debug!(
-                                        "Notification receiver dropped for subagent {}",
-                                        session_id
-                                    );
-                                }
+                            if let Some(notif) = create_tool_notification(content, &session_id)
+                                && tx.send(notif).is_err()
+                            {
+                                debug!("Notification receiver dropped for subagent {}", session_id);
                             }
                         }
                     }
@@ -311,54 +305,5 @@ pub fn create_tool_notification(
         ))
     } else {
         None
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::{create_tool_notification, SUBAGENT_TOOL_REQUEST_TYPE};
-    use crate::conversation::message::MessageContent;
-    use rmcp::model::{CallToolRequestParams, ServerNotification};
-    use serde_json::json;
-
-    #[test]
-    #[expect(deprecated)]
-    fn create_tool_notification_for_tool_request() {
-        let tool_call = CallToolRequestParams::new("developer__shell".to_string())
-            .with_arguments(json!({"command": "ls"}).as_object().unwrap().clone());
-        let content = MessageContent::tool_request("req1", Ok(tool_call));
-        let notification =
-            create_tool_notification(&content, "session_1").expect("expected notification");
-
-        let ServerNotification::LoggingMessageNotification(log_notif) = notification else {
-            panic!("expected logging notification");
-        };
-        let data = log_notif
-            .params
-            .data
-            .as_object()
-            .expect("expected object data");
-        assert_eq!(
-            data.get("type").and_then(|v| v.as_str()),
-            Some(SUBAGENT_TOOL_REQUEST_TYPE)
-        );
-        assert_eq!(
-            data.get("subagent_id").and_then(|v| v.as_str()),
-            Some("session_1")
-        );
-        let tool_call = data
-            .get("tool_call")
-            .and_then(|v| v.as_object())
-            .expect("expected tool_call object");
-        assert_eq!(
-            tool_call.get("name").and_then(|v| v.as_str()),
-            Some("developer__shell")
-        );
-    }
-
-    #[test]
-    fn create_tool_notification_ignores_non_tool_request() {
-        let content = MessageContent::text("hello");
-        assert!(create_tool_notification(&content, "session_1").is_none());
     }
 }

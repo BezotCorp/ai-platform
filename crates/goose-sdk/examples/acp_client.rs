@@ -19,13 +19,13 @@
 //! cargo run -p goose-sdk --example acp_client -- --goose-bin ./target/debug/goose "Explain Rust's ownership model in one sentence"
 //! ```
 
+use agent_client_protocol::schema::ProtocolVersion;
 use agent_client_protocol::schema::v1::{
     ContentBlock, InitializeRequest, RequestPermissionOutcome, RequestPermissionRequest,
     RequestPermissionResponse, SelectedPermissionOutcome, SessionNotification, SessionUpdate,
 };
-use agent_client_protocol::schema::ProtocolVersion;
 use agent_client_protocol::{Client, ConnectionTo};
-use goose_sdk::custom_requests::GetExtensionsRequest;
+use goose_sdk_types::custom_requests::GetExtensionsRequest;
 use std::path::PathBuf;
 use tokio_util::compat::{TokioAsyncReadCompatExt, TokioAsyncWriteCompatExt};
 

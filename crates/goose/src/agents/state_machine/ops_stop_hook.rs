@@ -1,19 +1,17 @@
 //! Lets stop hooks accept or block a completed assistant turn.
 
-use anyhow::Result;
-use async_trait::async_trait;
-use rmcp::model::Role;
-
 use crate::agents::state_machine::effects::GooseEffect;
-use crate::agents::state_machine::{
-    applied, ends_turn, messages_since_kickoff, not_applicable, yielded, yielded_with, Emitter,
-    Operation, OperationResult,
-};
-use crate::conversation::message::{Message, SystemNotificationType};
-use crate::conversation::Conversation;
 use crate::hooks::{HookContext, HookDecision, HookEvent, HookManager};
 use crate::session::Session;
-
+use anyhow::Result;
+use async_trait::async_trait;
+use bcaip_agent::operation::{
+    Emitter, Operation, OperationResult, applied, ends_turn, messages_since_kickoff,
+    not_applicable, yielded, yielded_with,
+};
+use bcaip_provider_types::conversations::Conversation;
+use bcaip_provider_types::conversations::{Message, SystemNotificationType};
+use rmcp::model::Role;
 pub(super) const DENIED: &str = "denied";
 
 fn denial_context_message(plugin: &str, reason: &str) -> Message {

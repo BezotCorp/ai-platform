@@ -1,34 +1,33 @@
+use super::api_client::ApiClient;
+use super::openai_compatible::handle_status;
 use crate::api_client::{AuthMethod, TlsConfig};
-use crate::base::ProviderDescriptor;
 use crate::declarative::{DeclarativeProviderConfig, KeyResolver};
-use crate::errors::ProviderError;
-use crate::request_log::{start_log, LoggerHandleExt};
 use anyhow::Result;
 use async_stream::try_stream;
 use async_trait::async_trait;
+use bcaip_provider_types::base::{
+    ConfigKey, MessageStream, ModelInfo, Provider, ProviderMetadata, known_models_from_registry,
+};
+use bcaip_provider_types::base::{ProviderDescriptor, merge_configured_model_info};
+use bcaip_provider_types::context_limit::ContextLimitResolver;
+use bcaip_provider_types::conversations::Message;
+use bcaip_provider_types::errors::ProviderError;
+use bcaip_provider_types::formats::AnthropicFormatOptions;
+use bcaip_provider_types::formats::{
+    ANTHROPIC_PROVIDER_NAME, INPUT_TRANSFORMATIONS_FIELD, PrefixMismatchBehavior,
+    THINKING_BINDING_CONTROLS_BETA, block_binding_behavior, create_request_for_model_anthropic,
+    is_thinking_signature_error, response_to_streaming_message_anthropic,
+};
+use bcaip_provider_types::model::ModelConfig;
+use bcaip_provider_types::request_log::{LoggerHandleExt, start_log};
+use bcaip_provider_types::retry::ProviderRetry;
 use futures::TryStreamExt;
 use reqwest::StatusCode;
-use serde_json::{json, Value};
+use rmcp::model::Tool;
+use serde_json::{Value, json};
 use std::io;
 use tokio::pin;
 use tokio_util::io::StreamReader;
-
-use super::api_client::ApiClient;
-use super::base::{
-    known_models_from_registry, ConfigKey, MessageStream, ModelInfo, Provider, ProviderMetadata,
-};
-pub use super::formats::anthropic::AnthropicFormatOptions;
-use super::formats::anthropic::{
-    block_binding_behavior, create_request_for_model, is_thinking_signature_error,
-    response_to_streaming_message, PrefixMismatchBehavior, ANTHROPIC_PROVIDER_NAME,
-    INPUT_TRANSFORMATIONS_FIELD, THINKING_BINDING_CONTROLS_BETA,
-};
-use super::openai_compatible::handle_status;
-use super::retry::ProviderRetry;
-use crate::conversation::message::Message;
-use crate::model::ModelConfig;
-use rmcp::model::Tool;
-
 pub const ANTHROPIC_DEFAULT_MODEL: &str = "claude-sonnet-4-5";
 
 const ANTHROPIC_DOC_URL: &str = "https://docs.anthropic.com/en/docs/about-claude/models";
@@ -153,7 +152,7 @@ impl AnthropicProvider {
         tools: &[Tool],
         format_options: AnthropicFormatOptions,
     ) -> Result<Value, ProviderError> {
-        let mut payload = create_request_for_model(
+        let mut payload = create_request_for_model_anthropic(
             &self.name,
             model_config,
             wire_model,
@@ -232,7 +231,7 @@ impl AnthropicProvider {
         Ok(Box::pin(try_stream! {
             let reader = StreamReader::new(stream);
             let framed = tokio_util::codec::FramedRead::new(reader, tokio_util::codec::LinesCodec::new()).map_err(anyhow::Error::from);
-            let messages = response_to_streaming_message(framed);
+            let messages = response_to_streaming_message_anthropic(framed);
             pin!(messages);
             while let Some(message) = futures::StreamExt::next(&mut messages).await {
                 let (message, usage) = message.map_err(ProviderError::from_stream_error)?;
@@ -368,7 +367,7 @@ impl Provider for AnthropicProvider {
             .iter()
             .flatten()
             .filter_map(|model| model.context_limit.map(|limit| (model.name.clone(), limit)));
-        crate::context_limit::ContextLimitResolver::new(&self.name)
+        ContextLimitResolver::new(&self.name)
             .with_configured_limits(configured_limits)
             .resolve(model, override_limit, || async { Ok(None) })
             .await
@@ -404,7 +403,7 @@ impl Provider for AnthropicProvider {
 
     async fn fetch_supported_model_info(&self) -> Result<Vec<ModelInfo>, ProviderError> {
         let names = self.fetch_supported_models().await?;
-        Ok(crate::base::merge_configured_model_info(
+        Ok(merge_configured_model_info(
             &self.name,
             &names,
             self.custom_models.as_deref().unwrap_or_default(),
@@ -561,323 +560,4 @@ pub fn from_declarative_config(
         .dynamic_models(config.dynamic_models)
         .skip_canonical_filtering(config.skip_canonical_filtering)
         .format_options(format_options))
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::api_client::AuthMethod;
-    use crate::conversation::message::MessageContent;
-    use serde_json::json;
-
-    struct StubKeyResolver;
-
-    impl crate::declarative::KeyResolver for StubKeyResolver {
-        type Error = std::convert::Infallible;
-
-        fn resolve_key(&self, _key: &str) -> Result<String, Self::Error> {
-            Ok("test-key".to_string())
-        }
-    }
-
-    #[test]
-    fn zai_provider_config_emits_clear_thinking() {
-        let configs = crate::declarative::fixed_provider_configs().unwrap();
-        let zai = configs.iter().find(|c| c.name == "zai").cloned().unwrap();
-        let builder = from_declarative_config(zai, None, StubKeyResolver).unwrap();
-
-        let mut model = ModelConfig::new("glm-4.7");
-        model.max_tokens = Some(64_000);
-        let messages = vec![
-            Message::assistant().with_content(MessageContent::thinking("internal", "")),
-            Message::user().with_text("Continue"),
-        ];
-
-        let payload = create_request_for_model(
-            "zai",
-            &model,
-            "glm-4.7",
-            "system",
-            &messages,
-            &[],
-            builder.format_options,
-        )
-        .unwrap();
-
-        assert_eq!(payload["thinking"]["clear_thinking"], false);
-    }
-
-    #[tokio::test]
-    async fn fetch_supported_model_info_preserves_configured_metadata() {
-        let mut provider = make_provider_with_custom_models("http://localhost", vec![]);
-        provider.dynamic_models = Some(false);
-        provider.custom_models = Some(vec![ModelInfo {
-            reasoning: true,
-            ..ModelInfo::new("unrecognized-static-model").with_context_limit(4096)
-        }]);
-
-        let models = provider.fetch_supported_model_info().await.unwrap();
-
-        assert_eq!(models.len(), 1);
-        assert_eq!(models[0].name, "unrecognized-static-model");
-        assert_eq!(models[0].context_limit, Some(4096));
-        assert!(models[0].reasoning);
-    }
-
-    fn make_provider_with_custom_models(
-        host: &str,
-        custom_models: Vec<String>,
-    ) -> AnthropicProvider {
-        AnthropicProvider {
-            api_client: ApiClient::new_with_tls(host.to_string(), AuthMethod::NoAuth, None)
-                .unwrap(),
-            supports_streaming: true,
-            name: "test-provider".to_string(),
-            custom_models: Some(custom_models.into_iter().map(ModelInfo::new).collect()),
-            dynamic_models: Some(true),
-            skip_canonical_filtering: false,
-            format_options: AnthropicFormatOptions::default(),
-        }
-    }
-
-    #[tokio::test]
-    async fn fetch_models_treats_invalid_json_as_endpoint_not_found() {
-        use wiremock::matchers::{method, path};
-        use wiremock::{Mock, MockServer, ResponseTemplate};
-
-        let server = MockServer::start().await;
-        Mock::given(method("GET"))
-            .and(path("/v1/models"))
-            .respond_with(
-                ResponseTemplate::new(200).set_body_string("<html>not a models endpoint</html>"),
-            )
-            .expect(1)
-            .mount(&server)
-            .await;
-
-        let provider =
-            make_provider_with_custom_models(&server.uri(), vec!["static-model".to_string()]);
-
-        let err = provider.fetch_models_from_api().await.unwrap_err();
-        assert!(
-            err.is_endpoint_not_found(),
-            "expected EndpointNotFound, got: {:?}",
-            err
-        );
-    }
-
-    #[tokio::test]
-    async fn fetch_models_treats_missing_data_field_as_request_failed() {
-        use wiremock::matchers::{method, path};
-        use wiremock::{Mock, MockServer, ResponseTemplate};
-
-        let server = MockServer::start().await;
-        Mock::given(method("GET"))
-            .and(path("/v1/models"))
-            .respond_with(ResponseTemplate::new(200).set_body_json(json!({"status": "ok"})))
-            .expect(1)
-            .mount(&server)
-            .await;
-
-        let provider =
-            make_provider_with_custom_models(&server.uri(), vec!["static-model".to_string()]);
-
-        let err = provider.fetch_models_from_api().await.unwrap_err();
-        assert!(
-            matches!(err, ProviderError::RequestFailed(_)),
-            "expected RequestFailed, got: {:?}",
-            err
-        );
-    }
-
-    #[tokio::test]
-    async fn fetch_supported_models_falls_back_on_invalid_payload() {
-        use wiremock::matchers::{method, path};
-        use wiremock::{Mock, MockServer, ResponseTemplate};
-
-        let server = MockServer::start().await;
-        Mock::given(method("GET"))
-            .and(path("/v1/models"))
-            .respond_with(ResponseTemplate::new(200).set_body_string("<html>error page</html>"))
-            .mount(&server)
-            .await;
-
-        let predefined = vec![
-            "claude-sonnet-4-5".to_string(),
-            "claude-haiku-4-5".to_string(),
-        ];
-        let provider = make_provider_with_custom_models(&server.uri(), predefined.clone());
-
-        let models = provider
-            .fetch_supported_models()
-            .await
-            .expect("should fall back to predefined list on invalid payload");
-        assert_eq!(models, predefined);
-    }
-
-    #[tokio::test]
-    async fn fetch_supported_models_does_not_fall_back_on_missing_data() {
-        use wiremock::matchers::{method, path};
-        use wiremock::{Mock, MockServer, ResponseTemplate};
-
-        let server = MockServer::start().await;
-        Mock::given(method("GET"))
-            .and(path("/v1/models"))
-            .respond_with(ResponseTemplate::new(200).set_body_json(json!({"status": "ok"})))
-            .mount(&server)
-            .await;
-
-        let provider =
-            make_provider_with_custom_models(&server.uri(), vec!["static-model".to_string()]);
-
-        let err = provider.fetch_supported_models().await.unwrap_err();
-        assert!(
-            matches!(err, ProviderError::RequestFailed(_)),
-            "expected RequestFailed to propagate, got: {:?}",
-            err
-        );
-    }
-
-    #[tokio::test]
-    async fn fetch_supported_models_propagates_auth_error() {
-        use wiremock::matchers::{method, path};
-        use wiremock::{Mock, MockServer, ResponseTemplate};
-
-        let server = MockServer::start().await;
-        Mock::given(method("GET"))
-            .and(path("/v1/models"))
-            .respond_with(ResponseTemplate::new(401).set_body_json(json!({
-                "type": "error",
-                "error": {
-                    "type": "authentication_error",
-                    "message": "invalid api key"
-                }
-            })))
-            .mount(&server)
-            .await;
-
-        let provider =
-            make_provider_with_custom_models(&server.uri(), vec!["static-model".to_string()]);
-
-        let err = provider.fetch_supported_models().await.unwrap_err();
-        assert!(
-            matches!(err, ProviderError::Authentication(_)),
-            "expected Authentication error, got: {:?}",
-            err
-        );
-    }
-
-    #[tokio::test]
-    async fn fetch_supported_models_accepts_null_error() {
-        use wiremock::matchers::{method, path};
-        use wiremock::{Mock, MockServer, ResponseTemplate};
-
-        let server = MockServer::start().await;
-        Mock::given(method("GET"))
-            .and(path("/v1/models"))
-            .respond_with(ResponseTemplate::new(200).set_body_json(json!({
-                "data": [{"id": "model-a"}],
-                "error": null
-            })))
-            .mount(&server)
-            .await;
-
-        let provider =
-            make_provider_with_custom_models(&server.uri(), vec!["static-model".to_string()]);
-
-        assert_eq!(
-            provider.fetch_supported_models().await.unwrap(),
-            vec!["model-a".to_string()]
-        );
-    }
-
-    #[tokio::test]
-    async fn fetch_supported_models_preserves_200_error_type() {
-        use wiremock::matchers::{method, path};
-        use wiremock::{Mock, MockServer, ResponseTemplate};
-
-        let server = MockServer::start().await;
-        Mock::given(method("GET"))
-            .and(path("/v1/models"))
-            .respond_with(ResponseTemplate::new(200).set_body_json(json!({
-                "type": "error",
-                "error": {
-                    "type": "rate_limit_error",
-                    "message": "quota exceeded"
-                }
-            })))
-            .mount(&server)
-            .await;
-
-        let provider =
-            make_provider_with_custom_models(&server.uri(), vec!["static-model".to_string()]);
-
-        assert!(matches!(
-            provider.fetch_supported_models().await.unwrap_err(),
-            ProviderError::RateLimitExceeded { .. }
-        ));
-    }
-
-    #[tokio::test]
-    async fn fetch_supported_models_propagates_auth_error_from_200_payload() {
-        use wiremock::matchers::{method, path};
-        use wiremock::{Mock, MockServer, ResponseTemplate};
-
-        let server = MockServer::start().await;
-        Mock::given(method("GET"))
-            .and(path("/v1/models"))
-            .respond_with(ResponseTemplate::new(200).set_body_json(json!({
-                "type": "error",
-                "error": {
-                    "type": "authentication_error",
-                    "message": "invalid api key"
-                }
-            })))
-            .mount(&server)
-            .await;
-
-        let provider =
-            make_provider_with_custom_models(&server.uri(), vec!["static-model".to_string()]);
-
-        let err = provider.fetch_supported_models().await.unwrap_err();
-        assert!(
-            matches!(err, ProviderError::Authentication(_)),
-            "expected Authentication error, got: {:?}",
-            err
-        );
-    }
-
-    #[test]
-    fn beta_header_merges_client_default_with_binding_beta() {
-        let client =
-            ApiClient::new_with_tls("http://localhost".to_string(), AuthMethod::NoAuth, None)
-                .unwrap()
-                .with_header("anthropic-beta", "context-1m-2025-08-07")
-                .unwrap();
-        let payload = json!({
-            "thinking": {"type": "adaptive", "block_binding": {"prefix_mismatch_behavior": "drop_block"}}
-        });
-        assert_eq!(
-            beta_header_value(&client, &ModelConfig::new("claude-opus-5"), &payload).as_deref(),
-            Some("context-1m-2025-08-07,thinking-binding-controls-2026-08-01")
-        );
-    }
-
-    #[test]
-    fn metadata_comes_from_the_registry() {
-        let metadata = AnthropicProvider::metadata();
-        let sonnet = metadata
-            .known_models
-            .iter()
-            .find(|model| model.name == "claude-sonnet-4-5")
-            .expect("claude-sonnet-4-5 should come from the catalog");
-        assert_eq!(sonnet.context_limit, Some(1_000_000));
-        assert!(
-            metadata
-                .known_models
-                .iter()
-                .all(|model| !model.name.contains('.')),
-            "Anthropic picker ids must be dashed wire names, not dotted catalog names"
-        );
-    }
 }

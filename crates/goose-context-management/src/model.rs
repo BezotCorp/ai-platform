@@ -1,12 +1,11 @@
-use std::sync::Arc;
-
 use async_trait::async_trait;
-use goose_provider_types::base::Provider;
-use goose_provider_types::conversation::message::Message;
-use goose_provider_types::conversation::token_usage::ProviderUsage;
-use goose_provider_types::errors::ProviderError;
-use goose_provider_types::model::ModelConfig;
-
+use bcaip_provider_types::{
+    base::Provider,
+    conversations::{Message, ProviderUsage},
+    errors::ProviderError,
+    model::ModelConfig,
+};
+use std::sync::Arc;
 /// The single completion call compaction needs. Implementations decide model
 /// selection, fallbacks and session plumbing.
 #[async_trait]

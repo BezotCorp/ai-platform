@@ -151,7 +151,7 @@ prompt: |
     context management
   - `crates/goose/src/providers/` — provider-specific quirks (prompt
     shape, streaming, tool-call format)
-  - `crates/goose-mcp/src/developer/` — the developer extension, where
+  - `crates/bcaip-mcp/src/developer/` — the developer extension, where
     most shell/file tools live
   - `crates/goose/src/prompts/` and any system-prompt strings — what
     we're telling the model about how to behave

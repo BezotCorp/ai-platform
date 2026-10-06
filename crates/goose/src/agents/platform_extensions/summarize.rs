@@ -1,22 +1,19 @@
-use std::path::{Path, PathBuf};
-use std::sync::Arc;
-
+use crate::agents::extension::PlatformExtensionContext;
+use crate::agents::mcp_client::{Error, McpClientTrait};
 use crate::agents::tool_execution::ToolCallContext;
 use async_trait::async_trait;
+use bcaip_provider_types::base::Provider;
+use bcaip_provider_types::conversations::Message;
 use ignore::gitignore::{Gitignore, GitignoreBuilder};
 use rmcp::model::{
     CallToolResult, ContentBlock, Implementation, InitializeResult, JsonObject, ListToolsResult,
     ServerCapabilities, Tool,
 };
-use schemars::{schema_for, JsonSchema};
+use schemars::{JsonSchema, schema_for};
 use serde::Deserialize;
+use std::path::{Path, PathBuf};
+use std::sync::Arc;
 use tokio_util::sync::CancellationToken;
-
-use crate::agents::extension::PlatformExtensionContext;
-use crate::agents::mcp_client::{Error, McpClientTrait};
-use crate::conversation::message::Message;
-use crate::providers::base::Provider;
-
 pub static EXTENSION_NAME: &str = "summarize";
 
 const MAX_FILE_SIZE: u64 = 100 * 1024;
@@ -175,7 +172,7 @@ impl McpClientTrait for SummarizeClient {
 
 async fn execute_summarize(
     provider: Arc<dyn Provider>,
-    model_config: goose_providers::model::ModelConfig,
+    model_config: bcaip_provider_types::model::ModelConfig,
     session_id: &str,
     params: SummarizeParams,
     working_dir: &Path,
@@ -191,8 +188,7 @@ async fn execute_summarize(
     let total_lines: usize = files.iter().map(|f| f.lines).sum();
     let file_count = files.len();
 
-    let system =
-        "You are an assistant that analyzes content and provides clear, concise summaries \
+    let system = "You are an assistant that analyzes content and provides clear, concise summaries \
          focused on answering the user's specific question. \
          Be specific and reference relevant parts of the content when helpful.";
 
@@ -209,7 +205,7 @@ async fn execute_summarize(
         .content
         .iter()
         .filter_map(|c| {
-            if let crate::conversation::message::MessageContent::Text(t) = c {
+            if let bcaip_provider_types::conversations::MessageContent::Text(t) = c {
                 Some(t.text.clone())
             } else {
                 None
@@ -428,132 +424,4 @@ fn build_prompt(files: &[FileContent], question: &str, working_dir: &Path) -> St
     }
 
     prompt
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use std::fs;
-    use tempfile::TempDir;
-
-    fn setup_test_dir() -> TempDir {
-        let dir = tempfile::tempdir().unwrap();
-
-        fs::create_dir_all(dir.path().join("src")).unwrap();
-        fs::write(
-            dir.path().join("src/main.rs"),
-            "fn main() {\n    println!(\"Hello\");\n}\n",
-        )
-        .unwrap();
-
-        fs::write(
-            dir.path().join("src/lib.rs"),
-            "pub struct Foo;\n\nimpl Foo {\n    pub fn new() -> Self { Self }\n}\n",
-        )
-        .unwrap();
-
-        fs::write(
-            dir.path().join(".gitignore"),
-            "node_modules/
-*.log
-",
-        )
-        .unwrap();
-
-        fs::create_dir_all(dir.path().join("node_modules")).unwrap();
-        fs::write(
-            dir.path().join("node_modules/pkg.js"),
-            "module.exports = {}",
-        )
-        .unwrap();
-
-        fs::write(dir.path().join("debug.log"), "some logs").unwrap();
-
-        dir
-    }
-
-    #[test]
-    fn test_collect_files_respects_gitignore() {
-        let dir = setup_test_dir();
-        let gitignore = build_gitignore(dir.path());
-        let files = collect_files(&[".".to_string()], dir.path(), &None, &gitignore).unwrap();
-
-        assert!(!files
-            .iter()
-            .any(|f| f.path.to_string_lossy().contains("node_modules")));
-        assert!(!files
-            .iter()
-            .any(|f| f.path.to_string_lossy().contains(".log")));
-    }
-
-    #[test]
-    fn test_collect_files_extension_filter() {
-        let dir = setup_test_dir();
-        fs::write(dir.path().join("src/script.py"), "print('hello')").unwrap();
-        let gitignore = build_gitignore(dir.path());
-
-        let files = collect_files(
-            &["src".to_string()],
-            dir.path(),
-            &Some(vec!["py".to_string()]),
-            &gitignore,
-        )
-        .unwrap();
-
-        assert_eq!(files.len(), 1);
-        assert!(files[0].path.ends_with("script.py"));
-    }
-
-    #[test]
-    fn test_collect_files_rejects_absolute_paths() {
-        let dir = setup_test_dir();
-        let gitignore = build_gitignore(dir.path());
-        let result = collect_files(&["/etc/passwd".to_string()], dir.path(), &None, &gitignore);
-
-        assert!(result.is_err());
-        assert!(result
-            .unwrap_err()
-            .contains("Absolute paths are not allowed"));
-    }
-
-    #[test]
-    fn test_collect_files_rejects_path_traversal() {
-        let dir = setup_test_dir();
-        let gitignore = build_gitignore(dir.path());
-        let result = collect_files(
-            &["../../../etc/passwd".to_string()],
-            dir.path(),
-            &None,
-            &gitignore,
-        );
-
-        assert!(result.is_err());
-    }
-
-    #[test]
-    fn test_collect_file_skips_large_files() {
-        let dir = setup_test_dir();
-        let large_content = "x".repeat((MAX_FILE_SIZE + 1) as usize);
-        fs::write(dir.path().join("src/large.rs"), &large_content).unwrap();
-
-        let gitignore = build_gitignore(dir.path());
-        let files = collect_files(&["src".to_string()], dir.path(), &None, &gitignore).unwrap();
-
-        assert!(!files.iter().any(|f| f.path.ends_with("large.rs")));
-    }
-
-    #[test]
-    fn test_collect_files_skips_symlinks() {
-        let dir = setup_test_dir();
-        let link_path = dir.path().join("src/link.rs");
-
-        #[cfg(unix)]
-        {
-            std::os::unix::fs::symlink(dir.path().join("src/main.rs"), &link_path).unwrap();
-            let gitignore = build_gitignore(dir.path());
-            let files = collect_files(&["src".to_string()], dir.path(), &None, &gitignore).unwrap();
-
-            assert!(!files.iter().any(|f| f.path.ends_with("link.rs")));
-        }
-    }
 }

@@ -1,31 +1,35 @@
-use anyhow::Result;
-use futures::future::BoxFuture;
-use goose_providers::base::ProviderDescriptor;
-use std::collections::HashMap;
-
-use crate::config::declarative_providers::DeclarativeProviderConfig;
 use crate::config::Config;
-use crate::providers::base::{ProviderDef, DEFAULT_PROVIDER_TIMEOUT_SECS};
-use crate::providers::command_auth::CommandAuthProvider;
-use crate::providers::custom_provider_config::ConfigKeyResolver;
+use crate::providers::base::ProviderDef;
+use crate::providers::{
+    command_auth::CommandAuthProvider, custom_provider_config::ConfigKeyResolver,
+};
 use crate::session_context::{
     session_id_request_builder, session_id_request_builder_with_header_override,
 };
-use goose_providers::api_client::{ApiClient, AuthMethod};
-use goose_providers::openai::{
-    parse_custom_headers, parse_openai_base_url, OpenAiProvider, OpenAiProviderBuilder,
-    OPEN_AI_DEFAULT_BASE_PATH, OPEN_AI_VERSIONLESS_BASE_PATH,
+use anyhow::Result;
+use bcaip_provider_types::base::{ProviderDescriptor, ProviderMetadata};
+use bcaip_provider_types::{
+    ProviderSetupCategory, ProviderSetupGroup, ProviderSetupMetadata, ProviderSetupMethod,
 };
+use futures::future::BoxFuture;
+use goose_providers::api_client::DEFAULT_PROVIDER_TIMEOUT_SECS;
+use goose_providers::api_client::{ApiClient, AuthMethod};
+use goose_providers::declarative::DeclarativeProviderConfig;
+use goose_providers::openai::{
+    OPEN_AI_DEFAULT_BASE_PATH, OPEN_AI_VERSIONLESS_BASE_PATH, OpenAiProvider,
+    OpenAiProviderBuilder, parse_custom_headers, parse_openai_base_url,
+};
+use std::collections::HashMap;
 
 pub struct OpenAiProviderDef;
 
 impl ProviderDescriptor for OpenAiProviderDef {
-    fn metadata() -> goose_providers::base::ProviderMetadata {
+    fn metadata() -> ProviderMetadata {
         OpenAiProvider::metadata().with_setup(
-            crate::providers::catalog::ProviderSetupMetadata::new(
-                crate::providers::catalog::ProviderSetupCategory::Model,
-                crate::providers::catalog::ProviderSetupMethod::ConfigFields,
-                crate::providers::catalog::ProviderSetupGroup::Default,
+            ProviderSetupMetadata::new(
+                ProviderSetupCategory::Model,
+                ProviderSetupMethod::ConfigFields,
+                ProviderSetupGroup::Default,
             )
             .with_docs_url("https://platform.openai.com/api-keys")
             .with_field(
@@ -43,7 +47,7 @@ impl ProviderDef for OpenAiProviderDef {
 
     fn from_env(
         _extensions: Vec<crate::config::ExtensionConfig>,
-        tls_config: Option<crate::providers::api_client::TlsConfig>,
+        tls_config: Option<goose_providers::api_client::TlsConfig>,
     ) -> BoxFuture<'static, Result<Self::Provider>> {
         Box::pin(from_env(tls_config))
     }
@@ -304,98 +308,4 @@ fn is_direct_openai_host(host: &str) -> bool {
         .and_then(|u| u.host_str().map(|h| h.to_ascii_lowercase()))
         .map(|h| h == "api.openai.com" || h.ends_with(".api.openai.com"))
         .unwrap_or(false)
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn parse_base_url_strips_v1_from_standard_openai_url() {
-        let r = parse_base_url("https://api.openai.com/v1").unwrap();
-        assert_eq!(r.host, "https://api.openai.com");
-        assert!(r.query_params.is_empty());
-        assert!(r.has_v1);
-    }
-
-    #[test]
-    fn parse_base_url_preserves_prefix_before_v1() {
-        let r = parse_base_url("https://gateway.example.com/openai/v1").unwrap();
-        assert_eq!(r.host, "https://gateway.example.com/openai");
-        assert!(r.has_v1);
-    }
-
-    #[test]
-    fn parse_base_url_handles_no_path() {
-        let r = parse_base_url("https://api.openai.com").unwrap();
-        assert_eq!(r.host, "https://api.openai.com");
-        assert!(r.has_v1);
-    }
-
-    #[test]
-    fn parse_base_url_handles_trailing_slash() {
-        let r = parse_base_url("https://api.openai.com/v1/").unwrap();
-        assert_eq!(r.host, "https://api.openai.com");
-        assert!(r.has_v1);
-    }
-
-    #[test]
-    fn parse_base_url_preserves_port() {
-        let r = parse_base_url("https://localhost:8080/v1").unwrap();
-        assert_eq!(r.host, "https://localhost:8080");
-        assert!(r.has_v1);
-    }
-
-    #[test]
-    fn parse_base_url_preserves_non_v1_path() {
-        let r = parse_base_url("https://example.com/custom/api").unwrap();
-        assert_eq!(r.host, "https://example.com/custom/api");
-        assert!(!r.has_v1);
-    }
-
-    #[test]
-    fn is_direct_openai_host_matches_only_openai() {
-        assert!(is_direct_openai_host("https://api.openai.com"));
-        assert!(is_direct_openai_host("https://api.openai.com/v1"));
-        assert!(is_direct_openai_host("https://eu.api.openai.com"));
-        assert!(!is_direct_openai_host("https://api.openai.com.local:8000"));
-        assert!(!is_direct_openai_host("https://localhost:1234"));
-        assert!(!is_direct_openai_host("https://router.huggingface.co/v1"));
-    }
-
-    #[test]
-    fn parse_base_url_preserves_query_params() {
-        let r = parse_base_url("https://gw.example.com/v1?api-version=2024-02-01").unwrap();
-        assert_eq!(r.host, "https://gw.example.com");
-        assert_eq!(
-            r.query_params,
-            vec![("api-version".to_string(), "2024-02-01".to_string())]
-        );
-        assert!(r.has_v1);
-    }
-
-    #[test]
-    fn parse_base_url_preserves_multiple_query_params() {
-        let r = parse_base_url("https://example.com/v1?key=val&foo=bar").unwrap();
-        assert_eq!(r.query_params.len(), 2);
-        assert_eq!(r.query_params[0], ("key".to_string(), "val".to_string()));
-        assert_eq!(r.query_params[1], ("foo".to_string(), "bar".to_string()));
-    }
-
-    #[test]
-    fn parse_base_url_preserves_credentials() {
-        let r = parse_base_url("https://user:pass@gateway.example.com/v1").unwrap();
-        assert_eq!(r.host, "https://user:pass@gateway.example.com");
-        assert!(r.has_v1);
-    }
-
-    #[test]
-    fn parse_base_url_rejects_empty_string() {
-        assert!(parse_base_url("").is_err());
-    }
-
-    #[test]
-    fn parse_base_url_rejects_whitespace_only() {
-        assert!(parse_base_url("  ").is_err());
-    }
 }

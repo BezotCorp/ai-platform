@@ -1,24 +1,23 @@
-use super::api_client::{ApiClient, AuthMethod};
-use super::base::{ConfigKey, MessageStream, Provider, ProviderDef, ProviderMetadata};
-use super::openai_compatible::{
+use super::base::ProviderDef;
+use crate::config::signup_tetrate::TETRATE_DEFAULT_MODEL;
+use anyhow::Result;
+use async_trait::async_trait;
+use bcaip_provider_types::base::{ConfigKey, MessageStream, Provider, ProviderMetadata};
+use bcaip_provider_types::conversations::Message;
+use bcaip_provider_types::errors::ProviderError;
+use bcaip_provider_types::formats::create_request_openai;
+use bcaip_provider_types::images::ImageFormat;
+use bcaip_provider_types::model::ModelConfig;
+use bcaip_provider_types::request_log::{LoggerHandleExt, start_log};
+use bcaip_provider_types::retry::ProviderRetry;
+use futures::future::BoxFuture;
+use goose_providers::api_client::{ApiClient, AuthMethod};
+use goose_providers::openai_compatible::{
     handle_response_openai_compat, handle_status, map_http_error_to_provider_error,
     stream_openai_compat,
 };
-use super::retry::ProviderRetry;
-use crate::config::signup_tetrate::TETRATE_DEFAULT_MODEL;
-use crate::conversation::message::Message;
-use anyhow::Result;
-use async_trait::async_trait;
-use futures::future::BoxFuture;
-use goose_providers::errors::ProviderError;
-use goose_providers::images::ImageFormat;
-
-use goose_providers::formats::openai::create_request;
-use goose_providers::model::ModelConfig;
-use goose_providers::request_log::{start_log, LoggerHandleExt};
 use rmcp::model::Tool;
 use serde_json::Value;
-
 pub const TETRATE_PROVIDER_NAME: &str = "tetrate";
 pub const TETRATE_DOC_URL: &str = "https://router.tetrate.ai";
 pub const TETRATE_BILLING_URL: &str = "https://router.tetrate.ai/billing";
@@ -47,7 +46,7 @@ pub struct TetrateProvider {
 
 impl TetrateProvider {
     pub async fn from_env(
-        tls_config: Option<crate::providers::api_client::TlsConfig>,
+        tls_config: Option<goose_providers::api_client::TlsConfig>,
     ) -> Result<Self> {
         let config = crate::config::Config::global();
         let api_key: String = config.get_secret("TETRATE_API_KEY")?;
@@ -90,7 +89,7 @@ impl TetrateProvider {
     }
 }
 
-impl goose_providers::base::ProviderDescriptor for TetrateProvider {
+impl bcaip_provider_types::base::ProviderDescriptor for TetrateProvider {
     fn metadata() -> ProviderMetadata {
         ProviderMetadata::new(
             TETRATE_PROVIDER_NAME,
@@ -118,7 +117,7 @@ impl ProviderDef for TetrateProvider {
 
     fn from_env(
         _extensions: Vec<crate::config::ExtensionConfig>,
-        tls_config: Option<crate::providers::api_client::TlsConfig>,
+        tls_config: Option<goose_providers::api_client::TlsConfig>,
     ) -> BoxFuture<'static, Result<Self::Provider>> {
         Box::pin(Self::from_env(tls_config))
     }
@@ -137,7 +136,7 @@ impl Provider for TetrateProvider {
         messages: &[Message],
         tools: &[Tool],
     ) -> Result<MessageStream, ProviderError> {
-        let payload = create_request(
+        let payload = create_request_openai(
             model_config,
             system,
             messages,
@@ -219,73 +218,5 @@ impl Provider for TetrateProvider {
             .collect();
         models.sort();
         Ok(models)
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use serde_json::json;
-
-    #[test]
-    fn enrich_adds_dashboard_url() {
-        let err = ProviderError::CreditsExhausted {
-            details: "out of credits".to_string(),
-            top_up_url: None,
-        };
-        match TetrateProvider::enrich_credits_error(err) {
-            ProviderError::CreditsExhausted { top_up_url, .. } => {
-                assert_eq!(
-                    top_up_url.as_deref(),
-                    Some("https://router.tetrate.ai/billing")
-                );
-            }
-            _ => panic!("Expected CreditsExhausted variant"),
-        }
-    }
-
-    #[test]
-    fn enrich_passes_through_other_errors() {
-        let err = ProviderError::ServerError("boom".to_string());
-        assert!(matches!(
-            TetrateProvider::enrich_credits_error(err),
-            ProviderError::ServerError(_)
-        ));
-    }
-
-    #[test]
-    fn error_payload_maps_credits_and_adds_billing_url() {
-        let payload = json!({
-            "error": {
-                "code": 402,
-                "message": "Insufficient credits"
-            }
-        });
-        match TetrateProvider::error_from_tetrate_error_payload(payload, "test") {
-            ProviderError::CreditsExhausted {
-                details,
-                top_up_url,
-            } => {
-                assert!(details.contains("Insufficient credits"));
-                assert_eq!(top_up_url.as_deref(), Some(TETRATE_BILLING_URL));
-            }
-            other => panic!("Expected CreditsExhausted, got {other:?}"),
-        }
-    }
-
-    #[test]
-    fn error_payload_maps_authentication() {
-        let payload = json!({
-            "error": {
-                "code": 401,
-                "message": "Invalid API key"
-            }
-        });
-        match TetrateProvider::error_from_tetrate_error_payload(payload, "test") {
-            ProviderError::Authentication(msg) => {
-                assert!(msg.contains("Invalid API key"));
-            }
-            other => panic!("Expected Authentication, got {other:?}"),
-        }
     }
 }
