@@ -91,7 +91,7 @@ qrcode = { version = "0.14.1", optional = true }
 fs2 = { workspace = true, optional = true }
 bcaip-download-manager = { path = "../bcaip-download-manager", optional = true }
 bcaip-local-inference = { path = "../bcaip-local-inference", default-features = false, optional = true }
-goose-provider-types = { path = "../goose-provider-types", default-features = false }
+bcaip-provider-types = { path = "../bcaip-provider-types", default-features = false }
 
 [target.'cfg(target_os = "windows")'.dependencies]
 anstream = { version = "1", default-features = false, features = ["wincon"] }

@@ -16,7 +16,7 @@ anyhow = { workspace = true }
 tokio = { workspace = true, features = ["macros", "sync", "rt", "time"] }
 tokio-util = { workspace = true, features = ["compat"] }
 async-trait = { workspace = true }
-goose-provider-types = { path = "../goose-provider-types", default-features = false }
+bcaip-provider-types = { path = "../bcaip-provider-types", default-features = false }
 rmcp = { workspace = true, features = ["server"] }
 uuid = { workspace = true }
 serde_json = { workspace = true }
