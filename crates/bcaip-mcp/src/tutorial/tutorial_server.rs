@@ -1,0 +1,113 @@
+use include_dir::{Dir, include_dir};
+use indoc::formatdoc;
+use rmcp::{
+    ServerHandler,
+    handler::server::{router::tool::ToolRouter, wrapper::Parameters},
+    model::{
+        Annotations, CallToolResult, ContentBlock, ErrorCode, ErrorData, Implementation,
+        InitializeResult, Role, ServerCapabilities, ServerConfig, TextContent,
+    },
+    tool, tool_handler, tool_router,
+};
+
+use super::load_tutorial_params::LoadTutorialParams;
+static TUTORIALS_DIR: Dir = include_dir!("$CARGO_MANIFEST_DIR/src/tutorial/tutorials");
+
+/// Tutorial MCP Server using official RMCP SDK
+#[derive(Clone)]
+pub struct TutorialServer {
+    tool_router: ToolRouter<Self>,
+    instructions: String,
+}
+
+impl Default for TutorialServer {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+#[tool_router(router = tool_router)]
+impl TutorialServer {
+    pub fn new() -> Self {
+        // Get base instructions and available tutorials
+        let available_tutorials = Self::get_available_tutorials();
+
+        let instructions = formatdoc! {r#"
+            Because the tutorial extension is enabled, be aware that the user may be new to using goose
+            or looking for help with specific features. Proactively offer relevant tutorials when appropriate.
+
+            Available tutorials:
+            {tutorials}
+
+            The specific content of the tutorial are available in by running load_tutorial.
+            To run through a tutorial, make sure to be interactive with the user. Don't run more than
+            a few related tool calls in a row. Make sure to prompt the user for understanding and participation.
+
+            **Important**: Make sure that you provide guidance or info *before* you run commands, as the command will
+            run immediately for the user. For example while running a game tutorial, let the user know what to expect
+            before you run a command to start the game itself.
+            "#,
+            tutorials=available_tutorials,
+        };
+
+        Self {
+            tool_router: Self::tool_router(),
+            instructions,
+        }
+    }
+
+    fn get_available_tutorials() -> String {
+        let mut tutorials = String::new();
+        for file in TUTORIALS_DIR.files() {
+            // Use first line for additional context
+            let first_line = file
+                .contents_utf8()
+                .and_then(|s| s.lines().next().map(|line| line.to_string()))
+                .unwrap_or_else(String::new);
+
+            if let Some(name) = file.path().file_stem() {
+                tutorials.push_str(&format!("- {}: {}\n", name.to_string_lossy(), first_line));
+            }
+        }
+        tutorials
+    }
+
+    /// Load a specific tutorial by name.
+    /// The tutorial will be returned as markdown content that provides step by step instructions.
+    #[tool(
+        name = "load_tutorial",
+        description = "Load a specific tutorial by name. The tutorial will be returned as markdown content that provides step by step instructions."
+    )]
+    pub async fn load_tutorial(
+        &self,
+        params: Parameters<LoadTutorialParams>,
+    ) -> Result<CallToolResult, ErrorData> {
+        let params = params.0;
+        let name = &params.name;
+
+        let file_name = format!("{}.md", name);
+        let file = TUTORIALS_DIR.get_file(&file_name).ok_or(ErrorData::new(
+            ErrorCode::INTERNAL_ERROR,
+            format!("Could not locate tutorial '{}'", name),
+            None,
+        ))?;
+        let content = String::from_utf8_lossy(file.contents()).into_owned();
+
+        Ok(CallToolResult::success(vec![ContentBlock::Text(
+            TextContent::new(content)
+                .with_annotations(Annotations::default().with_audience(vec![Role::Assistant])),
+        )]))
+    }
+}
+
+#[tool_handler(router = self.tool_router)]
+impl ServerHandler for TutorialServer {
+    fn get_info(&self) -> ServerConfig {
+        InitializeResult::new(ServerCapabilities::builder().enable_tools().build())
+            .with_server_info(Implementation::new(
+                "goose-tutorial",
+                env!("CARGO_PKG_VERSION"),
+            ))
+            .with_instructions(self.instructions.clone())
+    }
+}

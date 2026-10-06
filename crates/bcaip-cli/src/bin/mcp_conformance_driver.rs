@@ -102,7 +102,7 @@ fn main() {
 
     let goose = std::env::var("GOOSE_BIN").unwrap_or_else(|_| "target/debug/goose".to_string());
     let path_root = tempfile::Builder::new()
-        .prefix("goose-mcp-conformance-")
+        .prefix("bcaip-mcp-conformance-")
         .tempdir()
         .unwrap_or_else(|err| {
             eprintln!("failed to create temporary GOOSE_PATH_ROOT: {err}");
