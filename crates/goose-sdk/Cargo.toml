@@ -6,7 +6,7 @@ rust-version.workspace = true
 authors.workspace = true
 license.workspace = true
 repository.workspace = true
-description = "The goose Development Kit (GDK) for Rust, with optional uniffi bindings for Python/Kotlin"
+description = "The BCAIP Development Kit (BDK) for Rust, with optional uniffi bindings for Python/Kotlin"
 
 [lib]
 name = "goose_sdk"

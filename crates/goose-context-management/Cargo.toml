@@ -6,7 +6,7 @@ rust-version.workspace = true
 authors.workspace = true
 license.workspace = true
 repository.workspace = true
-description = "Conversation compaction for Goose"
+description = "Conversation compaction for BCAIP"
 
 [lints]
 workspace = true
