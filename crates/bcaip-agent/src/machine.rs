@@ -1,15 +1,14 @@
 use std::{collections::HashSet, sync::Arc};
 
-use anyhow::{anyhow, Result};
-use async_trait::async_trait;
-use tokio_util::sync::CancellationToken;
-
 use crate::operation::{
     ConversationEffect, Emitter, Inference, InferenceInput, MachineEffect, Operation,
     OperationFuture, OperationResult, StepResult,
 };
-use goose_provider_types::conversation::Conversation;
+use anyhow::{Result, anyhow};
+use async_trait::async_trait;
+use goose_provider_types::conversations::Conversation;
 use goose_provider_types::maybe_send::{MaybeSend, MaybeSync};
+use tokio_util::sync::CancellationToken;
 
 pub trait MachineSession: MaybeSend + MaybeSync {
     fn id(&self) -> &str;
@@ -29,7 +28,7 @@ pub trait EffectHandler<S, E>: MaybeSend + MaybeSync {
 }
 
 pub trait EffectUsage<E>: MaybeSend + MaybeSync {
-    fn usage(&self, _effect: &E) -> Option<goose_provider_types::conversation::token_usage::Usage> {
+    fn usage(&self, _effect: &E) -> Option<goose_provider_types::conversations::Usage> {
         None
     }
 }
@@ -173,35 +172,5 @@ where
             }
         }
         runtime.load(session_id).await
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn rejects_duplicate_tools_across_operations() {
-        let schema = Arc::new(serde_json::Map::new());
-        let mut input = InferenceInput::default();
-        let mut names = HashSet::new();
-
-        add_tools_to_inference_input(
-            &mut input,
-            &mut names,
-            vec![rmcp::model::Tool::new("duplicate", "first", schema.clone())],
-        )
-        .unwrap();
-        let error = add_tools_to_inference_input(
-            &mut input,
-            &mut names,
-            vec![rmcp::model::Tool::new("duplicate", "second", schema)],
-        )
-        .unwrap_err();
-
-        assert_eq!(
-            error.to_string(),
-            "multiple operations registered tool 'duplicate'"
-        );
     }
 }

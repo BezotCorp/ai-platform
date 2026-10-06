@@ -1,4 +1,4 @@
-# goose-agent
+# bcaip-agent
 
 The GDK's agent loop, unrolled into a state machine you assemble yourself.
 
@@ -16,7 +16,7 @@ is a function of the persisted conversation, not of in-memory loop state.
   `applied(..)` / `yielded(..)` to take the step. Helpers: `not_applicable()`,
   `applied()`, `yielded()`, `yielded_with()`.
 - **`Inference<S, E>`** — the step that reaches the provider. Before calling it,
-  the machine collects tools and prompt parts from *every* operation in the list
+  the machine collects tools and prompt parts from _every_ operation in the list
   into an `InferenceInput`.
 - **`ToolOperation<S>`** — adapts caller-defined `rmcp` tools into one operation.
   Register `SyncTool<S>` and `AsyncTool<S>` implementations with the typed builder

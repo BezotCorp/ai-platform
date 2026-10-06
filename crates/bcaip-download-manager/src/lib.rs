@@ -1,8 +1,11 @@
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::cmp;
+use std::collections::{HashMap, HashSet};
+use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
+use std::time;
 use tokio::io::AsyncWriteExt;
 use tracing::info;
 
@@ -18,31 +21,27 @@ fn partial_path_for(destination: &Path) -> PathBuf {
 /// Remove orphaned `.part` files in the given directory (and one level of subdirectories).
 /// Preserves `.part` files whose final destination is in `registered_paths` so that
 /// in-progress shard downloads can resume after a restart.
-pub fn cleanup_partial_downloads(
-    dir: &Path,
-    registered_paths: &std::collections::HashSet<PathBuf>,
-) {
+pub fn cleanup_partial_downloads(dir: &Path, registered_paths: &HashSet<PathBuf>) {
     let should_keep = |part_path: &Path| -> bool {
         // Derive the final path by stripping the trailing ".part" extension
         let final_path = part_path.with_extension("");
         registered_paths.contains(&final_path)
     };
 
-    if let Ok(entries) = std::fs::read_dir(dir) {
+    if let Ok(entries) = fs::read_dir(dir) {
         for entry in entries.flatten() {
             let path = entry.path();
             if path.extension().is_some_and(|e| e == "part") && !should_keep(&path) {
-                let _ = std::fs::remove_file(&path);
+                let _ = fs::remove_file(&path);
             }
-            if path.is_dir() {
-                if let Ok(sub_entries) = std::fs::read_dir(&path) {
-                    for sub in sub_entries.flatten() {
-                        let sub_path = sub.path();
-                        if sub_path.extension().is_some_and(|e| e == "part")
-                            && !should_keep(&sub_path)
-                        {
-                            let _ = std::fs::remove_file(&sub_path);
-                        }
+            if path.is_dir()
+                && let Ok(sub_entries) = fs::read_dir(&path)
+            {
+                for sub in sub_entries.flatten() {
+                    let sub_path = sub.path();
+                    if sub_path.extension().is_some_and(|e| e == "part") && !should_keep(&sub_path)
+                    {
+                        let _ = fs::remove_file(&sub_path);
                     }
                 }
             }
@@ -129,12 +128,11 @@ impl DownloadManager {
             .lock()
             .map_err(|_| anyhow::anyhow!("Failed to acquire lock"))?;
 
-        if let Some(existing) = downloads.get(&progress.model_id) {
-            if existing.status == DownloadStatus::Downloading
-                || (existing.status == DownloadStatus::Cancelled && !existing.task_exited)
-            {
-                return Ok(false);
-            }
+        if let Some(existing) = downloads.get(&progress.model_id)
+            && (existing.status == DownloadStatus::Downloading
+                || (existing.status == DownloadStatus::Cancelled && !existing.task_exited))
+        {
+            return Ok(false);
         }
 
         downloads.insert(progress.model_id.clone(), progress);
@@ -142,10 +140,10 @@ impl DownloadManager {
     }
 
     pub fn update_progress(&self, model_id: &str, update: impl FnOnce(&mut DownloadProgress)) {
-        if let Ok(mut downloads) = self.downloads.lock() {
-            if let Some(progress) = downloads.get_mut(model_id) {
-                update(progress);
-            }
+        if let Ok(mut downloads) = self.downloads.lock()
+            && let Some(progress) = downloads.get_mut(model_id)
+        {
+            update(progress);
         }
     }
 
@@ -276,12 +274,12 @@ impl DownloadManager {
             match result {
                 Ok(_) => {
                     info!(model_id = %model_id_clone, "Download completed successfully");
-                    if let Ok(mut downloads) = downloads.lock() {
-                        if let Some(progress) = downloads.get_mut(&model_id_clone) {
-                            progress.status = DownloadStatus::Completed;
-                            progress.progress_percent = 100.0;
-                            progress.task_exited = true;
-                        }
+                    if let Ok(mut downloads) = downloads.lock()
+                        && let Some(progress) = downloads.get_mut(&model_id_clone)
+                    {
+                        progress.status = DownloadStatus::Completed;
+                        progress.progress_percent = 100.0;
+                        progress.task_exited = true;
                     }
 
                     if let Some(callback) = on_complete {
@@ -294,14 +292,14 @@ impl DownloadManager {
                         let _ = tokio::fs::remove_file(&partial).await;
                     }
 
-                    if let Ok(mut downloads) = downloads.lock() {
-                        if let Some(progress) = downloads.get_mut(&model_id_clone) {
-                            if progress.status != DownloadStatus::Cancelled {
-                                progress.status = DownloadStatus::Failed;
-                            }
-                            progress.error = Some(e.to_string());
-                            progress.task_exited = true;
+                    if let Ok(mut downloads) = downloads.lock()
+                        && let Some(progress) = downloads.get_mut(&model_id_clone)
+                    {
+                        if progress.status != DownloadStatus::Cancelled {
+                            progress.status = DownloadStatus::Failed;
                         }
+                        progress.error = Some(e.to_string());
+                        progress.task_exited = true;
                     }
                 }
             }
@@ -311,31 +309,31 @@ impl DownloadManager {
     }
 
     const MAX_RETRIES: u32 = 10;
-    const RETRY_BASE_DELAY: std::time::Duration = std::time::Duration::from_secs(2);
-    const RETRY_MAX_DELAY: std::time::Duration = std::time::Duration::from_secs(60);
+    const RETRY_BASE_DELAY: time::Duration = time::Duration::from_secs(2);
+    const RETRY_MAX_DELAY: time::Duration = time::Duration::from_secs(60);
 
     async fn cancellable_sleep(
-        delay: std::time::Duration,
+        delay: time::Duration,
         downloads: &DownloadMap,
         model_id: &str,
     ) -> Result<(), anyhow::Error> {
-        let check_interval = std::time::Duration::from_millis(500);
-        let start = std::time::Instant::now();
+        let check_interval = time::Duration::from_millis(500);
+        let start = time::Instant::now();
         while start.elapsed() < delay {
             if Self::is_cancelled(downloads, model_id) {
                 anyhow::bail!("Download cancelled");
             }
             let remaining = delay.saturating_sub(start.elapsed());
-            tokio::time::sleep(std::cmp::min(check_interval, remaining)).await;
+            tokio::time::sleep(cmp::min(check_interval, remaining)).await;
         }
         Ok(())
     }
 
     fn is_cancelled(downloads: &DownloadMap, model_id: &str) -> bool {
-        if let Ok(downloads) = downloads.lock() {
-            if let Some(progress) = downloads.get(model_id) {
-                return progress.status == DownloadStatus::Cancelled;
-            }
+        if let Ok(downloads) = downloads.lock()
+            && let Some(progress) = downloads.get(model_id)
+        {
+            return progress.status == DownloadStatus::Cancelled;
         }
         false
     }
@@ -349,8 +347,8 @@ impl DownloadManager {
         bearer_token: Option<&str>,
     ) -> Result<(), anyhow::Error> {
         let client = reqwest::Client::builder()
-            .connect_timeout(std::time::Duration::from_secs(30))
-            .read_timeout(std::time::Duration::from_secs(120))
+            .connect_timeout(time::Duration::from_secs(30))
+            .read_timeout(time::Duration::from_secs(120))
             .build()?;
 
         // HEAD each file to get accurate total size. Only replace the hint if
@@ -369,15 +367,15 @@ impl DownloadManager {
             }
             total += size;
         }
-        if all_resolved && total > 0 {
-            if let Ok(mut dl) = downloads.lock() {
-                if let Some(progress) = dl.get_mut(model_id) {
-                    progress.total_bytes = total;
-                }
-            }
+        if all_resolved
+            && total > 0
+            && let Ok(mut dl) = downloads.lock()
+            && let Some(progress) = dl.get_mut(model_id)
+        {
+            progress.total_bytes = total;
         }
 
-        let start_time = std::time::Instant::now();
+        let start_time = time::Instant::now();
         let mut cumulative_bytes: u64 = 0;
         // Account for already-downloaded shards
         for (_, dest) in files {
@@ -386,10 +384,10 @@ impl DownloadManager {
                 if let Ok(meta) = tokio::fs::metadata(dest).await {
                     cumulative_bytes += meta.len();
                 }
-            } else if partial.exists() {
-                if let Ok(meta) = tokio::fs::metadata(&partial).await {
-                    cumulative_bytes += meta.len();
-                }
+            } else if partial.exists()
+                && let Ok(meta) = tokio::fs::metadata(&partial).await
+            {
+                cumulative_bytes += meta.len();
             }
         }
         let bytes_at_start = cumulative_bytes;
@@ -429,7 +427,7 @@ impl DownloadManager {
         downloads: &DownloadMap,
         model_id: &str,
         cumulative_bytes: &mut u64,
-        start_time: std::time::Instant,
+        start_time: time::Instant,
         bytes_at_start: u64,
         bearer_token: Option<&str>,
     ) -> Result<(), anyhow::Error> {
@@ -513,7 +511,7 @@ impl DownloadManager {
                     anyhow::bail!("Failed to download: HTTP {}", status);
                 }
                 retries += 1;
-                let delay = std::cmp::min(
+                let delay = cmp::min(
                     Self::RETRY_BASE_DELAY * 2u32.saturating_pow(retries - 1),
                     Self::RETRY_MAX_DELAY,
                 );
@@ -548,10 +546,10 @@ impl DownloadManager {
                 };
                 if let Some(t) = new_file_total {
                     file_total = t;
-                    if let Ok(mut dl) = downloads.lock() {
-                        if let Some(progress) = dl.get_mut(model_id) {
-                            progress.total_bytes = progress.total_bytes.saturating_add(t);
-                        }
+                    if let Ok(mut dl) = downloads.lock()
+                        && let Some(progress) = dl.get_mut(model_id)
+                    {
+                        progress.total_bytes = progress.total_bytes.saturating_add(t);
                     }
                 }
             }
@@ -608,17 +606,17 @@ impl DownloadManager {
                             None
                         };
 
-                        if let Ok(mut dl) = downloads.lock() {
-                            if let Some(progress) = dl.get_mut(model_id) {
-                                progress.bytes_downloaded = *cumulative_bytes;
-                                progress.progress_percent = if current_total > 0 {
-                                    (*cumulative_bytes as f64 / current_total as f64 * 100.0) as f32
-                                } else {
-                                    0.0
-                                };
-                                progress.speed_bps = speed_bps;
-                                progress.eta_seconds = eta_seconds;
-                            }
+                        if let Ok(mut dl) = downloads.lock()
+                            && let Some(progress) = dl.get_mut(model_id)
+                        {
+                            progress.bytes_downloaded = *cumulative_bytes;
+                            progress.progress_percent = if current_total > 0 {
+                                (*cumulative_bytes as f64 / current_total as f64 * 100.0) as f32
+                            } else {
+                                0.0
+                            };
+                            progress.speed_bps = speed_bps;
+                            progress.eta_seconds = eta_seconds;
                         }
                     }
                     Ok(None) => break,
@@ -641,7 +639,7 @@ impl DownloadManager {
                     );
                 }
                 retries += 1;
-                let delay = std::cmp::min(
+                let delay = cmp::min(
                     Self::RETRY_BASE_DELAY * 2u32.saturating_pow(retries - 1),
                     Self::RETRY_MAX_DELAY,
                 );
@@ -658,14 +656,14 @@ impl DownloadManager {
     }
 
     pub fn clear_completed(&self, model_id: &str) {
-        if let Ok(mut downloads) = self.downloads.lock() {
-            if let Some(progress) = downloads.get(model_id) {
-                let is_terminal = progress.status == DownloadStatus::Completed
-                    || progress.status == DownloadStatus::Failed
-                    || progress.status == DownloadStatus::Cancelled;
-                if is_terminal && progress.task_exited {
-                    downloads.remove(model_id);
-                }
+        if let Ok(mut downloads) = self.downloads.lock()
+            && let Some(progress) = downloads.get(model_id)
+        {
+            let is_terminal = progress.status == DownloadStatus::Completed
+                || progress.status == DownloadStatus::Failed
+                || progress.status == DownloadStatus::Cancelled;
+            if is_terminal && progress.task_exited {
+                downloads.remove(model_id);
             }
         }
     }

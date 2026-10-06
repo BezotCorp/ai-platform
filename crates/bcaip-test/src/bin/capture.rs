@@ -1,7 +1,7 @@
 use clap::{Parser, Subcommand, ValueEnum};
 use std::io;
 
-use goose_test::mcp::stdio::{playback::playback, record::record};
+use bcaip_test::mcp::stdio::{playback::playback, record::record};
 #[derive(Parser)]
 struct Cli {
     #[arg(value_enum)]

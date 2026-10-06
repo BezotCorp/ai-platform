@@ -20,9 +20,9 @@ use goose_agent::{
 use goose_provider_types::{
     base::{MessageStream, Provider},
     conversation::{
+        Conversation,
         message::{Message, MessageContent},
         token_usage::{ProviderUsage, Usage},
-        Conversation,
     },
     errors::ProviderError,
     model::ModelConfig,
@@ -39,7 +39,6 @@ use tokio::sync::mpsc;
 use tokio_util::sync::CancellationToken;
 use wasm_bindgen_futures::JsFuture;
 use wasm_bindgen_test::wasm_bindgen_test;
-
 /// Awaits a JavaScript promise, as a host call would. The future is not `Send`,
 /// so everything that awaits it must accept non-`Send` futures.
 async fn host_call() {

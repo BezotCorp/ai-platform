@@ -1,10 +1,5 @@
-use goose_provider_types::conversation::{
-    message::{Message, MessageUsage},
-    token_usage::ProviderUsage,
-    Conversation,
-};
+use goose_provider_types::conversations::{Conversation, Message, MessageUsage, ProviderUsage};
 use rmcp::model::ServerNotification;
-
 #[derive(Clone, Debug)]
 pub enum AgentEvent {
     Message(Message),

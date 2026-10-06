@@ -1,4 +1,6 @@
 use anyhow::Result;
+#[cfg(feature = "local-inference")]
+use bcaip_download_manager::{DownloadManager, DownloadStatus, get_download_manager};
 #[cfg(feature = "roaming")]
 use bcaip_roaming::RoamingNode;
 use clap::{Args, CommandFactory, Parser, Subcommand};
@@ -30,6 +32,7 @@ use crate::commands::roam::{RoamCommand, handle_roam_command};
 use crate::commands::term::{
     Shell, handle_term_info, handle_term_init, handle_term_log, handle_term_run,
 };
+use crate::{CliSession, session};
 
 #[cfg(feature = "scheduler")]
 use crate::commands::schedule::{
@@ -47,6 +50,8 @@ use goose::{
     agents::Container,
     session::{SessionManager, SessionType},
 };
+#[cfg(feature = "local-inference")]
+use std::time;
 use std::{io::Read, path::PathBuf};
 #[cfg(feature = "acp-http")]
 const GOOSE_SERVER_SECRET_KEY_ENV: &str = "GOOSE_SERVER__SECRET_KEY";
@@ -1924,10 +1929,10 @@ async fn handle_serve_command(args: ServeCommandArgs) -> Result<()> {
     }
 
     #[cfg(feature = "roaming")]
-    if let Some(slot) = roam_share {
-        if let Some(node) = slot.write().await.take() {
-            let _ = node.shutdown().await;
-        }
+    if let Some(slot) = roam_share
+        && let Some(node) = slot.write().await.take()
+    {
+        let _ = node.shutdown().await;
     }
 
     Ok(())
@@ -2072,45 +2077,44 @@ async fn handle_interactive_session(args: InteractiveSessionArgs) -> Result<()> 
         session_id: Some(_),
         ..
     }) = &identifier
+        && !resume
     {
-        if !resume {
-            eprintln!("Error: --session-id can only be used with --resume flag");
-            std::process::exit(1);
-        }
+        eprintln!("Error: --session-id can only be used with --resume flag");
+        std::process::exit(1);
     }
 
     let goose_mode = Config::global().get_goose_mode().unwrap_or_default();
     let mut session_id = get_or_create_session_id(identifier, resume, false, goose_mode).await?;
 
-    if edit || fork {
-        if let Some(ref id) = session_id {
-            let session_manager = SessionManager::instance();
-            let original = session_manager.get_session(id, true).await?;
+    if (edit || fork)
+        && let Some(ref id) = session_id
+    {
+        let session_manager = SessionManager::instance();
+        let original = session_manager.get_session(id, true).await?;
 
-            let target_id = if fork {
-                let copied = session_manager
-                    .copy_session(id, original.name.clone())
-                    .await?;
-                let copied_id = copied.id.clone();
-                session_id = Some(copied.id);
-                copied_id
-            } else {
-                id.clone()
-            };
+        let target_id = if fork {
+            let copied = session_manager
+                .copy_session(id, original.name.clone())
+                .await?;
+            let copied_id = copied.id.clone();
+            session_id = Some(copied.id);
+            copied_id
+        } else {
+            id.clone()
+        };
 
-            if edit {
-                let conversation = original
-                    .conversation
-                    .ok_or_else(|| anyhow::anyhow!("session has no messages to edit"))?;
-                let edited = crate::session::editor::edit_conversation(&conversation)?;
-                session_manager
-                    .replace_conversation(&target_id, &edited)
-                    .await?;
-            }
+        if edit {
+            let conversation = original
+                .conversation
+                .ok_or_else(|| anyhow::anyhow!("session has no messages to edit"))?;
+            let edited = session::editor::edit_conversation(&conversation)?;
+            session_manager
+                .replace_conversation(&target_id, &edited)
+                .await?;
         }
     }
 
-    let mut session: crate::CliSession = build_session(SessionBuilderConfig {
+    let mut session: CliSession = build_session(SessionBuilderConfig {
         session_id,
         resume,
         fork,
@@ -2309,11 +2313,10 @@ async fn handle_run_command(
         session_id: Some(_),
         ..
     }) = &identifier
+        && !run_behavior.resume
     {
-        if !run_behavior.resume {
-            eprintln!("Error: --session-id can only be used with --resume flag");
-            std::process::exit(1);
-        }
+        eprintln!("Error: --session-id can only be used with --resume flag");
+        std::process::exit(1);
     }
 
     let goose_mode = Config::global().get_goose_mode().unwrap_or_default();
@@ -2458,11 +2461,11 @@ async fn handle_term_subcommand(command: TermCommand) -> Result<()> {
 }
 
 #[cfg(feature = "local-inference")]
-fn print_download_progress(manager: &goose_download_manager::DownloadManager) {
+fn print_download_progress(manager: &DownloadManager) {
     let Some(progress) = manager
         .list_progress()
         .into_iter()
-        .find(|progress| progress.status == goose_download_manager::DownloadStatus::Downloading)
+        .find(|progress| progress.status == DownloadStatus::Downloading)
     else {
         return;
     };
@@ -2721,13 +2724,13 @@ async fn handle_local_models_command(command: LocalModelsCommand) -> Result<()> 
         }
         LocalModelsCommand::Download { spec } => {
             println!("Resolving {}...", spec);
-            let manager = goose_download_manager::get_download_manager();
+            let manager = get_download_manager();
             let resolve_task = hf_models::resolve_local_model_spec(&spec);
             tokio::pin!(resolve_task);
             let resolved = loop {
                 tokio::select! {
                     result = &mut resolve_task => break result?,
-                    _ = tokio::time::sleep(std::time::Duration::from_millis(500)) => {
+                    _ = tokio::time::sleep(time::Duration::from_millis(500)) => {
                         print_download_progress(manager);
                     }
                 }

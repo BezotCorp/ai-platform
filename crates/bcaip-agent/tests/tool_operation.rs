@@ -1,8 +1,8 @@
 use std::{
     borrow::Cow,
     sync::{
-        atomic::{AtomicBool, AtomicUsize, Ordering},
         Arc,
+        atomic::{AtomicBool, AtomicUsize, Ordering},
     },
 };
 
@@ -15,10 +15,7 @@ use goose_agent::{
     },
     tool::{ToolOperation, ToolProvider},
 };
-use goose_provider_types::conversation::{
-    message::{Message, MessageContent},
-    Conversation,
-};
+use goose_provider_types::conversations::{Conversation, Message, MessageContent};
 use rmcp::{
     handler::server::router::tool::{AsyncTool, SyncTool, ToolBase},
     model::{CallToolRequestParams, CallToolResult, ErrorData, Tool},
@@ -28,7 +25,6 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 use tokio::sync::mpsc;
 use tokio_util::sync::CancellationToken;
-
 #[derive(Default, Deserialize, JsonSchema)]
 struct AddInput {
     left: u64,
@@ -444,14 +440,16 @@ async fn cancellation_interrupts_blocking_sync_tools() {
         .unwrap();
 
     let message = appended_message(result);
-    assert!(message.content[0]
-        .as_tool_response()
-        .unwrap()
-        .tool_result
-        .as_ref()
-        .unwrap()
-        .is_error
-        .is_some_and(|is_error| is_error));
+    assert!(
+        message.content[0]
+            .as_tool_response()
+            .unwrap()
+            .tool_result
+            .as_ref()
+            .unwrap()
+            .is_error
+            .is_some_and(|is_error| is_error)
+    );
 }
 
 struct BlockingDiscovery {
@@ -574,12 +572,14 @@ async fn cancellation_interrupts_execution_discovery() {
 
     let response = message.content[0].as_tool_response().unwrap();
     assert_eq!(response.id, "call-1");
-    assert!(response
-        .tool_result
-        .as_ref()
-        .unwrap()
-        .is_error
-        .is_some_and(|is_error| is_error));
+    assert!(
+        response
+            .tool_result
+            .as_ref()
+            .unwrap()
+            .is_error
+            .is_some_and(|is_error| is_error)
+    );
 }
 
 struct BlockingTools {

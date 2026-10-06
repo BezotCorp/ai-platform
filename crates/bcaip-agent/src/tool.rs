@@ -2,19 +2,18 @@ use std::{collections::HashSet, sync::Arc};
 
 use anyhow::Result;
 use async_trait::async_trait;
-use goose_provider_types::conversation::{
-    message::{Message, MessageContent, ToolRequest},
-    Conversation,
+use goose_provider_types::conversations::{
+    Conversation, {Message, MessageContent, ToolRequest},
 };
 use rmcp::{
     handler::server::router::tool::{AsyncTool, SyncTool, ToolBase},
     model::{CallToolRequestParams, CallToolResult, ErrorData, JsonObject, Tool},
 };
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 use crate::operation::{
-    applied, messages_since_kickoff, not_applicable, Emitter, Operation, OperationFuture,
-    OperationResult,
+    Emitter, Operation, OperationFuture, OperationResult, applied, messages_since_kickoff,
+    not_applicable,
 };
 use goose_provider_types::maybe_send::{MaybeSend, MaybeSync};
 

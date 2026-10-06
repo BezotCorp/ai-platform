@@ -11,7 +11,7 @@ use std::task::Poll;
 use std::time::{Duration, Instant};
 use test_case::test_case;
 use tokio_util::sync::CancellationToken;
-const CHILD_MODE: &str = "GOOSE_ELICITATION_SIGNAL_TEST";
+const CHILD_MODE: &str = "BCAIP_ELICITATION_SIGNAL_TEST";
 
 struct ChildGuard(Child);
 

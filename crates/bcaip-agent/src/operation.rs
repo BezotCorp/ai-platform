@@ -1,16 +1,13 @@
-use anyhow::{anyhow, Result};
-use async_trait::async_trait;
-use std::future::Future;
-use std::pin::Pin;
-use tokio::sync::mpsc;
-use tokio_util::sync::CancellationToken;
-
 use crate::events::AgentEvent;
-use goose_provider_types::conversation::message::{Message, MessageContent, MessageErrorKind};
-use goose_provider_types::conversation::{effective_role, Conversation, EffectiveRole};
+use anyhow::{Result, anyhow};
+use async_trait::async_trait;
+use goose_provider_types::conversations::{Conversation, EffectiveRole, effective_role};
+use goose_provider_types::conversations::{Message, MessageContent, MessageErrorKind};
 use goose_provider_types::maybe_send::{MaybeSend, MaybeSync};
 use rmcp::model::Tool;
-
+use std::{future::Future, pin::Pin};
+use tokio::sync::mpsc;
+use tokio_util::sync::CancellationToken;
 #[cfg(not(target_arch = "wasm32"))]
 pub type OperationFuture<'a, T> = Pin<Box<dyn Future<Output = T> + Send + 'a>>;
 

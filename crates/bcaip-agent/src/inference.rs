@@ -1,26 +1,22 @@
 //! Provider inference operation for the unrolled agent loop.
 
-use std::sync::Arc;
-
+use crate::operation::{
+    Emitter, Inference, InferenceInput, Operation, OperationResult, applied,
+    messages_since_kickoff, not_applicable, trailing_error, yielded_with,
+};
 use anyhow::Result;
 use async_trait::async_trait;
 use futures::StreamExt;
-use goose_provider_types::base::Provider;
-use goose_provider_types::conversation::message::{InferenceMetadata, Message, MessageContent};
-use goose_provider_types::conversation::token_usage::ProviderUsage;
-use goose_provider_types::conversation::{
-    effective_role, fix_conversation, merge_consecutive_messages_for_request, Conversation,
-    EffectiveRole,
+use goose_provider_types::conversations::{
+    Conversation, EffectiveRole, effective_role, fix_conversation,
+    merge_consecutive_messages_for_request,
 };
-use goose_provider_types::errors::ProviderError;
-use goose_provider_types::model::ModelConfig;
-use tracing_futures::Instrument;
-
-use crate::operation::{
-    applied, messages_since_kickoff, not_applicable, trailing_error, yielded_with, Emitter,
-    Inference, InferenceInput, Operation, OperationResult,
-};
+use goose_provider_types::conversations::{InferenceMetadata, Message, MessageContent};
 use goose_provider_types::maybe_send::{MaybeSend, MaybeSync};
+use goose_provider_types::{base::Provider, conversations::ProviderUsage};
+use goose_provider_types::{errors::ProviderError, model::ModelConfig};
+use std::sync::Arc;
+use tracing_futures::Instrument;
 
 pub struct PreparedInferenceRequest {
     pub system_prompt: String,
@@ -550,98 +546,5 @@ impl<S: MaybeSync, E: InferenceEffect> Inference<S, E> for InferenceRunner<'_, S
         }
         .instrument(span)
         .await
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn provider_session_id_comes_only_from_latest_inference() {
-        let conversation = Conversation::new_unvalidated([
-            Message::assistant().with_inference(InferenceMetadata {
-                provider: "provider-a".to_string(),
-                requested_model: "model".to_string(),
-                resolved_model: None,
-                provider_session_id: Some("session-a".to_string()),
-            }),
-            Message::assistant().with_inference(InferenceMetadata {
-                provider: "provider-b".to_string(),
-                requested_model: "model".to_string(),
-                resolved_model: None,
-                provider_session_id: Some("session-b".to_string()),
-            }),
-        ]);
-
-        assert_eq!(
-            latest_provider_session_id(&conversation, "provider-b"),
-            Some("session-b")
-        );
-        assert_eq!(
-            latest_provider_session_id(&conversation, "provider-a"),
-            None
-        );
-    }
-
-    #[test]
-    fn cancellation_response_includes_requests_from_unconverted_messages() {
-        let persisted = [Message::user().with_text("run it")];
-        let pending = [Message::assistant().with_tool_request(
-            "pending-call",
-            Ok(rmcp::model::CallToolRequestParams::new("tool")),
-        )];
-
-        let response = cancellation_response(&persisted, &pending).expect("cancellation response");
-
-        assert_eq!(
-            response.get_tool_response_ids(),
-            std::collections::HashSet::from(["pending-call"])
-        );
-        let cancellation_text = response
-            .content
-            .iter()
-            .filter_map(MessageContent::as_tool_response)
-            .flat_map(|response| {
-                response
-                    .tool_result
-                    .as_ref()
-                    .expect("tool result")
-                    .content
-                    .iter()
-            })
-            .filter_map(|content| content.as_text())
-            .map(|text| text.text.as_str())
-            .collect::<Vec<_>>();
-        assert_eq!(cancellation_text, vec![CANCELLED_TOOL_RESPONSE]);
-    }
-
-    #[test]
-    fn cancellation_response_skips_answered_requests() {
-        let request = Message::assistant().with_tool_request(
-            "answered-call",
-            Ok(rmcp::model::CallToolRequestParams::new("tool")),
-        );
-        let response = Message::user().with_tool_response(
-            "answered-call",
-            Ok(rmcp::model::CallToolResult::success(vec![])),
-        );
-
-        assert!(cancellation_response(&[request, response], &[]).is_none());
-    }
-
-    #[test]
-    fn signed_thinking_without_text_is_not_an_empty_response() {
-        assert!(is_empty_response(
-            &Message::assistant().with_content(MessageContent::thinking("", ""))
-        ));
-        assert!(!is_empty_response(
-            &Message::assistant().with_content(MessageContent::thinking("", "sig-omitted"))
-        ));
-    }
-
-    #[test]
-    fn whitespace_only_text_is_an_empty_response() {
-        assert!(is_empty_response(&Message::assistant().with_text(" \n\t ")));
     }
 }

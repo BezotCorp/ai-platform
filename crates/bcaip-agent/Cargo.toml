@@ -1,6 +1,6 @@
 [package]
-name = "goose-agent"
-version = "0.1.0-alpha.11"
+name = "bcaip-agent"
+version = "0.1.0"
 edition.workspace = true
 rust-version.workspace = true
 authors.workspace = true
@@ -16,7 +16,7 @@ anyhow = { workspace = true }
 tokio = { workspace = true, features = ["macros", "sync", "rt", "time"] }
 tokio-util = { workspace = true, features = ["compat"] }
 async-trait = { workspace = true }
-goose-provider-types = { version = "0.1.0-alpha.11", path = "../goose-provider-types", default-features = false }
+goose-provider-types = { path = "../goose-provider-types", default-features = false }
 rmcp = { workspace = true, features = ["server"] }
 uuid = { workspace = true }
 serde_json = { workspace = true }
@@ -32,6 +32,6 @@ schemars.workspace = true
 serde = { workspace = true, features = ["derive"] }
 
 [target.'cfg(target_arch = "wasm32")'.dev-dependencies]
-js-sys = "0.3.105"
-wasm-bindgen-futures = "0.4.78"
-wasm-bindgen-test = "0.3.78"
+js-sys = "0.3.106"
+wasm-bindgen-futures = "0.4.79"
+wasm-bindgen-test = "0.3.79"
