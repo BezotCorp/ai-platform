@@ -24,8 +24,8 @@ Before saving recipes, it's important to understand where they can be stored and
 
 | Type | Location | Availability | Best For |
 |------|----------|-------------|----------|
-| **Global** | `~/.config/goose/recipes/` | All projects and sessions | Personal workflows, general-purpose recipes |
-| **Local** | `YOUR_WORKING_DIRECTORY/.goose/recipes/` | Only when working in that project | Project-specific workflows, team recipes |
+| **Global** | `~/.config/bcaip/recipes/` | All projects and sessions | Personal workflows, general-purpose recipes |
+| **Local** | `YOUR_WORKING_DIRECTORY/.bcaip/recipes/` | Only when working in that project | Project-specific workflows, team recipes |
 
 **Choose Global Storage When:**
 - You want the recipe available across all projects
@@ -62,7 +62,7 @@ When you modify and save a recipe with a new name, a new recipe and new link are
   </Tab>
   <Tab label="goose CLI">
 
-    Create recipe files with your preferred editor. Store project-specific recipes in `.goose/recipes/` and global recipes in `~/.config/goose/recipes/`. The CLI can run recipes in either YAML or JSON format.
+    Create recipe files with your preferred editor. Store project-specific recipes in `.bcaip/recipes/` and global recipes in `~/.config/bcaip/recipes/`. The CLI can run recipes in either YAML or JSON format.
 
   </Tab>
 </Tabs>
@@ -133,10 +133,10 @@ goose recipe list --format json
 goose searches for recipes in the following locations (in order):
 
 1. **Current directory**: `.` (looks for `*.yaml` and `*.json` files)
-2. **Custom paths**: Directories specified in [`GOOSE_RECIPE_PATH`](/guides/environment-variables#recipe-configuration) environment variable
-3. **Global recipe library**: `~/.config/goose/recipes/` (or equivalent on your OS)
-4. **Local project recipes**: `./.goose/recipes/`
-5. **GitHub repository**: If [`GOOSE_RECIPE_GITHUB_REPO`](/guides/environment-variables#recipe-configuration) environment variable is configured
+2. **Custom paths**: Directories specified in [`BCAIP_RECIPE_PATH`](/guides/environment-variables#recipe-configuration) environment variable
+3. **Global recipe library**: `~/.config/bcaip/recipes/` (or equivalent on your OS)
+4. **Local project recipes**: `./.bcaip/recipes/`
+5. **GitHub repository**: If [`BCAIP_RECIPE_GITHUB_REPO`](/guides/environment-variables#recipe-configuration) environment variable is configured
 
 **Example Output**
 
@@ -145,8 +145,8 @@ goose searches for recipes in the following locations (in order):
 $ goose recipe list
 Available recipes:
 goose-self-test - A comprehensive meta-testing recipe - local: ./goose-self-test.yaml
-hello-world - A sample recipe demonstrating basic usage - local: ~/.config/goose/recipes/hello-world.yaml
-job-finder - Find software engineering positions - local: ~/.config/goose/recipes/job-finder.yaml
+hello-world - A sample recipe demonstrating basic usage - local: ~/.config/bcaip/recipes/hello-world.yaml
+job-finder - Find software engineering positions - local: ~/.config/bcaip/recipes/job-finder.yaml
 ```
 
 *Verbose mode:*
@@ -156,9 +156,9 @@ Available recipes:
   goose-self-test - A comprehensive meta-testing recipe - local: ./goose-self-test.yaml
     Title: goose Self-Testing Integration Suite
     Path: ./goose-self-test.yaml
-  hello-world - A sample recipe demonstrating basic usage - local: ~/.config/goose/recipes/hello-world.yaml
+  hello-world - A sample recipe demonstrating basic usage - local: ~/.config/bcaip/recipes/hello-world.yaml
     Title: Hello World Recipe
-    Path: /Users/username/.config/goose/recipes/hello-world.yaml
+    Path: /Users/username/.config/bcaip/recipes/hello-world.yaml
 ```
 
 *JSON format for automation:*
@@ -185,13 +185,13 @@ Available recipes:
 
 Add custom recipe directories:
 ```bash
-export GOOSE_RECIPE_PATH="/path/to/my/recipes:/path/to/team/recipes"
+export BCAIP_RECIPE_PATH="/path/to/my/recipes:/path/to/team/recipes"
 goose recipe list
 ```
 
 Configure GitHub recipe repository:
 ```bash
-export GOOSE_RECIPE_GITHUB_REPO="myorg/goose-recipes"
+export BCAIP_RECIPE_GITHUB_REPO="myorg/goose-recipes"
 goose recipe list
 ```
 
@@ -203,10 +203,10 @@ If you need to browse recipe directories manually:
 
 ```bash
 # List recipes in default global location
-ls ~/.config/goose/recipes/
+ls ~/.config/bcaip/recipes/
 
 # List recipes in current project
-ls .goose/recipes/
+ls .bcaip/recipes/
 
 # Search for all recipe files
 find . -name "*.yaml" -path "*/recipes/*" -o -name "*.json" -path "*/recipes/*"

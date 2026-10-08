@@ -153,22 +153,22 @@ pub struct ToolChainSummary {
 
 /// Marker key under `ToolRequest.tool_meta` indicating the tool was already
 /// executed externally; the agent loop must skip redispatch.
-pub const TOOL_META_EXTERNAL_DISPATCH_KEY: &str = "goose.external_dispatch";
+pub const TOOL_META_EXTERNAL_DISPATCH_KEY: &str = "bcaip.external_dispatch";
 
 /// Key under `ToolRequest.tool_meta` storing the LLM-generated short title
 /// for this tool call. Used to make the title survive session reload.
-pub const TOOL_META_TITLE_KEY: &str = "goose.toolSummary.title";
+pub const TOOL_META_TITLE_KEY: &str = "bcaip.toolSummary.title";
 
 /// Key under `ToolRequest.tool_meta` storing the provider-reported index of the
 /// tool call within the streamed response. Streaming clients need this to
 /// correlate incremental argument fragments with the right call when a model
 /// emits several tool calls in parallel.
-pub const TOOL_META_PROVIDER_INDEX_KEY: &str = "goose.toolCall.providerIndex";
+pub const TOOL_META_PROVIDER_INDEX_KEY: &str = "bcaip.toolCall.providerIndex";
 
 /// Key under `ToolRequest.tool_meta` storing the LLM-generated chain summary
 /// for the chain that starts at this tool request. Shape: `{ "summary": String,
 /// "count": u64 }`. Only attached to the FIRST tool request in a chain.
-pub const TOOL_META_CHAIN_SUMMARY_KEY: &str = "goose.toolChain.summary";
+pub const TOOL_META_CHAIN_SUMMARY_KEY: &str = "bcaip.toolChain.summary";
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -835,7 +835,7 @@ pub struct MessageMetadata {
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub output_token_limit_reached: bool,
     /// Whether this message is a steer injected into an active run. UI-only:
-    /// surfaced as `_meta.goose.steer` so clients can mark the steer boundary
+    /// surfaced as `_meta.bcaip.steer` so clients can mark the steer boundary
     /// without matching user-visible text. Never sent to providers.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub steer: bool,

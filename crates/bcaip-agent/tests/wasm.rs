@@ -11,13 +11,13 @@ use std::{
 
 use anyhow::Result;
 use async_trait::async_trait;
-use goose_agent::{
+use bcaip_agent::{
     inference::{InferenceEffect, InferenceRunner},
     machine::{EffectHandler, MachineSession, SessionLoader, StateMachine, Step},
     operation::{Emitter, MachineEffect},
     tool::ToolOperation,
 };
-use goose_provider_types::{
+use bcaip_provider_types::{
     base::{MessageStream, Provider},
     conversation::{
         Conversation,
@@ -264,13 +264,13 @@ fn tool_output(conversation: &Conversation) -> serde_json::Value {
 async fn runs_a_turn_with_an_async_tool() {
     let conversation = run_turn(
         CallToolRequestParams::new("greet")
-            .with_arguments(serde_json::from_value(json!({"name": "Goose"})).unwrap()),
+            .with_arguments(serde_json::from_value(json!({"name": "BCAIP"})).unwrap()),
     )
     .await;
 
     assert_eq!(
         tool_output(&conversation),
-        json!({"greeting": "Hello, Goose!"})
+        json!({"greeting": "Hello, BCAIP!"})
     );
 }
 

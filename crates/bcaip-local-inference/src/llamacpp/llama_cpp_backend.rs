@@ -1,4 +1,32 @@
-use super::*;
+use std::path::PathBuf;
+
+use anyhow::Result;
+use bcaip_provider_types::{errors::ProviderError, formats::format_tools};
+use llama_cpp_2::{
+    LlamaBackendDeviceType, LogOptions, list_llama_ggml_backend_devices,
+    llama_backend::LlamaBackend,
+    model::{LlamaModel, params::LlamaModelParams},
+};
+
+use crate::{
+    LocalInferenceBackend, build_openai_messages_json, build_openai_text_messages_json,
+    llamacpp::{
+        CODE_EXECUTION_TOOL, LLAMACPP_BACKEND_ID, LoadedModel, check_cpu_supports_local_inference,
+        inference_emulated_tools::{
+            build_emulator_tool_description, generate_with_emulated_tools, load_tiny_model_prompt,
+        },
+        inference_engine::GenerationContext,
+        inference_native_tools::generate_with_native_tools,
+        is_accelerator_device, load_chat_templates, log_inference_backend_devices,
+        select_generation_template, should_use_native_tool_calling, supports_native_tool_calling,
+    },
+    local_generation_request::{BackendLoadedModel, LocalGenerationRequest},
+    model::ToolCallingMode,
+    multimodal::ExtractedImage,
+    resolved_model_paths::ResolvedModelPaths,
+    tool_parsing::compact_tools_json,
+};
+
 pub struct LlamaCppBackend {
     backend: LlamaBackend,
 }

@@ -1,0 +1,577 @@
+export const BCAIP_EXT_METHODS = [
+  {
+    method: "_bcaip/unstable/session/extensions/add",
+    requestType: "AddSessionExtensionRequest_unstable",
+    responseType: "EmptyResponse",
+  },
+  {
+    method: "_bcaip/unstable/session/extensions/remove",
+    requestType: "RemoveSessionExtensionRequest_unstable",
+    responseType: "EmptyResponse",
+  },
+  {
+    method: "_bcaip/unstable/tools/list",
+    requestType: "GetToolsRequest_unstable",
+    responseType: "GetToolsResponse_unstable",
+  },
+  {
+    method: "_bcaip/unstable/tools/permissions/set",
+    requestType: "SetToolPermissionsRequest_unstable",
+    responseType: "SetToolPermissionsResponse_unstable",
+  },
+  {
+    method: "_bcaip/unstable/tools/call",
+    requestType: "BcaipToolCallRequest_unstable",
+    responseType: "BcaipToolCallResponse_unstable",
+  },
+  {
+    method: "_bcaip/unstable/resources/read",
+    requestType: "ReadResourceRequest_unstable",
+    responseType: "ReadResourceResponse_unstable",
+  },
+  {
+    method: "_bcaip/unstable/apps/list",
+    requestType: "AppsListRequest_unstable",
+    responseType: "AppsListResponse_unstable",
+  },
+  {
+    method: "_bcaip/unstable/apps/export",
+    requestType: "AppsExportRequest_unstable",
+    responseType: "AppsExportResponse_unstable",
+  },
+  {
+    method: "_bcaip/unstable/apps/import",
+    requestType: "AppsImportRequest_unstable",
+    responseType: "AppsImportResponse_unstable",
+  },
+  {
+    method: "_bcaip/unstable/apps/delete",
+    requestType: "AppsDeleteRequest_unstable",
+    responseType: "AppsDeleteResponse_unstable",
+  },
+  {
+    method: "_bcaip/unstable/session/working-dir/update",
+    requestType: "UpdateWorkingDirRequest_unstable",
+    responseType: "EmptyResponse",
+  },
+  {
+    method: "_bcaip/unstable/session/system-prompt/set",
+    requestType: "SetSessionSystemPromptRequest_unstable",
+    responseType: "EmptyResponse",
+  },
+  {
+    method: "_bcaip/unstable/session/steer",
+    requestType: "SteerSessionRequest_unstable",
+    responseType: "SteerSessionResponse_unstable",
+  },
+  {
+    method: "_bcaip/unstable/session/live-voice/availability",
+    requestType: "LiveVoiceAvailabilityRequest_unstable",
+    responseType: "LiveVoiceAvailabilityResponse_unstable",
+  },
+  {
+    method: "_bcaip/unstable/session/live-voice/start",
+    requestType: "LiveVoiceStartRequest_unstable",
+    responseType: "LiveVoiceStartResponse_unstable",
+  },
+  {
+    method: "_bcaip/unstable/session/live-voice/stop",
+    requestType: "LiveVoiceStopRequest_unstable",
+    responseType: "EmptyResponse",
+  },
+  {
+    method: "_bcaip/unstable/diagnostics/get",
+    requestType: "DiagnosticsGetRequest_unstable",
+    responseType: "DiagnosticsGetResponse_unstable",
+  },
+  {
+    method: "_bcaip/unstable/config/prompts/list",
+    requestType: "ListPromptsRequest_unstable",
+    responseType: "ListPromptsResponse_unstable",
+  },
+  {
+    method: "_bcaip/unstable/config/prompts/get",
+    requestType: "GetPromptRequest_unstable",
+    responseType: "GetPromptResponse_unstable",
+  },
+  {
+    method: "_bcaip/unstable/config/prompts/save",
+    requestType: "SavePromptRequest_unstable",
+    responseType: "PromptOperationResponse_unstable",
+  },
+  {
+    method: "_bcaip/unstable/config/prompts/reset",
+    requestType: "ResetPromptRequest_unstable",
+    responseType: "PromptOperationResponse_unstable",
+  },
+  {
+    method: "_bcaip/unstable/config/extensions/list",
+    requestType: "GetConfigExtensionsRequest_unstable",
+    responseType: "GetConfigExtensionsResponse_unstable",
+  },
+  {
+    method: "_bcaip/unstable/config/extensions/add",
+    requestType: "AddConfigExtensionRequest_unstable",
+    responseType: "EmptyResponse",
+  },
+  {
+    method: "_bcaip/unstable/config/extensions/remove",
+    requestType: "RemoveConfigExtensionRequest_unstable",
+    responseType: "EmptyResponse",
+  },
+  {
+    method: "_bcaip/unstable/config/extensions/set-enabled",
+    requestType: "SetConfigExtensionEnabledRequest_unstable",
+    responseType: "EmptyResponse",
+  },
+  {
+    method: "_bcaip/unstable/session/extensions/list",
+    requestType: "GetSessionExtensionsRequest_unstable",
+    responseType: "GetSessionExtensionsResponse_unstable",
+  },
+  {
+    method: "_bcaip/unstable/providers/list",
+    requestType: "ListProvidersRequest_unstable",
+    responseType: "ListProvidersResponse_unstable",
+  },
+  {
+    method: "_bcaip/unstable/providers/supported-models/list",
+    requestType: "ProviderSupportedModelsListRequest_unstable",
+    responseType: "ProviderSupportedModelsListResponse_unstable",
+  },
+  {
+    method: "_bcaip/unstable/providers/catalog/list",
+    requestType: "ProviderCatalogListRequest_unstable",
+    responseType: "ProviderCatalogListResponse_unstable",
+  },
+  {
+    method: "_bcaip/unstable/providers/setup/catalog/list",
+    requestType: "ProviderSetupCatalogListRequest_unstable",
+    responseType: "ProviderSetupCatalogListResponse_unstable",
+  },
+  {
+    method: "_bcaip/unstable/providers/catalog/template",
+    requestType: "ProviderCatalogTemplateRequest_unstable",
+    responseType: "ProviderCatalogTemplateResponse_unstable",
+  },
+  {
+    method: "_bcaip/unstable/providers/custom/create",
+    requestType: "CustomProviderCreateRequest_unstable",
+    responseType: "CustomProviderCreateResponse_unstable",
+  },
+  {
+    method: "_bcaip/unstable/providers/custom/read",
+    requestType: "CustomProviderReadRequest_unstable",
+    responseType: "CustomProviderReadResponse_unstable",
+  },
+  {
+    method: "_bcaip/unstable/providers/custom/update",
+    requestType: "CustomProviderUpdateRequest_unstable",
+    responseType: "CustomProviderUpdateResponse_unstable",
+  },
+  {
+    method: "_bcaip/unstable/providers/custom/delete",
+    requestType: "CustomProviderDeleteRequest_unstable",
+    responseType: "CustomProviderDeleteResponse_unstable",
+  },
+  {
+    method: "_bcaip/unstable/providers/inventory/refresh",
+    requestType: "RefreshProviderInventoryRequest_unstable",
+    responseType: "RefreshProviderInventoryResponse_unstable",
+  },
+  {
+    method: "_bcaip/unstable/providers/readiness/check",
+    requestType: "ProviderReadinessCheckRequest_unstable",
+    responseType: "ProviderReadinessCheckResponse_unstable",
+  },
+  {
+    method: "_bcaip/unstable/providers/config/read",
+    requestType: "ProviderConfigReadRequest_unstable",
+    responseType: "ProviderConfigReadResponse_unstable",
+  },
+  {
+    method: "_bcaip/unstable/providers/config/status",
+    requestType: "ProviderConfigStatusRequest_unstable",
+    responseType: "ProviderConfigStatusResponse_unstable",
+  },
+  {
+    method: "_bcaip/unstable/providers/config/save",
+    requestType: "ProviderConfigSaveRequest_unstable",
+    responseType: "ProviderConfigChangeResponse_unstable",
+  },
+  {
+    method: "_bcaip/unstable/providers/config/delete",
+    requestType: "ProviderConfigDeleteRequest_unstable",
+    responseType: "ProviderConfigChangeResponse_unstable",
+  },
+  {
+    method: "_bcaip/unstable/providers/config/authenticate",
+    requestType: "ProviderConfigAuthenticateRequest_unstable",
+    responseType: "ProviderConfigChangeResponse_unstable",
+  },
+  {
+    method: "_bcaip/unstable/providers/secrets/list",
+    requestType: "ProviderSecretsListRequest_unstable",
+    responseType: "ProviderSecretsListResponse_unstable",
+  },
+  {
+    method: "_bcaip/unstable/providers/secrets/delete",
+    requestType: "ProviderSecretDeleteRequest_unstable",
+    responseType: "EmptyResponse",
+  },
+  {
+    method: "_bcaip/unstable/providers/canonical-model-info",
+    requestType: "CanonicalModelInfoRequest_unstable",
+    responseType: "CanonicalModelInfoResponse_unstable",
+  },
+  {
+    method: "_bcaip/unstable/preferences/read",
+    requestType: "PreferencesReadRequest_unstable",
+    responseType: "PreferencesReadResponse_unstable",
+  },
+  {
+    method: "_bcaip/unstable/preferences/save",
+    requestType: "PreferencesSaveRequest_unstable",
+    responseType: "EmptyResponse",
+  },
+  {
+    method: "_bcaip/unstable/config/read",
+    requestType: "ConfigReadRequest_unstable",
+    responseType: "ConfigReadResponse_unstable",
+  },
+  {
+    method: "_bcaip/unstable/config/upsert",
+    requestType: "ConfigUpsertRequest_unstable",
+    responseType: "EmptyResponse",
+  },
+  {
+    method: "_bcaip/unstable/config/remove",
+    requestType: "ConfigRemoveRequest_unstable",
+    responseType: "EmptyResponse",
+  },
+  {
+    method: "_bcaip/unstable/config/read-all",
+    requestType: "ConfigReadAllRequest_unstable",
+    responseType: "ConfigReadAllResponse_unstable",
+  },
+  {
+    method: "_bcaip/unstable/defaults/read",
+    requestType: "DefaultsReadRequest_unstable",
+    responseType: "DefaultsReadResponse_unstable",
+  },
+  {
+    method: "_bcaip/unstable/defaults/save",
+    requestType: "DefaultsSaveRequest_unstable",
+    responseType: "DefaultsReadResponse_unstable",
+  },
+  {
+    method: "_bcaip/unstable/defaults/clear",
+    requestType: "DefaultsClearRequest_unstable",
+    responseType: "DefaultsReadResponse_unstable",
+  },
+  {
+    method: "_bcaip/unstable/onboarding/import/scan",
+    requestType: "OnboardingImportScanRequest_unstable",
+    responseType: "OnboardingImportScanResponse_unstable",
+  },
+  {
+    method: "_bcaip/unstable/onboarding/import/apply",
+    requestType: "OnboardingImportApplyRequest_unstable",
+    responseType: "OnboardingImportApplyResponse_unstable",
+  },
+  {
+    method: "_bcaip/unstable/session/export",
+    requestType: "ExportSessionRequest_unstable",
+    responseType: "ExportSessionResponse_unstable",
+  },
+  {
+    method: "_bcaip/unstable/session/import",
+    requestType: "ImportSessionRequest_unstable",
+    responseType: "ImportSessionResponse_unstable",
+  },
+  {
+    method: "_bcaip/unstable/recipes/encode",
+    requestType: "EncodeRecipeRequest_unstable",
+    responseType: "EncodeRecipeResponse_unstable",
+  },
+  {
+    method: "_bcaip/unstable/recipes/decode",
+    requestType: "DecodeRecipeRequest_unstable",
+    responseType: "DecodeRecipeResponse_unstable",
+  },
+  {
+    method: "_bcaip/unstable/recipes/scan",
+    requestType: "ScanRecipeRequest_unstable",
+    responseType: "ScanRecipeResponse_unstable",
+  },
+  {
+    method: "_bcaip/unstable/recipes/list",
+    requestType: "ListRecipesRequest_unstable",
+    responseType: "ListRecipesResponse_unstable",
+  },
+  {
+    method: "_bcaip/unstable/recipes/delete",
+    requestType: "DeleteRecipeRequest_unstable",
+    responseType: "EmptyResponse",
+  },
+  {
+    method: "_bcaip/unstable/recipes/schedule",
+    requestType: "ScheduleRecipeRequest_unstable",
+    responseType: "EmptyResponse",
+  },
+  {
+    method: "_bcaip/unstable/recipes/slash-command",
+    requestType: "SetRecipeSlashCommandRequest_unstable",
+    responseType: "EmptyResponse",
+  },
+  {
+    method: "_bcaip/unstable/recipes/save",
+    requestType: "SaveRecipeRequest_unstable",
+    responseType: "SaveRecipeResponse_unstable",
+  },
+  {
+    method: "_bcaip/unstable/recipes/parse",
+    requestType: "ParseRecipeRequest_unstable",
+    responseType: "ParseRecipeResponse_unstable",
+  },
+  {
+    method: "_bcaip/unstable/recipes/to-yaml",
+    requestType: "RecipeToYamlRequest_unstable",
+    responseType: "RecipeToYamlResponse_unstable",
+  },
+  {
+    method: "_bcaip/unstable/schedules/list",
+    requestType: "ListSchedulesRequest_unstable",
+    responseType: "ListSchedulesResponse_unstable",
+  },
+  {
+    method: "_bcaip/unstable/schedules/sessions/list",
+    requestType: "ListScheduleSessionsRequest_unstable",
+    responseType: "ListScheduleSessionsResponse_unstable",
+  },
+  {
+    method: "_bcaip/unstable/schedules/create",
+    requestType: "CreateScheduleRequest_unstable",
+    responseType: "CreateScheduleResponse_unstable",
+  },
+  {
+    method: "_bcaip/unstable/schedules/delete",
+    requestType: "DeleteScheduleRequest_unstable",
+    responseType: "EmptyResponse",
+  },
+  {
+    method: "_bcaip/unstable/schedules/pause",
+    requestType: "PauseScheduleRequest_unstable",
+    responseType: "EmptyResponse",
+  },
+  {
+    method: "_bcaip/unstable/schedules/unpause",
+    requestType: "UnpauseScheduleRequest_unstable",
+    responseType: "EmptyResponse",
+  },
+  {
+    method: "_bcaip/unstable/schedules/update",
+    requestType: "UpdateScheduleRequest_unstable",
+    responseType: "UpdateScheduleResponse_unstable",
+  },
+  {
+    method: "_bcaip/unstable/schedules/run-now",
+    requestType: "RunScheduleNowRequest_unstable",
+    responseType: "RunScheduleNowResponse_unstable",
+  },
+  {
+    method: "_bcaip/unstable/schedules/running-job/kill",
+    requestType: "KillRunningJobRequest_unstable",
+    responseType: "KillRunningJobResponse_unstable",
+  },
+  {
+    method: "_bcaip/unstable/schedules/running-job/inspect",
+    requestType: "InspectRunningJobRequest_unstable",
+    responseType: "InspectRunningJobResponse_unstable",
+  },
+  {
+    method: "_bcaip/unstable/session/info",
+    requestType: "GetSessionInfoRequest_unstable",
+    responseType: "GetSessionInfoResponse_unstable",
+  },
+  {
+    method: "_bcaip/unstable/session/conversation/truncate",
+    requestType: "TruncateSessionConversationRequest_unstable",
+    responseType: "EmptyResponse",
+  },
+  {
+    method: "_bcaip/unstable/session/project/update",
+    requestType: "UpdateSessionProjectRequest_unstable",
+    responseType: "EmptyResponse",
+  },
+  {
+    method: "_bcaip/unstable/session/rename",
+    requestType: "RenameSessionRequest_unstable",
+    responseType: "EmptyResponse",
+  },
+  {
+    method: "_bcaip/unstable/session/archive",
+    requestType: "ArchiveSessionRequest_unstable",
+    responseType: "EmptyResponse",
+  },
+  {
+    method: "_bcaip/unstable/session/unarchive",
+    requestType: "UnarchiveSessionRequest_unstable",
+    responseType: "EmptyResponse",
+  },
+  {
+    method: "_bcaip/unstable/sources/create",
+    requestType: "CreateSourceRequest_unstable",
+    responseType: "CreateSourceResponse_unstable",
+  },
+  {
+    method: "_bcaip/unstable/sources/list",
+    requestType: "ListSourcesRequest_unstable",
+    responseType: "ListSourcesResponse_unstable",
+  },
+  {
+    method: "_bcaip/unstable/agent-mentions/list",
+    requestType: "ListAgentMentionsRequest_unstable",
+    responseType: "ListAgentMentionsResponse_unstable",
+  },
+  {
+    method: "_bcaip/unstable/slash-commands/list",
+    requestType: "ListSlashCommandsRequest_unstable",
+    responseType: "ListSlashCommandsResponse_unstable",
+  },
+  {
+    method: "_bcaip/unstable/sources/update",
+    requestType: "UpdateSourceRequest_unstable",
+    responseType: "UpdateSourceResponse_unstable",
+  },
+  {
+    method: "_bcaip/unstable/sources/delete",
+    requestType: "DeleteSourceRequest_unstable",
+    responseType: "EmptyResponse",
+  },
+  {
+    method: "_bcaip/unstable/sources/export",
+    requestType: "ExportSourceRequest_unstable",
+    responseType: "ExportSourceResponse_unstable",
+  },
+  {
+    method: "_bcaip/unstable/sources/import",
+    requestType: "ImportSourcesRequest_unstable",
+    responseType: "ImportSourcesResponse_unstable",
+  },
+  {
+    method: "_bcaip/unstable/dictation/transcribe",
+    requestType: "DictationTranscribeRequest_unstable",
+    responseType: "DictationTranscribeResponse_unstable",
+  },
+  {
+    method: "_bcaip/unstable/dictation/config",
+    requestType: "DictationConfigRequest_unstable",
+    responseType: "DictationConfigResponse_unstable",
+  },
+  {
+    method: "_bcaip/unstable/dictation/models/list",
+    requestType: "DictationModelsListRequest_unstable",
+    responseType: "DictationModelsListResponse_unstable",
+  },
+  {
+    method: "_bcaip/unstable/dictation/models/download",
+    requestType: "DictationModelDownloadRequest_unstable",
+    responseType: "EmptyResponse",
+  },
+  {
+    method: "_bcaip/unstable/dictation/models/download/progress",
+    requestType: "DictationModelDownloadProgressRequest_unstable",
+    responseType: "DictationModelDownloadProgressResponse_unstable",
+  },
+  {
+    method: "_bcaip/unstable/dictation/models/cancel",
+    requestType: "DictationModelCancelRequest_unstable",
+    responseType: "EmptyResponse",
+  },
+  {
+    method: "_bcaip/unstable/dictation/models/delete",
+    requestType: "DictationModelDeleteRequest_unstable",
+    responseType: "EmptyResponse",
+  },
+  {
+    method: "_bcaip/unstable/local-inference/models/list",
+    requestType: "LocalInferenceModelsListRequest_unstable",
+    responseType: "LocalInferenceModelsListResponse_unstable",
+  },
+  {
+    method: "_bcaip/unstable/local-inference/models/download",
+    requestType: "LocalInferenceModelDownloadRequest_unstable",
+    responseType: "LocalInferenceModelDownloadResponse_unstable",
+  },
+  {
+    method: "_bcaip/unstable/local-inference/models/download/progress",
+    requestType: "LocalInferenceModelDownloadProgressRequest_unstable",
+    responseType: "LocalInferenceModelDownloadProgressResponse_unstable",
+  },
+  {
+    method: "_bcaip/unstable/local-inference/models/download/cancel",
+    requestType: "LocalInferenceModelDownloadCancelRequest_unstable",
+    responseType: "EmptyResponse",
+  },
+  {
+    method: "_bcaip/unstable/local-inference/models/delete",
+    requestType: "LocalInferenceModelDeleteRequest_unstable",
+    responseType: "EmptyResponse",
+  },
+  {
+    method: "_bcaip/unstable/local-inference/models/evict",
+    requestType: "LocalInferenceModelEvictRequest_unstable",
+    responseType: "EmptyResponse",
+  },
+  {
+    method: "_bcaip/unstable/local-inference/models/settings/read",
+    requestType: "LocalInferenceModelSettingsReadRequest_unstable",
+    responseType: "LocalInferenceModelSettingsReadResponse_unstable",
+  },
+  {
+    method: "_bcaip/unstable/local-inference/models/settings/update",
+    requestType: "LocalInferenceModelSettingsUpdateRequest_unstable",
+    responseType: "LocalInferenceModelSettingsUpdateResponse_unstable",
+  },
+  {
+    method: "_bcaip/unstable/local-inference/huggingface/search",
+    requestType: "LocalInferenceHuggingFaceSearchRequest_unstable",
+    responseType: "LocalInferenceHuggingFaceSearchResponse_unstable",
+  },
+  {
+    method: "_bcaip/unstable/local-inference/huggingface/repo/variants",
+    requestType: "LocalInferenceHuggingFaceRepoVariantsRequest_unstable",
+    responseType: "LocalInferenceHuggingFaceRepoVariantsResponse_unstable",
+  },
+  {
+    method: "_bcaip/unstable/local-inference/chat-templates/builtin/list",
+    requestType: "LocalInferenceBuiltinChatTemplatesListRequest_unstable",
+    responseType: "LocalInferenceBuiltinChatTemplatesListResponse_unstable",
+  },
+] as const;
+
+export type BcaipExtMethod = (typeof BCAIP_EXT_METHODS)[number];
+
+export const BCAIP_EXT_NOTIFICATIONS = [
+  {
+    method: "_bcaip/unstable/session/update",
+    paramsType: "BcaipSessionNotification_unstable",
+  },
+  {
+    method: "_bcaip/unstable/providers/authentication/device-code",
+    paramsType: "ProviderDeviceCodeNotification_unstable",
+  },
+] as const;
+
+export type BcaipExtNotification = (typeof BCAIP_EXT_NOTIFICATIONS)[number];
+
+export const BCAIP_EXT_AGENT_REQUESTS = [
+  {
+    method: "_bcaip/unstable/session/recipe/request-params",
+    requestType: "RequestRecipeParams_unstable",
+    responseType: "RecipeParamsResponse_unstable",
+  },
+] as const;
+
+export type BcaipExtAgentRequest = (typeof BCAIP_EXT_AGENT_REQUESTS)[number];

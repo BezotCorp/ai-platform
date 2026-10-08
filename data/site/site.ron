@@ -1,0 +1,7 @@
+WebsiteSource(
+    name: "BCAIP",
+    description: Some("BezotCorp AI Platform"),
+    base_url: Some("https://bcaip.bezotcorp.com"),
+    default_language: "fr",
+    default_region: "FR",
+)

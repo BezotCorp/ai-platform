@@ -80,7 +80,7 @@ const i18n = defineMessages<{
   },
   secretKeyHelp: {
     id: 'externalBackendSection.secretKeyHelp',
-    defaultMessage: 'The secret key configured on the external backend (GOOSE_SERVER__SECRET_KEY).',
+    defaultMessage: 'The secret key configured on the external backend (BCAIP_SERVER__SECRET_KEY).',
   },
   certFingerprint: {
     id: 'externalBackendSection.certFingerprint',

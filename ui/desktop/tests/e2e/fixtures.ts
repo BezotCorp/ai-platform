@@ -19,7 +19,7 @@ type GooseTestFixtures = {
  * Speed: ⚠️ Slow - ~3s startup overhead per test
  *
  * This ensures each test starts with a fresh app instance, but the app uses the
- * user's existing Goose configuration (providers, models, etc.).
+ * user's existing BCAIP configuration (providers, models, etc.).
  *
  * Usage:
  *   import { test, expect } from './fixtures';
@@ -54,7 +54,7 @@ export const test = base.extend<GooseTestFixtures>({
           ...process.env,
           ELECTRON_IS_DEV: '1',
           NODE_ENV: 'development',
-          GOOSE_ALLOWLIST_BYPASS: 'true',
+          BCAIP_ALLOWLIST_BYPASS: 'true',
           ENABLE_PLAYWRIGHT: 'true',
           PLAYWRIGHT_DEBUG_PORT: debugPort.toString(), // Unique port per test for parallel execution
           RUST_LOG: 'info', // Enable info-level logging for goosed backend

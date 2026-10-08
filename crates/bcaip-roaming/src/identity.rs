@@ -4,7 +4,7 @@
 //! as the iroh [`EndpointId`], so the identity is self-certifying: iroh proves
 //! at the QUIC-TLS handshake that a peer holds the secret for the id it claims.
 //!
-//! The secret key is persisted as hex in a `0600` file inside goose's config
+//! The secret key is persisted as hex in a `0600` file inside BCAIP's config
 //! directory. This mirrors the storage approach used by a sibling production
 //! iroh project.
 
@@ -108,7 +108,7 @@ impl RoamingIdentity {
     }
 }
 
-/// The default node key path inside goose's config directory.
+/// The default node key path inside BCAIP's config directory.
 pub fn default_key_path(config_dir: &Path) -> PathBuf {
     config_dir.join(KEY_FILE_NAME)
 }

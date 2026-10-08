@@ -14,22 +14,22 @@ title: "VMware Tanzu Platform - CLI Testing Guide"
 **macOS:**
 ```bash
 # If built from source:
-export GOOSE_CLI=~/claude/goose-fork/target/release/goose
+export BCAIP_CLI=~/claude/goose-fork/target/release/goose
 
 # Verify:
-$GOOSE_CLI --version
+$BCAIP_CLI --version
 ```
 
 **Linux:**
 ```bash
 # If installed via .deb:
-export GOOSE_CLI=/usr/bin/goose
+export BCAIP_CLI=/usr/bin/goose
 
 # If built from source:
-export GOOSE_CLI=~/goose-fork/target/release/goose
+export BCAIP_CLI=~/goose-fork/target/release/goose
 
 # Verify:
-$GOOSE_CLI --version
+$BCAIP_CLI --version
 ```
 
 ## Test 1: Configure VMware Tanzu Platform Provider

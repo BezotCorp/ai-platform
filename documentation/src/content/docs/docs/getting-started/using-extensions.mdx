@@ -318,7 +318,7 @@ All parameters in the deeplink must be URL-encoded. For example, spaces should b
 
 
 ### Config Entry
-For advanced users, you can also directly edit the config file (`~/.config/goose/config.yaml`) to add, remove, or update an extension:
+For advanced users, you can also directly edit the config file (`~/.config/bcaip/config.yaml`) to add, remove, or update an extension:
 
 ```yaml
 extensions:
@@ -366,7 +366,7 @@ extensions:
   extension needs.
 
 The OAuth callback is served on `127.0.0.1` with an ephemeral port; set
-`GOOSE_OAUTH_CALLBACK_PORT` if the authorization server only allows a
+`BCAIP_OAUTH_CALLBACK_PORT` if the authorization server only allows a
 pre-registered redirect URI with a fixed port.
 
 ## Enabling/Disabling Extensions
@@ -582,7 +582,7 @@ goose relies on extension properties to determine how to handle an extension. Yo
 
   <Tab label="Config file">
   
-  1. Navigate to the goose [configuration file](/guides/config-files). For example, navigate to `~/.config/goose/config.yaml` on macOS.
+  1. Navigate to the goose [configuration file](/guides/config-files). For example, navigate to `~/.config/bcaip/config.yaml` on macOS.
   2. Edit the extension properties as needed and save your changes.
 
   </Tab>

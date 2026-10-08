@@ -3,7 +3,7 @@
 //! There is deliberately **no gossip**: the directory is built purely from
 //! connections this node observes. Inbound connections are recorded when a peer
 //! is authorized; outbound connections are recorded when this node dials a
-//! remote agent. This gives `goose roam list`-style visibility without any
+//! remote agent. This gives `bcaip roam list`-style visibility without any
 //! ambient network discovery.
 
 use iroh::EndpointId;
@@ -40,7 +40,7 @@ pub struct PeerEntry {
 }
 
 /// A shared directory of peers, optionally persisted to disk so that a separate
-/// process (e.g. `goose roam list`) can read what a running `share` has seen.
+/// process (e.g. `bcaip roam list`) can read what a running `share` has seen.
 #[derive(Clone, Default)]
 pub struct Directory {
     inner: Arc<Mutex<HashMap<String, PeerEntry>>>,
@@ -78,7 +78,7 @@ impl Directory {
     /// roaming endpoint (holds the exclusive endpoint lock). Because no other
     /// owner can be alive, any persisted `connected` flags are stale by
     /// definition — from a crash, SIGKILL, or reboot — so the cleared state is
-    /// flushed straight back to disk, making `goose roam connections` stop
+    /// flushed straight back to disk, making `bcaip roam connections` stop
     /// reporting phantom live peers immediately after a restart.
     pub fn persistent_owned(path: PathBuf) -> Self {
         let dir = Self::persistent(path.clone());

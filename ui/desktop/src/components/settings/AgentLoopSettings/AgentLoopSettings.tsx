@@ -232,14 +232,14 @@ export default function AgentLoopSettings() {
 
     Promise.all([
       window.electron.getSetting('useLegacyAgentLoop'),
-      read('GOOSE_MAX_TURNS', false),
-      read('GOOSE_AUTO_COMPACT_THRESHOLD', false),
-      read('GOOSE_SLASH_COMMANDS_ENABLED', false),
-      read('GOOSE_TOOL_PAIR_SUMMARIZATION', false),
-      read('GOOSE_TOOL_CALL_CUTOFF', false),
-      read('GOOSE_RECIPE_RETRY_TIMEOUT_SECONDS', false),
-      read('GOOSE_RECIPE_ON_FAILURE_TIMEOUT_SECONDS', false),
-      read('GOOSE_STOP_HOOK_BLOCK_CAP', false),
+      read('BCAIP_MAX_TURNS', false),
+      read('BCAIP_AUTO_COMPACT_THRESHOLD', false),
+      read('BCAIP_SLASH_COMMANDS_ENABLED', false),
+      read('BCAIP_TOOL_PAIR_SUMMARIZATION', false),
+      read('BCAIP_TOOL_CALL_CUTOFF', false),
+      read('BCAIP_RECIPE_RETRY_TIMEOUT_SECONDS', false),
+      read('BCAIP_RECIPE_ON_FAILURE_TIMEOUT_SECONDS', false),
+      read('BCAIP_STOP_HOOK_BLOCK_CAP', false),
     ]).then(
       ([
         useLegacyAgentLoop,
@@ -306,20 +306,20 @@ export default function AgentLoopSettings() {
 
   const handleToolPairCompactionToggle = async (checked: boolean) => {
     setToolPairCompactionEnabled(checked);
-    await upsert('GOOSE_TOOL_PAIR_SUMMARIZATION', checked, false);
+    await upsert('BCAIP_TOOL_PAIR_SUMMARIZATION', checked, false);
   };
 
   const handleSlashCommandsToggle = async (checked: boolean) => {
     setSlashCommandsEnabled(checked);
-    await upsert('GOOSE_SLASH_COMMANDS_ENABLED', checked, false);
+    await upsert('BCAIP_SLASH_COMMANDS_ENABLED', checked, false);
   };
 
   const saveToolCallCutoff = async () => {
     if (numbers.toolCallCutoff.trim() === '') {
-      await remove('GOOSE_TOOL_CALL_CUTOFF', false);
+      await remove('BCAIP_TOOL_CALL_CUTOFF', false);
       return;
     }
-    await saveNumber('toolCallCutoff', 'GOOSE_TOOL_CALL_CUTOFF', 1, 100000);
+    await saveNumber('toolCallCutoff', 'BCAIP_TOOL_CALL_CUTOFF', 1, 100000);
   };
 
   return (
@@ -360,7 +360,7 @@ export default function AgentLoopSettings() {
                 min={1}
                 max={10000}
                 onChange={(value) => setNumber('maxTurns', value)}
-                onBlur={() => saveNumber('maxTurns', 'GOOSE_MAX_TURNS', 1, 10000)}
+                onBlur={() => saveNumber('maxTurns', 'BCAIP_MAX_TURNS', 1, 10000)}
               />
             </OperationRow>
 
@@ -378,7 +378,7 @@ export default function AgentLoopSettings() {
                 onBlur={() =>
                   saveNumber(
                     'compactionThreshold',
-                    'GOOSE_AUTO_COMPACT_THRESHOLD',
+                    'BCAIP_AUTO_COMPACT_THRESHOLD',
                     1,
                     99,
                     (value) => value / 100,
@@ -420,7 +420,7 @@ export default function AgentLoopSettings() {
                   max={3600}
                   onChange={(value) => setNumber('retryTimeout', value)}
                   onBlur={() =>
-                    saveNumber('retryTimeout', 'GOOSE_RECIPE_RETRY_TIMEOUT_SECONDS', 1, 3600)
+                    saveNumber('retryTimeout', 'BCAIP_RECIPE_RETRY_TIMEOUT_SECONDS', 1, 3600)
                   }
                 />
                 <NumberInput
@@ -430,7 +430,7 @@ export default function AgentLoopSettings() {
                   max={3600}
                   onChange={(value) => setNumber('failureTimeout', value)}
                   onBlur={() =>
-                    saveNumber('failureTimeout', 'GOOSE_RECIPE_ON_FAILURE_TIMEOUT_SECONDS', 1, 3600)
+                    saveNumber('failureTimeout', 'BCAIP_RECIPE_ON_FAILURE_TIMEOUT_SECONDS', 1, 3600)
                   }
                 />
               </div>
@@ -446,7 +446,7 @@ export default function AgentLoopSettings() {
                 min={1}
                 max={100}
                 onChange={(value) => setNumber('stopHookBlockCap', value)}
-                onBlur={() => saveNumber('stopHookBlockCap', 'GOOSE_STOP_HOOK_BLOCK_CAP', 1, 100)}
+                onBlur={() => saveNumber('stopHookBlockCap', 'BCAIP_STOP_HOOK_BLOCK_CAP', 1, 100)}
               />
             </OperationRow>
           </CardContent>

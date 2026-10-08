@@ -1,5 +1,0 @@
-generated
-python/build/
-python/dist/
-python/src/*.egg-info/
-python/src/goose/

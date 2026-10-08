@@ -226,7 +226,7 @@ async function selectProvider(mainWindow: any, provider: Provider) {
   });
 }
 
-test.describe('Goose App', () => {
+test.describe('BCAIP App', () => {
   // No need for beforeAll/afterAll - the fixture handles app launch and cleanup!
 
   test.describe('General UI', () => {

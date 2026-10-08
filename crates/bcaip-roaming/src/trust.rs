@@ -5,7 +5,7 @@
 //! iroh's QUIC-TLS handshake authenticated, and is admitted only if that key is
 //! on this node's allowlist. There is no bearer/token mode: sharing a
 //! [`crate::ConnectionCard`] grants nothing until the recipient explicitly
-//! accepts the sender's key. An accepted peer gets goose's full ACP surface.
+//! accepts the sender's key. An accepted peer gets BCAIP's full ACP surface.
 //!
 //! This is deliberately local, unsigned admin state: it lives on the host under
 //! the user's control. Authentication of *who* a peer is comes from the
@@ -87,7 +87,7 @@ impl TrustBook {
     /// Read-modify-write the trust book under a cross-process advisory lock.
     ///
     /// Atomic replacement in [`save`] protects readers from partial JSON but
-    /// not writers from lost updates: two `goose roam peers` commands (or any
+    /// not writers from lost updates: two `bcaip roam peers` commands (or any
     /// other embedder) each load the whole book, mutate, and save, so the last
     /// writer clobbers the other's change with a stale snapshot —
     /// e.g. a concurrent accept resurrects a peer that was just revoked. This

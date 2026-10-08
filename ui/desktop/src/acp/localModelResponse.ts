@@ -1,3 +1,3 @@
-import type { LocalInferenceModelDto } from '@aaif/goose-acp-client';
+import type { LocalInferenceModelDto } from '@bezotcorp/bcaip-acp-client';
 
 export type LocalModelResponse = LocalInferenceModelDto;

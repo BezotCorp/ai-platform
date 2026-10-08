@@ -1,32 +1,65 @@
-use super::generation::{generate_single_model, mlx_max_tokens};
-use super::model_validation::{mlx_stop_token_ids, model_dir_from_path};
-use super::sampling::{prng_key, sampling};
-use super::tool_mode::ToolMode;
-use super::{
-    mlx_error::mlx_error, mlx_generation::MlxGeneration, mlx_loaded_model::MlxLoadedModel,
-    mlx_stream_emitter::MlxStreamEmitter,
-};
-use super::{output::emit_generated_response, prompt::build_prompt};
-use crate::ResolvedModelPaths;
-use crate::backend::{BackendLoadedModel, LocalGenerationRequest, LocalInferenceBackend};
-use crate::model::{ModelSettings, ToolCallingMode};
+use std::path::Path;
+
+use crate::LocalInferenceBackend;
+use crate::local_generation_request::{BackendLoadedModel, LocalGenerationRequest};
+use crate::mlx::snapshot_validation::validate_snapshot_files;
+use crate::model::ModelSettings;
+use crate::resolved_model_paths::ResolvedModelPaths;
+use bcaip_provider_types::errors::ProviderError;
+
+#[cfg(all(feature = "mlx", target_os = "macos"))]
+use crate::model::ToolCallingMode;
+#[cfg(all(feature = "mlx", target_os = "macos"))]
 use crate::tool_emulation::CODE_EXECUTION_TOOL;
-use goose_provider_types::conversations::{DraftStats, ProviderStats, ProviderUsage, Usage};
-use goose_provider_types::errors::ProviderError;
-use safemlx::{Device, DeviceType, Stream};
-use safemlx_lm::models::{LoadedModel, Model};
-use safemlx_lm::{
-    gemma4_mtp::generate_gemma4_mtp, models::gemma4_assistant::load_gemma4_assistant_model,
+#[cfg(all(feature = "mlx", target_os = "macos"))]
+use bcaip_provider_types::conversations::{DraftStats, ProviderStats, ProviderUsage, Usage};
+#[cfg(all(feature = "mlx", target_os = "macos"))]
+use bcaip_provider_types::request_log::LoggerHandleExt;
+
+#[cfg(all(feature = "mlx", target_os = "macos"))]
+use crate::mlx::{
+    generation::{generate_single_model, mlx_max_tokens},
+    mlx_error::mlx_error,
+    mlx_generation::MlxGeneration,
+    mlx_loaded_model::MlxLoadedModel,
+    mlx_stream_emitter::MlxStreamEmitter,
+    model_validation::{mlx_stop_token_ids, model_dir_from_path},
+    output::emit_generated_response,
+    prompt::build_prompt,
+    sampling::{prng_key, sampling},
+    tool_mode::ToolMode,
 };
+#[cfg(all(feature = "mlx", target_os = "macos"))]
+use safemlx::{Device, DeviceType, Stream};
+#[cfg(all(feature = "mlx", target_os = "macos"))]
+use safemlx_lm::{
+    gemma4_mtp::generate_gemma4_mtp,
+    models::{LoadedModel, Model, gemma4_assistant::load_gemma4_assistant_model},
+};
+#[cfg(all(feature = "mlx", target_os = "macos"))]
 use safemlx_lm_utils::tokenizer::Tokenizer;
-use serde_json::json;
+
 pub(crate) const MLX_BACKEND_ID: &str = "mlx";
+
 pub(crate) struct MlxBackend;
+
 impl MlxBackend {
     pub(crate) fn new() -> Self {
         Self
     }
 }
+
+pub(crate) fn validate_model_directory(path: &Path) -> Result<(), ProviderError> {
+    validate_snapshot_files(path)?;
+    let reason = if cfg!(target_os = "macos") {
+        "MLX support was not compiled in. Rebuild with the `mlx` feature."
+    } else {
+        "MLX backend requires macOS."
+    };
+    Err(ProviderError::ExecutionError(reason.to_string()))
+}
+
+#[cfg(all(feature = "mlx", target_os = "macos"))]
 impl LocalInferenceBackend for MlxBackend {
     fn id(&self) -> &'static str {
         MLX_BACKEND_ID
@@ -246,6 +279,46 @@ impl LocalInferenceBackend for MlxBackend {
         let provider_usage = ProviderUsage::new(request.model_name, usage).with_stats(stats);
         let _ = request.tx.blocking_send(Ok((None, Some(provider_usage))));
         Ok(())
+    }
+
+    fn available_memory_bytes(&self) -> u64 {
+        0
+    }
+}
+
+#[cfg(not(all(feature = "mlx", target_os = "macos")))]
+impl LocalInferenceBackend for MlxBackend {
+    fn id(&self) -> &'static str {
+        MLX_BACKEND_ID
+    }
+
+    fn load_model(
+        &self,
+        model_id: &str,
+        resolved: &ResolvedModelPaths,
+        _settings: &ModelSettings,
+    ) -> Result<Box<dyn BackendLoadedModel>, ProviderError> {
+        if !resolved.model_path.exists() {
+            return Err(ProviderError::ExecutionError(format!(
+                "Model not downloaded: {}. Please download it from Settings > Local Inference.",
+                model_id
+            )));
+        }
+
+        validate_model_directory(&resolved.model_path)?;
+        Err(ProviderError::ExecutionError(
+            "MLX backend is unavailable on this platform or build.".to_string(),
+        ))
+    }
+
+    fn generate(
+        &self,
+        _loaded: &mut dyn BackendLoadedModel,
+        _request: LocalGenerationRequest<'_>,
+    ) -> Result<(), ProviderError> {
+        Err(ProviderError::ExecutionError(
+            "MLX backend is unavailable on this platform or build.".to_string(),
+        ))
     }
 
     fn available_memory_bytes(&self) -> u64 {

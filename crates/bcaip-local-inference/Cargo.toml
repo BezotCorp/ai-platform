@@ -19,7 +19,7 @@ mlx = ["dep:safemlx", "dep:safemlx-lm", "dep:safemlx-lm-utils"]
 hf-hub = [
     "dep:futures",
     "dep:bcaip-download-manager",
-    "dep:goose-sdk-types",
+    "dep:bcaip-sdk-types",
     "dep:hf-hub",
 ]
 
@@ -34,7 +34,7 @@ encoding_rs = { version = "0.8.42", default-features = false }
 futures = { workspace = true, optional = true }
 bcaip-download-manager = { path = "../bcaip-download-manager", optional = true }
 bcaip-provider-types = { path = "../bcaip-provider-types", default-features = false }
-goose-sdk-types = { path = "../goose-sdk-types", default-features = false, optional = true }
+bcaip-sdk-types = { path = "../bcaip-sdk-types", default-features = false, optional = true }
 hf-hub = { version = "1.0.0", default-features = false, optional = true }
 include_dir = { workspace = true }
 llama-cpp-2 = { workspace = true }

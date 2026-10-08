@@ -1,5 +1,5 @@
 import type { AcpElicitationRequest } from './acpElicitationRequest';
-import type { GooseSessionNotificationUnstable } from '@aaif/goose-acp-client';
+import type { BcaipSessionNotificationUnstable } from '@bezotcorp/bcaip-acp-client';
 import type { SessionNotification } from '@agentclientprotocol/sdk';
 import type { ChatState } from '../types/chatState';
 import type { Message } from '../types/message';
@@ -12,8 +12,8 @@ import type { AcpChatSessionSnapshot } from './acpChatSessionSnapshot';
 export interface AcpChatSessionActions {
   deleteSnapshot(sessionId: string): void;
   applyAcpSessionNotification(notification: SessionNotification): AcpChatSessionSnapshot;
-  applyAcpGooseSessionNotification(
-    notification: GooseSessionNotificationUnstable
+  applyAcpBcaipSessionNotification(
+    notification: BcaipSessionNotificationUnstable
   ): AcpChatSessionSnapshot;
   applyPermissionRequest(request: AcpPermissionRequest): AcpChatSessionSnapshot;
   cancelPermissionRequest(

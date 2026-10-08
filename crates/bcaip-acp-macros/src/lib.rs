@@ -189,7 +189,7 @@ pub fn custom_methods(_attr: TokenStream, item: TokenStream) -> TokenStream {
             quote! {
                 {
                     let dummy = <#req_type as Default>::default();
-                    goose_sdk_types::custom_requests::CustomMethodSchema {
+                    bcaip_sdk_types::custom_requests::CustomMethodSchema {
                         method: agent_client_protocol::JsonRpcMessage::method(&dummy).to_string(),
                         params_schema: #params_expr,
                         params_type_name: #params_name_expr,
@@ -216,7 +216,7 @@ pub fn custom_methods(_attr: TokenStream, item: TokenStream) -> TokenStream {
 
     // Generate the custom_method_schemas method.
     let schemas_fn = quote! {
-        pub fn custom_method_schemas(generator: &mut schemars::SchemaGenerator) -> Vec<goose_sdk_types::custom_requests::CustomMethodSchema> {
+        pub fn custom_method_schemas(generator: &mut schemars::SchemaGenerator) -> Vec<bcaip_sdk_types::custom_requests::CustomMethodSchema> {
             vec![
                 #(#schema_entries),*
             ]

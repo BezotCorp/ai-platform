@@ -346,14 +346,92 @@ importers:
         specifier: ^7.0.2
         version: 7.0.2
 
-  ui/desktop:
-    dependencies:
-      '@aaif/goose-acp-client':
+  ui/bcaip-acp:
+    devDependencies:
+      '@types/node':
+        specifier: ^26.6.3
+        version: 26.6.4
+      prettier:
+        specifier: ^3.9.9
+        version: 3.9.9
+      typescript:
+        specifier: ~7.0.2
+        version: 7.0.2
+    optionalDependencies:
+      '@bezotcorp/bcaip-binary-darwin-arm64':
         specifier: workspace:*
-        version: link:../goose-acp-client
+        version: link:../bcaip-binary/bcaip-binary-darwin-arm64
+      '@bezotcorp/bcaip-binary-darwin-x64':
+        specifier: workspace:*
+        version: link:../bcaip-binary/bcaip-binary-darwin-x64
+      '@bezotcorp/bcaip-binary-linux-arm64':
+        specifier: workspace:*
+        version: link:../bcaip-binary/bcaip-binary-linux-arm64
+      '@bezotcorp/bcaip-binary-linux-x64':
+        specifier: workspace:*
+        version: link:../bcaip-binary/bcaip-binary-linux-x64
+      '@bezotcorp/bcaip-binary-win32-x64':
+        specifier: workspace:*
+        version: link:../bcaip-binary/bcaip-binary-win32-x64
+
+  ui/bcaip-acp-client:
+    dependencies:
+      '@modelcontextprotocol/ext-apps':
+        specifier: ^2.0.3
+        version: 2.0.3(@modelcontextprotocol/client@2.3.0)(@modelcontextprotocol/core@2.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(zod@4.6.5)
+      '@modelcontextprotocol/sdk':
+        specifier: ^1.31.0
+        version: 1.32.0(supports-color@10.2.2)(zod@4.6.5)
+      zod:
+        specifier: ^4.6.5
+        version: 4.6.5
+    devDependencies:
       '@agentclientprotocol/sdk':
         specifier: 1.6.0
         version: 1.6.0(zod@4.6.5)
+      '@kubb/cli':
+        specifier: ^5.4.2
+        version: 5.5.0(@kubb/adapter-oas@5.4.3(openapi-types@12.1.3))(@kubb/mcp@5.4.3(@kubb/renderer-jsx@5.4.3)(openapi-types@12.1.3)(typescript@7.0.2))(@kubb/studio@5.4.3(@azure/identity@4.13.3(supports-color@10.2.2))(oxc-resolver@11.24.2)(tsx@4.23.15)(typescript@7.0.2))
+      '@kubb/plugin-ts':
+        specifier: ^5.0.2
+        version: 5.0.3(kubb@5.4.3(@azure/identity@4.13.3(supports-color@10.2.2))(@rsbuild/core@2.2.11)(@rspack/core@2.2.8(@swc/helpers@0.5.23))(esbuild@0.28.2)(openapi-types@12.1.3)(oxc-resolver@11.24.2)(rolldown@1.2.12)(tsx@4.23.15)(typescript@7.0.2)(vite@8.3.2(@types/node@26.6.4)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)))
+      '@kubb/plugin-zod':
+        specifier: ^5.4.1
+        version: 5.4.2(kubb@5.4.3(@azure/identity@4.13.3(supports-color@10.2.2))(@rsbuild/core@2.2.11)(@rspack/core@2.2.8(@swc/helpers@0.5.23))(esbuild@0.28.2)(openapi-types@12.1.3)(oxc-resolver@11.24.2)(rolldown@1.2.12)(tsx@4.23.15)(typescript@7.0.2)(vite@8.3.2(@types/node@26.6.4)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)))(zod@4.6.5)
+      '@types/node':
+        specifier: ^26.6.3
+        version: 26.6.4
+      kubb:
+        specifier: ^5.4.2
+        version: 5.4.3(@azure/identity@4.13.3(supports-color@10.2.2))(@rsbuild/core@2.2.11)(@rspack/core@2.2.8(@swc/helpers@0.5.23))(esbuild@0.28.2)(openapi-types@12.1.3)(oxc-resolver@11.24.2)(rolldown@1.2.12)(tsx@4.23.15)(typescript@7.0.2)(vite@8.3.2(@types/node@26.6.4)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
+      prettier:
+        specifier: ^3.9.9
+        version: 3.9.9
+      tsx:
+        specifier: ^4.23.15
+        version: 4.23.15
+      typescript:
+        specifier: ~7.0.2
+        version: 7.0.2
+
+  ui/bcaip-binary/bcaip-binary-darwin-arm64: {}
+
+  ui/bcaip-binary/bcaip-binary-darwin-x64: {}
+
+  ui/bcaip-binary/bcaip-binary-linux-arm64: {}
+
+  ui/bcaip-binary/bcaip-binary-linux-x64: {}
+
+  ui/bcaip-binary/bcaip-binary-win32-x64: {}
+
+  ui/desktop:
+    dependencies:
+      '@agentclientprotocol/sdk':
+        specifier: 1.6.0
+        version: 1.6.0(zod@4.6.5)
+      '@bezotcorp/bcaip-acp-client':
+        specifier: workspace:*
+        version: link:../bcaip-acp-client
       '@mcp-ui/client':
         specifier: 7.1.1
         version: 7.1.1(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(supports-color@10.2.2)
@@ -664,84 +742,6 @@ importers:
       vitest:
         specifier: ^5.0.3
         version: 5.0.3(@types/node@26.6.4)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(jsdom@30.1.1)(vite@8.3.2(@types/node@26.6.4)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
-
-  ui/goose-acp:
-    devDependencies:
-      '@types/node':
-        specifier: ^26.6.3
-        version: 26.6.4
-      prettier:
-        specifier: ^3.9.9
-        version: 3.9.9
-      typescript:
-        specifier: ~7.0.2
-        version: 7.0.2
-    optionalDependencies:
-      '@aaif/goose-binary-darwin-arm64':
-        specifier: workspace:*
-        version: link:../goose-binary/goose-binary-darwin-arm64
-      '@aaif/goose-binary-darwin-x64':
-        specifier: workspace:*
-        version: link:../goose-binary/goose-binary-darwin-x64
-      '@aaif/goose-binary-linux-arm64':
-        specifier: workspace:*
-        version: link:../goose-binary/goose-binary-linux-arm64
-      '@aaif/goose-binary-linux-x64':
-        specifier: workspace:*
-        version: link:../goose-binary/goose-binary-linux-x64
-      '@aaif/goose-binary-win32-x64':
-        specifier: workspace:*
-        version: link:../goose-binary/goose-binary-win32-x64
-
-  ui/goose-acp-client:
-    dependencies:
-      '@modelcontextprotocol/ext-apps':
-        specifier: ^2.0.3
-        version: 2.0.3(@modelcontextprotocol/client@2.3.0)(@modelcontextprotocol/core@2.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(zod@4.6.5)
-      '@modelcontextprotocol/sdk':
-        specifier: ^1.31.0
-        version: 1.32.0(supports-color@10.2.2)(zod@4.6.5)
-      zod:
-        specifier: ^4.6.5
-        version: 4.6.5
-    devDependencies:
-      '@agentclientprotocol/sdk':
-        specifier: 1.6.0
-        version: 1.6.0(zod@4.6.5)
-      '@kubb/cli':
-        specifier: ^5.4.2
-        version: 5.4.3(@kubb/adapter-oas@5.4.3(openapi-types@12.1.3))(@kubb/mcp@5.4.3(@kubb/renderer-jsx@5.4.3)(openapi-types@12.1.3)(typescript@7.0.2))(@kubb/studio@5.4.3(@azure/identity@4.13.3(supports-color@10.2.2))(oxc-resolver@11.24.2)(tsx@4.23.15)(typescript@7.0.2))
-      '@kubb/plugin-ts':
-        specifier: ^5.0.2
-        version: 5.0.2(kubb@5.4.3(@azure/identity@4.13.3(supports-color@10.2.2))(@rsbuild/core@2.2.11)(@rspack/core@2.2.8(@swc/helpers@0.5.23))(esbuild@0.28.2)(openapi-types@12.1.3)(oxc-resolver@11.24.2)(rolldown@1.2.12)(tsx@4.23.15)(typescript@7.0.2)(vite@8.3.2(@types/node@26.6.4)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)))
-      '@kubb/plugin-zod':
-        specifier: ^5.4.1
-        version: 5.4.1(kubb@5.4.3(@azure/identity@4.13.3(supports-color@10.2.2))(@rsbuild/core@2.2.11)(@rspack/core@2.2.8(@swc/helpers@0.5.23))(esbuild@0.28.2)(openapi-types@12.1.3)(oxc-resolver@11.24.2)(rolldown@1.2.12)(tsx@4.23.15)(typescript@7.0.2)(vite@8.3.2(@types/node@26.6.4)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)))(zod@4.6.5)
-      '@types/node':
-        specifier: ^26.6.3
-        version: 26.6.4
-      kubb:
-        specifier: ^5.4.2
-        version: 5.4.3(@azure/identity@4.13.3(supports-color@10.2.2))(@rsbuild/core@2.2.11)(@rspack/core@2.2.8(@swc/helpers@0.5.23))(esbuild@0.28.2)(openapi-types@12.1.3)(oxc-resolver@11.24.2)(rolldown@1.2.12)(tsx@4.23.15)(typescript@7.0.2)(vite@8.3.2(@types/node@26.6.4)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
-      prettier:
-        specifier: ^3.9.9
-        version: 3.9.9
-      tsx:
-        specifier: ^4.23.15
-        version: 4.23.15
-      typescript:
-        specifier: ~7.0.2
-        version: 7.0.2
-
-  ui/goose-binary/goose-binary-darwin-arm64: {}
-
-  ui/goose-binary/goose-binary-darwin-x64: {}
-
-  ui/goose-binary/goose-binary-linux-arm64: {}
-
-  ui/goose-binary/goose-binary-linux-x64: {}
-
-  ui/goose-binary/goose-binary-win32-x64: {}
 
 packages:
 
@@ -2043,6 +2043,10 @@ packages:
     resolution: {integrity: sha512-iSu7khgRdgZodINBSDU2SCdgE/J5/TklysL4cIguO3hL5lLVtRBDnkhosnxLKkiq46UsqLSBjujmxAuKVFkYpg==}
     engines: {node: '>=22'}
 
+  '@kubb/ast@5.5.0':
+    resolution: {integrity: sha512-vXFR+jzNjmQW+MPVByOyom/sTZtA9gnDWCu5s1C28NZITmJt15TFv0UtDAA+q/A2bx+vwuMTOGuotOZ0Gzs0lg==}
+    engines: {node: '>=22'}
+
   '@kubb/cli@5.4.3':
     resolution: {integrity: sha512-a8ROvpdun2X8hn7nsdxx+o3PkRAYeiNFHFeBdOTvYpmoG6JMuWVDx9+bAl+4ZUq/LzY6yt42J1TuV3edZbL9Ig==}
     engines: {node: '>=22'}
@@ -2059,12 +2063,36 @@ packages:
       '@kubb/studio':
         optional: true
 
+  '@kubb/cli@5.5.0':
+    resolution: {integrity: sha512-KavZFsmIBd2vTNUQ2uud1wXn2N/LAWswSh9EWmbYSTMzFUy7RG7ZANgVmYXTZ+2Qp8xvlg98Bcr8F5/rxq1jOA==}
+    engines: {node: '>=22'}
+    hasBin: true
+    peerDependencies:
+      '@kubb/adapter-oas': 5.5.0
+      '@kubb/mcp': 5.5.0
+      '@kubb/studio': 5.5.0
+    peerDependenciesMeta:
+      '@kubb/adapter-oas':
+        optional: true
+      '@kubb/mcp':
+        optional: true
+      '@kubb/studio':
+        optional: true
+
   '@kubb/core@5.4.3':
     resolution: {integrity: sha512-cVKhZtDMSqxLuIS3EVpqrhRdQHGPLvKBAZkf5lDg8U2FZdsazOcjpLKm9x98PZmeS1miP95FbgzY41Fk7fLHgg==}
     engines: {node: '>=22'}
 
+  '@kubb/core@5.5.0':
+    resolution: {integrity: sha512-a7nOrntR8S7s51O8dHKahAwjhNYM0gyj7V2KwvUIxD6siU8piXPOAo2YEfKi/tUBpVKFuw0rqK7Sb3lRPwCksA==}
+    engines: {node: '>=22'}
+
   '@kubb/kit@5.4.3':
     resolution: {integrity: sha512-64/oWxzxG3X9JtyU3fJZRn8B8w4DKNveYU84MnEtKMLWlMlqAgNGrpkfpjlI5O8ymk5zCXFYYgi19xUkMMDwFg==}
+    engines: {node: '>=22'}
+
+  '@kubb/kit@5.5.0':
+    resolution: {integrity: sha512-9vNOrzah5h26M8iGJB2H798+y3zwc29aTRbowKP3d/fFw/e5YVLziBi/cpMYQbKItRFQMTO/q8kG0qrbxRWLXA==}
     engines: {node: '>=22'}
 
   '@kubb/mcp@5.4.3':
@@ -2082,23 +2110,27 @@ packages:
     resolution: {integrity: sha512-bJpjrWnU6sUUr44Y34ofSkSe7LFkcroTqHd1tLpwG05y4Msx3gT4Nh98oSzV9icCSNAf/3tlGGhoO2Z+X14Vvg==}
     engines: {node: '>=22'}
 
+  '@kubb/parser-ts@5.5.0':
+    resolution: {integrity: sha512-BoDcElO2S9H9eR80xc1piFMUI/oIXU/T8p8fi5pN6ZWcKfKEmwH5Mjx6vT9cnR7HlWdjnkLflSIQ0CI78x+Onw==}
+    engines: {node: '>=22'}
+
   '@kubb/plugin-barrel@5.4.3':
     resolution: {integrity: sha512-EQNdS6+/jbDk4ONJ0R+bUZ+aafdLn+TnCZWbe47EriWckCB6VoByu0qBXOVQdQRRnZ0kLzFkqVAf23pFSuVHxA==}
     engines: {node: '>=22'}
     peerDependencies:
       '@kubb/core': 5.4.3
 
-  '@kubb/plugin-ts@5.0.2':
-    resolution: {integrity: sha512-p/9729bxFUpJqZp6u2DTND588YhQLoT8WjGUCoTmks0XC36+Aj1tCcHzOuNg9DZCGrJ9PRQBHBaZG4Xg3M8RsA==}
+  '@kubb/plugin-ts@5.0.3':
+    resolution: {integrity: sha512-T0U3kqKF9j2eUf3y00WVTKvNS2rkYQl2wA7xyJow6eJH7ta7cVtGnsei7CqtOAsgcUsHzSTgQXViva6ucFBlCA==}
     engines: {node: '>=22'}
     peerDependencies:
-      kubb: ^5.2.0
+      kubb: ^5.4.2
 
-  '@kubb/plugin-zod@5.4.1':
-    resolution: {integrity: sha512-2km+OoxCrxCNEgxpLcTZSMCdHbfQIFGFZkPEjrkqXJpET9Yc2n29F6e1duuY/OfXLBlp9cIjKdQ/2CrEHWNGWA==}
+  '@kubb/plugin-zod@5.4.2':
+    resolution: {integrity: sha512-+Wjz3ZpDibAk++gyjKPPA8YHX/cTR+2WdIppMrPRa/ge/uI3TmTE0BD6SzLizbLEwqbbhkw0cR6SpyBvhsNyWA==}
     engines: {node: '>=22'}
     peerDependencies:
-      kubb: ^5.4.0
+      kubb: ^5.4.2
       zod: ^4.0.0
     peerDependenciesMeta:
       zod:
@@ -9254,6 +9286,8 @@ snapshots:
 
   '@kubb/ast@5.4.3': {}
 
+  '@kubb/ast@5.5.0': {}
+
   '@kubb/cli@5.4.3(@kubb/adapter-oas@5.4.3(openapi-types@12.1.3))(@kubb/mcp@5.4.3(@kubb/renderer-jsx@5.4.3)(openapi-types@12.1.3)(typescript@7.0.2))(@kubb/studio@5.4.3(@azure/identity@4.13.3(supports-color@10.2.2))(oxc-resolver@11.24.2)(tsx@4.23.15)(typescript@7.0.2))':
     dependencies:
       '@clack/prompts': 1.8.1
@@ -9270,14 +9304,39 @@ snapshots:
       '@kubb/mcp': 5.4.3(@kubb/renderer-jsx@5.4.3)(openapi-types@12.1.3)(typescript@7.0.2)
       '@kubb/studio': 5.4.3(@azure/identity@4.13.3(supports-color@10.2.2))(oxc-resolver@11.24.2)(tsx@4.23.15)(typescript@7.0.2)
 
+  '@kubb/cli@5.5.0(@kubb/adapter-oas@5.4.3(openapi-types@12.1.3))(@kubb/mcp@5.4.3(@kubb/renderer-jsx@5.4.3)(openapi-types@12.1.3)(typescript@7.0.2))(@kubb/studio@5.4.3(@azure/identity@4.13.3(supports-color@10.2.2))(oxc-resolver@11.24.2)(tsx@4.23.15)(typescript@7.0.2))':
+    dependencies:
+      '@clack/prompts': 1.8.1
+      '@gunshi/plugin-dryrun': 0.37.3
+      '@kubb/core': 5.5.0
+      chokidar: 5.0.0
+      gunshi: 0.37.3
+      jiti: 2.7.0
+      tinyexec: 1.3.1
+      unconfig: 7.5.0
+      verkit: 0.5.0
+    optionalDependencies:
+      '@kubb/adapter-oas': 5.4.3(openapi-types@12.1.3)
+      '@kubb/mcp': 5.4.3(@kubb/renderer-jsx@5.4.3)(openapi-types@12.1.3)(typescript@7.0.2)
+      '@kubb/studio': 5.4.3(@azure/identity@4.13.3(supports-color@10.2.2))(oxc-resolver@11.24.2)(tsx@4.23.15)(typescript@7.0.2)
+
   '@kubb/core@5.4.3':
     dependencies:
       '@kubb/ast': 5.4.3
+
+  '@kubb/core@5.5.0':
+    dependencies:
+      '@kubb/ast': 5.5.0
 
   '@kubb/kit@5.4.3':
     dependencies:
       '@kubb/ast': 5.4.3
       '@kubb/core': 5.4.3
+
+  '@kubb/kit@5.5.0':
+    dependencies:
+      '@kubb/ast': 5.5.0
+      '@kubb/core': 5.5.0
 
   '@kubb/mcp@5.4.3(@kubb/renderer-jsx@5.4.3)(openapi-types@12.1.3)(typescript@7.0.2)':
     dependencies:
@@ -9302,18 +9361,23 @@ snapshots:
       '@kubb/kit': 5.4.3
       typescript: 6.0.3
 
+  '@kubb/parser-ts@5.5.0':
+    dependencies:
+      '@kubb/kit': 5.5.0
+      typescript: 6.0.3
+
   '@kubb/plugin-barrel@5.4.3(@kubb/core@5.4.3)':
     dependencies:
       '@kubb/ast': 5.4.3
       '@kubb/core': 5.4.3
 
-  '@kubb/plugin-ts@5.0.2(kubb@5.4.3(@azure/identity@4.13.3(supports-color@10.2.2))(@rsbuild/core@2.2.11)(@rspack/core@2.2.8(@swc/helpers@0.5.23))(esbuild@0.28.2)(openapi-types@12.1.3)(oxc-resolver@11.24.2)(rolldown@1.2.12)(tsx@4.23.15)(typescript@7.0.2)(vite@8.3.2(@types/node@26.6.4)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)))':
+  '@kubb/plugin-ts@5.0.3(kubb@5.4.3(@azure/identity@4.13.3(supports-color@10.2.2))(@rsbuild/core@2.2.11)(@rspack/core@2.2.8(@swc/helpers@0.5.23))(esbuild@0.28.2)(openapi-types@12.1.3)(oxc-resolver@11.24.2)(rolldown@1.2.12)(tsx@4.23.15)(typescript@7.0.2)(vite@8.3.2(@types/node@26.6.4)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)))':
     dependencies:
-      '@kubb/parser-ts': 5.4.3
+      '@kubb/parser-ts': 5.5.0
       kubb: 5.4.3(@azure/identity@4.13.3(supports-color@10.2.2))(@rsbuild/core@2.2.11)(@rspack/core@2.2.8(@swc/helpers@0.5.23))(esbuild@0.28.2)(openapi-types@12.1.3)(oxc-resolver@11.24.2)(rolldown@1.2.12)(tsx@4.23.15)(typescript@7.0.2)(vite@8.3.2(@types/node@26.6.4)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
       typescript: 6.0.3
 
-  '@kubb/plugin-zod@5.4.1(kubb@5.4.3(@azure/identity@4.13.3(supports-color@10.2.2))(@rsbuild/core@2.2.11)(@rspack/core@2.2.8(@swc/helpers@0.5.23))(esbuild@0.28.2)(openapi-types@12.1.3)(oxc-resolver@11.24.2)(rolldown@1.2.12)(tsx@4.23.15)(typescript@7.0.2)(vite@8.3.2(@types/node@26.6.4)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)))(zod@4.6.5)':
+  '@kubb/plugin-zod@5.4.2(kubb@5.4.3(@azure/identity@4.13.3(supports-color@10.2.2))(@rsbuild/core@2.2.11)(@rspack/core@2.2.8(@swc/helpers@0.5.23))(esbuild@0.28.2)(openapi-types@12.1.3)(oxc-resolver@11.24.2)(rolldown@1.2.12)(tsx@4.23.15)(typescript@7.0.2)(vite@8.3.2(@types/node@26.6.4)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)))(zod@4.6.5)':
     dependencies:
       kubb: 5.4.3(@azure/identity@4.13.3(supports-color@10.2.2))(@rsbuild/core@2.2.11)(@rspack/core@2.2.8(@swc/helpers@0.5.23))(esbuild@0.28.2)(openapi-types@12.1.3)(oxc-resolver@11.24.2)(rolldown@1.2.12)(tsx@4.23.15)(typescript@7.0.2)(vite@8.3.2(@types/node@26.6.4)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
     optionalDependencies:

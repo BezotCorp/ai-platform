@@ -322,11 +322,11 @@ function CommunityAllStarsSection() {
           </div>
           <div className="text-sm">
             Want to be a Community All Star? Just start contributing on{" "}
-            <Link href="https://github.com/aaif-goose/goose">GitHub</Link>,
+            <Link href="https://github.com/BezotCorp/ai-platform">GitHub</Link>,
             helping others on{" "}
             <Link href="https://discord.gg/n8R5VaWDAn">Discord</Link>, or share
             your goose projects with the community! You can check out the{" "}
-            <Link href="https://github.com/aaif-goose/goose/blob/main/CONTRIBUTING.md">
+            <Link href="https://github.com/BezotCorp/ai-platform/blob/main/CONTRIBUTING.md">
               contributing guide
             </Link>{" "}
             for more tips.

@@ -2,7 +2,7 @@ import type {
   ToolListItem,
   ToolPermissionEntry,
   ToolPermissionLevelKey,
-} from '@aaif/goose-acp-client';
+} from '@bezotcorp/bcaip-acp-client';
 import { getAcpClient } from './acpConnection';
 
 export type { ToolListItem, ToolPermissionEntry, ToolPermissionLevelKey };
@@ -12,7 +12,7 @@ export async function listTools(
   extensionName?: string
 ): Promise<ToolListItem[]> {
   const client = await getAcpClient();
-  const response = await client.goose.toolsListUnstable({
+  const response = await client.bcaip.toolsListUnstable({
     sessionId,
     extensionName: extensionName ?? null,
   });
@@ -21,5 +21,5 @@ export async function listTools(
 
 export async function setToolPermissions(toolPermissions: ToolPermissionEntry[]): Promise<void> {
   const client = await getAcpClient();
-  await client.goose.toolsPermissionsSetUnstable({ toolPermissions });
+  await client.bcaip.toolsPermissionsSetUnstable({ toolPermissions });
 }

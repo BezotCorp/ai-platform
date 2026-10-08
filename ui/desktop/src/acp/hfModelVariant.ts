@@ -1,3 +1,3 @@
-import type { LocalInferenceHfModelVariantDto } from '@aaif/goose-acp-client';
+import type { LocalInferenceHfModelVariantDto } from '@bezotcorp/bcaip-acp-client';
 
 export type HfModelVariant = LocalInferenceHfModelVariantDto;

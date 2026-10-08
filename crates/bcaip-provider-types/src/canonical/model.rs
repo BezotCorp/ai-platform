@@ -57,7 +57,7 @@ impl Pricing {
     /// True when the entry carries no usable rate signal: `estimate_cost` needs both
     /// an input and an output price, so an unset or literal-zero value in either field
     /// makes the whole estimate wrong-low rather than merely incomplete. Mirrors the
-    /// `is_price_gap` predicate in `goose::providers::canonical_cost`.
+    /// `is_price_gap` predicate in `bcaip::providers::canonical_cost`.
     pub fn has_no_usable_rate(&self) -> bool {
         fn is_gap(price: Option<f64>) -> bool {
             matches!(price, None | Some(0.0))

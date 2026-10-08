@@ -7,7 +7,7 @@ use crate::{Directory, RelaySettings, RoamingIdentity, TrustBook};
 /// one), and an in-memory directory:
 ///
 /// ```no_run
-/// use goose_roaming::{RoamingConfig, RoamingIdentity, RoamingNode};
+/// use bcaip_roaming::{RoamingConfig, RoamingIdentity, RoamingNode};
 /// # async fn f() -> anyhow::Result<()> {
 /// let node = RoamingNode::bind(RoamingConfig::new(RoamingIdentity::generate())).await?;
 /// # Ok(()) }

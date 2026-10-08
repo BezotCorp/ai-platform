@@ -1,4 +1,4 @@
-import type { DictationProviderStatusEntry } from '@aaif/goose-acp-client';
+import type { DictationProviderStatusEntry } from '@bezotcorp/bcaip-acp-client';
 import { getAcpClient } from './acpConnection';
 
 import type { DictationProviders } from './dictationProviders';
@@ -8,7 +8,7 @@ export type { DictationProviderStatusEntry };
 
 export async function getDictationConfig(): Promise<DictationProviders> {
   const client = await getAcpClient();
-  const response = await client.goose.dictationConfigUnstable({});
+  const response = await client.bcaip.dictationConfigUnstable({});
   return response.providers ?? {};
 }
 
@@ -18,35 +18,35 @@ export async function transcribeDictation(
   provider: string
 ): Promise<string> {
   const client = await getAcpClient();
-  const response = await client.goose.dictationTranscribeUnstable({ audio, mimeType, provider });
+  const response = await client.bcaip.dictationTranscribeUnstable({ audio, mimeType, provider });
   return response.text;
 }
 
 export async function listLocalDictationModels(): Promise<LocalDictationModel[]> {
   const client = await getAcpClient();
-  const response = await client.goose.dictationModelsListUnstable({});
+  const response = await client.bcaip.dictationModelsListUnstable({});
   return response.models;
 }
 
 export async function downloadLocalDictationModel(modelId: string): Promise<void> {
   const client = await getAcpClient();
-  await client.goose.dictationModelsDownloadUnstable({ modelId });
+  await client.bcaip.dictationModelsDownloadUnstable({ modelId });
 }
 
 export async function getLocalDictationModelDownloadProgress(
   modelId: string
 ): Promise<LocalDictationDownloadProgress | null> {
   const client = await getAcpClient();
-  const response = await client.goose.dictationModelsDownloadProgressUnstable({ modelId });
+  const response = await client.bcaip.dictationModelsDownloadProgressUnstable({ modelId });
   return response.progress ?? null;
 }
 
 export async function cancelLocalDictationModelDownload(modelId: string): Promise<void> {
   const client = await getAcpClient();
-  await client.goose.dictationModelsCancelUnstable({ modelId });
+  await client.bcaip.dictationModelsCancelUnstable({ modelId });
 }
 
 export async function deleteLocalDictationModel(modelId: string): Promise<void> {
   const client = await getAcpClient();
-  await client.goose.dictationModelsDeleteUnstable({ modelId });
+  await client.bcaip.dictationModelsDeleteUnstable({ modelId });
 }

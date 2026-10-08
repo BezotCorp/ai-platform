@@ -266,7 +266,7 @@ function CommunitySection() {
             </p>
           </a>
           <a
-            href="https://github.com/aaif-goose/goose"
+            href="https://github.com/BezotCorp/ai-platform"
             target="_blank"
             rel="noopener"
             className={styles.communityCard}
@@ -319,7 +319,7 @@ function InstallSection() {
             </div>
             <pre className={styles.terminalBody}>
               <code>
-{`curl -fsSL https://github.com/aaif-goose/goose/releases/download/stable/download_cli.sh | bash`}
+{`curl -fsSL https://github.com/BezotCorp/ai-platform/releases/download/stable/download_cli.sh | bash`}
               </code>
             </pre>
           </div>

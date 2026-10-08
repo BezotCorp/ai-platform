@@ -1,0 +1,33 @@
+PageSource(
+    language: "fr",
+    region: "FR",
+    slug: "",
+    index: true,
+
+    title: "BCAIP",
+    description: Some("BezotCorp AI Platform"),
+
+    navigation: Some((
+        label: "Accueil",
+        order: 0,
+    )),
+
+    blocks: [
+        Hero(
+            title: "BCAIP",
+            subtitle: Some("BezotCorp AI Platform"),
+            title_style: Some((
+                color: Some("#d32f2f"),
+                font_size: None,
+                font_weight: None,
+                align: Some(Center),
+            )),
+            actions: [],
+        ),
+
+        Paragraph(
+            text: "BezotCorp AI Platform",
+            style: None,
+        ),
+    ],
+)

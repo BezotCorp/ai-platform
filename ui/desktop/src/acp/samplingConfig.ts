@@ -1,3 +1,3 @@
-import type { LocalInferenceModelSettingsDto } from '@aaif/goose-acp-client';
+import type { LocalInferenceModelSettingsDto } from '@bezotcorp/bcaip-acp-client';
 
 export type SamplingConfig = NonNullable<LocalInferenceModelSettingsDto['sampling']>;

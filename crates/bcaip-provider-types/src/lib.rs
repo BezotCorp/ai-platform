@@ -1,4 +1,5 @@
 pub mod base;
+pub mod bcaip_mode;
 pub mod cache_semantics;
 mod canonical;
 pub mod context_limit;
@@ -6,7 +7,6 @@ pub mod conversations;
 pub mod document_format;
 pub mod errors;
 pub mod formats;
-pub mod goose_mode;
 pub mod images;
 pub mod json;
 pub mod maybe_send;

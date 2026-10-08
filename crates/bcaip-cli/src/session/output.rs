@@ -2,18 +2,18 @@ use super::streaming_buffer::MarkdownBuffer;
 use crate::session::builder::ExtensionFailure;
 use anstream::{adapter::strip_str, eprintln, println};
 use bat::WrappingMode;
+use bcaip::agents::platform_extensions::todo::TODO_WRITE_TOOL_NAME_COMPLETE;
+use bcaip::config::Config;
+use bcaip::providers::canonical_cost::estimate_model_cost;
+#[cfg(target_os = "windows")]
+use bcaip::subprocess::SubprocessExt;
+use bcaip::utils::safe_truncate;
 use bcaip_provider_types::conversations::Usage;
 use bcaip_provider_types::conversations::{
     ActionRequiredData, Message, MessageContent, SystemNotificationContent, SystemNotificationType,
     ToolNameParts, ToolRequest, ToolResponse,
 };
 use console::{Color, StyledObject, Term, measure_text_width, style};
-use goose::agents::platform_extensions::todo::TODO_WRITE_TOOL_NAME_COMPLETE;
-use goose::config::Config;
-use goose::providers::canonical_cost::estimate_model_cost;
-#[cfg(target_os = "windows")]
-use goose::subprocess::SubprocessExt;
-use goose::utils::safe_truncate;
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use rmcp::model::{CallToolRequestParams, JsonObject, PromptArgument, Role};
 use serde_json::Value;
@@ -56,10 +56,10 @@ impl Theme {
     fn as_str(&self) -> String {
         match self {
             Theme::Light => Config::global()
-                .get_param::<String>("GOOSE_CLI_LIGHT_THEME")
+                .get_param::<String>("BCAIP_CLI_LIGHT_THEME")
                 .unwrap_or(DEFAULT_CLI_LIGHT_THEME.to_string()),
             Theme::Dark => Config::global()
-                .get_param::<String>("GOOSE_CLI_DARK_THEME")
+                .get_param::<String>("BCAIP_CLI_DARK_THEME")
                 .unwrap_or(DEFAULT_CLI_DARK_THEME.to_string()),
             Theme::Ansi => "base16".to_string(),
         }
@@ -86,23 +86,23 @@ impl Theme {
 
 thread_local! {
     static CURRENT_THEME: RefCell<Theme> = RefCell::new(
-        std::env::var("GOOSE_CLI_THEME").ok()
+        std::env::var("BCAIP_CLI_THEME").ok()
             .map(|val| Theme::from_config_str(&val))
             .unwrap_or_else(||
-                Config::global().get_param::<String>("GOOSE_CLI_THEME").ok()
+                Config::global().get_param::<String>("BCAIP_CLI_THEME").ok()
                     .map(|val| Theme::from_config_str(&val))
                     .unwrap_or(Theme::Ansi)
             )
     );
     static SHOW_FULL_TOOL_OUTPUT: RefCell<bool> = RefCell::new(
-        Config::global().get_param::<bool>("GOOSE_SHOW_FULL_OUTPUT").unwrap_or(false)
+        Config::global().get_param::<bool>("BCAIP_SHOW_FULL_OUTPUT").unwrap_or(false)
     );
 }
 
 pub fn set_theme(theme: Theme) {
     let config = Config::global();
     config
-        .set_param("GOOSE_CLI_THEME", theme.as_config_string())
+        .set_param("BCAIP_CLI_THEME", theme.as_config_string())
         .expect("Failed to set theme");
     CURRENT_THEME.with(|t| *t.borrow_mut() = theme);
 
@@ -113,13 +113,13 @@ pub fn set_theme(theme: Theme) {
         Theme::Ansi => "ansi",
     };
 
-    if let Err(e) = config.set_param("GOOSE_CLI_THEME", theme_str) {
+    if let Err(e) = config.set_param("BCAIP_CLI_THEME", theme_str) {
         eprintln!("Failed to save theme setting to config: {}", e);
     }
 }
 
 /// Ring the terminal bell so an unfocused terminal can badge or chime.
-/// Opt-in via `GOOSE_CLI_BELL=true` (environment or config); terminals
+/// Opt-in via `BCAIP_CLI_BELL=true` (environment or config); terminals
 /// decide how to surface it, typically only when the window lacks focus.
 pub fn emit_attention_bell() {
     if !bell_enabled() {
@@ -135,7 +135,7 @@ pub fn emit_attention_bell() {
 
 fn bell_enabled() -> bool {
     Config::global()
-        .get_param::<bool>("GOOSE_CLI_BELL")
+        .get_param::<bool>("BCAIP_CLI_BELL")
         .unwrap_or(false)
 }
 
@@ -259,7 +259,7 @@ pub fn show_extension_failures(failures: &[ExtensionFailure]) {
                 eprintln!(
                     "{}",
                     style(format!(
-                        "    Hint: ask goose to help debug the '{}' extension",
+                        "    Hint: ask BCAIP to help debug the '{}' extension",
                         label
                     ))
                     .dim()
@@ -270,7 +270,7 @@ pub fn show_extension_failures(failures: &[ExtensionFailure]) {
 }
 
 pub fn run_status_hook(status: &str) {
-    if let Ok(hook) = Config::global().get_param::<String>("GOOSE_STATUS_HOOK") {
+    if let Ok(hook) = Config::global().get_param::<String>("BCAIP_STATUS_HOOK") {
         let status = status.to_string();
         std::thread::spawn(move || {
             #[cfg(target_os = "windows")]
@@ -548,13 +548,13 @@ pub fn render_text_no_newlines(text: &str, color: Option<Color>, dim: bool) {
     print!("{}", styled_text);
 }
 
-pub fn goose_mode_message(text: &str) {
+pub fn bcaip_mode_message(text: &str) {
     println!("\n{} {}", accent("mode:"), text);
 }
 
 fn should_show_thinking() -> bool {
     Config::global()
-        .get_param::<bool>("GOOSE_CLI_SHOW_THINKING")
+        .get_param::<bool>("BCAIP_CLI_SHOW_THINKING")
         .unwrap_or(false)
         && std::io::stdout().is_terminal()
 }
@@ -620,7 +620,7 @@ fn render_tool_response(resp: &ToolResponse, debug: bool) {
                 }
 
                 let min_priority = config
-                    .get_param::<f32>("GOOSE_CLI_MIN_PRIORITY")
+                    .get_param::<f32>("BCAIP_CLI_MIN_PRIORITY")
                     .ok()
                     .unwrap_or(DEFAULT_MIN_PRIORITY);
 
@@ -1501,7 +1501,7 @@ pub fn display_session_info(
         .map(|p| p.display().to_string())
         .unwrap_or_else(|| "unknown".to_string());
 
-    // ASCII art goose with session info on the right
+    // ASCII art BCAIP with session info on the right
     println!();
     println!(
         "  {}  {} {} {} {} {}",
@@ -1532,7 +1532,7 @@ pub fn display_session_info(
     println!(
         "  {}  {}",
         style("   L L").white(),
-        style("   goose is ready").white()
+        style("   BCAIP is ready").white()
     );
 }
 

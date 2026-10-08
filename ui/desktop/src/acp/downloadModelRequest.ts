@@ -1,3 +1,3 @@
-import type { LocalInferenceModelDownloadRequestUnstable } from '@aaif/goose-acp-client';
+import type { LocalInferenceModelDownloadRequestUnstable } from '@bezotcorp/bcaip-acp-client';
 
 export type DownloadModelRequest = LocalInferenceModelDownloadRequestUnstable;

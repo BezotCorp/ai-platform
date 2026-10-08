@@ -1,17 +1,17 @@
 use super::output;
 use super::{CliSession, derive_extension_name_from_command, split_extension_name_prefix};
 use crate::cli::StreamableHttpOptions;
-use bcaip_provider_types::goose_mode::GooseMode;
-use console::style;
-use goose::agents::{Agent, Container, ExtensionError};
-use goose::config::{Config, ExtensionConfig};
-use goose::config::{extensions::name_to_key, resolve_extensions_for_new_session};
-use goose::{
+use bcaip::agents::{Agent, Container, ExtensionError};
+use bcaip::config::{Config, ExtensionConfig};
+use bcaip::config::{extensions::name_to_key, resolve_extensions_for_new_session};
+use bcaip::{
     model_config::model_config_from_user_config,
     providers::create,
     recipe::Recipe,
     session::{EnabledExtensionsState, SessionType},
 };
+use bcaip_provider_types::bcaip_mode::BcaipMode;
+use console::style;
 use rustyline::EditMode;
 use std::collections::{HashMap, HashSet};
 use std::{process, sync::Arc};
@@ -146,7 +146,7 @@ fn parse_cli_flag_extensions(
     extensions_to_load
 }
 
-/// Configuration for building a new Goose session
+/// Configuration for building a new BCAIP session
 ///
 /// This struct contains all the parameters needed to create a new session,
 /// including session identification, extension configuration, and debug settings.
@@ -296,16 +296,16 @@ async fn resolve_provider_and_model(
         .recipe
         .as_ref()
         .and_then(|r| r.settings.as_ref());
-    let configured_provider = config.get_goose_provider().ok();
+    let configured_provider = config.get_bcaip_provider().ok();
 
     let provider_name = session_config
         .provider
         .clone()
         .or_else(|| saved_provider.clone())
-        .or_else(|| recipe_settings.and_then(|s| s.goose_provider.clone()))
+        .or_else(|| recipe_settings.and_then(|s| s.bcaip_provider.clone()))
         .or_else(|| configured_provider.clone())
         .unwrap_or_else(|| {
-            output::render_error("No provider configured. Run 'goose configure' first.");
+            output::render_error("No provider configured. Run 'bcaip configure' first.");
             process::exit(1);
         });
 
@@ -313,30 +313,30 @@ async fn resolve_provider_and_model(
     let provider_overridden = session_config.provider.is_some();
     let matching_recipe_model = recipe_settings.and_then(|settings| {
         let recipe_provider_matches = settings
-            .goose_provider
+            .bcaip_provider
             .as_deref()
             .is_none_or(|provider| provider == provider_name);
 
         if provider_overridden && recipe_provider_matches {
-            settings.goose_model.clone()
+            settings.bcaip_model.clone()
         } else {
             None
         }
     });
     let matching_environment_model =
         if provider_overridden && configured_provider.as_deref() == Some(provider_name.as_str()) {
-            std::env::var("GOOSE_MODEL").ok()
+            std::env::var("BCAIP_MODEL").ok()
         } else {
             None
         };
     let matching_config_model =
         if provider_overridden && configured_provider.as_deref() == Some(provider_name.as_str()) {
-            config.get_goose_model().ok()
+            config.get_bcaip_model().ok()
         } else {
             None
         };
     let configured_provider_model = session_config.provider.as_ref().and_then(|_| {
-        goose::config::get_provider_entry(config, &provider_name)
+        bcaip::config::get_provider_entry(config, &provider_name)
             .map(|entry| entry.model)
             .filter(|model| !model.is_empty())
     });
@@ -348,7 +348,7 @@ async fn resolve_provider_and_model(
         && configured_provider_model.is_none()
     {
         Some(
-            goose::providers::get_from_registry(&provider_name)
+            bcaip::providers::get_from_registry(&provider_name)
                 .await
                 .unwrap_or_else(|e| {
                     output::render_error(&e.to_string());
@@ -389,18 +389,18 @@ async fn resolve_provider_and_model(
             if provider_overridden {
                 None
             } else {
-                recipe_settings.and_then(|s| s.goose_model.clone())
+                recipe_settings.and_then(|s| s.bcaip_model.clone())
             }
         })
         .or_else(|| {
             if provider_overridden {
                 None
             } else {
-                config.get_goose_model().ok()
+                config.get_bcaip_model().ok()
             }
         })
         .unwrap_or_else(|| {
-            output::render_error("No model configured. Run 'goose configure' first.");
+            output::render_error("No model configured. Run 'bcaip configure' first.");
             process::exit(1);
         });
 
@@ -412,7 +412,7 @@ async fn resolve_provider_and_model(
     {
         let mut config = saved_model_config.unwrap();
         config.normalize_effort_suffix();
-        config = goose::model_config::with_rederived_cache_ttl(config).unwrap_or_else(|e| {
+        config = bcaip::model_config::with_rederived_cache_ttl(config).unwrap_or_else(|e| {
             output::render_error(&format!("Invalid cache TTL configuration: {}", e));
             process::exit(1);
         });
@@ -422,7 +422,7 @@ async fn resolve_provider_and_model(
         config
     } else {
         let mut config =
-            goose::model_config::model_config_from_user_config(&provider_name, &model_name)
+            bcaip::model_config::model_config_from_user_config(&provider_name, &model_name)
                 .unwrap_or_else(|e| {
                     output::render_error(&format!("Failed to create model configuration: {}", e));
                     process::exit(1);
@@ -446,8 +446,8 @@ async fn resolve_provider_and_model(
 
 async fn resolve_session_id(
     session_config: &SessionBuilderConfig,
-    session_manager: &goose::session::SessionManager,
-    goose_mode: GooseMode,
+    session_manager: &bcaip::session::SessionManager,
+    bcaip_mode: BcaipMode,
 ) -> String {
     if session_config.no_session {
         let working_dir = std::env::current_dir().unwrap_or_else(|e| {
@@ -459,7 +459,7 @@ async fn resolve_session_id(
                 working_dir,
                 "CLI Session".to_string(),
                 SessionType::Hidden,
-                goose_mode,
+                bcaip_mode,
             )
             .await
             .unwrap_or_else(|e| {
@@ -591,7 +591,7 @@ async fn collect_extension_configs(
     if !session_config.no_profile && !session_config.resume && recipe_extensions.is_none() {
         let project_root = std::env::current_dir().ok();
         all.extend(
-            goose::plugins::mcp_servers::enabled_plugin_mcp_servers(project_root.as_deref())
+            bcaip::plugins::mcp_servers::enabled_plugin_mcp_servers(project_root.as_deref())
                 .into_iter()
                 .map(|config| (config.name(), config)),
         );
@@ -627,7 +627,7 @@ async fn configure_session_prompts(
             .await;
     }
 
-    let system_prompt_file: Option<String> = config.get_param("GOOSE_SYSTEM_PROMPT_FILE_PATH").ok();
+    let system_prompt_file: Option<String> = config.get_param("BCAIP_SYSTEM_PROMPT_FILE_PATH").ok();
     if let Some(ref path) = system_prompt_file {
         let override_prompt = std::fs::read_to_string(path).unwrap_or_else(|e| {
             output::render_error(&format!(
@@ -642,7 +642,7 @@ async fn configure_session_prompts(
 
 pub async fn build_session(session_config: SessionBuilderConfig) -> CliSession {
     #[cfg(feature = "telemetry")]
-    goose::posthog::set_session_context("cli", session_config.resume);
+    bcaip::posthog::set_session_context("cli", session_config.resume);
 
     let config = Config::global();
     let agent: Agent = Agent::new();
@@ -685,7 +685,7 @@ pub async fn build_session(session_config: SessionBuilderConfig) -> CliSession {
         });
 
     let session_id =
-        resolve_session_id(&session_config, &session_manager, agent.config.goose_mode).await;
+        resolve_session_id(&session_config, &session_manager, agent.config.bcaip_mode).await;
 
     if session_config.resume {
         handle_resumed_session_workdir(&agent, &session_id, session_config.interactive).await;
@@ -713,12 +713,12 @@ pub async fn build_session(session_config: SessionBuilderConfig) -> CliSession {
                     && session_config.provider.is_none()
                     && is_provider_unavailable_error(&e) =>
             {
-                let fallback_provider = config.get_goose_provider().unwrap_or_else(|_| {
-                    output::render_error("No provider configured. Run 'goose configure' first.");
+                let fallback_provider = config.get_bcaip_provider().unwrap_or_else(|_| {
+                    output::render_error("No provider configured. Run 'bcaip configure' first.");
                     process::exit(1);
                 });
-                let fallback_model = config.get_goose_model().unwrap_or_else(|_| {
-                    output::render_error("No model configured. Run 'goose configure' first.");
+                let fallback_model = config.get_bcaip_model().unwrap_or_else(|_| {
+                    output::render_error("No model configured. Run 'bcaip configure' first.");
                     process::exit(1);
                 });
                 eprintln!(
@@ -752,9 +752,9 @@ pub async fn build_session(session_config: SessionBuilderConfig) -> CliSession {
                     Err(e2) => {
                         output::render_error(&format!(
                             "Error {}.\n\
-                        Please check your system keychain and run 'goose configure' again.\n\
+                        Please check your system keychain and run 'bcaip configure' again.\n\
                         If your system is unable to use the keyring, please try setting secret key(s) via environment variables.\n\
-                        For more info, see: https://goose-docs.ai/docs/troubleshooting/#keychainkeyring-errors",
+                        For more info, see: https://bcaip.bezotcorp.com/docs/troubleshooting/#keychainkeyring-errors",
                             e2
                         ));
                         process::exit(1);
@@ -764,9 +764,9 @@ pub async fn build_session(session_config: SessionBuilderConfig) -> CliSession {
             Err(e) => {
                 output::render_error(&format!(
                     "Error {}.\n\
-                Please check your system keychain and run 'goose configure' again.\n\
+                Please check your system keychain and run 'bcaip configure' again.\n\
                 If your system is unable to use the keyring, please try setting secret key(s) via environment variables.\n\
-                For more info, see: https://goose-docs.ai/docs/troubleshooting/#keychainkeyring-errors",
+                For more info, see: https://bcaip.bezotcorp.com/docs/troubleshooting/#keychainkeyring-errors",
                     e
                 ));
                 process::exit(1);
@@ -796,7 +796,7 @@ pub async fn build_session(session_config: SessionBuilderConfig) -> CliSession {
         });
 
     agent
-        .update_goose_mode(agent.config.goose_mode, &session_id)
+        .update_bcaip_mode(agent.config.bcaip_mode, &session_id)
         .await
         .unwrap_or_else(|e| {
             output::render_error(&format!("Failed to set session mode: {}", e));
@@ -813,7 +813,7 @@ pub async fn build_session(session_config: SessionBuilderConfig) -> CliSession {
         tracing::warn!("Failed to store recipe on session: {}", e);
     }
 
-    for warning in goose::config::get_warnings() {
+    for warning in bcaip::config::get_warnings() {
         eprintln!("{}", style(format!("Warning: {}", warning)).yellow());
     }
 
@@ -846,7 +846,7 @@ pub async fn build_session(session_config: SessionBuilderConfig) -> CliSession {
             }
         });
 
-    let debug_mode = session_config.debug || config.get_param("GOOSE_DEBUG").unwrap_or(false);
+    let debug_mode = session_config.debug || config.get_param("BCAIP_DEBUG").unwrap_or(false);
 
     let session = CliSession::new(
         agent_ptr,

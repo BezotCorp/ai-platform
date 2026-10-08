@@ -5,7 +5,7 @@ import type {
   RunScheduleNowResponseUnstable,
   ScheduledJobDto,
   SessionInfo,
-} from '@aaif/goose-acp-client';
+} from '@bezotcorp/bcaip-acp-client';
 import { getAcpClient } from './acpConnection';
 
 let inFlightListSchedules: Promise<ScheduledJobDto[]> | null = null;
@@ -54,7 +54,7 @@ export async function acpListSchedules(): Promise<ScheduledJobDto[]> {
 
   const listPromise = (async () => {
     const client = await getAcpClient();
-    const response = await client.goose.schedulesListUnstable({});
+    const response = await client.bcaip.schedulesListUnstable({});
     return response.jobs;
   })().catch((error) => {
     throw normalizeAcpError(error, 'Failed to list schedules');
@@ -76,7 +76,7 @@ export async function acpCreateSchedule(
 ): Promise<ScheduledJobDto> {
   try {
     const client = await getAcpClient();
-    const response = await client.goose.schedulesCreateUnstable(request);
+    const response = await client.bcaip.schedulesCreateUnstable(request);
     clearInFlightScheduleReads();
     return response.job;
   } catch (error) {
@@ -87,7 +87,7 @@ export async function acpCreateSchedule(
 export async function acpDeleteSchedule(scheduleId: string): Promise<void> {
   try {
     const client = await getAcpClient();
-    await client.goose.schedulesDeleteUnstable({ scheduleId });
+    await client.bcaip.schedulesDeleteUnstable({ scheduleId });
     clearInFlightScheduleReads();
   } catch (error) {
     throw normalizeAcpError(error, 'Failed to delete schedule');
@@ -106,7 +106,7 @@ export async function acpListScheduleSessions(
 
   const listPromise = (async () => {
     const client = await getAcpClient();
-    const response = await client.goose.schedulesSessionsListUnstable({ scheduleId, limit });
+    const response = await client.bcaip.schedulesSessionsListUnstable({ scheduleId, limit });
     return response.sessions;
   })().catch((error) => {
     throw normalizeAcpError(error, 'Failed to list schedule sessions');
@@ -128,7 +128,7 @@ export async function acpRunScheduleNow(
 ): Promise<RunScheduleNowResponseUnstable> {
   try {
     const client = await getAcpClient();
-    const response = await client.goose.schedulesRunNowUnstable({ scheduleId });
+    const response = await client.bcaip.schedulesRunNowUnstable({ scheduleId });
     clearInFlightScheduleReads();
     return response;
   } catch (error) {
@@ -139,7 +139,7 @@ export async function acpRunScheduleNow(
 export async function acpPauseSchedule(scheduleId: string): Promise<void> {
   try {
     const client = await getAcpClient();
-    await client.goose.schedulesPauseUnstable({ scheduleId });
+    await client.bcaip.schedulesPauseUnstable({ scheduleId });
     clearInFlightScheduleReads();
   } catch (error) {
     throw normalizeAcpError(error, 'Failed to pause schedule');
@@ -149,7 +149,7 @@ export async function acpPauseSchedule(scheduleId: string): Promise<void> {
 export async function acpUnpauseSchedule(scheduleId: string): Promise<void> {
   try {
     const client = await getAcpClient();
-    await client.goose.schedulesUnpauseUnstable({ scheduleId });
+    await client.bcaip.schedulesUnpauseUnstable({ scheduleId });
     clearInFlightScheduleReads();
   } catch (error) {
     throw normalizeAcpError(error, 'Failed to unpause schedule');
@@ -162,7 +162,7 @@ export async function acpUpdateSchedule(
 ): Promise<ScheduledJobDto> {
   try {
     const client = await getAcpClient();
-    const response = await client.goose.schedulesUpdateUnstable({ scheduleId, cron });
+    const response = await client.bcaip.schedulesUpdateUnstable({ scheduleId, cron });
     clearInFlightScheduleReads();
     return response.job;
   } catch (error) {
@@ -173,7 +173,7 @@ export async function acpUpdateSchedule(
 export async function acpKillRunningJob(jobId: string): Promise<KillRunningJobResponseUnstable> {
   try {
     const client = await getAcpClient();
-    const response = await client.goose.schedulesRunningJobKillUnstable({ jobId });
+    const response = await client.bcaip.schedulesRunningJobKillUnstable({ jobId });
     clearInFlightScheduleReads();
     return response;
   } catch (error) {
@@ -186,7 +186,7 @@ export async function acpInspectRunningJob(
 ): Promise<InspectRunningJobResponseUnstable> {
   try {
     const client = await getAcpClient();
-    return await client.goose.schedulesRunningJobInspectUnstable({ jobId });
+    return await client.bcaip.schedulesRunningJobInspectUnstable({ jobId });
   } catch (error) {
     throw normalizeAcpError(error, 'Failed to inspect running job');
   }

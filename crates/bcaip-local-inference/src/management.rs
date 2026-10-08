@@ -1,15 +1,15 @@
-use super::hf_models::{
+use crate::download_manager::{DownloadProgress, DownloadStatus, get_download_manager};
+use crate::hf_models::{
     self, CachedLocalModel, HfModelInfo, HfModelVariant, model_id_from_repo,
     resolve_local_model_selection, resolve_local_model_spec,
 };
-use super::model::{ChatTemplate, ModelSettings, SamplingConfig, ToolCallingMode};
-use super::{
+use crate::model::{ChatTemplate, ModelSettings, SamplingConfig, ToolCallingMode};
+use crate::{
     InferenceRuntime, available_inference_memory_bytes, builtin_chat_template_names,
     recommend_local_model,
 };
-use crate::download_manager::{DownloadProgress, DownloadStatus, get_download_manager};
 use anyhow::{Result, anyhow};
-use goose_sdk_types::custom_requests::{
+use bcaip_sdk_types::custom_requests::{
     LocalInferenceBuiltinChatTemplatesListResponse, LocalInferenceChatTemplate,
     LocalInferenceDownloadProgressDto, LocalInferenceDownloadState, LocalInferenceHfGgufFileDto,
     LocalInferenceHfModelInfoDto, LocalInferenceHfModelVariantDto,
@@ -207,7 +207,7 @@ pub fn cancel_download(model_id: &str) -> Result<()> {
 pub async fn delete_model(model_id: &str) -> Result<()> {
     if crate::explicit_model_path(model_id)?.is_some() {
         anyhow::bail!(
-            "Model '{}' was loaded from a user-owned path and cannot be deleted by Goose",
+            "Model '{}' was loaded from a user-owned path and cannot be deleted by BCAIP",
             model_id
         );
     }

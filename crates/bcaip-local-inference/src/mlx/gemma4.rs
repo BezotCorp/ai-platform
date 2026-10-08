@@ -2,7 +2,7 @@ use crate::{
     extract_text_content, provider_utils::filter_extensions_from_system_prompt,
     tool_emulation::load_tiny_model_prompt,
 };
-use goose_provider_types::conversations::Message;
+use bcaip_provider_types::conversations::Message;
 use safemlx_lm::models::LoadedModel;
 use safemlx_lm_utils::tokenizer::Role;
 use serde_json::json;

@@ -1,6 +1,6 @@
 use anyhow::Result;
+use bcaip::{skills::list_installed_skills, token_counter::create_token_counter};
 use console::{Term, measure_text_width};
-use goose::{skills::list_installed_skills, token_counter::create_token_counter};
 use unicode_segmentation::UnicodeSegmentation;
 const DESCRIPTION_PREVIEW_CHARS: usize = 50;
 const SEPARATOR: &str = " | ";

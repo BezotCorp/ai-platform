@@ -6,7 +6,7 @@ export async function getDiagnosticsReport(
   level: DiagnosticsLevel
 ): Promise<DiagnosticsReport> {
   const client = await getAcpClient();
-  const response = await client.goose.diagnosticsGetUnstable({
+  const response = await client.bcaip.diagnosticsGetUnstable({
     sessionId,
     level,
   });

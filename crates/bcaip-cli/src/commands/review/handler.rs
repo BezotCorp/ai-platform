@@ -10,10 +10,10 @@ use super::orchestrator::{
     Severity, emit_findings, run_checks_in_parallel, run_main_pass_in_parallel,
 };
 use super::prompt::{DEFAULT_REVIEW_PROMPT, build_review_prompt};
-use goose::checks::{DiscoveredReview, discover};
-use goose::subprocess::git_command;
+use bcaip::checks::{DiscoveredReview, discover};
+use bcaip::subprocess::git_command;
 
-/// Options for `goose review`.
+/// Options for `bcaip review`.
 #[derive(Debug, Clone, Default)]
 pub struct ReviewOptions {
     /// Diff range to review (e.g. `main...HEAD`). When `None`, falls back to
@@ -70,7 +70,7 @@ pub struct ReviewOptions {
     pub severity: String,
 }
 
-/// Entry point for the `goose review` subcommand.
+/// Entry point for the `bcaip review` subcommand.
 pub async fn handle_review(opts: ReviewOptions) -> Result<()> {
     let repo_root = find_repo_root().context("not inside a git repository")?;
     let untracked_root = opts
@@ -112,7 +112,7 @@ pub async fn handle_review(opts: ReviewOptions) -> Result<()> {
     drop(untracked_root);
 
     if diff.trim().is_empty() {
-        eprintln!("goose review: no changes to review");
+        eprintln!("bcaip review: no changes to review");
         return Ok(());
     }
 
@@ -205,7 +205,7 @@ pub async fn handle_review(opts: ReviewOptions) -> Result<()> {
             if !opts.quiet {
                 let suppressed = total_seen.saturating_sub(total_emitted);
                 eprintln!(
-                    "goose review: emitted {total_emitted} finding(s) from {} check(s) ({suppressed} hidden below severity={:?})",
+                    "bcaip review: emitted {total_emitted} finding(s) from {} check(s) ({suppressed} hidden below severity={:?})",
                     discovered.checks.len(),
                     min_sev
                 );
@@ -255,13 +255,13 @@ pub async fn handle_review(opts: ReviewOptions) -> Result<()> {
         let main_pass_label = if opts.checks_only { "skipped" } else { "ran" };
         if suppressed == 0 {
             eprintln!(
-                "goose review: orchestrator emitted {total_emitted} finding(s) from {} check(s) (main: {main_pass_label}, {} finding(s))",
+                "bcaip review: orchestrator emitted {total_emitted} finding(s) from {} check(s) (main: {main_pass_label}, {} finding(s))",
                 discovered.checks.len(),
                 main_findings.len()
             );
         } else {
             eprintln!(
-                "goose review: orchestrator emitted {total_emitted} finding(s) from {} check(s) (main: {main_pass_label}, {} finding(s); {suppressed} hidden below severity={:?})",
+                "bcaip review: orchestrator emitted {total_emitted} finding(s) from {} check(s) (main: {main_pass_label}, {} finding(s); {suppressed} hidden below severity={:?})",
                 discovered.checks.len(),
                 main_findings.len(),
                 min_sev
@@ -323,10 +323,10 @@ fn prepend_instructions(base_prompt: &str, instructions: Option<&str>) -> String
 
 fn print_discovered_summary(d: &DiscoveredReview) {
     if d.checks.is_empty() {
-        eprintln!("goose review: no checks or REVIEW.md rules discovered");
+        eprintln!("bcaip review: no checks or REVIEW.md rules discovered");
         return;
     }
-    eprintln!("goose review: discovered {} check(s):", d.checks.len());
+    eprintln!("bcaip review: discovered {} check(s):", d.checks.len());
     for c in &d.checks {
         let scope = if c.scope_dir.is_empty() {
             "<root>"
@@ -1040,7 +1040,7 @@ fn synthesize_untracked_diff(repo_root: &UntrackedRoot, paths: &[String]) -> Res
 }
 
 /// Convert repo-relative `touched` paths into paths relative to
-/// `discovery_root` so [`goose::checks::discover`] doesn't double-
+/// `discovery_root` so [`bcaip::checks::discover`] doesn't double-
 /// prefix `<scope>/api/...` when `--check-scope` points at a subtree.
 /// Files outside the scope are dropped — they cannot affect any
 /// scoped check inside `discovery_root`.

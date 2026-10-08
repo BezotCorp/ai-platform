@@ -1,0 +1,29 @@
+{
+  "name": "@bezotcorp/bcaip-binary-darwin-arm64",
+  "version": "1.53.0",
+  "description": "BCAIP binary for macOS ARM64",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/BezotCorp/ai-platform.git"
+  },
+  "keywords": [
+    "bcaip",
+    "ai",
+    "agent",
+    "binary"
+  ],
+  "os": [
+    "darwin"
+  ],
+  "cpu": [
+    "arm64"
+  ],
+  "bin": {
+    "bcaip-binary-darwin-arm64": "./bin/bcaip"
+  },
+  "files": [
+    "bin/bcaip"
+  ],
+  "type": "module"
+}

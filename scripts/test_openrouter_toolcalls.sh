@@ -15,7 +15,7 @@ show_usage() {
   echo "Environment:"
   echo "  OPENROUTER_API_KEY       Required by goose's OpenRouter provider"
   echo "  OPENROUTER_HOST          Optional OpenRouter host (default: https://openrouter.ai)"
-  echo "  GOOSE_BIN                Optional goose binary path"
+  echo "  BCAIP_BIN                Optional goose binary path"
   echo "  SKIP_BUILD               Skip cargo build when set"
   echo ""
   echo "Examples:"
@@ -90,15 +90,15 @@ fi
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
-if [[ -z "${SKIP_BUILD:-}" && -z "${GOOSE_BIN:-}" ]]; then
+if [[ -z "${SKIP_BUILD:-}" && -z "${BCAIP_BIN:-}" ]]; then
   echo "Building goose..."
   (cd "$REPO_ROOT" && cargo build --bin goose)
   echo ""
 fi
 
-GOOSE_BIN="${GOOSE_BIN:-$REPO_ROOT/target/debug/goose}"
-if [[ ! -x "$GOOSE_BIN" ]]; then
-  echo "Error: goose binary not found or not executable: $GOOSE_BIN"
+BCAIP_BIN="${BCAIP_BIN:-$REPO_ROOT/target/debug/goose}"
+if [[ ! -x "$BCAIP_BIN" ]]; then
+  echo "Error: goose binary not found or not executable: $BCAIP_BIN"
   exit 1
 fi
 
@@ -137,7 +137,7 @@ def get_weather(
     location: Annotated[str, "City or place to check"],
 ) -> Annotated[str, "Weather report"]:
     """Get the current weather for a location."""
-    return f"GOOSE_TOOL_CALL_OK: The weather in {location} is 68 F and clear."
+    return f"BCAIP_TOOL_CALL_OK: The weather in {location} is 68 F and clear."
 EOF
 
 cat >"$TESTDIR/recipe.yaml" <<'EOF'
@@ -188,8 +188,8 @@ run_model() {
   local model="$1"
 
   if [[ "$RUN_TIMEOUT" -eq 0 ]]; then
-    GOOSE_MODE=auto GOOSE_PROVIDER=openrouter GOOSE_MODEL="$model" \
-      "$GOOSE_BIN" run --no-profile --max-turns 4 --recipe recipe.yaml
+    BCAIP_MODE=auto BCAIP_PROVIDER=openrouter BCAIP_MODEL="$model" \
+      "$BCAIP_BIN" run --no-profile --max-turns 4 --recipe recipe.yaml
     return $?
   fi
 
@@ -214,8 +214,8 @@ run_model() {
     exit($status & 127 ? 128 + ($status & 127) : $status >> 8);
   ' \
     "$RUN_TIMEOUT" \
-    env GOOSE_MODE=auto GOOSE_PROVIDER=openrouter GOOSE_MODEL="$model" \
-    "$GOOSE_BIN" run --no-profile --max-turns 4 --recipe recipe.yaml
+    env BCAIP_MODE=auto BCAIP_PROVIDER=openrouter BCAIP_MODEL="$model" \
+    "$BCAIP_BIN" run --no-profile --max-turns 4 --recipe recipe.yaml
 }
 
 echo "Testing ${#MODELS[@]} OpenRouter model(s)"
@@ -237,7 +237,7 @@ for model in "${MODELS[@]}"; do
       RESULTS+=("✗ $model - $error_summary")
       OVERALL_SUCCESS=false
     elif grep -qE "(get_weather \| weather)|(▸.*get_weather.*weather)" "$log_file" &&
-      grep -Fq "GOOSE_TOOL_CALL_OK:" "$log_file"; then
+      grep -Fq "BCAIP_TOOL_CALL_OK:" "$log_file"; then
       echo "✓ Tool call passed for $model"
       RESULTS+=("✓ $model")
     elif grep -qE "(get_weather \| weather)|(▸.*get_weather.*weather)" "$log_file"; then

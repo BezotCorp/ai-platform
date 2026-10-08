@@ -46,11 +46,11 @@ const i18n = defineMessages<{
   },
   description: {
     id: 'configSettings.description',
-    defaultMessage: 'Edit your goose configuration settings',
+    defaultMessage: 'Edit your BCAIP configuration settings',
   },
   descriptionWithProvider: {
     id: 'configSettings.descriptionWithProvider',
-    defaultMessage: 'Edit your goose configuration settings (current settings for {provider})',
+    defaultMessage: 'Edit your BCAIP configuration settings (current settings for {provider})',
   },
   editConfiguration: {
     id: 'configSettings.editConfiguration',
@@ -198,7 +198,7 @@ export default function ConfigSettings() {
     setIsModalOpen(open);
   };
 
-  const currentProvider = typedConfig.GOOSE_PROVIDER || '';
+  const currentProvider = typedConfig.BCAIP_PROVIDER || '';
 
   const configEntries: [string, ConfigValue][] = useMemo(() => {
     const currentProviderPrefixes = providerPrefixes[currentProvider] || [];

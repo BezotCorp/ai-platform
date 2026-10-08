@@ -13,31 +13,31 @@ use crate::session::task_execution_display::{
     TASK_EXECUTION_NOTIFICATION_TYPE, format_task_execution_notification,
 };
 use anyhow::Result;
+use bcaip::agents::SUBAGENT_TOOL_REQUEST_TYPE;
+use bcaip::agents::extension::{Envs, ExtensionConfig, PLATFORM_EXTENSIONS};
+use bcaip::agents::platform_extensions::developer::shell::{
+    ShellOutputNotificationParams, ShellOutputStream, parse_shell_output_notification,
+};
+use bcaip::agents::types::RetryConfig;
+use bcaip::agents::{
+    Agent, COMPACT_TRIGGERS, SessionConfig, context_management_unsupported_message,
+};
+use bcaip::config::Config;
+use bcaip::config::extensions::name_to_key;
+use bcaip::config::{paths::Paths, providers};
+use bcaip::utils::safe_truncate;
+use bcaip::{providers::inventory::ProviderInventoryService, session::SessionManager};
 use bcaip_agent::events::AgentEvent;
+use bcaip_provider_types::bcaip_mode::BcaipMode;
 use bcaip_provider_types::conversations::Conversation;
 use bcaip_provider_types::conversations::ProviderUsage;
 use bcaip_provider_types::conversations::{
     ActionRequiredData, Message, MessageContent, ToolConfirmationRequest,
 };
-use bcaip_provider_types::goose_mode::GooseMode;
 use bcaip_provider_types::permission::Permission;
 pub use builder::{ExtensionFailure, SessionBuilderConfig, build_session};
-use completion::GooseCompleter;
+use completion::BcaipCompleter;
 use console::Color;
-use goose::agents::SUBAGENT_TOOL_REQUEST_TYPE;
-use goose::agents::extension::{Envs, ExtensionConfig, PLATFORM_EXTENSIONS};
-use goose::agents::platform_extensions::developer::shell::{
-    ShellOutputNotificationParams, ShellOutputStream, parse_shell_output_notification,
-};
-use goose::agents::types::RetryConfig;
-use goose::agents::{
-    Agent, COMPACT_TRIGGERS, SessionConfig, context_management_unsupported_message,
-};
-use goose::config::Config;
-use goose::config::extensions::name_to_key;
-use goose::config::{paths::Paths, providers};
-use goose::utils::safe_truncate;
-use goose::{providers::inventory::ProviderInventoryService, session::SessionManager};
 use input::InputResult;
 use rmcp::model::ServerNotification;
 use rmcp::model::{ElicitationAction, PromptMessage};
@@ -191,7 +191,7 @@ impl HistoryManager {
 
     fn load(
         &self,
-        editor: &mut rustyline::Editor<GooseCompleter, rustyline::history::DefaultHistory>,
+        editor: &mut rustyline::Editor<BcaipCompleter, rustyline::history::DefaultHistory>,
     ) {
         if let Some(parent) = self.history_file.parent()
             && !parent.exists()
@@ -210,7 +210,7 @@ impl HistoryManager {
 
     fn save(
         &self,
-        editor: &mut rustyline::Editor<GooseCompleter, rustyline::history::DefaultHistory>,
+        editor: &mut rustyline::Editor<BcaipCompleter, rustyline::history::DefaultHistory>,
     ) {
         if let Err(err) = editor.save_history(&self.history_file) {
             eprintln!("Warning: Failed to save command history: {}", err);
@@ -340,7 +340,7 @@ impl CliSession {
     /// whenever one is used (`npx`, `python -m ...`, `uvx`, ...).
     pub fn parse_stdio_extension(extension_command: &str) -> Result<ExtensionConfig> {
         let (explicit_name, command) = split_extension_name_prefix(extension_command);
-        let mut parts = goose::utils::split_command_args(command)?;
+        let mut parts = bcaip::utils::split_command_args(command)?;
         let mut envs = HashMap::new();
 
         while let Some(part) = parts.first() {
@@ -371,8 +371,8 @@ impl CliSession {
             args: parts,
             envs: Envs::new(envs),
             env_keys: Vec::new(),
-            description: goose::config::DEFAULT_EXTENSION_DESCRIPTION.to_string(),
-            timeout: Some(goose::config::DEFAULT_EXTENSION_TIMEOUT),
+            description: bcaip::config::DEFAULT_EXTENSION_DESCRIPTION.to_string(),
+            timeout: Some(bcaip::config::DEFAULT_EXTENSION_TIMEOUT),
             cwd: None,
             bundled: None,
             available_tools: Vec::new(),
@@ -407,7 +407,7 @@ impl CliSession {
             envs: Envs::new(HashMap::new()),
             env_keys: Vec::new(),
             headers: HashMap::new(),
-            description: goose::config::DEFAULT_EXTENSION_DESCRIPTION.to_string(),
+            description: bcaip::config::DEFAULT_EXTENSION_DESCRIPTION.to_string(),
             timeout: Some(timeout),
             socket: None,
             client_id: None,
@@ -469,7 +469,7 @@ impl CliSession {
     pub async fn add_streamable_http_extension(&mut self, extension_url: String) -> Result<()> {
         let config = Self::parse_streamable_http_extension(
             &extension_url,
-            goose::config::DEFAULT_EXTENSION_TIMEOUT,
+            bcaip::config::DEFAULT_EXTENSION_TIMEOUT,
         );
         self.add_and_persist_extensions(vec![config]).await
     }
@@ -551,7 +551,7 @@ impl CliSession {
     pub async fn interactive(&mut self, prompt: Option<String>) -> Result<()> {
         let banners = self
             .agent
-            .emit_hook_with_banners(goose::hooks::HookEvent::SessionStart, &self.session_id)
+            .emit_hook_with_banners(bcaip::hooks::HookEvent::SessionStart, &self.session_id)
             .await;
         if !banners.is_empty() {
             output::display_banner(&banners);
@@ -560,7 +560,7 @@ impl CliSession {
         let result = self.run_interactive(prompt).await;
 
         self.agent
-            .emit_hook(goose::hooks::HookEvent::SessionEnd, &self.session_id)
+            .emit_hook(bcaip::hooks::HookEvent::SessionEnd, &self.session_id)
             .await;
 
         if result.is_ok() {
@@ -634,7 +634,7 @@ impl CliSession {
 
     fn create_editor(
         &self,
-    ) -> Result<rustyline::Editor<GooseCompleter, rustyline::history::DefaultHistory>> {
+    ) -> Result<rustyline::Editor<BcaipCompleter, rustyline::history::DefaultHistory>> {
         let builder =
             rustyline::Config::builder().completion_type(rustyline::CompletionType::Circular);
         let builder = match self.edit_mode {
@@ -643,10 +643,10 @@ impl CliSession {
         };
         let config = builder.build();
         let mut editor =
-            rustyline::Editor::<GooseCompleter, rustyline::history::DefaultHistory>::with_config(
+            rustyline::Editor::<BcaipCompleter, rustyline::history::DefaultHistory>::with_config(
                 config,
             )?;
-        let completer = GooseCompleter::new(self.completion_cache.clone());
+        let completer = BcaipCompleter::new(self.completion_cache.clone());
         editor.set_helper(Some(completer));
         Ok(editor)
     }
@@ -655,7 +655,7 @@ impl CliSession {
         &mut self,
         input: InputResult,
         history: &HistoryManager,
-        editor: &mut rustyline::Editor<GooseCompleter, rustyline::history::DefaultHistory>,
+        editor: &mut rustyline::Editor<BcaipCompleter, rustyline::history::DefaultHistory>,
         conversation_messages: &[String],
     ) -> Result<()> {
         // The REPL's loading gate: every command, including future ones, waits
@@ -700,9 +700,9 @@ impl CliSession {
                     Err(e) => output::render_error(&e.to_string()),
                 }
             }
-            InputResult::GooseMode(mode) => {
+            InputResult::BcaipMode(mode) => {
                 history.save(editor);
-                self.handle_goose_mode(&mode).await?;
+                self.handle_bcaip_mode(&mode).await?;
             }
             InputResult::Model(options) => {
                 history.save(editor);
@@ -749,7 +749,7 @@ impl CliSession {
                     None => {
                         output::render_error(
                             "No editor found. Set one with:\n  \
-                                 goose configure set goose_prompt_editor \"vim\"\n  \
+                                 bcaip configure set bcaip_prompt_editor \"vim\"\n  \
                                  or set $VISUAL or $EDITOR in your shell.",
                         );
                     }
@@ -771,7 +771,7 @@ impl CliSession {
         &mut self,
         content: &str,
         history: &HistoryManager,
-        editor: &mut rustyline::Editor<GooseCompleter, rustyline::history::DefaultHistory>,
+        editor: &mut rustyline::Editor<BcaipCompleter, rustyline::history::DefaultHistory>,
     ) -> Result<()> {
         history.save(editor);
         self.push_message(Message::user().with_text(content));
@@ -851,21 +851,21 @@ impl CliSession {
         }
     }
 
-    async fn handle_goose_mode(&self, mode: &str) -> Result<()> {
+    async fn handle_bcaip_mode(&self, mode: &str) -> Result<()> {
         let config = Config::global();
-        let mode = match GooseMode::from_str(&mode.to_lowercase()) {
+        let mode = match BcaipMode::from_str(&mode.to_lowercase()) {
             Ok(mode) => mode,
             Err(_) => {
                 output::render_error(&format!(
                     "Invalid mode '{mode}'. Mode must be one of: {}",
-                    GooseMode::VARIANTS.join(", ")
+                    BcaipMode::VARIANTS.join(", ")
                 ));
                 return Ok(());
             }
         };
-        self.agent.update_goose_mode(mode, &self.session_id).await?;
-        config.set_goose_mode(mode)?;
-        output::goose_mode_message(&format!("Goose mode set to '{mode}'"));
+        self.agent.update_bcaip_mode(mode, &self.session_id).await?;
+        config.set_bcaip_mode(mode)?;
+        output::bcaip_mode_message(&format!("BCAIP mode set to '{mode}'"));
         Ok(())
     }
 
@@ -879,7 +879,7 @@ impl CliSession {
         let current_model_name = current_model_config.model_name.clone();
 
         if options.provider.is_none() && options.model.is_none() {
-            output::goose_mode_message(&format!(
+            output::bcaip_mode_message(&format!(
                 "Current session model: '{}' (provider '{}')\n\
                  Tip: use '/model <name>' to switch model, or '/model --provider <name> [model]' to switch provider.",
                 current_model_name, current_provider_name
@@ -899,7 +899,7 @@ impl CliSession {
             return Ok(());
         }
 
-        let target_entry = match goose::providers::get_from_registry(target_provider_name).await {
+        let target_entry = match bcaip::providers::get_from_registry(target_provider_name).await {
             Ok(entry) => entry,
             Err(_) => {
                 output::render_error(&format!(
@@ -961,7 +961,7 @@ impl CliSession {
             &current_model_config,
         )?;
 
-        let configured_effort = Config::global().get_goose_thinking_effort();
+        let configured_effort = Config::global().get_bcaip_thinking_effort();
         let new_effort = new_model_config.thinking_effort().or(configured_effort);
         let current_effort = current_model_config.thinking_effort().or(configured_effort);
         let provider_unchanged = target_provider_name == current_provider_name;
@@ -969,26 +969,26 @@ impl CliSession {
             && new_model_config.model_name == current_model_config.model_name
             && new_effort == current_effort
         {
-            output::goose_mode_message(&format!(
+            output::bcaip_mode_message(&format!(
                 "Session already using model '{}' for provider '{}'",
                 current_model_name, current_provider_name
             ));
             return Ok(());
         }
 
-        let current_context_limit = goose::context_limit::get_context_limit(
+        let current_context_limit = bcaip::context_limit::get_context_limit(
             provider.as_ref(),
             &current_model_config.model_name,
         )
         .await?;
 
         let extensions = self.agent.get_extension_configs().await;
-        let new_provider = match goose::providers::create(target_provider_name, extensions).await {
+        let new_provider = match bcaip::providers::create(target_provider_name, extensions).await {
             Ok(p) => p,
             Err(e) => {
                 output::render_error(&format!(
                     "Cannot switch to provider '{}': {}\n\
-                         Set credentials via `goose configure` or the appropriate environment variable.\n\
+                         Set credentials via `bcaip configure` or the appropriate environment variable.\n\
                          Session continues with current provider '{}'.",
                     target_provider_name, e, current_provider_name
                 ));
@@ -1004,7 +1004,7 @@ impl CliSession {
             return Ok(());
         }
 
-        let new_context_limit = goose::context_limit::get_context_limit(
+        let new_context_limit = bcaip::context_limit::get_context_limit(
             new_provider.as_ref(),
             &new_model_config.model_name,
         )
@@ -1024,18 +1024,18 @@ impl CliSession {
             .update_provider(new_provider, new_model_config, &self.session_id)
             .await?;
 
-        let mode = self.agent.goose_mode().await;
-        self.agent.update_goose_mode(mode, &self.session_id).await?;
+        let mode = self.agent.bcaip_mode().await;
+        self.agent.update_bcaip_mode(mode, &self.session_id).await?;
 
         self.update_completion_cache().await?;
 
         if provider_unchanged {
-            output::goose_mode_message(&format!(
+            output::bcaip_mode_message(&format!(
                 "Session model switched from '{}' to '{}' for provider '{}'",
                 current_model_name, target_model_name, current_provider_name
             ));
         } else {
-            output::goose_mode_message(&format!(
+            output::bcaip_mode_message(&format!(
                 "Session switched from provider '{}' / model '{}' to provider '{}' / model '{}'",
                 current_provider_name, current_model_name, target_provider_name, target_model_name
             ));
@@ -1116,7 +1116,7 @@ impl CliSession {
         let extension_configs = self.agent.get_extension_configs().await;
 
         self.agent
-            .emit_hook(goose::hooks::HookEvent::SessionEnd, &self.session_id)
+            .emit_hook(bcaip::hooks::HookEvent::SessionEnd, &self.session_id)
             .await;
 
         self.agent.discard_pending_steers(&self.session_id).await;
@@ -1128,14 +1128,14 @@ impl CliSession {
 
         if let Err(e) = self
             .agent
-            .update_goose_mode(self.agent.goose_mode().await, &self.session_id)
+            .update_bcaip_mode(self.agent.bcaip_mode().await, &self.session_id)
             .await
         {
             output::render_error(&format!("Failed to apply the current mode: {}", e));
         }
 
         if !extension_configs.is_empty() {
-            output::goose_mode_message("Restarting extensions for the new session...");
+            output::bcaip_mode_message("Restarting extensions for the new session...");
         }
 
         // MCP clients pin themselves to the first session id they see a request for, so
@@ -1174,7 +1174,7 @@ impl CliSession {
         let session_manager = &self.agent.config.session_manager;
         let old_session = session_manager.get_session(&self.session_id, false).await?;
         let new_session_id =
-            create_successor_session(session_manager, &old_session, self.agent.goose_mode().await)
+            create_successor_session(session_manager, &old_session, self.agent.bcaip_mode().await)
                 .await?;
         self.agent.persist_extension_state(&new_session_id).await?;
         Ok(new_session_id)
@@ -1203,9 +1203,9 @@ impl CliSession {
     }
 
     async fn handle_list_skills(&mut self) -> Result<()> {
+        use bcaip::skills::list_installed_skills;
+        use bcaip_sdk_types::custom_requests::SourceType;
         use comfy_table::{Cell, ContentArrangement, Table, presets};
-        use goose::skills::list_installed_skills;
-        use goose_sdk_types::custom_requests::SourceType;
         let cwd = std::env::current_dir().unwrap_or_default();
         let skills = list_installed_skills(Some(&cwd));
 
@@ -1282,7 +1282,7 @@ impl CliSession {
             .process_message(message, CancellationToken::default(), false)
             .await;
         self.agent
-            .emit_hook(goose::hooks::HookEvent::SessionEnd, &self.session_id)
+            .emit_hook(bcaip::hooks::HookEvent::SessionEnd, &self.session_id)
             .await;
         result?;
         Ok(())
@@ -1319,7 +1319,7 @@ impl CliSession {
             .reply(
                 user_message.clone(),
                 session_config.clone(),
-                goose::agents::state_machine::enabled(),
+                bcaip::agents::state_machine::enabled(),
                 Some(cancel_token.clone()),
             )
             .await?;
@@ -1351,14 +1351,14 @@ impl CliSession {
                                     // Approve/SmartApprove modes since auto-allowing would
                                     // bypass the safety contract those modes are meant to enforce.
                                     let config = Config::global();
-                                    let goose_mode = config.get_goose_mode().unwrap_or(GooseMode::Auto);
-                                    if goose_mode == GooseMode::Approve || goose_mode == GooseMode::SmartApprove {
+                                    let bcaip_mode = config.get_bcaip_mode().unwrap_or(BcaipMode::Auto);
+                                    if bcaip_mode == BcaipMode::Approve || bcaip_mode == BcaipMode::SmartApprove {
                                         cancel_token_clone.cancel();
                                         drop(stream);
                                         return Err(anyhow::anyhow!(
-                                            "Tool approval required in non-interactive mode with GooseMode::{goose_mode}. \
+                                            "Tool approval required in non-interactive mode with BcaipMode::{bcaip_mode}. \
                                              This is an invalid configuration — Approve/SmartApprove modes require an \
-                                             interactive terminal. Use GooseMode::Auto for headless sessions."
+                                             interactive terminal. Use BcaipMode::Auto for headless sessions."
                                         ));
                                     }
                                     tracing::warn!(
@@ -1443,7 +1443,7 @@ impl CliSession {
                                         self.messages.push(response_message.clone());
                                         // Elicitation responses return an empty stream - the response
                                         // unblocks the waiting tool call via ActionRequiredManager
-                                        let _ = self.agent.reply(response_message, session_config.clone(), goose::agents::state_machine::enabled(), Some(cancel_token.clone())).await?;
+                                        let _ = self.agent.reply(response_message, session_config.clone(), bcaip::agents::state_machine::enabled(), Some(cancel_token.clone())).await?;
                                         if should_cancel {
                                             cancel_token_clone.cancel();
                                             drop(stream);
@@ -1747,7 +1747,7 @@ impl CliSession {
         completion_cache: &Arc<std::sync::RwLock<CompletionCache>>,
     ) -> Result<()> {
         let prompts = agent.list_extension_prompts(session_id).await;
-        let all_providers = goose::providers::providers().await;
+        let all_providers = bcaip::providers::providers().await;
         let session_provider = agent.provider().await?.get_name().to_string();
 
         let provider_ids: Vec<String> = all_providers.iter().map(|(m, _)| m.name.clone()).collect();
@@ -1863,7 +1863,7 @@ impl CliSession {
         println!();
     }
 
-    pub async fn get_session(&self) -> Result<goose::session::Session> {
+    pub async fn get_session(&self) -> Result<bcaip::session::Session> {
         self.agent
             .config
             .session_manager
@@ -1884,16 +1884,16 @@ impl CliSession {
             .model_config_for_session(&self.session_id)
             .await?;
         let context_limit =
-            goose::context_limit::get_context_limit(provider.as_ref(), &model_config.model_name)
+            bcaip::context_limit::get_context_limit(provider.as_ref(), &model_config.model_name)
                 .await?;
 
         let config = Config::global();
         let show_cost = config
-            .get_param::<bool>("GOOSE_CLI_SHOW_COST")
+            .get_param::<bool>("BCAIP_CLI_SHOW_COST")
             .unwrap_or(false);
 
         let provider_name = config
-            .get_goose_provider()
+            .get_bcaip_provider()
             .unwrap_or_else(|_| "unknown".to_string());
 
         match self.get_session().await {
@@ -1999,15 +1999,15 @@ impl CliSession {
 
 async fn create_successor_session(
     session_manager: &SessionManager,
-    old_session: &goose::session::Session,
-    goose_mode: GooseMode,
+    old_session: &bcaip::session::Session,
+    bcaip_mode: BcaipMode,
 ) -> Result<String> {
     let new_session = session_manager
         .create_session(
             old_session.working_dir.clone(),
             "CLI Session".to_string(),
             old_session.session_type,
-            goose_mode,
+            bcaip_mode,
         )
         .await?;
 
@@ -2162,7 +2162,7 @@ fn prompt_tool_confirmation(request: &ToolConfirmationRequest) -> Result<Permiss
     let prompt = if request.prompt.is_some() {
         "Do you allow this tool call?".to_string()
     } else {
-        "Goose would like to call the above tool, do you allow?".to_string()
+        "BCAIP would like to call the above tool, do you allow?".to_string()
     };
 
     let permission_result = if request.prompt.is_none() {
@@ -2427,7 +2427,7 @@ fn format_logging_notification(
                     Some("response_generated") => {
                         let config = Config::global();
                         let min_priority = config
-                            .get_param::<f32>("GOOSE_CLI_MIN_PRIORITY")
+                            .get_param::<f32>("BCAIP_CLI_MIN_PRIORITY")
                             .ok()
                             .unwrap_or(output::DEFAULT_MIN_PRIORITY);
 
@@ -2493,7 +2493,7 @@ fn display_log_notification(
         } else if ntype == "shell_output" {
             let config = Config::global();
             let min_priority = config
-                .get_param::<f32>("GOOSE_CLI_MIN_PRIORITY")
+                .get_param::<f32>("BCAIP_CLI_MIN_PRIORITY")
                 .ok()
                 .unwrap_or(output::DEFAULT_MIN_PRIORITY);
 
@@ -2520,7 +2520,7 @@ fn log_tool_metrics(message: &Message, messages: &Conversation) {
             && let Ok(tool_call) = &tool_request.tool_call
         {
             tracing::info!(
-                monotonic_counter.goose.tool_calls = 1,
+                monotonic_counter.bcaip.tool_calls = 1,
                 tool_name = %tool_call.name,
                 "Tool call started"
             );
@@ -2550,7 +2550,7 @@ fn log_tool_metrics(message: &Message, messages: &Conversation) {
                 "error"
             };
             tracing::info!(
-                monotonic_counter.goose.tool_completions = 1,
+                monotonic_counter.bcaip.tool_completions = 1,
                 tool_name = %tool_name,
                 result = %result_status,
                 "Tool call completed"
@@ -2631,7 +2631,7 @@ fn build_switched_model_config(
     model_name: &str,
     current_model_config: &bcaip_provider_types::model::ModelConfig,
 ) -> Result<bcaip_provider_types::model::ModelConfig> {
-    goose::model_config::model_config_from_user_config(provider_name, model_name)
+    bcaip::model_config::model_config_from_user_config(provider_name, model_name)
         .map(|config| {
             config
                 .with_temperature(current_model_config.temperature)

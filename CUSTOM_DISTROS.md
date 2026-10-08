@@ -1,12 +1,12 @@
-# Custom Distributions of goose
+# Custom Distributions of BCAIP
 
 > **Tip:** This is sometimes referred to as "white labelling" — creating a branded or tailored version of an open source project for your organization.
 
-This guide explains how to create custom distributions of goose tailored to your organization's needs—whether that's preconfigured models, custom tools, branded interfaces, or entirely new user experiences.
+This guide explains how to create custom distributions of BCAIP tailored to your organization's needs—whether that's preconfigured models, custom tools, branded interfaces, or entirely new user experiences.
 
 ## Overview
 
-goose's architecture is designed for extensibility. Organizations can create "remixed" versions that:
+BCAIP's architecture is designed for extensibility. Organizations can create "remixed" versions that:
 
 - **Preconfigure AI providers**: Ship with a specific model (local or cloud) and API credentials
 - **Bundle custom tools**: Include proprietary extensions for internal data sources
@@ -15,24 +15,24 @@ goose's architecture is designed for extensibility. Organizations can create "re
 
 ## Architecture at a Glance
 
-```
+```plain_text
 ┌─────────────────────────────────────────────────────────────────┐
 │                        User Interfaces                          │
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────────┐  │
 │  │  CLI        │  │  Desktop    │  │  Your Custom UI         │  │
-│  │  (goose-cli)│  │  (Electron) │  │  (web, mobile, etc.)    │  │
+│  │  (bcaip-cli)│  │  (Electron) │  │  (web, mobile, etc.)    │  │
 │  └──────┬──────┘  └──────┬──────┘  └────────────┬────────────┘  │
 └─────────┼────────────────┼──────────────────────┼───────────────┘
           │                │                      │
           ▼                ▼                      ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│                    goose serve (ACP)                            │
+│                    bcaip serve (ACP)                            │
 │         ACP HTTP/WebSocket server for custom clients            │
 └─────────────────────────────────────────────────────────────────┘
           │
           ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│                      Core (goose crate)                         │
+│                      Core (bcaip crate)                         │
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────────┐  │
 │  │  Providers  │  │  Extensions │  │  Config & Recipes       │  │
 │  │  (AI models)│  │  (MCP tools)│  │  (behavior & defaults)  │  │
@@ -45,11 +45,11 @@ goose's architecture is designed for extensibility. Organizations can create "re
 | What You Want                      | Where to Look                                                                                                                                        | Complexity |
 | ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
 | Preconfigure a model/provider      | `config.yaml`, `init-config.yaml`, environment variables                                                                                             | Low        |
-| Add custom AI providers            | `crates/goose/src/providers/declarative/`                                                                                                            | Low        |
+| Add custom AI providers            | `crates/bcaip/src/providers/declarative/`                                                                                                            | Low        |
 | Bundle custom MCP extensions       | `config.yaml` extensions section, `ui/desktop/src/built-in-extensions.json`, `ui/desktop/src/components/settings/extensions/bundled-extensions.json` | Medium     |
-| Modify system prompts              | `crates/goose/src/prompts/`                                                                                                                          | Low        |
+| Modify system prompts              | `crates/bcaip/src/prompts/`                                                                                                                          | Low        |
 | Customize desktop branding         | `ui/desktop/` (icons, names, colors)                                                                                                                 | Medium     |
-| Build a new UI (web, mobile)       | Integrate with `goose serve` over ACP                                                                                                                | High       |
+| Build a new UI (web, mobile)       | Integrate with `bcaip serve` over ACP                                                                                                                | High       |
 | Create guided workflows            | Recipes (YAML-based task definitions)                                                                                                                | Low        |
 | Build complex multi-step workflows | Recipes with sub-recipes and subagents                                                                                                               | Medium     |
 
@@ -58,8 +58,8 @@ goose's architecture is designed for extensibility. Organizations can create "re
 ### 1. Fork and Clone
 
 ```bash
-git clone https://github.com/YOUR_ORG/goose.git
-cd goose
+git clone https://github.com/YOUR_ORG/ai-platform.git
+cd ai-platform
 ```
 
 ### 2. Choose Your Customization Strategy
@@ -76,11 +76,11 @@ See [BUILDING_LINUX.md](BUILDING_LINUX.md) and [ui/desktop/README.md](ui/desktop
 
 ### Licensing
 
-goose is licensed under Apache License 2.0 (ASL v2). Custom distributions must:
+BCAIP is licensed under Apache License 2.0 (ASL v2). Custom distributions must:
 
 - Include the original license and copyright notices
 - Clearly indicate any modifications made
-- Not use "Goose" trademarks in ways that imply official endorsement
+- Not use "BCAIP" trademarks in ways that imply official endorsement
 
 For detailed guidance on ASL v2 compliance, see the [Apache License FAQ](https://www.apache.org/foundation/license-faq.html).
 
@@ -90,10 +90,10 @@ While you're free to maintain private forks, contributing improvements upstream 
 
 ### Telemetry
 
-goose includes optional telemetry (via PostHog) to help improve the project. For custom distributions, you can:
+BCAIP includes optional telemetry (via PostHog) to help improve the project. For custom distributions, you can:
 
-- **Disable telemetry**: Set `GOOSE_DISABLE_TELEMETRY=1`
-- **Use your own instance**: Modify `crates/goose/src/posthog.rs` to point to your PostHog instance
+- **Disable telemetry**: Set `BCAIP_DISABLE_TELEMETRY=1`
+- **Use your own instance**: Modify `crates/bcaip/src/posthog.rs` to point to your PostHog instance
 
 ### Staying Current
 
@@ -110,7 +110,7 @@ To benefit from upstream improvements:
 
 ## A. Preconfigured Local Model Distribution
 
-**Goal**: Ship goose preconfigured to use a local Ollama model, requiring no API keys.
+**Goal**: Ship BCAIP preconfigured to use a local Ollama model, requiring no API keys.
 
 ### Steps
 
@@ -118,57 +118,57 @@ To benefit from upstream improvements:
 
 ```yaml
 # init-config.yaml - Applied on first run if no config exists
-GOOSE_PROVIDER: ollama
-GOOSE_MODEL: qwen3-coder:latest
+BCAIP_PROVIDER: ollama
+BCAIP_MODEL: qwen3-coder:latest
 ```
 
-2. **Set environment defaults** in your launcher script or packaging:
+1. **Set environment defaults** in your launcher script or packaging:
 
 ```bash
-export GOOSE_PROVIDER=ollama
-export GOOSE_MODEL=qwen3-coder:latest
+export BCAIP_PROVIDER=ollama
+export BCAIP_MODEL=qwen3-coder:latest
 export OLLAMA_HOST=http://localhost:11434  # Or your hosted instance
 ```
 
-3. **Optionally hide provider selection** in the UI by modifying `ui/desktop/src/` components.
+1. **Optionally hide provider selection** in the UI by modifying `ui/desktop/src/` components.
 
 ### Technical Details
 
-- Provider configuration: `crates/goose/src/config/base.rs`
-- Ollama provider implementation: `crates/goose/src/providers/ollama.rs`
+- Provider configuration: `crates/bcaip/src/config/base.rs`
+- Ollama provider implementation: `crates/bcaip/src/providers/ollama.rs`
 - Config precedence: Environment variables → config.yaml → defaults
 
 ---
 
 ## B. Corporate Distribution with Managed API Keys
 
-**Goal**: Distribute goose internally with pre-provisioned API keys for a frontier model.
+**Goal**: Distribute BCAIP internally with pre-provisioned API keys for a frontier model.
 
 ### Steps
 
-1. **Store API keys securely** using goose's secret management:
+1. **Store API keys securely** using BCAIP's secret management:
 
 ```yaml
 # config.yaml (distributed with your package)
-GOOSE_PROVIDER: anthropic
-GOOSE_MODEL: claude-sonnet-4-20250514
+BCAIP_PROVIDER: anthropic
+BCAIP_MODEL: claude-sonnet-4-20250514
 ```
 
-2. **Inject secrets at install time** or via your MDM/configuration management:
+1. **Inject secrets at install time** or via your MDM/configuration management:
 
 ```bash
-# Secrets are stored in system keyring or ~/.config/goose/secrets.yaml
-# if GOOSE_DISABLE_KEYRING=1
-goose configure set-secret ANTHROPIC_API_KEY "your-corporate-key"
+# Secrets are stored in system keyring or ~/.config/bcaip/secrets.yaml
+# if BCAIP_DISABLE_KEYRING=1
+bcaip configure set-secret ANTHROPIC_API_KEY "your-corporate-key"
 ```
 
-3. **Lock down provider changes** (optional) by modifying the settings UI or using a recipe that enforces the provider.
+1. **Lock down provider changes** (optional) by modifying the settings UI or using a recipe that enforces the provider.
 
 ### Technical Details
 
-- Secret storage: `crates/goose/src/config/base.rs` (SecretStorage enum)
+- Secret storage: `crates/bcaip/src/config/base.rs` (SecretStorage enum)
 - Keyring integration: Uses system keyring by default, file-based fallback available
-- Config file location: `~/.config/goose/config.yaml`
+- Config file location: `~/.config/bcaip/config.yaml`
 
 ---
 
@@ -194,7 +194,7 @@ async def query_data_lake(query: str) -> str:
     return results
 ```
 
-2. **Bundle as a built-in extension** by adding to either:
+1. **Bundle as a built-in extension** by adding to either:
    - `ui/desktop/src/built-in-extensions.json` (core built-ins surfaced in extension UI)
    - `ui/desktop/src/components/settings/extensions/bundled-extensions.json` (bundled extension catalog in Settings)
 
@@ -214,27 +214,27 @@ Example:
 }
 ```
 
-3. **Or distribute as a recipe** that enables the extension:
+1. **Or distribute as a recipe** that enables the extension:
 
 ```yaml
 # data-analyst.yaml
 title: Data Analyst Assistant
-description: goose configured for data analysis
+description: bcaip configured for data analysis
 instructions: |
   You have access to the corporate data lake. Help users query and analyze data.
 extensions:
   - type: stdio
     name: internal-data
     cmd: python
-    args: ['/opt/corp-goose/internal_data_mcp.py']
+    args: ['/opt/corp-bcaip/internal_data_mcp.py']
     description: Corporate data lake access
 ```
 
 ### Technical Details
 
-- Extension types: `crates/goose/src/agents/extension.rs` (ExtensionConfig enum)
+- Extension types: `crates/bcaip/src/agents/extension.rs` (ExtensionConfig enum)
 - Built-in MCP servers: `crates/bcaip-mcp/`
-- Extension loading: `crates/goose/src/agents/extension_manager.rs`
+- Extension loading: `crates/bcaip/src/agents/extension_manager.rs`
 
 ---
 
@@ -263,34 +263,34 @@ module.exports = {
 };
 ```
 
-3. **Update the system prompt** to reflect your branding in `crates/goose/src/prompts/system.md`:
+1. **Update the system prompt** to reflect your branding in `crates/bcaip/src/prompts/system.md`:
 
 ```markdown
 You are an AI assistant called [YourName], created by [YourCompany].
 ...
 ```
 
-4. **Customize UI components** in `ui/desktop/src/` (React/TypeScript):
+1. **Customize UI components** in `ui/desktop/src/` (React/TypeScript):
    - Color schemes in CSS/Tailwind config
    - Component text and labels
    - Feature visibility
 
-5. **Align packaging and updater names** when rebranding:
+2. **Align packaging and updater names** when rebranding:
    - Update static branding metadata in `ui/desktop/package.json` (`productName`, description) and Linux desktop templates (`ui/desktop/forge.deb.desktop`, `ui/desktop/forge.rpm.desktop`)
 
    - Set build/release environment variables consistently:
      - `GITHUB_OWNER` and `GITHUB_REPO` for publisher + updater repository lookup
-     - `GOOSE_BUNDLE_NAME` for bundle/debug scripts and updater asset naming (defaults to `Goose`)
+     - `BCAIP_BUNDLE_NAME` for bundle/debug scripts and updater asset naming (defaults to `BCAIP`)
 
 Example:
 
 ```bash
 export GITHUB_OWNER="your-org"
-export GITHUB_REPO="your-goose-fork"
-export GOOSE_BUNDLE_NAME="InsightStream-goose"
+export GITHUB_REPO="your-ai-platform-fork"
+export BCAIP_BUNDLE_NAME="InsightStream-BCAIP"
 ```
 
-6. **Use this branding consistency checklist** before release:
+1. **Use this branding consistency checklist** before release:
    - Application metadata (`forge.config.ts`, `package.json`, `index.html`) uses your distro name
    - Release artifact names and updater lookup names are consistent
    - Desktop launchers (Linux `.desktop` templates) point to the same executable name produced by packaging
@@ -299,23 +299,23 @@ export GOOSE_BUNDLE_NAME="InsightStream-goose"
 
 - Electron config: `ui/desktop/forge.config.ts`
 - UI entry point: `ui/desktop/src/renderer.tsx`
-- System prompts: `crates/goose/src/prompts/`
+- System prompts: `crates/bcaip/src/prompts/`
 
 ---
 
 ## E. Building a New Interface (Web, Mobile, etc.)
 
-**Goal**: Create an entirely new frontend while leveraging goose's backend.
+**Goal**: Create an entirely new frontend while leveraging BCAIP's backend.
 
-goose provides two ACP transport options for building custom clients:
+BCAIP provides two ACP transport options for building custom clients:
 
-### Option 1: ACP HTTP/WebSocket (`goose serve`)
+### Option 1: ACP HTTP/WebSocket (`bcaip serve`)
 
-Use `goose serve` for process-separated integrations such as web apps, desktop shells, and other clients:
+Use `bcaip serve` for process-separated integrations such as web apps, desktop shells, and other clients:
 
 ```bash
 # Start the server
-GOOSE_SERVER__SECRET_KEY='a-long-random-secret' goose serve
+BCAIP_SERVER__SECRET_KEY='a-long-random-secret' bcaip serve
 
 # ACP endpoint available at http://localhost:3284/acp
 ```
@@ -328,11 +328,11 @@ ws://localhost:3284/acp?token=a-long-random-secret
 
 For browser clients served from a non-loopback origin, pass the exact UI origin with `--allowed-origin`. When you pass `--allowed-origin`, it replaces the default loopback origin allowlist, so include every origin the client needs.
 
-For the ACP protocol and client flow, see [Use goose as an ACP agent](documentation/docs/gdk/acp/index.md).
+For the ACP protocol and client flow, see [Use BCAIP as an ACP agent](documentation/docs/gdk/acp/index.md).
 
 ### Option 2: Agent Client Protocol (ACP) over stdio
 
-For richer local integrations (IDEs and embedded agents), run goose as an ACP agent over stdio.
+For richer local integrations (IDEs and embedded agents), run BCAIP as an ACP agent over stdio.
 
 ACP provides:
 
@@ -341,14 +341,14 @@ ACP provides:
 - **Session management**: Create, load, and resume sessions with full conversation history
 - **MCP server integration**: Dynamically add MCP servers to sessions
 
-**Start goose as an ACP agent**:
+**Start BCAIP as an ACP agent**:
 
 ```bash
-# Run goose as an ACP server on stdio
-goose acp --with-builtin developer,memory
+# Run BCAIP as an ACP server on stdio
+bcaip acp --with-builtin developer,memory
 
 # Or programmatically
-cargo run -p goose-cli -- acp --with-builtin developer
+cargo run -p bcaip-cli -- acp --with-builtin developer
 ```
 
 **Key ACP methods**:
@@ -370,7 +370,7 @@ import json
 class AcpClient:
     def __init__(self):
         self.process = subprocess.Popen(
-            ['goose', 'acp', '--with-builtin', 'developer'],
+            ['bcaip', 'acp', '--with-builtin', 'developer'],
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             text=True
@@ -409,8 +409,8 @@ For the full ACP specification, see the [Agent Client Protocol documentation](ht
 
 **ACP**:
 
-- ACP server implementation: `crates/goose/src/acp/server.rs`
-- CLI integration: `crates/goose-cli/src/cli.rs` (Command::Acp)
+- ACP server implementation: `crates/bcaip/src/acp/server.rs`
+- CLI integration: `crates/bcaip-cli/src/cli.rs` (Command::Acp)
 - Protocol library: `agent-client-protocol` crate (Rust implementation of ACP)
 - Test client example: `test_acp_client.py`
 
@@ -418,7 +418,7 @@ For the full ACP specification, see the [Agent Client Protocol documentation](ht
 
 ## F. Audience-Specific Distributions (Legal, Design, etc.)
 
-**Goal**: Create a version of goose tailored for a specific professional audience.
+**Goal**: Create a version of BCAIP tailored for a specific professional audience.
 
 ### Steps
 
@@ -445,7 +445,7 @@ extensions:
   - type: stdio
     name: legal-database
     cmd: python
-    args: ['/opt/legal-goose/legal_db_mcp.py']
+    args: ['/opt/legal-bcaip/legal_db_mcp.py']
     description: Legal database search
 
 activities:
@@ -454,18 +454,18 @@ activities:
   - 'Find precedents for...'
 
 settings:
-  goose_provider: anthropic
-  goose_model: claude-sonnet-4-20250514
+  bcaip_provider: anthropic
+  bcaip_model: claude-sonnet-4-20250514
 ```
 
-2. **Customize the UI** to show only relevant features and use domain-appropriate language.
+1. **Customize the UI** to show only relevant features and use domain-appropriate language.
 
-3. **Bundle domain-specific extensions** for specialized data sources (legal databases, design tools, etc.).
+2. **Bundle domain-specific extensions** for specialized data sources (legal databases, design tools, etc.).
 
 ### Technical Details
 
-- Recipe format: `crates/goose/src/recipe/mod.rs`
-- Recipe loading: `crates/goose/src/recipe/local_recipes.rs`
+- Recipe format: `crates/bcaip/src/recipe/mod.rs`
+- Recipe loading: `crates/bcaip/src/recipe/local_recipes.rs`
 - Activity suggestions: Shown in UI as quick-start prompts
 
 ---
@@ -476,7 +476,7 @@ settings:
 
 ### Option 1: Declarative Provider (No Code)
 
-Create a JSON file in `~/.config/goose/custom_providers/` or bundle in your distribution:
+Create a JSON file in `~/.config/bcaip/custom_providers/` or bundle in your distribution:
 
 ```json
 {
@@ -503,16 +503,16 @@ Supported engines: `openai`, `anthropic`, `ollama`
 
 For providers with unique APIs, implement the Provider trait:
 
-1. Create a new file in `crates/goose/src/providers/`
+1. Create a new file in `crates/bcaip/src/providers/`
 2. Implement the `Provider` trait from `base.rs`
-3. Register in `crates/goose/src/providers/factory.rs`
+3. Register in `crates/bcaip/src/providers/factory.rs`
 
 ### Technical Details
 
-- Declarative providers: `crates/goose/src/config/declarative_providers.rs`
-- Provider trait: `crates/goose/src/providers/base.rs`
-- Provider registration: `crates/goose/src/providers/factory.rs`
-- Example providers: `crates/goose/src/providers/declarative/*.json`
+- Declarative providers: `crates/bcaip/src/config/declarative_providers.rs`
+- Provider trait: `crates/bcaip/src/providers/base.rs`
+- Provider registration: `crates/bcaip/src/providers/factory.rs`
+- Example providers: `crates/bcaip/src/providers/declarative/*.json`
 
 ---
 
@@ -520,7 +520,7 @@ For providers with unique APIs, implement the Provider trait:
 
 **Goal**: Create standardized, repeatable workflows that users can run with minimal setup.
 
-Recipes are YAML files that define complete goose experiences—instructions, extensions, parameters, and prompts bundled together. They're ideal for custom distributions because they require no code changes and can be distributed as simple files.
+Recipes are YAML files that define complete BCAIP experiences—instructions, extensions, parameters, and prompts bundled together. They're ideal for custom distributions because they require no code changes and can be distributed as simple files.
 
 ### Basic Recipe Structure
 
@@ -590,9 +590,9 @@ prompt: |
 
 ### Technical Details
 
-- Recipe schema: `crates/goose/src/recipe/mod.rs`
-- Parameter handling: `crates/goose/src/recipe/template_recipe.rs`
-- Recipe validation: `crates/goose/src/recipe/validate_recipe.rs`
+- Recipe schema: `crates/bcaip/src/recipe/mod.rs`
+- Parameter handling: `crates/bcaip/src/recipe/template_recipe.rs`
+- Recipe validation: `crates/bcaip/src/recipe/validate_recipe.rs`
 
 ---
 
@@ -600,7 +600,7 @@ prompt: |
 
 **Goal**: Build sophisticated multi-step workflows that orchestrate multiple specialized tasks.
 
-For complex workflows, goose supports two powerful composition mechanisms:
+For complex workflows, BCAIP supports two powerful composition mechanisms:
 
 1. **Sub-recipes**: Predefined recipe templates that can be invoked by name
 2. **Subagents**: Independent AI agents spawned to handle specific tasks
@@ -812,7 +812,7 @@ prompt: |
 
 ### Technical Details
 
-- Subagent tool: `crates/goose/src/agents/subagent_tool.rs`
-- Subagent execution: `crates/goose/src/agents/subagent_handler.rs`
-- Recipe sub_recipes field: `crates/goose/src/recipe/mod.rs` (SubRecipe struct)
-- Template rendering: `crates/goose/src/recipe/template_recipe.rs`
+- Subagent tool: `crates/bcaip/src/agents/subagent_tool.rs`
+- Subagent execution: `crates/bcaip/src/agents/subagent_handler.rs`
+- Recipe sub_recipes field: `crates/bcaip/src/recipe/mod.rs` (SubRecipe struct)
+- Template rendering: `crates/bcaip/src/recipe/template_recipe.rs`

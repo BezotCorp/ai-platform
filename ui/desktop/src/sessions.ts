@@ -1,12 +1,12 @@
 import type { Session } from './types/session';
 import { configuredExtensionEntryToConfig } from './utils/configuredExtensionEntryToConfig';
 import type { ExtensionConfig } from './types/extensionConfig';
-import type { GooseExtension } from '@aaif/goose-acp-client';
+import type { BcaipExtension } from '@bezotcorp/bcaip-acp-client';
 import type { SetViewType } from './hooks/useNavigation';
 
 import { AppEvents } from './constants/appEvents';
 import { acpChatSessionController } from './acp/chatSessionController';
-import { getConfiguredGooseExtensions, gooseExtensionName } from './acp/extensions';
+import { getConfiguredBcaipExtensions, bcaipExtensionName } from './acp/extensions';
 import { beginConfiguredRecipeParameterScope } from './acp/recipeParamRequests';
 import { getAcpFeatureCapabilities } from './acp/capabilities';
 import { RecipeDeclinedError, RecipeParameterScopesUnsupportedError } from './acp/errors';
@@ -49,9 +49,9 @@ function selectedExtensionConfigs(options?: CreateSessionOptions): ExtensionConf
   return undefined;
 }
 
-async function resolveGooseExtensions(
+async function resolveBcaipExtensions(
   selected: ExtensionConfig[] | undefined
-): Promise<GooseExtension[] | undefined> {
+): Promise<BcaipExtension[] | undefined> {
   if (selected === undefined) {
     return undefined;
   }
@@ -59,8 +59,8 @@ async function resolveGooseExtensions(
     return [];
   }
   const selectedNames = new Set(selected.map((config) => config.name));
-  return (await getConfiguredGooseExtensions())
-    .filter((entry) => selectedNames.has(gooseExtensionName(entry.extension)))
+  return (await getConfiguredBcaipExtensions())
+    .filter((entry) => selectedNames.has(bcaipExtensionName(entry.extension)))
     .map((entry) => entry.extension);
 }
 
@@ -113,8 +113,8 @@ async function createAcpSession(
         throw new RecipeParameterScopesUnsupportedError();
       }
     }
-    const gooseExtensions = await resolveGooseExtensions(selectedExtensionConfigs(options));
-    return await acpChatSessionController.createSession(workingDir, gooseExtensions, {
+    const bcaipExtensions = await resolveBcaipExtensions(selectedExtensionConfigs(options));
+    return await acpChatSessionController.createSession(workingDir, bcaipExtensions, {
       recipeId: options?.recipeId,
       recipeDeeplink: options?.recipeDeeplink,
       recipeParameterScopeId: configuredParameterScope?.id,

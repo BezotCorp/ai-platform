@@ -45,7 +45,7 @@ ClawMetry auto-detects the [session store](/guides/logs#session-records) by reso
 | macOS and Linux | `$XDG_DATA_HOME/goose/sessions/sessions.db`, defaulting to `~/.local/share/goose/sessions/sessions.db` |
 | Windows | `%APPDATA%\Block\goose\data\sessions\sessions.db` |
 
-If [`GOOSE_PATH_ROOT`](/guides/environment-variables) is set, ClawMetry reads `$GOOSE_PATH_ROOT/data/sessions/sessions.db` instead, on every platform. On macOS it also checks `~/Library/Application Support/Block/goose/` last, so an older install that still keeps its data there is picked up.
+If [`BCAIP_PATH_ROOT`](/guides/environment-variables) is set, ClawMetry reads `$BCAIP_PATH_ROOT/data/sessions/sessions.db` instead, on every platform. On macOS it also checks `~/Library/Application Support/Block/goose/` last, so an older install that still keeps its data there is picked up.
 
 Sessions you ran before installing ClawMetry appear as well.
 

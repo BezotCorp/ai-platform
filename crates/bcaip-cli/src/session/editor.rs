@@ -1,6 +1,6 @@
 use anyhow::{Context, Result};
+use bcaip::config::Config;
 use bcaip_provider_types::conversations::{Conversation, Message};
-use goose::config::Config;
 use std::{
     fs,
     io::{Read, Write},
@@ -9,10 +9,10 @@ use std::{
 };
 use tempfile::{Builder, NamedTempFile};
 /// Resolve the editor command from config and environment variables.
-/// Checks GOOSE_PROMPT_EDITOR, then $VISUAL, then $EDITOR.
+/// Checks BCAIP_PROMPT_EDITOR, then $VISUAL, then $EDITOR.
 pub fn resolve_editor_command() -> Option<String> {
     let config = Config::global();
-    let config_editor = config.get_goose_prompt_editor().ok().flatten();
+    let config_editor = config.get_bcaip_prompt_editor().ok().flatten();
     let visual = std::env::var("VISUAL").ok();
     let editor_env = std::env::var("EDITOR").ok();
     resolve_editor_from_sources(
@@ -38,7 +38,7 @@ fn resolve_editor_from_sources(
 /// Resolve the editor command, falling back to vi (or notepad on Windows).
 pub fn resolve_editor_or_default() -> String {
     let config = Config::global();
-    let config_editor = config.get_goose_prompt_editor().ok().flatten();
+    let config_editor = config.get_bcaip_prompt_editor().ok().flatten();
     let visual = std::env::var("VISUAL").ok();
     let editor_env = std::env::var("EDITOR").ok();
     resolve_editor_or_default_from_sources(
@@ -88,7 +88,7 @@ pub fn edit_conversation(conversation: &Conversation) -> Result<Conversation> {
 
 /// Build the markdown template content for the editor prompt.
 fn build_template(messages: &[&str], prefill: Option<&str>) -> String {
-    let mut content = String::from("# Goose Prompt Editor\n\n");
+    let mut content = String::from("# BCAIP Prompt Editor\n\n");
 
     content.push_str("# Your prompt:\n\n");
     if let Some(text) = prefill
@@ -112,7 +112,7 @@ fn build_template(messages: &[&str], prefill: Option<&str>) -> String {
 /// Create temporary markdown file with conversation history and optional prefill text
 fn create_temp_file(messages: &[&str], prefill: Option<&str>) -> Result<NamedTempFile> {
     let temp_file = Builder::new()
-        .prefix("goose_prompt_")
+        .prefix("bcaip_prompt_")
         .suffix(".md")
         .tempfile()?;
 

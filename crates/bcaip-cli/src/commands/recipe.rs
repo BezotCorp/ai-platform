@@ -1,9 +1,9 @@
 use crate::recipes::github_recipe::RecipeSource;
 use crate::recipes::search_recipe::{list_available_recipes, load_recipe_file};
 use anyhow::Result;
+use bcaip::recipe::validate_recipe::validate_recipe_template_from_file;
+use bcaip::recipe_deeplink;
 use console::style;
-use goose::recipe::validate_recipe::validate_recipe_template_from_file;
-use goose::recipe_deeplink;
 use std::collections::HashMap;
 pub fn handle_validate(recipe_name: &str) -> Result<()> {
     // Load and validate the recipe file
@@ -67,7 +67,7 @@ where
             Ok(_) => {
                 writeln!(
                     out,
-                    "{} Opened recipe '{}' in Goose Desktop",
+                    "{} Opened recipe '{}' in BCAIP Desktop",
                     style("✓").green().bold(),
                     recipe.title
                 )?;
@@ -76,14 +76,14 @@ where
             Err(err) => {
                 writeln!(
                     out,
-                    "{} Failed to open recipe in Goose Desktop: {}",
+                    "{} Failed to open recipe in BCAIP Desktop: {}",
                     style("✗").red().bold(),
                     err
                 )?;
                 writeln!(out, "Generated deeplink: {}", deeplink_url)?;
                 writeln!(
                     out,
-                    "You can manually copy and open the URL above, or ensure Goose Desktop is installed."
+                    "You can manually copy and open the URL above, or ensure BCAIP Desktop is installed."
                 )?;
                 Err(anyhow::anyhow!("Failed to open recipe: {}", err))
             }
@@ -165,13 +165,13 @@ fn parse_params(params: &[String]) -> Result<HashMap<String, String>> {
 fn generate_deeplink(
     recipe_name: &str,
     params: HashMap<String, String>,
-) -> Result<(String, goose::recipe::Recipe)> {
+) -> Result<(String, bcaip::recipe::Recipe)> {
     let recipe_file = load_recipe_file(recipe_name)?;
     // Load the recipe file first to validate it
     let recipe = validate_recipe_template_from_file(&recipe_file)?;
     match recipe_deeplink::encode(&recipe) {
         Ok(encoded) => {
-            let mut full_url = format!("goose://recipe?config={}", encoded);
+            let mut full_url = format!("bcaip://recipe?config={}", encoded);
 
             // Append parameters as additional query parameters
             for (key, value) in params {

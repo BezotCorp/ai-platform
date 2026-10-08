@@ -34,14 +34,14 @@ fn parse_positive_lines(value: &str) -> Option<usize> {
 
 fn max_code_block_lines() -> Option<usize> {
     static VALUE: LazyLock<Option<usize>> = LazyLock::new(|| {
-        if std::env::var("GOOSE_NO_CODE_TRUNCATION")
+        if std::env::var("BCAIP_NO_CODE_TRUNCATION")
             .map(|v| v == "1" || v.eq_ignore_ascii_case("true"))
             .unwrap_or(false)
         {
             return None;
         }
         Some(
-            std::env::var("GOOSE_MAX_CODE_BLOCK_LINES")
+            std::env::var("BCAIP_MAX_CODE_BLOCK_LINES")
                 .ok()
                 .and_then(|v| parse_positive_lines(&v))
                 .unwrap_or(DEFAULT_MAX_CODE_BLOCK_LINES),
@@ -52,7 +52,7 @@ fn max_code_block_lines() -> Option<usize> {
 
 fn truncated_show_lines() -> usize {
     static VALUE: LazyLock<usize> = LazyLock::new(|| {
-        std::env::var("GOOSE_TRUNCATED_SHOW_LINES")
+        std::env::var("BCAIP_TRUNCATED_SHOW_LINES")
             .ok()
             .and_then(|v| parse_positive_lines(&v))
             .unwrap_or(DEFAULT_TRUNCATED_SHOW_LINES)
@@ -176,7 +176,7 @@ fn find_closing_fence(region: &str, fence_char: char, min_len: usize) -> Option<
 
 fn save_to_temp_file(content: &str) -> Option<String> {
     let mut file = tempfile::Builder::new()
-        .prefix("goose-")
+        .prefix("bcaip-")
         .suffix(".txt")
         .tempfile()
         .ok()?;

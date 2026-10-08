@@ -26,7 +26,7 @@ mod sampling;
 mod tool_mode;
 
 #[cfg(not(all(feature = "mlx", target_os = "macos")))]
-mod fallback_backend;
+mod mlx_backend;
 
 #[cfg(all(feature = "mlx", target_os = "macos"))]
 pub(crate) use mlx_backend::{MLX_BACKEND_ID, MlxBackend};
@@ -34,7 +34,10 @@ pub(crate) use mlx_backend::{MLX_BACKEND_ID, MlxBackend};
 #[cfg(all(feature = "mlx", target_os = "macos"))]
 pub(crate) use model_validation::validate_model_directory;
 
+#[cfg(all(feature = "mlx", target_os = "macos"))]
+pub(crate) use output::*;
+
 #[cfg(not(all(feature = "mlx", target_os = "macos")))]
-pub(crate) use fallback_backend::{MLX_BACKEND_ID, MlxBackend, validate_model_directory};
+pub(crate) use mlx_backend::{MLX_BACKEND_ID, MlxBackend, validate_model_directory};
 
 pub(crate) use snapshot_validation::mlx_snapshot_files_are_complete;

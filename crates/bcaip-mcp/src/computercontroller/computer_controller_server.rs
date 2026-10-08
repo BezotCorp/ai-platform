@@ -678,7 +678,7 @@ impl ServerHandler for ComputerControllerServer {
     fn get_info(&self) -> ServerConfig {
         InitializeResult::new(ServerCapabilities::builder().enable_tools().build())
             .with_server_info(Implementation::new(
-                "goose-computercontroller",
+                "bcaip-computercontroller",
                 env!("CARGO_PKG_VERSION"),
             ))
             .with_instructions(self.instructions.clone())

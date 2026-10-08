@@ -9,8 +9,8 @@
 #   bash scripts/test_subagents.sh
 #
 # Knobs:
-#   GOOSE_PROVIDER (default: anthropic)
-#   GOOSE_MODEL    (default: claude-haiku-4-5)
+#   BCAIP_PROVIDER (default: anthropic)
+#   BCAIP_MODEL    (default: claude-haiku-4-5)
 #   SKIP_BUILD     skip cargo build (assumes target/debug/goose already exists)
 #   KEEP_TESTDIR   don't rm the temp workdir on exit (for debugging)
 #
@@ -37,14 +37,14 @@ else
 fi
 
 SCRIPT_DIR=$(pwd)
-GOOSE_BIN="$SCRIPT_DIR/target/debug/goose"
+BCAIP_BIN="$SCRIPT_DIR/target/debug/goose"
 export PATH="$SCRIPT_DIR/target/debug:$PATH"
 
-export GOOSE_PROVIDER="${GOOSE_PROVIDER:-anthropic}"
-export GOOSE_MODEL="${GOOSE_MODEL:-claude-haiku-4-5}"
+export BCAIP_PROVIDER="${BCAIP_PROVIDER:-anthropic}"
+export BCAIP_MODEL="${BCAIP_MODEL:-claude-haiku-4-5}"
 
-echo "Using provider: $GOOSE_PROVIDER"
-echo "Using model:    $GOOSE_MODEL"
+echo "Using provider: $BCAIP_PROVIDER"
+echo "Using model:    $BCAIP_MODEL"
 echo ""
 
 TESTDIR=$(mktemp -d)
@@ -102,7 +102,7 @@ RESULTS=()
 run_goose() {
   local prompt="$1"
   local outfile="$2"
-  (cd "$TESTDIR" && "$GOOSE_BIN" run --text "$prompt" --no-session 2>&1) | tee "$outfile"
+  (cd "$TESTDIR" && "$BCAIP_BIN" run --text "$prompt" --no-session 2>&1) | tee "$outfile"
 }
 
 # Detect: did the model invoke `delegate` with the expected source?
@@ -182,7 +182,7 @@ $(cat "$outfile")
 EOF
   )
   local verdict
-  verdict=$("$GOOSE_BIN" run --text "$judge_prompt" --no-session 2>&1)
+  verdict=$("$BCAIP_BIN" run --text "$judge_prompt" --no-session 2>&1)
   echo "$verdict" | tr -d '\r' | grep -Eq '^[[:space:]]*PASS[[:space:]]*$'
 }
 
@@ -291,7 +291,7 @@ echo ""
 echo "=== Scenario 5: empty workdir (janpier/peterjoris must not leak) ==="
 EMPTYDIR=$(mktemp -d)
 TMP5=$(mktemp)
-(cd "$EMPTYDIR" && "$GOOSE_BIN" run --text "@janpier where is the treasure?" --no-session 2>&1) | tee "$TMP5"
+(cd "$EMPTYDIR" && "$BCAIP_BIN" run --text "@janpier where is the treasure?" --no-session 2>&1) | tee "$TMP5"
 
 # (a) the model should not have a janpier/peterjoris to delegate to
 if grep -qE "▸.*delegate" "$TMP5" &&

@@ -28,7 +28,7 @@ pub async fn run_interactive(stream: RoamingClientStream, agent_label: String) -
 
     Client
         .builder()
-        .name("goose-roam")
+        .name("bcaip-roam")
         .on_receive_notification(
             async move |notification: SessionNotification, _cx| {
                 render_update(&notification.update);
@@ -120,7 +120,7 @@ pub async fn delegate(
 
     Client
         .builder()
-        .name("goose-roam-delegate")
+        .name("bcaip-roam-delegate")
         .on_receive_notification(
             async move |notification: SessionNotification, _cx| {
                 if let SessionUpdate::AgentMessageChunk(chunk) = &notification.update
@@ -194,7 +194,7 @@ pub async fn list_sessions(stream: RoamingClientStream) -> Result<Vec<SessionInf
 
     let sessions = Client
         .builder()
-        .name("goose-roam-list")
+        .name("bcaip-roam-list")
         .on_receive_notification(
             async move |_notification: SessionNotification, _cx| Ok(()),
             agent_client_protocol::on_receive_notification!(),
@@ -248,7 +248,7 @@ fn prompt_permission(request: &RequestPermissionRequest) -> RequestPermissionOut
     eprint!("choose a number (anything else cancels): ");
     let _ = std::io::stderr().flush();
 
-    // Fail closed: option 1 is allow-always for goose hosts, so EOF, an empty
+    // Fail closed: option 1 is allow-always for BCAIP hosts, so EOF, an empty
     // line, or a typo must cancel rather than silently granting permission.
     let Some(choice) = read_line().and_then(|l| l.trim().parse::<usize>().ok()) else {
         eprintln!("   cancelled");

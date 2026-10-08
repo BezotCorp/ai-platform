@@ -14,7 +14,7 @@ import type { McpAppRendererProps } from './mcpAppRendererProps';
  *
  * Display modes:
  * - "inline" | "fullscreen" | "pip" — standard MCP display modes
- * - "standalone" — Goose-specific mode for dedicated Electron windows
+ * - "standalone" — BCAIP-specific mode for dedicated Electron windows
  */
 
 import {

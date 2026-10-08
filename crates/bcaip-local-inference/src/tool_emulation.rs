@@ -2,11 +2,11 @@
 //!
 //! Models that do not have native tool-calling support are prompted to emit shell commands
 //! as `$ command` on a new line and code blocks as ```execute_typescript fenced blocks.
-//! The parser converts those patterns into Goose tool-call messages.
+//! The parser converts those patterns into BCAIP tool-call messages.
 use pulldown_cmark::{CodeBlockKind, Event, Parser, Tag};
 
 #[cfg(feature = "mlx")]
-use goose_provider_types::conversations::{Message, MessageContent};
+use bcaip_provider_types::conversations::{Message, MessageContent};
 #[cfg(feature = "mlx")]
 use rmcp::model::{CallToolRequestParams, Tool};
 #[cfg(feature = "mlx")]
@@ -47,7 +47,7 @@ pub(crate) fn load_tiny_model_prompt() -> String {
 
     crate::prompt_template::render_template("tiny_model_system.md", &context).unwrap_or_else(|e| {
         tracing::warn!("Failed to load tiny_model_system.md: {:?}", e);
-        "You are Goose, an AI assistant. You can execute shell commands by starting lines with $."
+        "You are BCAIP, an AI assistant. You can execute shell commands by starting lines with $."
             .to_string()
     })
 }

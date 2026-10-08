@@ -10,24 +10,24 @@
 
 set -e
 
-GOOSE_REPO=${GOOSE_REPO:-"$HOME/Development/goose"}
+BCAIP_REPO=${BCAIP_REPO:-"$HOME/Development/goose"}
 
 # Function to get release tags using gh CLI
 get_latest_release() {
     if command -v gh &>/dev/null; then
-        gh release list --repo aaif-goose/goose --limit 1 --json tagName --jq '.[0].tagName' 2>/dev/null
+        gh release list --repo BezotCorp/ai-platform --limit 1 --json tagName --jq '.[0].tagName' 2>/dev/null
     else
         # Fallback: get latest version tag from git
-        cd "$GOOSE_REPO" && git tag --sort=-v:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -1
+        cd "$BCAIP_REPO" && git tag --sort=-v:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -1
     fi
 }
 
 get_previous_release() {
     if command -v gh &>/dev/null; then
-        gh release list --repo aaif-goose/goose --limit 2 --json tagName --jq '.[].tagName' 2>/dev/null | sed -n '2p'
+        gh release list --repo BezotCorp/ai-platform --limit 2 --json tagName --jq '.[].tagName' 2>/dev/null | sed -n '2p'
     else
         # Fallback: get second-latest version tag from git
-        cd "$GOOSE_REPO" && git tag --sort=-v:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sed -n '2p'
+        cd "$BCAIP_REPO" && git tag --sort=-v:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sed -n '2p'
     fi
 }
 
@@ -148,7 +148,7 @@ if [ "$HAS_CHANGES" = "true" ]; then
     echo "Step 5: Updating CLI commands documentation..."
 
     # Set environment variables for the update recipe
-    export CLI_COMMANDS_PATH="${GOOSE_REPO}/documentation/docs/guides/goose-cli-commands.md"
+    export CLI_COMMANDS_PATH="${BCAIP_REPO}/documentation/docs/guides/goose-cli-commands.md"
 
     # Run the update recipe
     goose run --recipe ../recipes/update-cli-commands.yaml 2>&1 |

@@ -1,7 +1,7 @@
-use super::tool_mode::ToolMode;
+use crate::mlx::tool_mode::ToolMode;
 use crate::thinking_output::ThinkingOutputFilter;
 use crate::tool_emulation::{StreamingEmulatorParser, message_for_emulator_action};
-use goose_provider_types::{
+use bcaip_provider_types::{
     conversations::{Message, ProviderUsage},
     errors::ProviderError,
 };

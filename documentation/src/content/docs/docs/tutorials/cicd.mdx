@@ -67,16 +67,16 @@ jobs:
          - name: Install goose CLI
            run: |
               mkdir -p /home/runner/.local/bin
-              curl -fsSL https://github.com/aaif-goose/goose/releases/download/stable/download_cli.sh \
-                | GOOSE_VERSION=REPLACE_WITH_VERSION CONFIGURE=false GOOSE_BIN_DIR=/home/runner/.local/bin bash
+              curl -fsSL https://github.com/BezotCorp/ai-platform/releases/download/stable/download_cli.sh \
+                | BCAIP_VERSION=REPLACE_WITH_VERSION CONFIGURE=false BCAIP_BIN_DIR=/home/runner/.local/bin bash
               echo "/home/runner/.local/bin" >> $GITHUB_PATH
 
          - name: Configure goose
            run: |
-              mkdir -p ~/.config/goose
-              cat <<EOF > ~/.config/goose/config.yaml
-              GOOSE_PROVIDER: REPLACE_WITH_PROVIDER
-              GOOSE_MODEL: REPLACE_WITH_MODEL
+              mkdir -p ~/.config/bcaip
+              cat <<EOF > ~/.config/bcaip/config.yaml
+              BCAIP_PROVIDER: REPLACE_WITH_PROVIDER
+              BCAIP_MODEL: REPLACE_WITH_MODEL
               keyring: false
               EOF
 
@@ -101,7 +101,7 @@ jobs:
               # Remove ANSI color codes
               sed -E 's/\x1B\[[0-9;]*[mK]//g' | \
               # Remove session/logging lines
-              grep -v "logging to /home/runner/.config/goose/sessions/" | \
+              grep -v "logging to /home/runner/.config/bcaip/sessions/" | \
               grep -v "^starting session" | \
               grep -v "^Closing session" | \
               # Trim trailing whitespace
@@ -157,27 +157,27 @@ steps:
     - name: Install goose CLI
       run: |
           mkdir -p /home/runner/.local/bin
-          curl -fsSL https://github.com/aaif-goose/goose/releases/download/stable/download_cli.sh \
-            | GOOSE_VERSION=REPLACE_WITH_VERSION CONFIGURE=false GOOSE_BIN_DIR=/home/runner/.local/bin bash
+          curl -fsSL https://github.com/BezotCorp/ai-platform/releases/download/stable/download_cli.sh \
+            | BCAIP_VERSION=REPLACE_WITH_VERSION CONFIGURE=false BCAIP_BIN_DIR=/home/runner/.local/bin bash
           echo "/home/runner/.local/bin" >> $GITHUB_PATH
 
     - name: Configure goose
       run: |
-          mkdir -p ~/.config/goose
-          cat <<EOF > ~/.config/goose/config.yaml
-          GOOSE_PROVIDER: REPLACE_WITH_PROVIDER
-          GOOSE_MODEL: REPLACE_WITH_MODEL
+          mkdir -p ~/.config/bcaip
+          cat <<EOF > ~/.config/bcaip/config.yaml
+          BCAIP_PROVIDER: REPLACE_WITH_PROVIDER
+          BCAIP_MODEL: REPLACE_WITH_MODEL
           keyring: false
           EOF
 ```
 
 #### Pinning goose versions in CI/CD
 
-In CI/CD, we recommend pinning a specific goose version with `GOOSE_VERSION` for reproducible runs. This also avoids 404 errors when downloading the goose CLI binary assets if the `stable` release tag doesn’t include them.
+In CI/CD, we recommend pinning a specific goose version with `BCAIP_VERSION` for reproducible runs. This also avoids 404 errors when downloading the goose CLI binary assets if the `stable` release tag doesn’t include them.
 
 Relevant installer options for CI:
-- `GOOSE_VERSION`: the version to pin the install to (both `1.21.1` and `v1.21.1` formats are supported)
-- `GOOSE_BIN_DIR`: install directory (make sure this directory is on `PATH`)
+- `BCAIP_VERSION`: the version to pin the install to (both `1.21.1` and `v1.21.1` formats are supported)
+- `BCAIP_BIN_DIR`: install directory (make sure this directory is on `PATH`)
 - `CONFIGURE=false`: skip interactive `goose configure` flow
 
 :::info Replacements
@@ -213,7 +213,7 @@ Now, run goose with the formatted instructions and clean the output by removing 
             # Remove ANSI color codes
             sed -E 's/\x1B\[[0-9;]*[mK]//g' | \
             # Remove session/logging lines
-            grep -v "logging to /home/runner/.config/goose/sessions/" | \
+            grep -v "logging to /home/runner/.config/bcaip/sessions/" | \
             grep -v "^starting session" | \
             grep -v "^Closing session" | \
             # Trim trailing whitespace

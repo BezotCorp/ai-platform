@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import type { ProviderDeviceCodeNotificationUnstable } from '@aaif/goose-acp-client';
+import type { ProviderDeviceCodeNotificationUnstable } from '@bezotcorp/bcaip-acp-client';
 
 export function useProviderDeviceCode(providerId: string) {
   const [deviceCode, setDeviceCode] = useState<ProviderDeviceCodeNotificationUnstable | null>(

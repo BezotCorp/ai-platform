@@ -85,7 +85,7 @@ Wraps `pi-acp`, an ACP adapter for Pi. Uses your existing Pi installation.
 
    Set the provider environment variable:
    ```bash
-   export GOOSE_PROVIDER=amp-acp
+   export BCAIP_PROVIDER=amp-acp
    ```
 
    Or configure through the goose CLI using `goose configure`.
@@ -106,7 +106,7 @@ Wraps `pi-acp`, an ACP adapter for Pi. Uses your existing Pi installation.
 
    Set the provider environment variable:
    ```bash
-   export GOOSE_PROVIDER=claude-acp
+   export BCAIP_PROVIDER=claude-acp
    ```
 
    Or configure through the goose CLI using `goose configure`:
@@ -158,8 +158,8 @@ Wraps `pi-acp`, an ACP adapter for Pi. Uses your existing Pi installation.
 
    Set the provider and use `current` to let Codex choose its default model:
    ```bash
-   export GOOSE_PROVIDER=codex-acp
-   export GOOSE_MODEL=current
+   export BCAIP_PROVIDER=codex-acp
+   export BCAIP_MODEL=current
    ```
 
    Or configure through the goose CLI using `goose configure`:
@@ -195,7 +195,7 @@ Replacing the npm package does not change `~/.codex` or require recreating your 
 
    Set the provider environment variable:
    ```bash
-   export GOOSE_PROVIDER=pi-acp
+   export BCAIP_PROVIDER=pi-acp
    ```
 
    Or configure through the goose CLI using `goose configure`.
@@ -213,13 +213,13 @@ goose session
 Extensions configured via `--with-extension` or `--with-streamable-http-extension` are passed through to the ACP agent:
 
 ```bash
-GOOSE_PROVIDER=claude-acp goose run \
+BCAIP_PROVIDER=claude-acp goose run \
   --with-extension 'npx -y @modelcontextprotocol/server-everything' \
   -t 'Use the echo tool to say hello'
 ```
 
 ```bash
-GOOSE_PROVIDER=codex-acp goose run \
+BCAIP_PROVIDER=codex-acp goose run \
   --with-streamable-http-extension 'https://mcp.kiwi.com' \
   -t 'Search for flights from BKI to SYD tomorrow'
 ```
@@ -230,24 +230,24 @@ GOOSE_PROVIDER=codex-acp goose run \
 
 | Environment Variable | Description       | Default   |
 |----------------------|-------------------|-----------|
-| `GOOSE_PROVIDER`     | Set to `amp-acp`  | None      |
-| `GOOSE_MODEL`        | Model to use      | `current` |
-| `GOOSE_MODE`         | Permission mode   | `auto`    |
+| `BCAIP_PROVIDER`     | Set to `amp-acp`  | None      |
+| `BCAIP_MODEL`        | Model to use      | `current` |
+| `BCAIP_MODE`         | Permission mode   | `auto`    |
 
 ### Claude ACP Configuration
 
 | Environment Variable | Description         | Default   |
 |----------------------|---------------------|-----------|
-| `GOOSE_PROVIDER`     | Set to `claude-acp` | None      |
-| `GOOSE_MODEL`        | Model to use        | `default` |
-| `GOOSE_MODE`         | Permission mode     | `auto`    |
+| `BCAIP_PROVIDER`     | Set to `claude-acp` | None      |
+| `BCAIP_MODEL`        | Model to use        | `default` |
+| `BCAIP_MODE`         | Permission mode     | `auto`    |
 
 **Known Models:**
 - `default` (opus)
 - `sonnet`
 - `haiku`
 
-**Permission Modes (`GOOSE_MODE`):**
+**Permission Modes (`BCAIP_MODE`):**
 
 | Mode            | Session Mode        | Behavior                                              |
 |-----------------|---------------------|-------------------------------------------------------|
@@ -262,13 +262,13 @@ See [claude-agent-acp](https://github.com/agentclientprotocol/claude-agent-acp) 
 
 | Environment Variable | Description        | Default   |
 |----------------------|--------------------|-----------|
-| `GOOSE_PROVIDER`     | Set to `codex-acp` | None      |
-| `GOOSE_MODEL`        | Model to use       | `current` |
-| `GOOSE_MODE`         | Permission mode    | `auto`    |
+| `BCAIP_PROVIDER`     | Set to `codex-acp` | None      |
+| `BCAIP_MODEL`        | Model to use       | `current` |
+| `BCAIP_MODE`         | Permission mode    | `auto`    |
 
 Codex ACP reports its available models dynamically. Keep `current` to use Codex's default, or select a discovered model explicitly.
 
-**Permission Modes (`GOOSE_MODE`):**
+**Permission Modes (`BCAIP_MODE`):**
 
 | goose mode      | Codex ACP mode      |
 |-----------------|---------------------|
@@ -283,9 +283,9 @@ See [codex-acp](https://github.com/agentclientprotocol/codex-acp) for session mo
 
 | Environment Variable | Description      | Default   |
 |----------------------|------------------|-----------|
-| `GOOSE_PROVIDER`     | Set to `pi-acp`  | None      |
-| `GOOSE_MODEL`        | Model to use     | `current` |
-| `GOOSE_MODE`         | Permission mode  | `auto`    |
+| `BCAIP_PROVIDER`     | Set to `pi-acp`  | None      |
+| `BCAIP_MODEL`        | Model to use     | `current` |
+| `BCAIP_MODE`         | Permission mode  | `auto`    |
 
 ## Error Handling
 

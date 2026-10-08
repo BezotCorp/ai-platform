@@ -19,25 +19,26 @@
 //!
 //! These are inherent to text-based tool emulation. Models with native tool-calling
 //! support should use the `inference_native_tools` path instead.
-
+use crate::llamacpp::StopSuffixTrimmer;
 use crate::llamacpp::inference_engine::{
-    GenerationContext, StopSuffixTrimmer, TokenAction, generation_loop, prepare_generation,
+    GenerationContext, TokenAction, generation_loop, prepare_generation,
 };
 use crate::thinking_output::ThinkingOutputFilter;
 use crate::tool_emulation::{EmulatorAction, StreamingEmulatorParser};
-use crate::{StreamSender, finalize_usage};
+use crate::{StreamSender, finalize_usage, prompt_template};
 use bcaip_provider_types::conversations::{Message, MessageContent};
 use bcaip_provider_types::errors::ProviderError;
 use rmcp::model::{CallToolRequestParams, Tool};
 use serde_json::json;
 use std::borrow::Cow;
+use std::env;
 use uuid::Uuid;
 
 const SHELL_TOOL: &str = "developer__shell";
 const CODE_EXECUTION_TOOL: &str = "code_execution__execute_typescript";
 
 pub(crate) fn load_tiny_model_prompt() -> String {
-    use std::env;
+    use env;
     let os = if cfg!(target_os = "macos") {
         "macos"
     } else if cfg!(target_os = "linux") {
@@ -60,9 +61,9 @@ pub(crate) fn load_tiny_model_prompt() -> String {
         "shell": shell,
     });
 
-    crate::prompt_template::render_template("tiny_model_system.md", &context).unwrap_or_else(|e| {
+    prompt_template::render_template("tiny_model_system.md", &context).unwrap_or_else(|e| {
         tracing::warn!("Failed to load tiny_model_system.md: {:?}", e);
-        "You are Goose, an AI assistant. You can execute shell commands by starting lines with $."
+        "You are BCAIP, an AI assistant. You can execute shell commands by starting lines with $."
             .to_string()
     })
 }

@@ -26,7 +26,7 @@ impl ToolRequest {
         if let Some(extension_name) = self
             .tool_meta
             .as_ref()
-            .and_then(|meta| meta.get("goose_extension"))
+            .and_then(|meta| meta.get("bcaip_extension"))
             .and_then(serde_json::Value::as_str)
         {
             parts.extension_name = Some(extension_name);

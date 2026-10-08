@@ -1,6 +1,6 @@
 use anstream::println;
+use bcaip::recipe::{BUILT_IN_RECIPE_DIR_PARAM, Recipe};
 use console::style;
-use goose::recipe::{BUILT_IN_RECIPE_DIR_PARAM, Recipe};
 use std::collections::HashMap;
 
 pub fn print_recipe_explanation(recipe: &Recipe) {

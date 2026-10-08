@@ -1,0 +1,29 @@
+{
+  "name": "@bezotcorp/bcaip-binary-win32-x64",
+  "version": "1.53.0",
+  "description": "BCAIP binary for Windows x64",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/BezotCorp/ai-platform.git"
+  },
+  "keywords": [
+    "bcaip",
+    "ai",
+    "agent",
+    "binary"
+  ],
+  "os": [
+    "win32"
+  ],
+  "cpu": [
+    "x64"
+  ],
+  "bin": {
+    "bcaip-binary-win32-x64": "./bin/bcaip.exe"
+  },
+  "files": [
+    "bin/bcaip.exe"
+  ],
+  "type": "module"
+}

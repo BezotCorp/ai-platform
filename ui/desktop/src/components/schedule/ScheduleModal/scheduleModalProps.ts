@@ -1,4 +1,4 @@
-import type { ScheduledJobDto } from '@aaif/goose-acp-client';
+import type { ScheduledJobDto } from '@bezotcorp/bcaip-acp-client';
 import type { NewSchedulePayload } from '../ScheduleModal/newSchedulePayload';
 
 export interface ScheduleModalProps {

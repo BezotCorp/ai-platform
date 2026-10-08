@@ -51,7 +51,7 @@ instructions: |
 
    2. **goose-cli-commands.md** - The target documentation file:
       - Located at: ${CLI_COMMANDS_PATH} (environment variable)
-      - Default: ${GOOSE_REPO}/documentation/docs/guides/goose-cli-commands.md
+      - Default: ${BCAIP_REPO}/documentation/docs/guides/goose-cli-commands.md
       - Contains: Complete CLI reference documentation
 
    3. **update-summary.md** - Output file for change summary:
@@ -185,14 +185,14 @@ instructions: |
    ## File Locations Summary
 
    - Input 1: ./cli-changes.md (change documentation)
-   - Input 2: ${CLI_COMMANDS_PATH} or ${GOOSE_REPO}/documentation/docs/guides/goose-cli-commands.md
+   - Input 2: ${CLI_COMMANDS_PATH} or ${BCAIP_REPO}/documentation/docs/guides/goose-cli-commands.md
    - Output 1: Same as Input 2 (updated in place)
    - Output 2: ./update-summary.md (change summary)
 
    ## Environment Variables
 
    - CLI_COMMANDS_PATH: Full path to goose-cli-commands.md file (overrides default)
-   - GOOSE_REPO: Path to goose repository (used if CLI_COMMANDS_PATH not set)
+   - BCAIP_REPO: Path to goose repository (used if CLI_COMMANDS_PATH not set)
 
    Start by reading both input files, then apply the updates and generate the summary.
 

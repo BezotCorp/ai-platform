@@ -1,5 +1,5 @@
 //! Providers for the scenario tests. Keep in sync with
-//! goose/crates/goose/src/providers/factory.rs
+//! bcaip/crates/bcaip/src/providers/factory.rs
 
 use std::{
     collections::HashMap,

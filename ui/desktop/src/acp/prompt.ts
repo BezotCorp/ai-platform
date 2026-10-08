@@ -2,7 +2,7 @@ import { methods, type ContentBlock, type PromptResponse } from '@agentclientpro
 import type {
   SteerSessionRequestUnstable,
   SteerSessionResponseUnstable,
-} from '@aaif/goose-acp-client';
+} from '@bezotcorp/bcaip-acp-client';
 import type { Message } from '../types/message';
 import { getAcpClient } from './acpConnection';
 
@@ -15,7 +15,7 @@ export async function acpPromptSession(
   return client.connection.agent.request(methods.agent.session.prompt, {
     sessionId,
     prompt: messageToAcpPromptContent(message),
-    _meta: { goose: { unrolledAgentLoop: !useLegacyAgentLoop } },
+    _meta: { bcaip: { unrolledAgentLoop: !useLegacyAgentLoop } },
   });
 }
 
@@ -30,7 +30,7 @@ export async function acpSteerSession(
   expectedRunId: string
 ): Promise<SteerSessionResponseUnstable> {
   const client = await getAcpClient();
-  return client.goose.sessionSteerUnstable({
+  return client.bcaip.sessionSteerUnstable({
     sessionId,
     expectedRunId,
     prompt: messageToAcpPromptContent(message) as unknown as SteerSessionRequestUnstable['prompt'],

@@ -63,12 +63,12 @@ from JavaScript. Some things differ from native:
   `Sync`, and neither does `MessageStream`. So you can await JavaScript promises
   and hold host handles directly. Implement the traits with
   `#[async_trait(?Send)]`. The bounds are `MaybeSend` and `MaybeSync` from
-  `goose_provider_types::maybe_send`, which are the real `Send` and `Sync`
+  `bcaip_provider_types::maybe_send`, which are the real `Send` and `Sync`
   natively.
 - `SyncTool`s run inline instead of on a blocking thread, so cancellation cannot
   interrupt one that has started.
 - `ProviderRetry` waits between attempts on the host's `setTimeout` instead of
   tokio's timer, so retries work without a tokio runtime.
 
-The reference assembly of these pieces is `goose::agents::state_machine` in the
-[`goose`](../goose) crate.
+The reference assembly of these pieces is `bcaip::agents::state_machine` in the
+[`bcaip`](../bcaip) crate.

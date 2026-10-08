@@ -18,7 +18,7 @@ const uvBinaryHashes = {
 };
 
 // Platform-specific file patterns
-const windowsFiles = ['*.exe', '*.dll', '*.cmd', 'goose-npm/**/*'];
+const windowsFiles = ['*.exe', '*.dll', '*.cmd', 'bcaip-npm/**/*'];
 
 // Helper function to check if file matches patterns
 function matchesPattern(filename, patterns) {
@@ -116,7 +116,7 @@ async function ensureWindowsUvBinaries() {
     return;
   }
 
-  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'goose-uv-'));
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'bcaip-uv-'));
   const zipPath = path.join(tmpDir, 'uv.zip');
   const extractDir = path.join(tmpDir, 'extract');
   fs.mkdirSync(extractDir, { recursive: true });

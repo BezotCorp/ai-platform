@@ -1,5 +1,5 @@
 //! The roaming node: owns the iroh [`Endpoint`] and [`Router`], hosts agents
-//! over the `goose-acp/1` ALPN, and dials remote agents as a client.
+//! over the `bcaip-acp/1` ALPN, and dials remote agents as a client.
 
 use futures::io::{AsyncRead, AsyncWrite};
 use iroh::{
@@ -20,8 +20,8 @@ use crate::{
 };
 use crate::{connection_card::ConnectionCard, host_ack::HostAck};
 use crate::{relay::RelaySettings, trust::TrustBook};
-/// ALPN identifying the goose ACP-over-iroh protocol.
-pub const ROAMING_ACP_ALPN: &[u8] = b"goose-acp/1";
+/// ALPN identifying the BCAIP ACP-over-iroh protocol.
+pub const ROAMING_ACP_ALPN: &[u8] = b"bcaip-acp/1";
 
 /// Cap on the handshake phase (open bi-stream + read the client hello). A peer
 /// that connects and then stalls without completing the handshake is dropped
@@ -33,7 +33,7 @@ const HANDSHAKE_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(10
 const DEFAULT_REVOCATION_POLL: std::time::Duration = std::time::Duration::from_secs(2);
 
 /// Serves an accepted, authorized ACP byte stream. Implemented by the
-/// integration layer (e.g. `goose-cli`) so this crate does not depend on the
+/// integration layer (e.g. `bcaip-cli`) so this crate does not depend on the
 /// concrete agent/session machinery.
 pub trait AcpStreamServer: Send + Sync + 'static {
     /// Drive the ACP protocol to completion over the given stream for the

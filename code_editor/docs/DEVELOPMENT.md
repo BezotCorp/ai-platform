@@ -116,7 +116,7 @@ This will:
 1. Build the extension
 2. Build the webview
 3. Compile Tailwind CSS
-4. Package with `vsce`
+4. Package with `pnpm exec vsce`
 
 ## Commit Message Guidelines
 

@@ -80,7 +80,7 @@ Type `@` in the chat input to search your workspace. Select a file to add it as 
 
 Goose reads its provider and model configuration from:
 
-- **macOS/Linux**: `~/.config/goose/config.yaml`
+- **macOS/Linux**: `~/.config/bcaip/config.yaml`
 - **Windows**: `%APPDATA%\Block\goose\config\config.yaml`
 
 ## Commands

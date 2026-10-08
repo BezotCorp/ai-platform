@@ -144,7 +144,7 @@ export const aiTools = {
   }),
   search_github: tool({
     description:
-      'Search GitHub issues and pull requests in the aaif-goose/goose repository. Use this to find bugs, feature requests, or discussions. Results can be sorted by recency, relevance, or comment count.',
+      'Search GitHub issues and pull requests in the BezotCorp/ai-platform repository. Use this to find bugs, feature requests, or discussions. Results can be sorted by recency, relevance, or comment count.',
     inputSchema: z.object({
       query: z
         .string()
@@ -191,7 +191,7 @@ export const aiTools = {
   }),
   get_github_issue_or_pr: tool({
     description:
-      'Get detailed information about a specific GitHub issue or pull request in the aaif-goose/goose repository, including its description and comments.',
+      'Get detailed information about a specific GitHub issue or pull request in the BezotCorp/ai-platform repository, including its description and comments.',
     inputSchema: z.object({
       issueNumber: z.number().describe('The issue or pull request number'),
       includeComments: z.boolean().optional().describe('Whether to include comments in the response (default: true)'),

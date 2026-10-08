@@ -1,4 +1,4 @@
-use crate::backend::BackendLoadedModel;
+use crate::local_generation_request::BackendLoadedModel;
 use safemlx_lm::models::LoadedModel;
 use safemlx_lm_utils::tokenizer::Tokenizer;
 use std::{any::Any, path::PathBuf};

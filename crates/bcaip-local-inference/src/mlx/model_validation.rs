@@ -1,11 +1,12 @@
-use super::{mlx_error::mlx_error, snapshot_validation::validate_snapshot_files};
-use goose_provider_types::errors::ProviderError;
+use crate::mlx::mlx_error::mlx_error;
+use crate::mlx::snapshot_validation::validate_snapshot_files;
+use bcaip_provider_types::errors::ProviderError;
 use safemlx_lm::models::LoadedModel;
 use serde_json::json;
 use std::path::{Path, PathBuf};
 
 pub(crate) fn validate_model_directory(path: &Path) -> Result<(), ProviderError> {
-    super::validate_snapshot_files(path)?;
+    validate_snapshot_files(path)?;
     let config_path = path.join("config.json");
     let config = std::fs::read(&config_path).map_err(mlx_error)?;
     let config: serde_json::Value = serde_json::from_slice(&config).map_err(mlx_error)?;

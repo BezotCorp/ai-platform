@@ -21,13 +21,13 @@ async fn run() -> Result<()> {
     }
 
     #[cfg(feature = "online-model-meta")]
-    goose::model_catalog::initialize();
+    bcaip::model_catalog::initialize();
 
     let result = cli().await;
 
     #[cfg(feature = "otel")]
-    if goose::otel::otlp::is_otlp_initialized() {
-        goose::otel::otlp::shutdown_otlp();
+    if bcaip::otel::otlp::is_otlp_initialized() {
+        bcaip::otel::otlp::shutdown_otlp();
     }
 
     result
@@ -38,7 +38,7 @@ fn main() -> Result<()> {
     enable_windows_vt_processing();
 
     let handle = std::thread::Builder::new()
-        .name("goose-cli-main".to_string())
+        .name("bcaip-cli-main".to_string())
         .stack_size(8 * 1024 * 1024)
         .spawn(|| {
             let runtime = tokio::runtime::Builder::new_multi_thread()
@@ -47,9 +47,9 @@ fn main() -> Result<()> {
                 .expect("Failed to build Tokio runtime");
             runtime.block_on(run())
         })
-        .map_err(|e| anyhow::anyhow!("Failed to spawn goose-cli main thread: {}", e))?;
+        .map_err(|e| anyhow::anyhow!("Failed to spawn bcaip-cli main thread: {}", e))?;
 
     handle
         .join()
-        .map_err(|_| anyhow::anyhow!("goose-cli main thread panicked"))?
+        .map_err(|_| anyhow::anyhow!("bcaip-cli main thread panicked"))?
 }

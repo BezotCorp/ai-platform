@@ -1,0 +1,4 @@
+ContentIndex(
+    site: "site/index.ron",
+    blog: "blog/index.ron",
+)

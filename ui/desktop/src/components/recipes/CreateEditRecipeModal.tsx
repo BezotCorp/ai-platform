@@ -155,7 +155,7 @@ export default function CreateEditRecipeModal({
         jsonSchema: recipe.response?.json_schema
           ? JSON.stringify(recipe.response.json_schema, null, 2)
           : '',
-        model: recipe.settings?.goose_model ?? undefined,
+        model: recipe.settings?.bcaip_model ?? undefined,
         provider: recipe.settings?.goose_provider ?? undefined,
         extensions: recipe.extensions || undefined,
         subRecipes: (recipe.sub_recipes || []).map((sr) => ({
@@ -293,9 +293,9 @@ export default function CreateEditRecipeModal({
       ...(recipe?.settings || {}),
     };
     if (model !== undefined) {
-      mergedSettings.goose_model = model || null;
-    } else if ('goose_model' in mergedSettings) {
-      delete mergedSettings.goose_model;
+      mergedSettings.bcaip_model = model || null;
+    } else if ('bcaip_model' in mergedSettings) {
+      delete mergedSettings.bcaip_model;
     }
     if (provider !== undefined) {
       mergedSettings.goose_provider = provider || null;

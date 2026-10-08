@@ -21,7 +21,7 @@ describe('ACP session extensions', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(getAcpClient).mockResolvedValue({
-      goose: {
+      bcaip: {
         sessionExtensionsListUnstable: list,
         sessionExtensionsRemoveUnstable: remove,
       },

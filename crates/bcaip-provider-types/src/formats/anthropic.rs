@@ -770,7 +770,7 @@ pub fn thinking_effort(model_config: &ModelConfig) -> ThinkingEffort {
 
 fn adaptive_effort_wire(provider_name: &str, model_config: &ModelConfig) -> String {
     let effort = adaptive_output_effort(model_config);
-    // Meta Messages accepts low, medium, high, and xhigh. goose's max maps to xhigh.
+    // Meta Messages accepts low, medium, high, and xhigh. BCAIP's max maps to xhigh.
     if provider_name == "muse_code" && effort == ThinkingEffort::Max {
         return "xhigh".to_string();
     }

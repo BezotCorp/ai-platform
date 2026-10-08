@@ -1,4 +1,4 @@
-import type { AgentMention, AvailableCommand } from '@aaif/goose-acp-client';
+import type { AgentMention, AvailableCommand } from '@bezotcorp/bcaip-acp-client';
 
 import { getAcpClient } from './acpConnection';
 
@@ -54,7 +54,7 @@ export function agentMentionToDisplayItem(agent: AgentMention): AutocompleteDisp
 
 export async function listSlashCommandItems(cwd: string): Promise<AutocompleteDisplayItem[]> {
   const client = await getAcpClient();
-  const response = await client.goose.slashCommandsListUnstable(cwdParam(cwd));
+  const response = await client.bcaip.slashCommandsListUnstable(cwdParam(cwd));
   return response.availableCommands
     .map(availableCommandToDisplayItem)
     .filter((item): item is AutocompleteDisplayItem => item !== null);
@@ -65,7 +65,7 @@ export async function listAgentMentionItems(
   sessionId?: string
 ): Promise<AutocompleteDisplayItem[]> {
   const client = await getAcpClient();
-  const response = await client.goose.agentMentionsListUnstable({
+  const response = await client.bcaip.agentMentionsListUnstable({
     ...cwdParam(cwd),
     ...(sessionId ? { sessionId } : {}),
   });

@@ -23,4 +23,4 @@ This script performs two operations by default:
    - Shows changed/added/removed mappings
    - Writes to: `crates/bcaip-provider-types/src/canonical/data/canonical_mapping_report.json`
 
-The script is currently built from `crates/goose/src/bin/build_canonical_models.rs` and writes into this crate's `src/canonical/data` directory.
+The script is currently built from `crates/bcaip/src/bin/build_canonical_models.rs` and writes into this crate's `src/canonical/data` directory.

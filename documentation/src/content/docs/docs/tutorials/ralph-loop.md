@@ -22,13 +22,13 @@ In this tutorial, we'll use Ralph Loop to build a simple Electron-based browser 
 Copy and paste this in your terminal to download the Ralph Loop recipes:
 
 ```bash
-mkdir -p ~/.config/goose/recipes
+mkdir -p ~/.config/bcaip/recipes
 
-curl -sL https://raw.githubusercontent.com/aaif-goose/goose/main/documentation/src/pages/recipes/data/recipes/ralph-loop.sh -o ~/.config/goose/recipes/ralph-loop.sh
-curl -sL https://raw.githubusercontent.com/aaif-goose/goose/main/documentation/src/pages/recipes/data/recipes/ralph-work.yaml -o ~/.config/goose/recipes/ralph-work.yaml
-curl -sL https://raw.githubusercontent.com/aaif-goose/goose/main/documentation/src/pages/recipes/data/recipes/ralph-review.yaml -o ~/.config/goose/recipes/ralph-review.yaml
+curl -sL https://raw.githubusercontent.com/BezotCorp/ai-platform/main/documentation/src/pages/recipes/data/recipes/ralph-loop.sh -o ~/.config/bcaip/recipes/ralph-loop.sh
+curl -sL https://raw.githubusercontent.com/BezotCorp/ai-platform/main/documentation/src/pages/recipes/data/recipes/ralph-work.yaml -o ~/.config/bcaip/recipes/ralph-work.yaml
+curl -sL https://raw.githubusercontent.com/BezotCorp/ai-platform/main/documentation/src/pages/recipes/data/recipes/ralph-review.yaml -o ~/.config/bcaip/recipes/ralph-review.yaml
 
-chmod +x ~/.config/goose/recipes/ralph-loop.sh
+chmod +x ~/.config/bcaip/recipes/ralph-loop.sh
 ```
 
 </details>
@@ -42,14 +42,14 @@ Ralph Loop runs your agent multiple times in a loop (up to 10 iterations by defa
 To start the process, run the script from your terminal and provide your prompt in quotes. This command triggers the first iteration of the worker and reviewer cycle:
 
 ```bash
-~/.config/goose/recipes/ralph-loop.sh "Create a simple browser using Electron and React"
+~/.config/bcaip/recipes/ralph-loop.sh "Create a simple browser using Electron and React"
 ```
 
 :::tip For Complex Tasks
 You can pass a file path instead of a string. This works well for PRDs, detailed specs, or any multi-step task that benefits from iterative development:
 
 ```bash
-~/.config/goose/recipes/ralph-loop.sh ./prd.md
+~/.config/bcaip/recipes/ralph-loop.sh ./prd.md
 ```
 :::
 
@@ -72,8 +72,8 @@ Continue? [y/N]: y
 
 | Variable | Description |
 |--------|-------------|
-| Worker model | The model that does the actual coding work. Defaults to `GOOSE_MODEL` if set. |
-| Worker provider | The provider for the worker model (e.g., `openai`, `anthropic`). Defaults to `GOOSE_PROVIDER` if set. |
+| Worker model | The model that does the actual coding work. Defaults to `BCAIP_MODEL` if set. |
+| Worker provider | The provider for the worker model (e.g., `openai`, `anthropic`). Defaults to `BCAIP_PROVIDER` if set. |
 | Reviewer model | The model that reviews the work. Should be different from the worker for best results. |
 | Reviewer provider | The provider for the reviewer model. |
 | Max iterations | How many work/review cycles before giving up. Defaults to 10. |
@@ -86,7 +86,7 @@ RALPH_WORKER_MODEL="gpt-4o" \
 RALPH_WORKER_PROVIDER="openai" \
 RALPH_REVIEWER_MODEL="claude-sonnet-4-20250514" \
 RALPH_REVIEWER_PROVIDER="anthropic" \
-~/.config/goose/recipes/ralph-loop.sh "Create a simple browser using Electron and React"
+~/.config/bcaip/recipes/ralph-loop.sh "Create a simple browser using Electron and React"
 ```
 :::
 
@@ -189,13 +189,13 @@ The Ralph Loop uses three files: a bash script that orchestrates the work/review
 #   RALPH_REVIEWER_MODEL  - Model for review phase (prompts if not set)
 #   RALPH_REVIEWER_PROVIDER - Provider for review phase (prompts if not set)
 #   RALPH_MAX_ITERATIONS  - Max iterations (default: 10)
-#   RALPH_RECIPE_DIR      - Recipe directory (default: ~/.config/goose/recipes)
+#   RALPH_RECIPE_DIR      - Recipe directory (default: ~/.config/bcaip/recipes)
 #
 
 set -e
 
 INPUT="$1"
-RECIPE_DIR="${RALPH_RECIPE_DIR:-$HOME/.config/goose/recipes}"
+RECIPE_DIR="${RALPH_RECIPE_DIR:-$HOME/.config/bcaip/recipes}"
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -212,8 +212,8 @@ fi
 
 # Function to prompt for settings
 prompt_for_settings() {
-    local default_model="${GOOSE_MODEL:-}"
-    local default_provider="${GOOSE_PROVIDER:-}"
+    local default_model="${BCAIP_MODEL:-}"
+    local default_provider="${BCAIP_PROVIDER:-}"
     
     # Worker model
     if [ -n "$default_model" ]; then
@@ -343,7 +343,7 @@ for i in $(seq 1 "$MAX_ITERATIONS"); do
     echo ""
     echo -e "${YELLOW}▶ WORK PHASE${NC}"
     
-    GOOSE_PROVIDER="$WORKER_PROVIDER" GOOSE_MODEL="$WORKER_MODEL" goose run --recipe "$RECIPE_DIR/ralph-work.yaml" || {
+    BCAIP_PROVIDER="$WORKER_PROVIDER" BCAIP_MODEL="$WORKER_MODEL" goose run --recipe "$RECIPE_DIR/ralph-work.yaml" || {
         echo -e "${RED}✗ WORK PHASE FAILED${NC}"
         exit 1
     }
@@ -358,7 +358,7 @@ for i in $(seq 1 "$MAX_ITERATIONS"); do
     echo ""
     echo -e "${YELLOW}▶ REVIEW PHASE${NC}"
     
-    GOOSE_PROVIDER="$REVIEWER_PROVIDER" GOOSE_MODEL="$REVIEWER_MODEL" goose run --recipe "$RECIPE_DIR/ralph-review.yaml" || {
+    BCAIP_PROVIDER="$REVIEWER_PROVIDER" BCAIP_MODEL="$REVIEWER_MODEL" goose run --recipe "$RECIPE_DIR/ralph-review.yaml" || {
         echo -e "${RED}✗ REVIEW PHASE FAILED${NC}"
         exit 1
     }

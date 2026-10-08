@@ -1,4 +1,4 @@
-name: Python GDK Wheels
+name: Python BDK Wheels
 
 on:
   workflow_call:
@@ -12,17 +12,21 @@ jobs:
     name: Build wheel (${{ matrix.name }})
     runs-on: ${{ matrix.os }}
     container: ${{ matrix.container || null }}
+
     strategy:
       fail-fast: false
       matrix:
         include:
           - name: macos-arm64
             os: macos-14
+
           - name: macos-x86_64
             os: macos-15-intel
+
           - name: linux-x86_64
             os: ubuntu-latest
             container: quay.io/pypa/manylinux_2_28_x86_64@sha256:441c35fdc6ee809ff9260894f8468ab4fea8c15dc880f8700a3f81b7922c1cda
+
           - name: windows-x86_64
             os: windows-latest
 
@@ -63,33 +67,43 @@ jobs:
 
       - name: Build wheel
         shell: bash
-        run: just --justfile crates/goose-sdk/justfile python-wheel
+        run: just --justfile crates/bcaip-sdk/justfile python-wheel
 
       - name: Repair Linux wheel
         if: runner.os == 'Linux'
         shell: bash
         run: |
           python3 -m pip install auditwheel
-          mkdir -p crates/goose-sdk/python/wheelhouse
-          auditwheel repair --plat manylinux_2_28_x86_64 -w crates/goose-sdk/python/wheelhouse crates/goose-sdk/python/dist/*.whl
-          rm crates/goose-sdk/python/dist/*.whl
-          mv crates/goose-sdk/python/wheelhouse/*.whl crates/goose-sdk/python/dist/
+          mkdir -p crates/bcaip-sdk/python/wheelhouse
+          auditwheel repair \
+            --plat manylinux_2_28_x86_64 \
+            -w crates/bcaip-sdk/python/wheelhouse \
+            crates/bcaip-sdk/python/dist/*.whl
+
+          rm crates/bcaip-sdk/python/dist/*.whl
+          mv crates/bcaip-sdk/python/wheelhouse/*.whl crates/bcaip-sdk/python/dist/
 
       - name: Smoke test wheel
         shell: bash
         run: |
           python -m venv .venv-wheel-test
+
           if [ "${{ runner.os }}" = "Windows" ]; then
             python_bin=".venv-wheel-test/Scripts/python.exe"
           else
             python_bin=".venv-wheel-test/bin/python"
           fi
-          UV_NO_CONFIG=1 uv pip install --default-index https://pypi.org/simple --python "$python_bin" crates/goose-sdk/python/dist/*.whl
-          "$python_bin" -c 'import goose; print(goose.__name__)'
+
+          UV_NO_CONFIG=1 uv pip install \
+            --default-index https://pypi.org/simple \
+            --python "$python_bin" \
+            crates/bcaip-sdk/python/dist/*.whl
+
+          "$python_bin" -c 'import bcaip; print(bcaip.__name__)'
 
       - name: Upload wheel artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
-          name: goose-sdk-wheel-${{ matrix.name }}
-          path: crates/goose-sdk/python/dist/*.whl
+          name: bcaip-sdk-wheel-${{ matrix.name }}
+          path: crates/bcaip-sdk/python/dist/*.whl
           if-no-files-found: error

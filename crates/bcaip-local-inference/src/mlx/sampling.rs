@@ -1,6 +1,6 @@
-use super::mlx_error::mlx_error;
+use crate::mlx::mlx_error::mlx_error;
 use crate::model::ModelSettings;
-use goose_provider_types::errors::ProviderError;
+use bcaip_provider_types::errors::ProviderError;
 use safemlx::{Array, random};
 
 pub(crate) fn sampling(settings: &ModelSettings) -> (f32, Option<u32>) {

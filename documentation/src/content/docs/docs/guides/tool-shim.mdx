@@ -34,7 +34,7 @@ The shim intercepts model responses and converts any text-based tool call format
 ### Enable the shim
 
 ```bash
-export GOOSE_TOOLSHIM=true
+export BCAIP_TOOLSHIM=true
 ```
 
 ### Ollama backend (default)
@@ -46,19 +46,19 @@ Ollama must be installed and running. The default interpreter model is `mistral-
 ollama pull mistral-nemo
 
 # Optional: use a different interpreter model
-export GOOSE_TOOLSHIM_OLLAMA_MODEL=llama3.2
+export BCAIP_TOOLSHIM_OLLAMA_MODEL=llama3.2
 ```
 
 ### Local backend (llama.cpp / built-in inference)
 
-If you're running goose with the built-in local inference backend, you can use it as the interpreter instead of a separate Ollama instance. A model name is required — set either `GOOSE_TOOLSHIM_MODEL` or the `LOCAL_LLM_MODEL` config key, otherwise goose will error on startup:
+If you're running goose with the built-in local inference backend, you can use it as the interpreter instead of a separate Ollama instance. A model name is required — set either `BCAIP_TOOLSHIM_MODEL` or the `LOCAL_LLM_MODEL` config key, otherwise goose will error on startup:
 
 ```bash
-export GOOSE_TOOLSHIM_BACKEND=local
-export GOOSE_TOOLSHIM_MODEL=my-model-name
+export BCAIP_TOOLSHIM_BACKEND=local
+export BCAIP_TOOLSHIM_MODEL=my-model-name
 ```
 
-Valid values for `GOOSE_TOOLSHIM_BACKEND`: `ollama` (default), `local`, `llama.cpp`.
+Valid values for `BCAIP_TOOLSHIM_BACKEND`: `ollama` (default), `local`, `llama.cpp`.
 
 ## Usage examples
 
@@ -66,17 +66,17 @@ Valid values for `GOOSE_TOOLSHIM_BACKEND`: `ollama` (default), `local`, `llama.c
   <Tab label="Ollama as primary provider" default>
 
   ```bash
-  GOOSE_TOOLSHIM=true goose session
+  BCAIP_TOOLSHIM=true goose session
   ```
 
-  Uses `mistral-nemo` as the interpreter. Override with `GOOSE_TOOLSHIM_OLLAMA_MODEL` if needed.
+  Uses `mistral-nemo` as the interpreter. Override with `BCAIP_TOOLSHIM_OLLAMA_MODEL` if needed.
 
   </Tab>
   <Tab label="Custom OpenAI-compatible provider">
 
   ```bash
-  GOOSE_TOOLSHIM=true \
-  GOOSE_TOOLSHIM_OLLAMA_MODEL=llama3.2 \
+  BCAIP_TOOLSHIM=true \
+  BCAIP_TOOLSHIM_OLLAMA_MODEL=llama3.2 \
   goose session
   ```
 
@@ -86,13 +86,13 @@ Valid values for `GOOSE_TOOLSHIM_BACKEND`: `ollama` (default), `local`, `llama.c
   <Tab label="Built-in local inference">
 
   ```bash
-  GOOSE_TOOLSHIM=true \
-  GOOSE_TOOLSHIM_BACKEND=local \
-  GOOSE_TOOLSHIM_MODEL=my-model-name \
+  BCAIP_TOOLSHIM=true \
+  BCAIP_TOOLSHIM_BACKEND=local \
+  BCAIP_TOOLSHIM_MODEL=my-model-name \
   goose session
   ```
 
-  Uses goose's built-in llama.cpp backend as the interpreter. `GOOSE_TOOLSHIM_MODEL` (or `LOCAL_LLM_MODEL` in config) is required — startup fails if neither is set.
+  Uses goose's built-in llama.cpp backend as the interpreter. `BCAIP_TOOLSHIM_MODEL` (or `LOCAL_LLM_MODEL` in config) is required — startup fails if neither is set.
 
   </Tab>
 </Tabs>
@@ -101,16 +101,16 @@ Valid values for `GOOSE_TOOLSHIM_BACKEND`: `ollama` (default), `local`, `llama.c
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `GOOSE_TOOLSHIM` | Enable the tool shim (`true` or `1`) | `false` |
-| `GOOSE_TOOLSHIM_BACKEND` | Interpreter backend: `ollama`, `local`, or `llama.cpp` | `ollama` |
-| `GOOSE_TOOLSHIM_OLLAMA_MODEL` | Ollama model used as the interpreter | `mistral-nemo` |
-| `GOOSE_TOOLSHIM_MODEL` | Model name for the local interpreter backend (required if using `local` backend and `LOCAL_LLM_MODEL` config is not set) | — |
+| `BCAIP_TOOLSHIM` | Enable the tool shim (`true` or `1`) | `false` |
+| `BCAIP_TOOLSHIM_BACKEND` | Interpreter backend: `ollama`, `local`, or `llama.cpp` | `ollama` |
+| `BCAIP_TOOLSHIM_OLLAMA_MODEL` | Ollama model used as the interpreter | `mistral-nemo` |
+| `BCAIP_TOOLSHIM_MODEL` | Model name for the local interpreter backend (required if using `local` backend and `LOCAL_LLM_MODEL` config is not set) | — |
 
 ## Troubleshooting
 
 **Tools suddenly stop working in the middle of a session**
 
-The model may have switched from native tool calls to a text-based format. Enable `GOOSE_TOOLSHIM=true` and restart.
+The model may have switched from native tool calls to a text-based format. Enable `BCAIP_TOOLSHIM=true` and restart.
 
 **The shim is enabled but tools still don't execute**
 
@@ -122,7 +122,7 @@ Check that your interpreter backend is reachable:
 
 Switch to a smaller, faster Ollama model:
 ```bash
-export GOOSE_TOOLSHIM_OLLAMA_MODEL=qwen2.5:3b
+export BCAIP_TOOLSHIM_OLLAMA_MODEL=qwen2.5:3b
 ```
 
 **Model outputs reasoning before tool calls (`<think>` tags)**

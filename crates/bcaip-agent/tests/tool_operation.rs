@@ -146,7 +146,7 @@ async fn dispatches_calls_to_user_defined_tools() {
             .with_tool_request(
                 "call-2",
                 Ok(CallToolRequestParams::new("greet")
-                    .with_arguments(serde_json::from_value(json!({"name": "Goose"})).unwrap())),
+                    .with_arguments(serde_json::from_value(json!({"name": "BCAIP"})).unwrap())),
             ),
     ]);
 
@@ -184,7 +184,7 @@ async fn dispatches_calls_to_user_defined_tools() {
             .as_ref()
             .unwrap()
             .structured_content,
-        Some(json!({"greeting": "Hello, Goose!"}))
+        Some(json!({"greeting": "Hello, BCAIP!"}))
     );
 }
 
@@ -671,7 +671,7 @@ async fn ignores_unavailable_answered_and_externally_dispatched_requests() {
                 "external",
                 Ok(CallToolRequestParams::new("add")),
                 None,
-                Some(json!({"goose.external_dispatch": true})),
+                Some(json!({"bcaip.external_dispatch": true})),
             ),
         Message::user().with_tool_response(
             "answered",

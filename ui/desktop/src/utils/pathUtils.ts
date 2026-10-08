@@ -24,7 +24,7 @@ export function expandTilde(filePath: string): string {
   return filePath;
 }
 
-export function resolveGoosePathRoot(value: string | undefined): string | undefined {
+export function resolveBcaipPathRoot(value: string | undefined): string | undefined {
   const trimmed = value?.trim();
   if (!trimmed) {
     return undefined;
@@ -44,12 +44,12 @@ export function isAbsoluteGoosePath(
   return path.win32.isAbsolute(filePath) && root.length > 1;
 }
 
-export function sanitizeGoosePathRoot(env: { GOOSE_PATH_ROOT?: string }): string | undefined {
-  const pathRoot = resolveGoosePathRoot(env.GOOSE_PATH_ROOT);
+export function sanitizeBcaipPathRoot(env: { BCAIP_PATH_ROOT?: string }): string | undefined {
+  const pathRoot = resolveBcaipPathRoot(env.BCAIP_PATH_ROOT);
   if (pathRoot) {
-    env.GOOSE_PATH_ROOT = pathRoot;
+    env.BCAIP_PATH_ROOT = pathRoot;
   } else {
-    delete env.GOOSE_PATH_ROOT;
+    delete env.BCAIP_PATH_ROOT;
   }
   return pathRoot;
 }

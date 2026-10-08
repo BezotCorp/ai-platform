@@ -1,10 +1,10 @@
-# Building goose for RISC-V (riscv64gc-unknown-linux-gnu)
+# Building bcaip for RISC-V (riscv64gc-unknown-linux-gnu)
 
-This document describes how to build goose-cli for RISC-V 64-bit systems with full V8/code-mode support.
+This document describes how to build bcaip-cli for RISC-V 64-bit systems with full V8/code-mode support.
 
 > [!WARNING]
 > This is an experimental, community-contributed build process. RISC-V is not
-> officially supported by the goose project.
+> officially supported by the bcaip project.
 
 ## Prerequisites
 
@@ -38,7 +38,7 @@ different name.
 
 V8 152.2.0 is the first version with pre-built RISC-V binaries. However:
 
-- Current goose uses v8 145.0.0 via deno_core 0.381.1 (no RISC-V support)
+- Current bcaip uses v8 145.0.0 via deno_core 0.381.1 (no RISC-V support)
 - Upgrading requires patching deno_core and serde_v8 for V8 152 API changes
 - These patches are intrusive and affect all platforms if applied via Cargo.toml patches
 
@@ -89,7 +89,7 @@ rm vendor/serde_v8-0.290.0.crate
 The cloned `vendor/rusty_v8` is itself the `v8` crate at `152.2.0`, so the
 root `[patch.crates-io]` entry points straight at it (see step 6). The
 committed `vendor/v8` shim is not edited, but it must leave the workspace:
-it pulls in `v8-goose`, which declares `links = "rusty_v8"`, and once the
+it pulls in `v8-bcaip`, which declares `links = "rusty_v8"`, and once the
 patch resolves denoland's `v8` 152 (also `links = "rusty_v8"`) a workspace
 containing both fails with "more than one crate with links=rusty_v8". Remove
 `vendor/v8` from `members` and add it to `exclude` (see step 6).
@@ -198,7 +198,7 @@ v8 = { path = "vendor/rusty_v8" }  # was vendor/v8; rusty_v8 is the v8 crate
 # ... existing patches
 ```
 
-### 7. Update crates/goose/Cargo.toml
+### 7. Update crates/bcaip/Cargo.toml
 
 Relax ICU pins:
 
@@ -209,7 +209,7 @@ icu_locale = { version = ">=2.1", default-features = false }
 
 ### 8. RISC-V Update Command Handling (already in repo)
 
-`crates/goose-cli/src/commands/update.rs` already handles RISC-V:
+`crates/bcaip-cli/src/commands/update.rs` already handles RISC-V:
 
 - `asset_name()` includes the riscv64gc-gnu asset name so the function
   compiles on RISC-V (otherwise every branch is cfg-disabled and the body
@@ -253,10 +253,10 @@ Expected changes:
 ### 10. Build
 
 ```bash
-cargo build --release --target riscv64gc-unknown-linux-gnu -p goose-cli --bin goose
+cargo build --release --target riscv64gc-unknown-linux-gnu -p bcaip-cli --bin bcaip
 ```
 
-Output: `target/riscv64gc-unknown-linux-gnu/release/goose`
+Output: `target/riscv64gc-unknown-linux-gnu/release/bcaip`
 
 ## Complete Patch Script
 
@@ -281,10 +281,10 @@ For production PR, consider:
 
 ```bash
 # Check architecture
-file target/riscv64gc-unknown-linux-gnu/release/goose
+file target/riscv64gc-unknown-linux-gnu/release/bcaip
 # Output: ELF 64-bit LSB pie executable, UCB RISC-V
 
 # Test execution (on RISC-V hardware)
-./target/riscv64gc-unknown-linux-gnu/release/goose --version
-./target/riscv64gc-unknown-linux-gnu/release/goose doctor
+./target/riscv64gc-unknown-linux-gnu/release/bcaip --version
+./target/riscv64gc-unknown-linux-gnu/release/bcaip doctor
 ```

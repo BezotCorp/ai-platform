@@ -144,7 +144,7 @@ pub async fn refresh_remote_catalog(url: &str, cache_dir: &Path) -> Result<bool>
     let etag_path = cache_dir.join(ETAG_FILENAME);
     let mut request = client.get(url).timeout(Duration::from_secs(15)).header(
         "User-Agent",
-        "goose/model-catalog (https://github.com/aaif-goose/goose)",
+        "bcaip/model-catalog (https://github.com/BezotCorp/ai-platform)",
     );
     if let Ok(etag) = std::fs::read_to_string(&etag_path) {
         request = request.header(IF_NONE_MATCH, etag);

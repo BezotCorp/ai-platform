@@ -1,4 +1,4 @@
-use goose::checks::{Check, DiscoveredReview};
+use bcaip::checks::{Check, DiscoveredReview};
 use std::fmt::Write;
 
 /// The default review prompt embedded in the binary.

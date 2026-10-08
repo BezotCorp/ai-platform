@@ -27,12 +27,12 @@ describe('LiveVoiceSettings', () => {
 
     const toggle = screen.getByRole('switch', { name: 'Live voice' });
     await waitFor(() => expect(toggle).toBeChecked());
-    expect(read).toHaveBeenCalledWith('GOOSE_LIVE_VOICE_ENABLED', false);
+    expect(read).toHaveBeenCalledWith('BCAIP_LIVE_VOICE_ENABLED', false);
 
     fireEvent.click(toggle);
 
     await waitFor(() =>
-      expect(upsert).toHaveBeenCalledWith('GOOSE_LIVE_VOICE_ENABLED', false, false)
+      expect(upsert).toHaveBeenCalledWith('BCAIP_LIVE_VOICE_ENABLED', false, false)
     );
     await waitFor(() => expect(toggle).not.toBeChecked());
   });

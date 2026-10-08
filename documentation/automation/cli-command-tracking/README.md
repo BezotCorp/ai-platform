@@ -23,7 +23,7 @@ The automation runs automatically when a new release is published. See [TESTING.
 
 ```bash
 # Set the goose repository path
-export GOOSE_REPO=/path/to/goose
+export BCAIP_REPO=/path/to/goose
 
 # Run the complete pipeline with auto-detected versions
 ./scripts/run-pipeline.sh
@@ -142,15 +142,15 @@ All stages communicate via JSON/Markdown files in the `output/` directory:
 
 | Variable            | Required    | Default                                                       | Description                                       |
 | ------------------- | ----------- | ------------------------------------------------------------- | ------------------------------------------------- |
-| `GOOSE_REPO`        | Yes (local) | -                                                             | Path to goose repository root                     |
-| `CLI_COMMANDS_PATH` | No          | `$GOOSE_REPO/documentation/docs/guides/goose-cli-commands.md` | Full path to target doc file                      |
+| `BCAIP_REPO`        | Yes (local) | -                                                             | Path to goose repository root                     |
+| `CLI_COMMANDS_PATH` | No          | `$BCAIP_REPO/documentation/docs/guides/goose-cli-commands.md` | Full path to target doc file                      |
 | `RELEASE_TAG`       | No          | -                                                             | Used by GitHub Actions to specify the new version |
 
 **Example:**
 
 ```bash
-export GOOSE_REPO=/Users/you/goose
-# CLI_COMMANDS_PATH is auto-constructed from GOOSE_REPO
+export BCAIP_REPO=/Users/you/goose
+# CLI_COMMANDS_PATH is auto-constructed from BCAIP_REPO
 ```
 
 ### Skipped Commands
@@ -264,7 +264,7 @@ Updates the CLI Commands Guide based on synthesized changes.
 **Inputs:**
 
 - `output/cli-changes.md` - Change documentation from synthesis recipe
-- `goose-cli-commands.md` - Target documentation file (path from `CLI_COMMANDS_PATH` or `GOOSE_REPO` env var)
+- `goose-cli-commands.md` - Target documentation file (path from `CLI_COMMANDS_PATH` or `BCAIP_REPO` env var)
 
 **Outputs:**
 

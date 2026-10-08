@@ -41,7 +41,7 @@ const i18n = defineMessages<{
   autoDownloadDisabledByEnv: {
     id: 'updateSection.autoDownloadDisabledByEnv',
     defaultMessage:
-      'Automatic downloads are disabled via the GOOSE_DISABLE_AUTO_DOWNLOAD environment variable.',
+      'Automatic downloads are disabled via the BCAIP_DISABLE_AUTO_DOWNLOAD environment variable.',
   },
   downloadNow: {
     id: 'updateSection.downloadNow',

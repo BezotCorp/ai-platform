@@ -1,0 +1,9 @@
+{
+  "client_id": "https://bcaip.bezotcorp.com/.well-known/oauth-cimd",
+  "client_name": "BezotCorp AI Platform (BCAIP)",
+  "redirect_uris": [
+    "http://127.0.0.1/oauth/huggingface/callback"
+  ],
+  "token_endpoint_auth_method": "none",
+  "client_uri": "https://bcaip.bezotcorp.com"
+}

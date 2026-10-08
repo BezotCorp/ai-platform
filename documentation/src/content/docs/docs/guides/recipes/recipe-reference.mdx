@@ -29,10 +29,10 @@ Recipes can be loaded from:
 
 1. Local filesystem:
    - Current directory
-   - Directories specified in [`GOOSE_RECIPE_PATH`](/guides/environment-variables#recipe-configuration) environment variable
+   - Directories specified in [`BCAIP_RECIPE_PATH`](/guides/environment-variables#recipe-configuration) environment variable
    
 2. GitHub repositories:
-   - Configure using [`GOOSE_RECIPE_GITHUB_REPO`](/guides/environment-variables#recipe-configuration) configuration key
+   - Configure using [`BCAIP_RECIPE_GITHUB_REPO`](/guides/environment-variables#recipe-configuration) configuration key
    - Requires GitHub CLI (`gh`) to be installed and authenticated
 
 ## Core Recipe Schema
@@ -485,8 +485,8 @@ retry:
 
 You can configure retry behavior globally using environment variables:
 
-- `GOOSE_RECIPE_RETRY_TIMEOUT_SECONDS`: Global timeout for success check commands
-- `GOOSE_RECIPE_ON_FAILURE_TIMEOUT_SECONDS`: Global timeout for on_failure commands
+- `BCAIP_RECIPE_RETRY_TIMEOUT_SECONDS`: Global timeout for success check commands
+- `BCAIP_RECIPE_ON_FAILURE_TIMEOUT_SECONDS`: Global timeout for on_failure commands
 
 These environment variables are overridden by recipe-specific timeout configurations.
 
@@ -499,7 +499,7 @@ The `settings` field allows you to configure the AI model and provider settings 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `goose_provider` | String | - | The AI provider to use (e.g., "anthropic", "openai") |
-| `goose_model` | String | - | The specific model name to use |
+| `bcaip_model` | String | - | The specific model name to use |
 | `temperature` | Number | - | The temperature setting for the model (typically 0.0-1.0) |
 | `max_turns` | Number | - | Maximum number of turns for subagent tasks created by this recipe |
 
@@ -510,19 +510,19 @@ The `max_turns` setting controls how many iterations an agent can perform before
 **Configuration precedence (highest to lowest):**
 1. Subagent tool call override
 2. Recipe `settings.max_turns`
-3. `GOOSE_SUBAGENT_MAX_TURNS` environment variable
+3. `BCAIP_SUBAGENT_MAX_TURNS` environment variable
 4. Default value (1000 for main recipes, 25 for subagents)
 
 **Common use cases:** Limit execution time for automated workflows, prevent runaway subagents, control resource usage in scheduled jobs.
 
-For subagents, `goose_provider` and `goose_model` in `settings` take precedence over the `GOOSE_SUBAGENT_PROVIDER` and `GOOSE_SUBAGENT_MODEL` environment variables.
+For subagents, `goose_provider` and `bcaip_model` in `settings` take precedence over the `BCAIP_SUBAGENT_PROVIDER` and `BCAIP_SUBAGENT_MODEL` environment variables.
 
 #### Example Settings Configuration
 
 ```yaml
 settings:
   goose_provider: "anthropic"
-  goose_model: "claude-sonnet-4-20250514"
+  bcaip_model: "claude-sonnet-4-20250514"
   temperature: 0.7
   max_turns: 50
 ```
@@ -530,7 +530,7 @@ settings:
 ```yaml
 settings:
   goose_provider: "openai"
-  goose_model: "gpt-4o"
+  bcaip_model: "gpt-4o"
   temperature: 0.3
 ```
 
@@ -754,7 +754,7 @@ Built-in template parameters are automatically supported and don't need to be de
 
 ## Validation Rules
 
-Validation rules from [`validate_recipe.rs`](https://github.com/aaif-goose/goose/blob/main/crates/goose/src/recipe/validate_recipe.rs) are enforced when loading recipes and used by the [`goose recipe validate`](/guides/goose-cli-commands#recipe) subcommand:
+Validation rules from [`validate_recipe.rs`](https://github.com/BezotCorp/ai-platform/blob/main/crates/goose/src/recipe/validate_recipe.rs) are enforced when loading recipes and used by the [`goose recipe validate`](/guides/goose-cli-commands#recipe) subcommand:
 
 ### Recipe-Level Validation
 
@@ -820,7 +820,7 @@ extensions:
 
 settings:
   goose_provider: "anthropic"
-  goose_model: "claude-sonnet-4-20250514"
+  bcaip_model: "claude-sonnet-4-20250514"
   temperature: 0.7
   max_turns: 100
 
@@ -900,7 +900,7 @@ response:
   ],
   "settings": {
     "goose_provider": "anthropic",
-    "goose_model": "claude-sonnet-4-20250514",
+    "bcaip_model": "claude-sonnet-4-20250514",
     "temperature": 0.7,
     "max_turns": 100
   },

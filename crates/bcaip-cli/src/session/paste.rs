@@ -8,7 +8,7 @@
 //! is deliberately narrow: [`PasteState`], the two handlers, and
 //! [`read_paste_aware_input`]; everything else stays private.
 
-use super::completion::GooseCompleter;
+use super::completion::BcaipCompleter;
 use rustyline::Editor;
 use std::sync::Arc;
 /// Minimum number of events already queued in the console input buffer for a
@@ -359,7 +359,7 @@ fn expand_pastes(line: &str, pastes: &[Paste]) -> String {
 }
 
 pub(super) fn read_paste_aware_input(
-    editor: &mut Editor<GooseCompleter, rustyline::history::DefaultHistory>,
+    editor: &mut Editor<BcaipCompleter, rustyline::history::DefaultHistory>,
     paste_state: Arc<std::sync::RwLock<PasteState>>,
 ) -> rustyline::Result<String> {
     let input = editor.readline("> ")?;

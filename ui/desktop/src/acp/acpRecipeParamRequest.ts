@@ -1,4 +1,4 @@
-import type { RecipeParameterDto } from '@aaif/goose-acp-client';
+import type { RecipeParameterDto } from '@bezotcorp/bcaip-acp-client';
 
 export interface AcpRecipeParamRequest {
   id: string;

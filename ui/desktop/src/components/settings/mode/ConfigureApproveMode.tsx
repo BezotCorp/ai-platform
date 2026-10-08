@@ -3,7 +3,7 @@ import type { ConfigureApproveModeProps } from './configureApproveModeProps';
 import React, { useEffect, useState } from 'react';
 import { Card } from '../../ui/card';
 import { Button } from '../../ui/button';
-import { GooseMode, ModeSelectionItem } from './ModeSelectionItem';
+import { BcaipMode, ModeSelectionItem } from './ModeSelectionItem';
 import { defineMessages, useIntl } from '../../../i18n';
 import type { NoMessageValues } from 'react-intl';
 
@@ -63,7 +63,7 @@ export function ConfigureApproveMode({
   currentMode,
 }: ConfigureApproveModeProps) {
   const intl = useIntl();
-  const approveModes: GooseMode[] = [
+  const approveModes: BcaipMode[] = [
     {
       key: 'approve',
       labelDescriptor: i18n.manualApproval,

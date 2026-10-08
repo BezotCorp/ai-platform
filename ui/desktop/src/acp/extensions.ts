@@ -1,10 +1,10 @@
 import type { ConfiguredExtensionEntry } from '../types/configuredExtensionEntry';
 import type { ExtensionConfig } from '../types/extensionConfig';
 import type { ConfiguredExtensionsResponse } from './configuredExtensionsResponse';
-import type { GooseExtension, GooseExtensionEntry } from '@aaif/goose-acp-client';
+import type { BcaipExtension, BcaipExtensionEntry } from '@bezotcorp/bcaip-acp-client';
 import { getAcpClient } from './acpConnection';
 
-export function gooseExtensionName(extension: GooseExtension): string {
+export function bcaipExtensionName(extension: BcaipExtension): string {
   return extension.type === 'mcp' ? extension.server.name : extension.name;
 }
 
@@ -16,7 +16,7 @@ function availableToolsOrUndefined(availableTools?: string[] | null): string[] |
   return availableTools?.length ? availableTools : undefined;
 }
 
-export function gooseExtensionToExtensionConfig(extension: GooseExtension): ExtensionConfig | null {
+export function bcaipExtensionToExtensionConfig(extension: BcaipExtension): ExtensionConfig | null {
   switch (extension.type) {
     case 'builtin':
     case 'platform':
@@ -63,24 +63,24 @@ export function gooseExtensionToExtensionConfig(extension: GooseExtension): Exte
 }
 
 function gooseExtensionEntryToConfiguredExtensionEntry(
-  entry: GooseExtensionEntry
+  entry: BcaipExtensionEntry
 ): ConfiguredExtensionEntry | null {
-  const config = gooseExtensionToExtensionConfig(entry.extension);
+  const config = bcaipExtensionToExtensionConfig(entry.extension);
   if (!config) {
     return null;
   }
   return { ...config, enabled: entry.enabled, configKey: entry.configKey ?? undefined };
 }
 
-export async function getConfiguredGooseExtensions(): Promise<GooseExtensionEntry[]> {
+export async function getConfiguredBcaipExtensions(): Promise<BcaipExtensionEntry[]> {
   const client = await getAcpClient();
-  const response = await client.goose.configExtensionsListUnstable({});
+  const response = await client.bcaip.configExtensionsListUnstable({});
   return response.extensions;
 }
 
 export async function getConfiguredExtensions(): Promise<ConfiguredExtensionsResponse> {
   const client = await getAcpClient();
-  const response = await client.goose.configExtensionsListUnstable({});
+  const response = await client.bcaip.configExtensionsListUnstable({});
   return {
     extensions: response.extensions
       .map(gooseExtensionEntryToConfiguredExtensionEntry)
@@ -89,7 +89,7 @@ export async function getConfiguredExtensions(): Promise<ConfiguredExtensionsRes
   };
 }
 
-export function extensionConfigToGooseExtension(config: ExtensionConfig): GooseExtension | null {
+export function extensionConfigToBcaipExtension(config: ExtensionConfig): BcaipExtension | null {
   switch (config.type) {
     case 'builtin':
       return {
@@ -143,17 +143,17 @@ export function extensionConfigToGooseExtension(config: ExtensionConfig): GooseE
 }
 
 export async function addConfigExtension(config: ExtensionConfig, enabled: boolean): Promise<void> {
-  const extension = extensionConfigToGooseExtension(config);
+  const extension = extensionConfigToBcaipExtension(config);
   if (!extension) {
     throw new Error(`Unsupported extension type for ACP: ${config.type}`);
   }
   const client = await getAcpClient();
-  await client.goose.configExtensionsAddUnstable({ extension, enabled });
+  await client.bcaip.configExtensionsAddUnstable({ extension, enabled });
 }
 
 export async function removeConfigExtension(configKey: string): Promise<void> {
   const client = await getAcpClient();
-  await client.goose.configExtensionsRemoveUnstable({ configKey });
+  await client.bcaip.configExtensionsRemoveUnstable({ configKey });
 }
 
 export async function setConfigExtensionEnabled(
@@ -161,5 +161,5 @@ export async function setConfigExtensionEnabled(
   enabled: boolean
 ): Promise<void> {
   const client = await getAcpClient();
-  await client.goose.configExtensionsSetEnabledUnstable({ configKey, enabled });
+  await client.bcaip.configExtensionsSetEnabledUnstable({ configKey, enabled });
 }

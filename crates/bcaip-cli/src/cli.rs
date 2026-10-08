@@ -1,25 +1,25 @@
 use anyhow::Result;
+use bcaip::agents::BcaipPlatform;
+#[cfg(feature = "bundled-mcp")]
+use bcaip::builtin_extension::register_builtin_extensions;
+use bcaip::config::Config;
+#[cfg(feature = "telemetry")]
+use bcaip::posthog::get_telemetry_choice;
+use bcaip::recipe::Recipe;
+#[cfg(feature = "acp-http")]
+use bcaip::source_roots::SourceRoot;
 #[cfg(feature = "local-inference")]
 use bcaip_download_manager::{DownloadManager, DownloadStatus, get_download_manager};
 #[cfg(feature = "bundled-mcp")]
-use bcaip_mcp::mcp_server_runner::{McpCommand, serve};
+use bcaip_mcp::mc_command::{McpCommand, serve};
 #[cfg(feature = "bundled-mcp")]
 use bcaip_mcp::{AutoVisualiserRouter, ComputerControllerServer, MemoryServer, TutorialServer};
-use bcaip_provider_types::goose_mode::GooseMode;
+use bcaip_provider_types::bcaip_mode::BcaipMode;
 #[cfg(feature = "roaming")]
 use bcaip_roaming::RoamingNode;
 use clap::{Args, CommandFactory, Parser, Subcommand};
 use clap_complete::{Shell as ClapShell, generate};
 use clap_complete_nushell::Nushell as ClapNushell;
-use goose::agents::GoosePlatform;
-#[cfg(feature = "bundled-mcp")]
-use goose::builtin_extension::register_builtin_extensions;
-use goose::config::Config;
-#[cfg(feature = "telemetry")]
-use goose::posthog::get_telemetry_choice;
-use goose::recipe::Recipe;
-#[cfg(feature = "acp-http")]
-use goose::source_roots::SourceRoot;
 
 #[cfg(feature = "telemetry")]
 use crate::commands::configure::configure_telemetry_consent_dialog;
@@ -46,7 +46,7 @@ use crate::session::{SessionBuilderConfig, build_session};
 use crate::{
     commands::skills::handle_skills_list, recipes::extract_from_cli::extract_recipe_info_from_cli,
 };
-use goose::{
+use bcaip::{
     agents::Container,
     session::{SessionManager, SessionType},
 };
@@ -54,14 +54,14 @@ use goose::{
 use std::time;
 use std::{io::Read, path::PathBuf};
 #[cfg(feature = "acp-http")]
-const GOOSE_SERVER_SECRET_KEY_ENV: &str = "GOOSE_SERVER__SECRET_KEY";
+const BCAIP_SERVER_SECRET_KEY_ENV: &str = "BCAIP_SERVER__SECRET_KEY";
 
 #[cfg(feature = "acp-http")]
 fn generate_serve_secret_key() -> String {
     use rand::distr::{Alphanumeric, SampleString};
 
     format!(
-        "goose-acp-{}",
+        "bcaip-acp-{}",
         Alphanumeric.sample_string(&mut rand::rng(), 32)
     )
 }
@@ -73,17 +73,17 @@ enum ServePlatform {
     Desktop,
 }
 
-impl From<ServePlatform> for GoosePlatform {
+impl From<ServePlatform> for BcaipPlatform {
     fn from(platform: ServePlatform) -> Self {
         match platform {
-            ServePlatform::Cli => GoosePlatform::GooseCli,
-            ServePlatform::Desktop => GoosePlatform::GooseDesktop,
+            ServePlatform::Cli => BcaipPlatform::BcaipCli,
+            ServePlatform::Desktop => BcaipPlatform::BcaipDesktop,
         }
     }
 }
 
 #[derive(Parser)]
-#[command(name = "goose", author, version, display_name = "", about, long_about = None)]
+#[command(name = "bcaip", author, version, display_name = "", about, long_about = None)]
 pub struct Cli {
     #[command(subcommand)]
     command: Option<Command>,
@@ -150,7 +150,7 @@ pub struct SessionOptions {
         long = "container",
         value_name = "CONTAINER_ID",
         help = "Docker container ID to run extensions inside",
-        long_help = "Run extensions (stdio and built-in) inside the specified container. The extension must exist in the container. For built-in extensions, goose must be installed inside the container."
+        long_help = "Run extensions (stdio and built-in) inside the specified container. The extension must exist in the container. For built-in extensions, BCAIP must be installed inside the container."
     )]
     pub container: Option<String>,
 }
@@ -163,7 +163,7 @@ pub struct StreamableHttpOptions {
 
 fn parse_streamable_http_extension(input: &str) -> Result<StreamableHttpOptions, String> {
     let mut input_iter = input.split_whitespace();
-    let (mut url, mut timeout) = (String::new(), goose::config::DEFAULT_EXTENSION_TIMEOUT);
+    let (mut url, mut timeout) = (String::new(), bcaip::config::DEFAULT_EXTENSION_TIMEOUT);
 
     if let Some(url_str) = input_iter.next() {
         url.push_str(url_str);
@@ -213,7 +213,7 @@ pub struct ExtensionOptions {
         long = "with-builtin",
         value_name = "NAME",
         help = "Add builtin extensions by name (e.g., 'developer' or multiple: 'developer,github')",
-        long_help = "Add one or more builtin extensions that are bundled with goose by specifying their names, comma-separated",
+        long_help = "Add one or more builtin extensions that are bundled with BCAIP by specifying their names, comma-separated",
         value_delimiter = ','
     )]
     pub builtins: Vec<String>,
@@ -244,8 +244,8 @@ pub struct InputOptions {
         short = 't',
         long = "text",
         value_name = "TEXT",
-        help = "Input text to provide to goose directly",
-        long_help = "Input text containing commands for goose. Use this in lieu of the instructions argument.",
+        help = "Input text to provide to BCAIP directly",
+        long_help = "Input text containing commands for BCAIP. Use this in lieu of the instructions argument.",
         conflicts_with = "instructions",
         conflicts_with = "recipe"
     )]
@@ -276,7 +276,7 @@ pub struct InputOptions {
     #[arg(
         long,
         value_name = "KEY=VALUE",
-        help = "Dynamic parameters (e.g., --params username=alice --params channel_name=goose-channel)",
+        help = "Dynamic parameters (e.g., --params username=alice --params channel_name=bcaip-channel)",
         long_help = "Key-value parameters to pass to the recipe file. Can be specified multiple times.",
         action = clap::ArgAction::Append,
         value_parser = parse_key_val,
@@ -288,7 +288,7 @@ pub struct InputOptions {
         long = "sub-recipe",
         value_name = "RECIPE",
         help = "Sub-recipe name or file path (can be specified multiple times)",
-        long_help = "Specify sub-recipes to include alongside the main recipe. Can be:\n  - Recipe names from GitHub (if GOOSE_RECIPE_GITHUB_REPO is configured)\n  - Local file paths to YAML files\nCan be specified multiple times to include multiple sub-recipes.",
+        long_help = "Specify sub-recipes to include alongside the main recipe. Can be:\n  - Recipe names from GitHub (if BCAIP_RECIPE_GITHUB_REPO is configured)\n  - Local file paths to YAML files\nCan be specified multiple times to include multiple sub-recipes.",
         action = clap::ArgAction::Append
     )]
     pub additional_sub_recipes: Vec<String>,
@@ -347,7 +347,7 @@ pub struct ModelOptions {
         long = "provider",
         value_name = "PROVIDER",
         help = "Specify the LLM provider to use (e.g., 'openai', 'anthropic')",
-        long_help = "Override the GOOSE_PROVIDER environment variable for this run. Available providers include openai, anthropic, ollama, databricks, gemini-cli, claude-code, and others."
+        long_help = "Override the BCAIP_PROVIDER environment variable for this run. Available providers include openai, anthropic, ollama, databricks, gemini-cli, claude-code, and others."
     )]
     pub provider: Option<String>,
 
@@ -356,7 +356,7 @@ pub struct ModelOptions {
         long = "model",
         value_name = "MODEL",
         help = "Specify the model to use (e.g., 'gpt-4o', 'claude-sonnet-4-20250514')",
-        long_help = "Override the GOOSE_MODEL environment variable for this run. The model must be supported by the specified provider."
+        long_help = "Override the BCAIP_MODEL environment variable for this run. The model must be supported by the specified provider."
     )]
     pub model: Option<String>,
 }
@@ -413,7 +413,7 @@ async fn get_or_create_session_id(
     identifier: Option<Identifier>,
     resume: bool,
     no_session: bool,
-    goose_mode: GooseMode,
+    bcaip_mode: BcaipMode,
 ) -> Result<Option<String>> {
     if no_session {
         return Ok(None);
@@ -459,7 +459,7 @@ async fn get_or_create_session_id(
                     std::env::current_dir()?,
                     "CLI Session".to_string(),
                     SessionType::User,
-                    goose_mode,
+                    bcaip_mode,
                 )
                 .await?;
             return Ok(Some(session.id));
@@ -476,7 +476,7 @@ async fn get_or_create_session_id(
                 std::env::current_dir()?,
                 name.clone(),
                 SessionType::User,
-                goose_mode,
+                bcaip_mode,
             )
             .await?;
 
@@ -588,7 +588,7 @@ enum SessionCommand {
     #[command(about = "Import a session from JSON or a Claude Code / Codex / Pi .jsonl")]
     Import {
         #[arg(
-            help = "Path to a goose session export, or a Claude Code, Codex, or Pi .jsonl transcript"
+            help = "Path to a BCAIP session export, or a Claude Code, Codex, or Pi .jsonl transcript"
         )]
         input: String,
     },
@@ -739,8 +739,8 @@ enum PluginCommand {
 
 #[derive(Subcommand)]
 enum SkillsCommand {
-    /// List all skills available to the goose agent
-    #[command(about = "List all skills available to the goose agent")]
+    /// List all skills available to the BCAIP agent
+    #[command(about = "List all skills available to the BCAIP agent")]
     List,
 }
 
@@ -772,8 +772,8 @@ enum RecipeCommand {
         params: Vec<String>,
     },
 
-    /// Open a recipe in Goose Desktop
-    #[command(about = "Open a recipe in Goose Desktop")]
+    /// Open a recipe in BCAIP Desktop
+    #[command(about = "Open a recipe in BCAIP Desktop")]
     Open {
         /// Recipe name to get recipe file to open
         #[arg(help = "recipe name or full path to the recipe file")]
@@ -812,12 +812,12 @@ enum RecipeCommand {
 
 #[derive(Subcommand)]
 enum Command {
-    /// Configure goose settings
-    #[command(about = "Configure goose settings")]
+    /// Configure bcaip settings
+    #[command(about = "Configure bcaip settings")]
     Configure {},
 
-    /// Display goose configuration information
-    #[command(about = "Display goose information")]
+    /// Display BCAIP configuration information
+    #[command(about = "Display BCAIP information")]
     Info {
         /// Show verbose information including current configuration
         #[arg(short, long, help = "Show verbose information including config.yaml")]
@@ -826,26 +826,26 @@ enum Command {
         check: bool,
     },
 
-    #[command(about = "Check that your Goose setup is working")]
+    #[command(about = "Check that your BCAIP setup is working")]
     Doctor {},
 
     /// Manage system prompts and behaviors
     #[cfg(feature = "bundled-mcp")]
-    #[command(about = "Run one of the mcp servers bundled with goose")]
+    #[command(about = "Run one of the mcp servers bundled with BCAIP")]
     Mcp {
         #[arg(value_parser = clap::value_parser!(McpCommand))]
         server: McpCommand,
     },
 
-    /// Run goose as an ACP (Agent Client Protocol) agent
-    #[command(about = "Run goose as an ACP agent server on stdio")]
+    /// Run BCAIP as an ACP (Agent Client Protocol) agent
+    #[command(about = "Run BCAIP as an ACP agent server on stdio")]
     Acp {
         /// Add builtin extensions by name
         #[arg(
             long = "with-builtin",
             value_name = "NAME",
             help = "Add builtin extensions by name (e.g., 'developer' or multiple: 'developer,github')",
-            long_help = "Add one or more builtin extensions that are bundled with goose by specifying their names, comma-separated",
+            long_help = "Add one or more builtin extensions that are bundled with BCAIP by specifying their names, comma-separated",
             value_delimiter = ','
         )]
         builtins: Vec<String>,
@@ -888,7 +888,7 @@ enum Command {
             long = "with-builtin",
             value_name = "NAME",
             help = "Add builtin extensions by name (e.g., 'developer' or multiple: 'developer,github')",
-            long_help = "Add one or more builtin extensions that are bundled with goose by specifying their names, comma-separated",
+            long_help = "Add one or more builtin extensions that are bundled with BCAIP by specifying their names, comma-separated",
             value_delimiter = ',',
             action = clap::ArgAction::Append
         )]
@@ -896,7 +896,7 @@ enum Command {
 
         #[arg(
             long = "dangerously-unauthenticated",
-            help = "Start the ACP endpoint without requiring GOOSE_SERVER__SECRET_KEY"
+            help = "Start the ACP endpoint without requiring BCAIP_SERVER__SECRET_KEY"
         )]
         dangerously_unauthenticated: bool,
 
@@ -911,11 +911,11 @@ enum Command {
         #[arg(long, help = "Enable scheduled recipe execution")]
         enable_scheduler: bool,
 
-        /// Also expose this server over goose roam (p2p) so paired devices can connect remotely
+        /// Also expose this server over bcaip roam (p2p) so paired devices can connect remotely
         #[cfg(feature = "roaming")]
         #[arg(
             long,
-            help = "Also expose this server over goose roam (p2p) so paired devices can connect remotely"
+            help = "Also expose this server over bcaip roam (p2p) so paired devices can connect remotely"
         )]
         roam: bool,
     },
@@ -1050,35 +1050,35 @@ enum Command {
         command: GatewayCommand,
     },
 
-    /// Update the goose CLI version
+    /// Update the BCAIP CLI version
     #[cfg(feature = "update")]
-    #[command(about = "Update the goose CLI version")]
+    #[command(about = "Update the BCAIP CLI version")]
     Update {
         /// Update to canary version
         #[arg(
             short,
             long,
             help = "Update to canary version",
-            long_help = "Update to the latest canary version of the goose CLI, otherwise updates to the latest stable version."
+            long_help = "Update to the latest canary version of the BCAIP CLI, otherwise updates to the latest stable version."
         )]
         canary: bool,
 
-        /// Enforce to re-configure goose during update
-        #[arg(short, long, help = "Enforce to re-configure goose during update")]
+        /// Enforce to re-configure BCAIP during update
+        #[arg(short, long, help = "Enforce to re-configure BCAIP during update")]
         reconfigure: bool,
     },
 
     /// Terminal-integrated session (one session per terminal)
     #[command(
-        about = "Terminal-integrated goose session",
-        long_about = "Runs a goose session tied to your terminal window.\n\
+        about = "Terminal-integrated BCAIP session",
+        long_about = "Runs a BCAIP session tied to your terminal window.\n\
                       Each terminal maintains its own persistent session that resumes automatically.\n\n\
                       Setup:\n  \
-                        eval \"$(goose term init zsh)\"  # zsh/bash\n  \
-                        let init = ($nu.cache-dir | path join \"goose-term-init.nu\"); ^goose term init nu | save --force $init; source $init\n\n\
+                        eval \"$(bcaip term init zsh)\"  # zsh/bash\n  \
+                        let init = ($nu.cache-dir | path join \"bcaip-term-init.nu\"); ^bcaip term init nu | save --force $init; source $init\n\n\
                       Usage:\n  \
-                        goose term run \"list files in this directory\"\n  \
-                        @goose \"create a python script\"  # using alias\n  \
+                        bcaip term run \"list files in this directory\"\n  \
+                        @bcaip \"create a python script\"  # using alias\n  \
                         @g \"quick question\"  # short alias"
     )]
     Term {
@@ -1102,7 +1102,7 @@ enum Command {
         #[arg(value_enum)]
         shell: CompletionShell,
 
-        #[arg(long, default_value = "goose", help = "Provide a custom binary name")]
+        #[arg(long, default_value = "bcaip", help = "Provide a custom binary name")]
         bin_name: String,
     },
 
@@ -1111,8 +1111,8 @@ enum Command {
     /// Discovers `**/.agents/checks/*.md` subagent reviewers and
     /// `**/.agents/REVIEW.md` scoped prompt overrides, builds a review
     /// request from the working tree (or an explicit diff range), and
-    /// runs the review through goose.
-    #[command(about = "Review the current diff using goose")]
+    /// runs the review through BCAIP.
+    #[command(about = "Review the current diff using BCAIP")]
     Review {
         /// Diff range to review (e.g. "main...HEAD"). Defaults to the working
         /// tree vs HEAD.
@@ -1156,7 +1156,7 @@ enum Command {
         /// Disable the Rust-driven parallel orchestrator and fall back to
         /// the single-prompt path that asks the main agent to delegate
         /// each check via `delegate(... async: true ...)`. The default
-        /// orchestrator dispatches one `goose run` subprocess per check
+        /// orchestrator dispatches one `bcaip run` subprocess per check
         /// (capped at 4 concurrent), bounding wall-clock to the slowest
         /// single check rather than waiting on the model to issue
         /// dispatches.
@@ -1217,7 +1217,7 @@ enum Command {
 
     #[command(
         name = "mcp-probe",
-        about = "Start a Goose MCP session without an LLM and inspect a stdio MCP server",
+        about = "Start a BCAIP MCP session without an LLM and inspect a stdio MCP server",
         hide = true
     )]
     McpProbe {
@@ -1292,17 +1292,17 @@ enum TermCommand {
     #[command(
         about = "Print shell initialization script",
         long_about = "Prints shell configuration to set up terminal-integrated sessions.\n\
-                      Each terminal gets a persistent goose session that automatically resumes.\n\n\
+                      Each terminal gets a persistent BCAIP session that automatically resumes.\n\n\
                       Setup:\n  \
-                        echo 'eval \"$(goose term init zsh)\"' >> ~/.zshrc\n  \
+                        echo 'eval \"$(bcaip term init zsh)\"' >> ~/.zshrc\n  \
                         source ~/.zshrc\n\n\
                         Nushell:\n  \
-                        let init = ($nu.cache-dir | path join \"goose-term-init.nu\")\n  \
-                        ^goose term init nu | save --force $init\n  \
+                        let init = ($nu.cache-dir | path join \"bcaip-term-init.nu\")\n  \
+                        ^bcaip term init nu | save --force $init\n  \
                         source $init\n\n\
-                      With --default (anything typed that isn't a command goes to goose):\n  \
-                        echo 'eval \"$(goose term init zsh --default)\"' >> ~/.zshrc\n  \
-                        ^goose term init nu --default | save --force $init"
+                      With --default (anything typed that isn't a command goes to BCAIP):\n  \
+                        echo 'eval \"$(bcaip term init zsh --default)\"' >> ~/.zshrc\n  \
+                        ^bcaip term init nu --default | save --force $init"
     )]
     Init {
         /// Shell type (bash, zsh, fish, nu, powershell)
@@ -1312,11 +1312,11 @@ enum TermCommand {
         #[arg(short, long, help = "Name for the terminal session")]
         name: Option<String>,
 
-        /// Make goose the default handler for unknown commands
+        /// Make BCAIP the default handler for unknown commands
         #[arg(
             long = "default",
-            help = "Make goose the default handler for unknown commands",
-            long_help = "When enabled, anything you type that isn't a valid command will be sent to goose. Supported for zsh, bash, and nu."
+            help = "Make BCAIP the default handler for unknown commands",
+            long_help = "When enabled, anything you type that isn't a valid command will be sent to BCAIP. Supported for zsh, bash, and nu."
         )]
         default: bool,
     },
@@ -1333,12 +1333,12 @@ enum TermCommand {
         about = "Run a prompt in the terminal session",
         long_about = "Run a prompt in the terminal-integrated session.\n\n\
                       Examples:\n  \
-                        goose term run list files in this directory\n  \
-                        @goose list files  # using alias\n  \
+                        bcaip term run list files in this directory\n  \
+                        @bcaip list files  # using alias\n  \
                         @g why did that fail  # short alias"
     )]
     Run {
-        /// The prompt to send to goose (multiple words allowed without quotes)
+        /// The prompt to send to BCAIP (multiple words allowed without quotes)
         #[arg(required = true, num_args = 1..)]
         prompt: Vec<String>,
     },
@@ -1430,7 +1430,7 @@ struct McpProbeScript {
     steps: Vec<McpProbeStep>,
     elicitation: Option<McpProbeElicitation>,
     #[serde(default)]
-    oauth: goose::oauth::OAuthFlowConfig,
+    oauth: bcaip::oauth::OAuthFlowConfig,
     protocol_version: Option<String>,
 }
 
@@ -1457,8 +1457,8 @@ enum McpProbeElicitation {
 }
 
 async fn handle_mcp_probe(extension_command: String, script_path: Option<String>) -> Result<()> {
-    use goose::agents::{Agent, AgentConfig, ToolCallContext};
-    use goose::config::ExtensionConfig;
+    use bcaip::agents::{Agent, AgentConfig, ToolCallContext};
+    use bcaip::config::ExtensionConfig;
     use rmcp::model::{ElicitRequestParams, ElicitResult, ElicitationAction};
     use tokio_util::sync::CancellationToken;
     let script = if let Some(path) = script_path {
@@ -1478,7 +1478,7 @@ async fn handle_mcp_probe(extension_command: String, script_path: Option<String>
                 McpProbeStep::ListResources,
             ],
             elicitation: None,
-            oauth: goose::oauth::OAuthFlowConfig::default(),
+            oauth: bcaip::oauth::OAuthFlowConfig::default(),
             protocol_version: None,
         }
     };
@@ -1488,7 +1488,7 @@ async fn handle_mcp_probe(extension_command: String, script_path: Option<String>
     {
         crate::session::CliSession::parse_streamable_http_extension(
             &extension_command,
-            goose::config::DEFAULT_EXTENSION_TIMEOUT,
+            bcaip::config::DEFAULT_EXTENSION_TIMEOUT,
         )
     } else {
         crate::session::CliSession::parse_stdio_extension(&extension_command)?
@@ -1511,7 +1511,7 @@ async fn handle_mcp_probe(extension_command: String, script_path: Option<String>
         const PROBE_CLIENT_SECRET_KEY: &str = "MCP_PROBE_OAUTH_CLIENT_SECRET";
         *client_id = Some(script_client_id.clone());
         if let Some(script_client_secret) = &script.oauth.client_secret {
-            *envs = goose::agents::extension::Envs::new(std::collections::HashMap::from([(
+            *envs = bcaip::agents::extension::Envs::new(std::collections::HashMap::from([(
                 PROBE_CLIENT_SECRET_KEY.to_string(),
                 script_client_secret.clone(),
             )]));
@@ -1519,17 +1519,17 @@ async fn handle_mcp_probe(extension_command: String, script_path: Option<String>
         }
     }
     if let Some(client_metadata_url) = &script.oauth.client_metadata_url {
-        goose::oauth::set_client_metadata_url_override(client_metadata_url.clone());
+        bcaip::oauth::set_client_metadata_url_override(client_metadata_url.clone());
     }
 
-    let config = goose::config::Config::global();
+    let config = bcaip::config::Config::global();
     let mut agent_config = AgentConfig::new(
         std::sync::Arc::new(SessionManager::instance()),
-        goose::config::permission::PermissionManager::instance(),
+        bcaip::config::permission::PermissionManager::instance(),
         None,
-        config.get_goose_mode().unwrap_or_default(),
+        config.get_bcaip_mode().unwrap_or_default(),
         true,
-        GoosePlatform::GooseCli,
+        BcaipPlatform::BcaipCli,
     );
     if let Some(protocol_version) = script.protocol_version.as_deref() {
         agent_config.mcp_protocol_version = Some(serde_json::from_value(
@@ -1575,8 +1575,8 @@ async fn handle_mcp_probe(extension_command: String, script_path: Option<String>
         .create_session(
             std::env::current_dir()?,
             "MCP Probe".to_string(),
-            goose::session::SessionType::Hidden,
-            agent.config.goose_mode,
+            bcaip::session::SessionType::Hidden,
+            agent.config.bcaip_mode,
         )
         .await?;
     let session_id = session.id.as_str();
@@ -1674,7 +1674,7 @@ type RoamShareSlot = std::sync::Arc<tokio::sync::RwLock<Option<std::sync::Arc<Ro
 
 #[cfg(feature = "roaming")]
 fn spawn_roam_share(
-    server: std::sync::Arc<goose::acp::server_factory::AcpServer>,
+    server: std::sync::Arc<bcaip::acp::server_factory::AcpServer>,
 ) -> RoamShareSlot {
     use crate::commands::roam::try_acquire_roam_lock_owner;
     let slot = RoamShareSlot::default();
@@ -1698,7 +1698,7 @@ fn spawn_roam_share(
                     if !standing_by {
                         standing_by = true;
                         eprintln!(
-                            "another goose process owns the roaming endpoint; standing by to take over if it exits"
+                            "another BCAIP process owns the roaming endpoint; standing by to take over if it exits"
                         );
                     }
                 }
@@ -1718,14 +1718,14 @@ fn spawn_roam_share(
 
 #[cfg(feature = "roaming")]
 async fn start_roam_share(
-    server: std::sync::Arc<goose::acp::server_factory::AcpServer>,
+    server: std::sync::Arc<bcaip::acp::server_factory::AcpServer>,
 ) -> Result<std::sync::Arc<RoamingNode>> {
     use crate::commands::roam::{
         directory_path, load_identity, resolve_relay_settings, trust_path,
     };
     use crate::commands::roam_full_bridge::FullAcpBridge;
+    use bcaip::config::paths::Paths;
     use bcaip_roaming::{RoamingConfig, RoamingNode, TrustBook};
-    use goose::config::paths::Paths;
     use std::sync::Arc;
     let status_path = Paths::data_dir().join("roam/serve.json");
     let _ = std::fs::remove_file(&status_path);
@@ -1743,7 +1743,7 @@ async fn start_roam_share(
     .await?;
 
     let agent_id = node.endpoint_id().to_string();
-    // Roaming sessions run where `goose serve` was started: the connector's
+    // Roaming sessions run where `bcaip serve` was started: the connector's
     // machine-local path is meaningless on this host, and the serve-wide
     // server keeps `session_cwd: None` for local ACP clients.
     let session_cwd =
@@ -1788,9 +1788,9 @@ async fn start_roam_share(
 #[cfg(feature = "acp-http")]
 async fn handle_serve_command(args: ServeCommandArgs) -> Result<()> {
     use axum::http::HeaderValue;
-    use goose::acp::server::AcpBuiltinSelection;
-    use goose::acp::server_factory::{AcpServer, AcpServerFactoryConfig};
-    use goose::{acp::transport::create_router, config::paths::Paths};
+    use bcaip::acp::server::AcpBuiltinSelection;
+    use bcaip::acp::server_factory::{AcpServer, AcpServerFactoryConfig};
+    use bcaip::{acp::transport::create_router, config::paths::Paths};
     use std::{net::SocketAddr, sync::Arc};
     use tracing::{info, warn};
 
@@ -1826,24 +1826,24 @@ async fn handle_serve_command(args: ServeCommandArgs) -> Result<()> {
     let server = Arc::new(AcpServer::new(AcpServerFactoryConfig {
         builtins,
         config_dir: Paths::config_dir(),
-        goose_platform: platform.into(),
+        bcaip_platform: platform.into(),
         additional_source_roots,
         session_cwd: None,
         enable_scheduler,
     }));
-    let env_secret = std::env::var(GOOSE_SERVER_SECRET_KEY_ENV)
+    let env_secret = std::env::var(BCAIP_SERVER_SECRET_KEY_ENV)
         .ok()
         .map(|secret| secret.trim().to_string())
         .filter(|secret| !secret.is_empty());
     let require_token = env_secret.is_some();
     if !require_token && !dangerously_unauthenticated {
         anyhow::bail!(
-            "{GOOSE_SERVER_SECRET_KEY_ENV} must be set to start `goose serve`; pass --dangerously-unauthenticated to run without ACP authentication"
+            "{BCAIP_SERVER_SECRET_KEY_ENV} must be set to start `bcaip serve`; pass --dangerously-unauthenticated to run without ACP authentication"
         );
     }
     if dangerously_unauthenticated && !require_token {
         warn!(
-            "{GOOSE_SERVER_SECRET_KEY_ENV} is not set and --dangerously-unauthenticated was passed; the ACP endpoint will accept unauthenticated connections"
+            "{BCAIP_SERVER_SECRET_KEY_ENV} is not set and --dangerously-unauthenticated was passed; the ACP endpoint will accept unauthenticated connections"
         );
     }
     let additional_allowed_origins = allowed_origins
@@ -1880,11 +1880,11 @@ async fn handle_serve_command(args: ServeCommandArgs) -> Result<()> {
 
     let config = Config::global();
     let tls_cert_path =
-        tls_cert_path.or_else(|| config.get_param::<String>("GOOSE_TLS_CERT_PATH").ok());
+        tls_cert_path.or_else(|| config.get_param::<String>("BCAIP_TLS_CERT_PATH").ok());
     let tls_key_path =
-        tls_key_path.or_else(|| config.get_param::<String>("GOOSE_TLS_KEY_PATH").ok());
+        tls_key_path.or_else(|| config.get_param::<String>("BCAIP_TLS_KEY_PATH").ok());
     let tls = tls
-        || config.get_param::<bool>("GOOSE_TLS").unwrap_or(false)
+        || config.get_param::<bool>("BCAIP_TLS").unwrap_or(false)
         || tls_cert_path.is_some()
         || tls_key_path.is_some();
 
@@ -1892,7 +1892,7 @@ async fn handle_serve_command(args: ServeCommandArgs) -> Result<()> {
     if tls {
         #[cfg(any(feature = "rustls-tls", feature = "native-tls"))]
         {
-            let tls_setup = goose::acp::transport::tls::setup_tls(
+            let tls_setup = bcaip::acp::transport::tls::setup_tls(
                 tls_cert_path.as_deref(),
                 tls_key_path.as_deref(),
             )
@@ -2067,7 +2067,7 @@ async fn handle_interactive_session(args: InteractiveSessionArgs) -> Result<()> 
     };
 
     tracing::info!(
-        monotonic_counter.goose.session_starts = 1,
+        monotonic_counter.bcaip.session_starts = 1,
         session_type,
         interactive = true,
         "Session started"
@@ -2083,8 +2083,8 @@ async fn handle_interactive_session(args: InteractiveSessionArgs) -> Result<()> 
         std::process::exit(1);
     }
 
-    let goose_mode = Config::global().get_goose_mode().unwrap_or_default();
-    let mut session_id = get_or_create_session_id(identifier, resume, false, goose_mode).await?;
+    let bcaip_mode = Config::global().get_bcaip_mode().unwrap_or_default();
+    let mut session_id = get_or_create_session_id(identifier, resume, false, bcaip_mode).await?;
 
     if (edit || fork)
         && let Some(ref id) = session_id
@@ -2164,7 +2164,7 @@ async fn log_session_completion(
         .unwrap_or((0, 0));
 
     tracing::info!(
-        monotonic_counter.goose.session_completions = 1,
+        monotonic_counter.bcaip.session_completions = 1,
         session_type,
         exit_type,
         duration_ms = session_duration.as_millis() as u64,
@@ -2174,14 +2174,14 @@ async fn log_session_completion(
     );
 
     tracing::info!(
-        monotonic_counter.goose.session_duration_ms = session_duration.as_millis() as u64,
+        monotonic_counter.bcaip.session_duration_ms = session_duration.as_millis() as u64,
         session_type,
         "Session duration"
     );
 
     if total_tokens > 0 {
         tracing::info!(
-            monotonic_counter.goose.session_tokens = total_tokens,
+            monotonic_counter.bcaip.session_tokens = total_tokens,
             session_type,
             "Session tokens"
         );
@@ -2213,7 +2213,7 @@ fn parse_run_input(
         (Some(file), _, _) => {
             let contents = std::fs::read_to_string(file).unwrap_or_else(|err| {
                 eprintln!(
-                    "Instruction file not found — did you mean to use goose run --text?\n{}",
+                    "Instruction file not found — did you mean to use bcaip run --text?\n{}",
                     err
                 );
                 std::process::exit(1);
@@ -2242,7 +2242,7 @@ fn parse_run_input(
             let recipe_version = crate::recipes::search_recipe::load_recipe_file(recipe_name)
                 .ok()
                 .and_then(|rf| {
-                    goose::recipe::template_recipe::parse_recipe_content(
+                    bcaip::recipe::template_recipe::parse_recipe_content(
                         &rf.content,
                         Some(rf.parent_dir.display().to_string()),
                     )
@@ -2264,7 +2264,7 @@ fn parse_run_input(
             }
 
             tracing::info!(
-                monotonic_counter.goose.recipe_runs = 1,
+                monotonic_counter.bcaip.recipe_runs = 1,
                 recipe_name = %recipe_display_name,
                 recipe_version = %recipe_version,
                 session_type = "recipe",
@@ -2319,12 +2319,12 @@ async fn handle_run_command(
         std::process::exit(1);
     }
 
-    let goose_mode = Config::global().get_goose_mode().unwrap_or_default();
+    let bcaip_mode = Config::global().get_bcaip_mode().unwrap_or_default();
     let session_id = get_or_create_session_id(
         identifier,
         run_behavior.resume,
         run_behavior.no_session,
-        goose_mode,
+        bcaip_mode,
     )
     .await?;
 
@@ -2360,7 +2360,7 @@ async fn handle_run_command(
         let session_type = if recipe.is_some() { "recipe" } else { "run" };
 
         tracing::info!(
-            monotonic_counter.goose.session_starts = 1,
+            monotonic_counter.bcaip.session_starts = 1,
             session_type,
             interactive = false,
             "Headless session started"
@@ -2385,7 +2385,7 @@ async fn handle_gateway_command(command: GatewayCommand) -> Result<()> {
             bot_token,
         } => {
             let mut platform_config = serde_json::json!({ "bot_token": bot_token });
-            if let Some(ids) = goose::gateway::manager::saved_allowed_user_ids(&gateway_type) {
+            if let Some(ids) = bcaip::gateway::manager::saved_allowed_user_ids(&gateway_type) {
                 platform_config["allowed_user_ids"] = serde_json::json!(ids);
             }
             gateway::handle_gateway_start(gateway_type, platform_config).await
@@ -2581,7 +2581,7 @@ fn recommended_variant(
 #[cfg(feature = "local-inference")]
 async fn handle_local_models_command(command: LocalModelsCommand) -> Result<()> {
     use bcaip_local_inference::hf_models;
-    goose::providers::local_inference::configure_huggingface_auth();
+    bcaip::providers::local_inference::configure_huggingface_auth();
 
     match command {
         LocalModelsCommand::Search {
@@ -2684,7 +2684,7 @@ async fn handle_local_models_command(command: LocalModelsCommand) -> Result<()> 
                         format_size(variant.size_bytes)
                     );
                     println!(
-                        "    Download: goose local-models download '{}'",
+                        "    Download: bcaip local-models download '{}'",
                         variant.download_id
                     );
                 } else {
@@ -2715,7 +2715,7 @@ async fn handle_local_models_command(command: LocalModelsCommand) -> Result<()> 
                     );
                     if variant.supported {
                         println!(
-                            "    Download: goose local-models download '{}'",
+                            "    Download: bcaip local-models download '{}'",
                             variant.download_id
                         );
                     }
@@ -2788,8 +2788,8 @@ async fn handle_default_session() -> Result<()> {
         configure_telemetry_consent_dialog()?;
     }
 
-    let goose_mode = Config::global().get_goose_mode().unwrap_or_default();
-    let session_id = get_or_create_session_id(None, false, false, goose_mode).await?;
+    let bcaip_mode = Config::global().get_bcaip_mode().unwrap_or_default();
+    let session_id = get_or_create_session_id(None, false, false, bcaip_mode).await?;
 
     let mut session = build_session(SessionBuilderConfig {
         session_id,
@@ -2826,7 +2826,7 @@ pub async fn cli() -> anyhow::Result<()> {
 
     let command_name = get_command_name(&cli.command);
     tracing::info!(
-        monotonic_counter.goose.cli_commands = 1,
+        monotonic_counter.bcaip.cli_commands = 1,
         command = command_name,
         "CLI command executed"
     );
@@ -2845,7 +2845,7 @@ pub async fn cli() -> anyhow::Result<()> {
         Some(Command::Acp {
             builtins,
             enable_scheduler,
-        }) => goose::acp::server::run(builtins, enable_scheduler).await,
+        }) => bcaip::acp::server::run(builtins, enable_scheduler).await,
         #[cfg(feature = "roaming")]
         Some(Command::Roam { command }) => handle_roam_command(command).await,
         #[cfg(feature = "acp-http")]
@@ -2984,7 +2984,7 @@ pub async fn cli() -> anyhow::Result<()> {
             .await
         }
         Some(Command::ValidateExtensions { file }) => {
-            use goose::agents::validate_extensions::validate_bundled_extensions;
+            use bcaip::agents::validate_extensions::validate_bundled_extensions;
             match validate_bundled_extensions(&file) {
                 Ok(msg) => {
                     println!("{msg}");

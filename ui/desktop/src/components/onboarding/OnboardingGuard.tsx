@@ -48,7 +48,7 @@ const i18n = defineMessages<{
   },
 });
 
-const TELEMETRY_CONFIG_KEY = 'GOOSE_TELEMETRY_ENABLED';
+const TELEMETRY_CONFIG_KEY = 'BCAIP_TELEMETRY_ENABLED';
 
 
 export default function OnboardingGuard({ children }: OnboardingGuardProps) {

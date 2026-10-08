@@ -42,7 +42,7 @@ pub fn is_meta_provider(provider: &str) -> bool {
 
 pub fn map_provider_name(provider: &str) -> &str {
     match provider {
-        // Goose provider names that differ from models.dev names
+        // BCAIP provider names that differ from models.dev names
         "xai" | "xai_oauth" => "x-ai",
         "azure_openai" | "azure_foundry" => "azure",
         "aws_bedrock" => "amazon-bedrock",

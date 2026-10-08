@@ -1,12 +1,12 @@
 use anyhow::{Context, Result};
 
-use cliclack::{confirm, multiselect, select};
-use etcetera::home_dir;
-use goose::session::{
+use bcaip::session::{
     DiagnosticsLevel, Session, SessionManager, SessionType, export_session_to_markdown,
     generate_diagnostics,
 };
-use goose::utils::safe_truncate;
+use bcaip::utils::safe_truncate;
+use cliclack::{confirm, multiselect, select};
+use etcetera::home_dir;
 use regex::Regex;
 use std::fs;
 use std::io::{self, Write};
@@ -308,12 +308,12 @@ pub async fn handle_session_import(input: String) -> Result<()> {
     let json = fs::read_to_string(&input)
         .with_context(|| format!("Failed to read session import file: {input}"))?;
 
-    let format = goose::session::detect_format(&json);
+    let format = bcaip::session::detect_format(&json);
     let label = match format {
-        goose::session::ImportFormat::Goose => "goose",
-        goose::session::ImportFormat::ClaudeCode => "Claude Code",
-        goose::session::ImportFormat::Codex => "Codex",
-        goose::session::ImportFormat::Pi => "Pi",
+        bcaip::session::ImportFormat::Goose => "goose",
+        bcaip::session::ImportFormat::ClaudeCode => "Claude Code",
+        bcaip::session::ImportFormat::Codex => "Codex",
+        bcaip::session::ImportFormat::Pi => "Pi",
     };
     println!("Detected format: {}", label);
 

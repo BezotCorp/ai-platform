@@ -11,9 +11,9 @@ sidebar:
 The `goose-doc-guide` skill reads official goose documentation before answering
 goose-specific questions. By default it reads from `https://goose-docs.ai`. In
 an offline or air-gapped environment, point goose at a **local copy** instead by
-setting `GOOSE_DOCS_ROOT`.
+setting `BCAIP_DOCS_ROOT`.
 
-- If `GOOSE_DOCS_ROOT` is set (in `config.yaml` or the environment), goose uses
+- If `BCAIP_DOCS_ROOT` is set (in `config.yaml` or the environment), goose uses
   it as the docs root — either a local filesystem path or an HTTP(S) URL.
 - If it is not set, goose falls back to `https://goose-docs.ai`.
 
@@ -60,29 +60,29 @@ build/
 
 `npm run build` requires registry access, so run it in an online environment.
 Then copy the resulting `build/` directory to your air-gapped target location
-(for example `/opt/goose-docs`) and point `GOOSE_DOCS_ROOT` at it.
+(for example `/opt/goose-docs`) and point `BCAIP_DOCS_ROOT` at it.
 
 ## Configuring goose
 
-Set `GOOSE_DOCS_ROOT` in `config.yaml`:
+Set `BCAIP_DOCS_ROOT` in `config.yaml`:
 
 ```yaml
-GOOSE_DOCS_ROOT: "/opt/goose-docs"
+BCAIP_DOCS_ROOT: "/opt/goose-docs"
 ```
 
 Or via the environment:
 
 ```bash
-export GOOSE_DOCS_ROOT=/opt/goose-docs
+export BCAIP_DOCS_ROOT=/opt/goose-docs
 ```
 
 For a managed distribution, bake the docs tree into your image and set
-`GOOSE_DOCS_ROOT` in the shipped `config.yaml` or launcher environment.
+`BCAIP_DOCS_ROOT` in the shipped `config.yaml` or launcher environment.
 
 ## Notes
 
 - Documentation links in goose's answers always render as canonical
   `https://goose-docs.ai/...` URLs, even when read locally.
-- A custom HTTP(S) mirror also works: set `GOOSE_DOCS_ROOT` to its root URL.
+- A custom HTTP(S) mirror also works: set `BCAIP_DOCS_ROOT` to its root URL.
 - For MCP extension runtime issues offline, see
   [Airgapped/Offline Environment Issues](/troubleshooting/known-issues#airgappedoffline-environment-issues).

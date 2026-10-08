@@ -18,25 +18,25 @@ These are the minimum required variables to get started with goose.
 
 | Variable | Purpose | Values | Default |
 |----------|---------|---------|---------|
-| `GOOSE_PROVIDER` | Specifies the LLM provider to use | [See available providers](/getting-started/providers#available-providers) | None (must be [configured](/getting-started/providers#configure-provider-and-model)) |
-| `GOOSE_MODEL` | Specifies which model to use from the provider | Model name (e.g., "gpt-4", "claude-sonnet-4-20250514") | None (must be [configured](/getting-started/providers#configure-provider-and-model)) |
-| `GOOSE_TEMPERATURE` | Sets the [temperature](https://medium.com/@kelseyywang/a-comprehensive-guide-to-llm-temperature-%EF%B8%8F-363a40bbc91f) for model responses | Float between 0.0 and 1.0 | Model-specific default |
-| `GOOSE_MAX_TOKENS` | Sets the maximum number of tokens for each model response (truncates longer responses) | Positive integer (e.g., 4096, 8192) | Model-specific default |
-| `GOOSE_CACHE_TTL` | Sets the Anthropic prompt-cache TTL. `1h` keeps the cached prefix alive across idle gaps (e.g. stepping away mid-session) but bills cache writes at 2x input instead of 1.25x, so it only pays off for sessions that actually idle. Headless runs (`goose run`, subagents, scheduled recipes) always use `5m` | `5m`, `1h` | `5m` |
+| `BCAIP_PROVIDER` | Specifies the LLM provider to use | [See available providers](/getting-started/providers#available-providers) | None (must be [configured](/getting-started/providers#configure-provider-and-model)) |
+| `BCAIP_MODEL` | Specifies which model to use from the provider | Model name (e.g., "gpt-4", "claude-sonnet-4-20250514") | None (must be [configured](/getting-started/providers#configure-provider-and-model)) |
+| `BCAIP_TEMPERATURE` | Sets the [temperature](https://medium.com/@kelseyywang/a-comprehensive-guide-to-llm-temperature-%EF%B8%8F-363a40bbc91f) for model responses | Float between 0.0 and 1.0 | Model-specific default |
+| `BCAIP_MAX_TOKENS` | Sets the maximum number of tokens for each model response (truncates longer responses) | Positive integer (e.g., 4096, 8192) | Model-specific default |
+| `BCAIP_CACHE_TTL` | Sets the Anthropic prompt-cache TTL. `1h` keeps the cached prefix alive across idle gaps (e.g. stepping away mid-session) but bills cache writes at 2x input instead of 1.25x, so it only pays off for sessions that actually idle. Headless runs (`goose run`, subagents, scheduled recipes) always use `5m` | `5m`, `1h` | `5m` |
 
 **Examples**
 
 ```bash
 # Basic model configuration
-export GOOSE_PROVIDER="anthropic"
-export GOOSE_MODEL="claude-sonnet-4-5-20250929"
-export GOOSE_TEMPERATURE=0.7
+export BCAIP_PROVIDER="anthropic"
+export BCAIP_MODEL="claude-sonnet-4-5-20250929"
+export BCAIP_TEMPERATURE=0.7
 
 # Set a lower limit for shorter interactions
-export GOOSE_MAX_TOKENS=4096
+export BCAIP_MAX_TOKENS=4096
 
 # Set a higher limit for tasks requiring longer output (e.g. code generation)
-export GOOSE_MAX_TOKENS=16000
+export BCAIP_MAX_TOKENS=16000
 ```
 
 ### Advanced Provider Configuration
@@ -45,18 +45,18 @@ These variables are needed when using custom endpoints, enterprise deployments, 
 
 | Variable | Purpose | Values | Default |
 |----------|---------|---------|---------|
-| `GOOSE_PROVIDER__TYPE` | The specific type/implementation of the provider | [See available providers](/getting-started/providers#available-providers) | Derived from GOOSE_PROVIDER |
-| `GOOSE_PROVIDER__HOST` | Custom API endpoint for the provider | URL (e.g., "https://api.openai.com") | Provider-specific default |
-| `GOOSE_PROVIDER__API_KEY` | Authentication key for the provider | API key string | None |
+| `BCAIP_PROVIDER__TYPE` | The specific type/implementation of the provider | [See available providers](/getting-started/providers#available-providers) | Derived from BCAIP_PROVIDER |
+| `BCAIP_PROVIDER__HOST` | Custom API endpoint for the provider | URL (e.g., "https://api.openai.com") | Provider-specific default |
+| `BCAIP_PROVIDER__API_KEY` | Authentication key for the provider | API key string | None |
 | `GEMINI3_THINKING_LEVEL` | Sets the [thinking level](/getting-started/providers#gemini-3-thinking-levels) for Gemini 3 models globally | `low`, `high` | `low` |
 
 **Examples**
 
 ```bash
 # Advanced provider configuration
-export GOOSE_PROVIDER__TYPE="anthropic"
-export GOOSE_PROVIDER__HOST="https://api.anthropic.com"
-export GOOSE_PROVIDER__API_KEY="your-api-key-here"
+export BCAIP_PROVIDER__TYPE="anthropic"
+export BCAIP_PROVIDER__HOST="https://api.anthropic.com"
+export BCAIP_PROVIDER__API_KEY="your-api-key-here"
 ```
 
 ### Claude Thinking Configuration
@@ -71,8 +71,8 @@ These variables control Claude's reasoning behavior. Supported on Anthropic and 
 
 ```bash
 # Claude 4.6 adaptive thinking
-export GOOSE_PROVIDER=anthropic
-export GOOSE_MODEL=claude-sonnet-4-6
+export BCAIP_PROVIDER=anthropic
+export BCAIP_MODEL=claude-sonnet-4-6
 export CLAUDE_THINKING_TYPE=adaptive
 
 # Explicit extended thinking with the default budget
@@ -86,7 +86,7 @@ export CLAUDE_THINKING_TYPE=disabled
 ```
 
 :::tip Viewing Thinking Output
-To see Claude's thinking output in the **CLI**, you also need to set `GOOSE_CLI_SHOW_THINKING=1`. In **goose Desktop**, thinking output is shown automatically in a collapsible "Show reasoning" toggle.
+To see Claude's thinking output in the **CLI**, you also need to set `BCAIP_CLI_SHOW_THINKING=1`. In **goose Desktop**, thinking output is shown automatically in a collapsible "Show reasoning" toggle.
 :::
 
 ### Provider Retries
@@ -136,96 +136,96 @@ These variables control how goose manages conversation sessions and context.
 
 | Variable | Purpose | Values | Default |
 |----------|---------|---------|---------|
-| `GOOSE_MAX_TURNS` | [Maximum number of turns](/guides/sessions/smart-context-management#maximum-turns) allowed without user input | Integer (e.g., 10, 50, 100) | 1000 |
-| `GOOSE_GATEWAY_MAX_TURNS` | Maximum number of turns for gateway sessions (e.g., Telegram). Overrides `GOOSE_MAX_TURNS` for gateway traffic only, so chat platforms can keep a stricter cap than CLI/desktop sessions. | Integer (e.g., 5, 10, 25) | Falls back to `GOOSE_MAX_TURNS`, then 5 |
-| `GOOSE_SUBAGENT_MAX_TURNS` | Sets the maximum turns allowed for a [subagent](/guides/context-engineering/subagents) to complete before timeout. Can be overridden by [`settings.max_turns`](/guides/recipes/recipe-reference#settings) in recipes or subagent tool calls. | Integer (e.g., 25) | 25 |
-| `GOOSE_MAX_BACKGROUND_TASKS` | Sets the maximum number of concurrent background [subagent](/guides/context-engineering/subagents) tasks goose can run at once | Integer (e.g., 1, 5, 10) | 5 |
+| `BCAIP_MAX_TURNS` | [Maximum number of turns](/guides/sessions/smart-context-management#maximum-turns) allowed without user input | Integer (e.g., 10, 50, 100) | 1000 |
+| `BCAIP_GATEWAY_MAX_TURNS` | Maximum number of turns for gateway sessions (e.g., Telegram). Overrides `BCAIP_MAX_TURNS` for gateway traffic only, so chat platforms can keep a stricter cap than CLI/desktop sessions. | Integer (e.g., 5, 10, 25) | Falls back to `BCAIP_MAX_TURNS`, then 5 |
+| `BCAIP_SUBAGENT_MAX_TURNS` | Sets the maximum turns allowed for a [subagent](/guides/context-engineering/subagents) to complete before timeout. Can be overridden by [`settings.max_turns`](/guides/recipes/recipe-reference#settings) in recipes or subagent tool calls. | Integer (e.g., 25) | 25 |
+| `BCAIP_MAX_BACKGROUND_TASKS` | Sets the maximum number of concurrent background [subagent](/guides/context-engineering/subagents) tasks goose can run at once | Integer (e.g., 1, 5, 10) | 5 |
 | `CONTEXT_FILE_NAMES` | Specifies custom filenames for [hint/context files](/guides/context-engineering/using-goosehints#custom-context-files) | JSON array of strings (e.g., `["CLAUDE.md", ".goosehints"]`) | `[".goosehints", "AGENTS.md"]` |
-| `GOOSE_DISABLE_SESSION_NAMING` | Disables automatic AI-generated session naming; avoids the background model call and keeps the default "CLI Session" (goose CLI) or "New Chat" (goose Desktop) | "1", "true" (case-insensitive) to enable | false |
-| `GOOSE_PROMPT_EDITOR` | [External editor](/guides/goose-cli-commands#external-editor-mode) to use for composing prompts instead of CLI input | Editor command (e.g., "vim", "code --wait") | Unset (uses CLI input) |
-| `GOOSE_CLI_THEME` | [Theme](/guides/goose-cli-commands#themes) for CLI response markdown | "light", "dark", "ansi" | "ansi" |
-| `GOOSE_CLI_LIGHT_THEME` | Custom [bat theme](https://github.com/sharkdp/bat#adding-new-themes) for syntax highlighting when using light mode | bat theme name (e.g., "Solarized (light)", "OneHalfLight") | "GitHub" |
-| `GOOSE_CLI_DARK_THEME` | Custom [bat theme](https://github.com/sharkdp/bat#adding-new-themes) for syntax highlighting when using dark mode | bat theme name (e.g., "Dracula", "Nord") | "zenburn" |
-| `GOOSE_CLI_NEWLINE_KEY` | Customize the keyboard shortcut for [inserting newlines in CLI input](/guides/goose-cli-commands#keyboard-shortcuts) | Single character (e.g., "n", "m") | "j" (Ctrl+J) |
-| `GOOSE_CLI_BELL` | Ring the terminal bell when an interactive turn finishes or tool approval is required | "true", "false" | false |
-| `GOOSE_CLI_SHOW_THINKING` | Shows model reasoning/thinking output in CLI responses. Some models (e.g., DeepSeek-R1, Kimi, Gemini) expose their internal reasoning process — this variable makes it visible in the CLI. | Set to any value to enable | Disabled |
-| `GOOSE_RANDOM_THINKING_MESSAGES` | Controls whether to show amusing random messages during processing | "true", "false" | "true" |
-| `GOOSE_CLI_SHOW_COST` | Toggles display of model cost estimates in CLI output | "1", "true" (case-insensitive) to enable | false |
-| `GOOSE_MAX_CODE_BLOCK_LINES` | Line count threshold before code blocks are truncated in CLI output. Full content is saved to a temp file. | Positive integer | 50 |
-| `GOOSE_TRUNCATED_SHOW_LINES` | Number of lines shown before the "... (N more lines)" message when a code block is truncated | Positive integer | 20 |
-| `GOOSE_NO_CODE_TRUNCATION` | Disable code block truncation entirely — all code blocks are shown in full | "1", "true" (case-insensitive) to enable | false |
-| `GOOSE_AUTO_COMPACT_THRESHOLD` | Set the percentage threshold at which goose [automatically compacts your session](/guides/sessions/smart-context-management#automatic-compaction). | Float between 0.0 and 1.0 (disabled at 0.0) | 0.8 |
-| `GOOSE_TOOL_CALL_CUTOFF` | Number of tool calls to keep in full detail before summarizing older tool outputs to help maintain efficient context usage | Integer (e.g., 5, 10, 20) | Computed from the model context limit and auto-compaction threshold |
-| `GOOSE_MOIM_MESSAGE_TEXT` | Injects persistent text into goose's [working memory](/guides/context-engineering/using-persistent-instructions) every turn. Useful for behavioral guardrails or persistent reminders. | Any text string | Not set |
-| `GOOSE_MOIM_MESSAGE_FILE` | Path to a file whose contents are injected into goose's [working memory](/guides/context-engineering/using-persistent-instructions) every turn. Supports `~/`. Max 64 KB per file. | File path | Not set |
+| `BCAIP_DISABLE_SESSION_NAMING` | Disables automatic AI-generated session naming; avoids the background model call and keeps the default "CLI Session" (goose CLI) or "New Chat" (goose Desktop) | "1", "true" (case-insensitive) to enable | false |
+| `BCAIP_PROMPT_EDITOR` | [External editor](/guides/goose-cli-commands#external-editor-mode) to use for composing prompts instead of CLI input | Editor command (e.g., "vim", "code --wait") | Unset (uses CLI input) |
+| `BCAIP_CLI_THEME` | [Theme](/guides/goose-cli-commands#themes) for CLI response markdown | "light", "dark", "ansi" | "ansi" |
+| `BCAIP_CLI_LIGHT_THEME` | Custom [bat theme](https://github.com/sharkdp/bat#adding-new-themes) for syntax highlighting when using light mode | bat theme name (e.g., "Solarized (light)", "OneHalfLight") | "GitHub" |
+| `BCAIP_CLI_DARK_THEME` | Custom [bat theme](https://github.com/sharkdp/bat#adding-new-themes) for syntax highlighting when using dark mode | bat theme name (e.g., "Dracula", "Nord") | "zenburn" |
+| `BCAIP_CLI_NEWLINE_KEY` | Customize the keyboard shortcut for [inserting newlines in CLI input](/guides/goose-cli-commands#keyboard-shortcuts) | Single character (e.g., "n", "m") | "j" (Ctrl+J) |
+| `BCAIP_CLI_BELL` | Ring the terminal bell when an interactive turn finishes or tool approval is required | "true", "false" | false |
+| `BCAIP_CLI_SHOW_THINKING` | Shows model reasoning/thinking output in CLI responses. Some models (e.g., DeepSeek-R1, Kimi, Gemini) expose their internal reasoning process — this variable makes it visible in the CLI. | Set to any value to enable | Disabled |
+| `BCAIP_RANDOM_THINKING_MESSAGES` | Controls whether to show amusing random messages during processing | "true", "false" | "true" |
+| `BCAIP_CLI_SHOW_COST` | Toggles display of model cost estimates in CLI output | "1", "true" (case-insensitive) to enable | false |
+| `BCAIP_MAX_CODE_BLOCK_LINES` | Line count threshold before code blocks are truncated in CLI output. Full content is saved to a temp file. | Positive integer | 50 |
+| `BCAIP_TRUNCATED_SHOW_LINES` | Number of lines shown before the "... (N more lines)" message when a code block is truncated | Positive integer | 20 |
+| `BCAIP_NO_CODE_TRUNCATION` | Disable code block truncation entirely — all code blocks are shown in full | "1", "true" (case-insensitive) to enable | false |
+| `BCAIP_AUTO_COMPACT_THRESHOLD` | Set the percentage threshold at which goose [automatically compacts your session](/guides/sessions/smart-context-management#automatic-compaction). | Float between 0.0 and 1.0 (disabled at 0.0) | 0.8 |
+| `BCAIP_TOOL_CALL_CUTOFF` | Number of tool calls to keep in full detail before summarizing older tool outputs to help maintain efficient context usage | Integer (e.g., 5, 10, 20) | Computed from the model context limit and auto-compaction threshold |
+| `BCAIP_MOIM_MESSAGE_TEXT` | Injects persistent text into goose's [working memory](/guides/context-engineering/using-persistent-instructions) every turn. Useful for behavioral guardrails or persistent reminders. | Any text string | Not set |
+| `BCAIP_MOIM_MESSAGE_FILE` | Path to a file whose contents are injected into goose's [working memory](/guides/context-engineering/using-persistent-instructions) every turn. Supports `~/`. Max 64 KB per file. | File path | Not set |
 
-For subagents, recipe [`settings.goose_provider` and `settings.goose_model`](/guides/recipes/recipe-reference#settings) take precedence over the `GOOSE_SUBAGENT_PROVIDER` and `GOOSE_SUBAGENT_MODEL` environment variables.
+For subagents, recipe [`settings.goose_provider` and `settings.bcaip_model`](/guides/recipes/recipe-reference#settings) take precedence over the `BCAIP_SUBAGENT_PROVIDER` and `BCAIP_SUBAGENT_MODEL` environment variables.
 
 **Examples**
 
 ```bash
 # Set a low limit for step-by-step control
-export GOOSE_MAX_TURNS=5
+export BCAIP_MAX_TURNS=5
 
 # Set a moderate limit for controlled automation
-export GOOSE_MAX_TURNS=25
+export BCAIP_MAX_TURNS=25
 
 # Set a reasonable limit for production
-export GOOSE_MAX_TURNS=100
+export BCAIP_MAX_TURNS=100
 
 # Raise the per-gateway cap without changing CLI/desktop limits
 # (applies to Telegram and other gateway sessions only)
-export GOOSE_GATEWAY_MAX_TURNS=15
+export BCAIP_GATEWAY_MAX_TURNS=15
 
 # Customize the default subagent turn limit
 # Note: This can be overridden per-recipe or per-subagent using the max_turns setting
-export GOOSE_SUBAGENT_MAX_TURNS=50
+export BCAIP_SUBAGENT_MAX_TURNS=50
 
 # Use multiple context files
 export CONTEXT_FILE_NAMES='["CLAUDE.md", ".goosehints", ".cursorrules", "project_rules.txt"]'
 
 # Disable automatic AI-generated session naming (useful for CI/headless runs)
-export GOOSE_DISABLE_SESSION_NAMING=true
+export BCAIP_DISABLE_SESSION_NAMING=true
 
 # Use vim for composing prompts
-export GOOSE_PROMPT_EDITOR=vim
+export BCAIP_PROMPT_EDITOR=vim
 
 # Set the ANSI theme for the session
-export GOOSE_CLI_THEME=ansi
+export BCAIP_CLI_THEME=ansi
 
 # Customize syntax highlighting themes (uses bat themes)
-export GOOSE_CLI_LIGHT_THEME="Solarized (light)"
-export GOOSE_CLI_DARK_THEME="Dracula"
+export BCAIP_CLI_LIGHT_THEME="Solarized (light)"
+export BCAIP_CLI_DARK_THEME="Dracula"
 
 # Use Ctrl+N instead of Ctrl+J for newline
-export GOOSE_CLI_NEWLINE_KEY=n
+export BCAIP_CLI_NEWLINE_KEY=n
 
 # Disable random thinking messages for less distraction
-export GOOSE_RANDOM_THINKING_MESSAGES=false
+export BCAIP_RANDOM_THINKING_MESSAGES=false
 
 # Show reasoning/thinking output from models that support it (e.g., DeepSeek-R1, Kimi, Gemini)
-export GOOSE_CLI_SHOW_THINKING=1
+export BCAIP_CLI_SHOW_THINKING=1
 
 # Enable model cost display in CLI
-export GOOSE_CLI_SHOW_COST=true
+export BCAIP_CLI_SHOW_COST=true
 
 # Show code blocks up to 100 lines before truncating
-export GOOSE_MAX_CODE_BLOCK_LINES=100
+export BCAIP_MAX_CODE_BLOCK_LINES=100
 
 # Disable code block truncation entirely (show all lines inline)
-export GOOSE_NO_CODE_TRUNCATION=true
+export BCAIP_NO_CODE_TRUNCATION=true
 
 # Automatically compact sessions when 60% of available tokens are used
-export GOOSE_AUTO_COMPACT_THRESHOLD=0.6
+export BCAIP_AUTO_COMPACT_THRESHOLD=0.6
 
 # Keep more tool calls in full detail (useful for debugging or verbose workflows)
-export GOOSE_TOOL_CALL_CUTOFF=20
+export BCAIP_TOOL_CALL_CUTOFF=20
 
 # Inject a persistent reminder into goose's working memory every turn
-export GOOSE_MOIM_MESSAGE_TEXT="IMPORTANT: Always run tests before committing changes."
+export BCAIP_MOIM_MESSAGE_TEXT="IMPORTANT: Always run tests before committing changes."
 
 # Load persistent instructions from a file (supports ~/)
-export GOOSE_MOIM_MESSAGE_FILE="~/.goose/guardrails.md"
+export BCAIP_MOIM_MESSAGE_FILE="~/.goose/guardrails.md"
 ```
 
 ### Model Context Limit Overrides
@@ -234,16 +234,16 @@ These variables allow you to override the default context window size (token lim
 
 | Variable | Purpose | Values | Default |
 |----------|---------|---------|---------|
-| `GOOSE_CONTEXT_LIMIT` | Override context limit for the main model | Integer (number of tokens) | Model-specific default or 128,000 |
-| `GOOSE_INPUT_LIMIT` | Override input prompt limit for ollama requests (maps to `num_ctx`) | Integer (number of tokens) | Unset; Ollama uses its model default |
+| `BCAIP_CONTEXT_LIMIT` | Override context limit for the main model | Integer (number of tokens) | Model-specific default or 128,000 |
+| `BCAIP_INPUT_LIMIT` | Override input prompt limit for ollama requests (maps to `num_ctx`) | Integer (number of tokens) | Unset; Ollama uses its model default |
 
 **Examples**
 
 ```bash
 # Set context limit for main model (useful for LiteLLM proxies)
-export GOOSE_CONTEXT_LIMIT=200000
+export BCAIP_CONTEXT_LIMIT=200000
 # Override ollama input prompt limit
-export GOOSE_INPUT_LIMIT=32000
+export BCAIP_INPUT_LIMIT=32000
 ```
 
 For more details and examples, see [Model Context Limit Overrides](/guides/sessions/smart-context-management#model-context-limit-overrides).
@@ -254,49 +254,49 @@ These variables control how goose handles [tool execution](/guides/managing-tool
 
 | Variable | Purpose | Values | Default |
 |----------|---------|---------|---------|
-| `GOOSE_MODE` | Controls how goose handles tool execution | "auto", "approve", "chat", "smart_approve" | "auto" |
-| `GOOSE_TOOLSHIM` | Enables the [tool shim](/guides/tool-shim) for models that output text-based tool calls | "1", "true" (case-insensitive) to enable | false |
-| `GOOSE_TOOLSHIM_BACKEND` | Interpreter backend for the tool shim | "ollama" (default), "local", "llama.cpp" | "ollama" |
-| `GOOSE_TOOLSHIM_OLLAMA_MODEL` | Ollama model used as the [tool shim](/guides/tool-shim) interpreter | Model name (e.g. llama3.2, mistral-nemo) | "mistral-nemo" |
-| `GOOSE_TOOLSHIM_MODEL` | Model for the local tool shim interpreter backend | Model name | Uses `LOCAL_LLM_MODEL` config |
-| `GOOSE_CLI_MIN_PRIORITY` | Controls verbosity of [tool output](/guides/managing-tools/adjust-tool-output) | Float between 0.0 and 1.0 | 0.0 |
-| `GOOSE_DEBUG` | Enables debug mode to show full tool parameters without truncation. Can also be toggled during a session using the `/r` [slash command](/guides/goose-cli-commands#slash-commands) | "1", "true" (case-insensitive) to enable | false |
-| `GOOSE_SHOW_FULL_OUTPUT` | Shows full tool parameters in CLI output instead of truncating them to the terminal width | true/false | false |
-| `GOOSE_SEARCH_PATHS` | Prepends additional directories to PATH for extension commands | JSON array of paths (for example, `["/usr/local/bin", "~/custom/bin"]`) | Built-in search paths followed by the system PATH |
-| `GOOSE_MAX_TOOL_RESPONSE_SIZE` | Maximum character count for a single tool response before it is written to a temporary file instead of being included inline in the conversation | Positive integer (e.g., 100000, 200000) | 200000 |
-| `GOOSE_SHELL` | Overrides the shell used for Developer extension shell commands | Shell executable path or name (for example, `/bin/zsh`, `pwsh`, `C:\cygwin64\bin\bash.exe`) | Unix: `bash` if found on PATH, otherwise `sh`. Windows: `cmd` |
+| `BCAIP_MODE` | Controls how goose handles tool execution | "auto", "approve", "chat", "smart_approve" | "auto" |
+| `BCAIP_TOOLSHIM` | Enables the [tool shim](/guides/tool-shim) for models that output text-based tool calls | "1", "true" (case-insensitive) to enable | false |
+| `BCAIP_TOOLSHIM_BACKEND` | Interpreter backend for the tool shim | "ollama" (default), "local", "llama.cpp" | "ollama" |
+| `BCAIP_TOOLSHIM_OLLAMA_MODEL` | Ollama model used as the [tool shim](/guides/tool-shim) interpreter | Model name (e.g. llama3.2, mistral-nemo) | "mistral-nemo" |
+| `BCAIP_TOOLSHIM_MODEL` | Model for the local tool shim interpreter backend | Model name | Uses `LOCAL_LLM_MODEL` config |
+| `BCAIP_CLI_MIN_PRIORITY` | Controls verbosity of [tool output](/guides/managing-tools/adjust-tool-output) | Float between 0.0 and 1.0 | 0.0 |
+| `BCAIP_DEBUG` | Enables debug mode to show full tool parameters without truncation. Can also be toggled during a session using the `/r` [slash command](/guides/goose-cli-commands#slash-commands) | "1", "true" (case-insensitive) to enable | false |
+| `BCAIP_SHOW_FULL_OUTPUT` | Shows full tool parameters in CLI output instead of truncating them to the terminal width | true/false | false |
+| `BCAIP_SEARCH_PATHS` | Prepends additional directories to PATH for extension commands | JSON array of paths (for example, `["/usr/local/bin", "~/custom/bin"]`) | Built-in search paths followed by the system PATH |
+| `BCAIP_MAX_TOOL_RESPONSE_SIZE` | Maximum character count for a single tool response before it is written to a temporary file instead of being included inline in the conversation | Positive integer (e.g., 100000, 200000) | 200000 |
+| `BCAIP_SHELL` | Overrides the shell used for Developer extension shell commands | Shell executable path or name (for example, `/bin/zsh`, `pwsh`, `C:\cygwin64\bin\bash.exe`) | Unix: `bash` if found on PATH, otherwise `sh`. Windows: `cmd` |
 
 **Examples**
 
 ```bash
 # Enable tool interpretation
-export GOOSE_TOOLSHIM=true
-export GOOSE_TOOLSHIM_OLLAMA_MODEL=llama3.2
-export GOOSE_MODE="auto"
-export GOOSE_CLI_MIN_PRIORITY=0.2  # Show only medium and high importance output
-export GOOSE_SHOW_FULL_OUTPUT=true  # Show full tool parameters in CLI output
+export BCAIP_TOOLSHIM=true
+export BCAIP_TOOLSHIM_OLLAMA_MODEL=llama3.2
+export BCAIP_MODE="auto"
+export BCAIP_CLI_MIN_PRIORITY=0.2  # Show only medium and high importance output
+export BCAIP_SHOW_FULL_OUTPUT=true  # Show full tool parameters in CLI output
 
 # Add custom tool directories for extensions
-export GOOSE_SEARCH_PATHS='["/usr/local/bin", "~/custom/tools", "/opt/homebrew/bin"]'
+export BCAIP_SEARCH_PATHS='["/usr/local/bin", "~/custom/tools", "/opt/homebrew/bin"]'
 
 # These custom paths are checked before built-in fallback paths such as
 # ~/.local/bin, /usr/local/bin on Unix, Homebrew/MacPorts paths on macOS,
 # and finally the inherited system PATH.
 
 # Lower the tool response size limit for smaller-context models
-export GOOSE_MAX_TOOL_RESPONSE_SIZE=100000
+export BCAIP_MAX_TOOL_RESPONSE_SIZE=100000
 
 # Use zsh for Developer extension shell commands
-export GOOSE_SHELL=/bin/zsh
+export BCAIP_SHELL=/bin/zsh
 ```
 
 ```bat
 REM Windows: use a POSIX-like shell instead of cmd.exe
-set GOOSE_SHELL=C:\cygwin64\bin\bash.exe
+set BCAIP_SHELL=C:\cygwin64\bin\bash.exe
 ```
 
 :::note
-You only ever set `GOOSE_SHELL` to a shell executable path or name. goose injects the command-line flags automatically based on the shell, so there is no need to add them yourself:
+You only ever set `BCAIP_SHELL` to a shell executable path or name. goose injects the command-line flags automatically based on the shell, so there is no need to add them yourself:
 
 - **PowerShell** (`pwsh`, `powershell`) → `-NoProfile -NonInteractive -Command`
 - **cmd** → `/C`
@@ -310,14 +310,14 @@ These variables control security features, credential storage, and anonymous usa
 
 | Variable | Purpose | Values | Default |
 |----------|---------|---------|---------|
-| `GOOSE_ALLOWLIST` | Controls which extensions can be loaded | URL for [allowed extensions](/guides/allowlist) list | Unset |
-| `GOOSE_DISABLE_KEYRING` | Disables the system keyring for secret storage | Set to any value (e.g., "1", "true", "yes") to disable. The actual value doesn't matter, only whether the variable is set. | Unset (keyring enabled) |
+| `BCAIP_ALLOWLIST` | Controls which extensions can be loaded | URL for [allowed extensions](/guides/allowlist) list | Unset |
+| `BCAIP_DISABLE_KEYRING` | Disables the system keyring for secret storage | Set to any value (e.g., "1", "true", "yes") to disable. The actual value doesn't matter, only whether the variable is set. | Unset (keyring enabled) |
 | `SECURITY_PROMPT_ENABLED` | Enable [prompt injection detection](/guides/security/prompt-injection-detection) to identify potentially harmful commands | true/false | false |
 | `SECURITY_PROMPT_THRESHOLD` | Sensitivity threshold for prompt injection detection (higher = stricter) | Float between 0.01 and 1.0 | 0.8 |
 | `SECURITY_PROMPT_CLASSIFIER_ENABLED` | Enable ML-based prompt injection detection for advanced threat identification | true/false | false |
 | `SECURITY_PROMPT_CLASSIFIER_ENDPOINT` | Classification endpoint URL for ML-based prompt injection detection | URL (e.g., "https://api.example.com/classify") | Unset |
 | `SECURITY_PROMPT_CLASSIFIER_TOKEN` | Authentication token for `SECURITY_PROMPT_CLASSIFIER_ENDPOINT` | String | Unset |
-| `GOOSE_TELEMETRY_ENABLED` | Enable or disable [anonymous usage data collection](/guides/usage-data) | true/false | false |
+| `BCAIP_TELEMETRY_ENABLED` | Enable or disable [anonymous usage data collection](/guides/usage-data) | true/false | false |
 
 **Examples**
 
@@ -336,14 +336,14 @@ export SECURITY_PROMPT_CLASSIFIER_ENDPOINT="https://your-endpoint.com/classify"
 export SECURITY_PROMPT_CLASSIFIER_TOKEN="your-auth-token"
 
 # Control anonymous usage data collection
-export GOOSE_TELEMETRY_ENABLED=false  # Disable telemetry
-export GOOSE_TELEMETRY_ENABLED=true   # Enable telemetry
+export BCAIP_TELEMETRY_ENABLED=false  # Disable telemetry
+export BCAIP_TELEMETRY_ENABLED=true   # Enable telemetry
 ```
 
 :::tip
 When the keyring is disabled (or cannot be accessed and goose [falls back to file-based storage](/troubleshooting/known-issues#keyring-cannot-be-accessed-automatic-fallback)), secrets are stored here:
 
-* macOS/Linux: `~/.config/goose/secrets.yaml`
+* macOS/Linux: `~/.config/bcaip/secrets.yaml`
 * Windows: `%APPDATA%\Block\goose\config\secrets.yaml`
 :::
 
@@ -357,13 +357,13 @@ By default, goose starts a temporary local server on a random port to receive OA
 
 | Variable | Purpose | Values | Default |
 |----------|---------|---------|---------|
-| `GOOSE_OAUTH_CALLBACK_PORT` | Fixed port for the local OAuth callback server | Port number (e.g., 8080, 9999) | Random (OS-assigned) |
+| `BCAIP_OAUTH_CALLBACK_PORT` | Fixed port for the local OAuth callback server | Port number (e.g., 8080, 9999) | Random (OS-assigned) |
 
 **Examples**
 
 ```bash
 # Use a fixed port so your IdP's redirect_uri whitelist can match exactly
-export GOOSE_OAUTH_CALLBACK_PORT=8080
+export BCAIP_OAUTH_CALLBACK_PORT=8080
 ```
 
 Then register the appropriate redirect URI in your identity provider:
@@ -457,24 +457,24 @@ These variables configure the [Langfuse integration for observability](/tutorial
 
 ## goose ACP Server
 
-These variables configure the `goose serve` ACP server process. They are alternatives to the equivalent `goose serve` flags, and are most often used when [running a remote goose server](/guides/remote-goose-server) and connecting goose Desktop to it.
+These variables configure the `bcaip serve` ACP server process. They are alternatives to the equivalent `bcaip serve` flags, and are most often used when [running a remote bcaip server](/guides/remote-goose-server) and connecting goose Desktop to it.
 
 | Variable | Purpose | Values | Default |
 |----------|---------|---------|---------|
-| `GOOSE_TLS` | Equivalent to `goose serve --tls`. Recommended for remote servers. | `true`, `false` | `false` |
-| `GOOSE_TLS_CERT_PATH` | Equivalent to `goose serve --tls-cert-path`. Must be used with `GOOSE_TLS_KEY_PATH`; setting it enables TLS. | File path | None |
-| `GOOSE_TLS_KEY_PATH` | Equivalent to `goose serve --tls-key-path`. Must be used with `GOOSE_TLS_CERT_PATH`; setting it enables TLS. | File path | None |
-| `GOOSE_SERVER__SECRET_KEY` | Shared secret required by the ACP endpoint unless `--dangerously-unauthenticated` is used. | Secret string | Required |
+| `BCAIP_TLS` | Equivalent to `bcaip serve --tls`. Recommended for remote servers. | `true`, `false` | `false` |
+| `BCAIP_TLS_CERT_PATH` | Equivalent to `bcaip serve --tls-cert-path`. Must be used with `BCAIP_TLS_KEY_PATH`; setting it enables TLS. | File path | None |
+| `BCAIP_TLS_KEY_PATH` | Equivalent to `bcaip serve --tls-key-path`. Must be used with `BCAIP_TLS_CERT_PATH`; setting it enables TLS. | File path | None |
+| `BCAIP_SERVER__SECRET_KEY` | Shared secret required by the ACP endpoint unless `--dangerously-unauthenticated` is used. | Secret string | Required |
 
 **Examples**
 
 ```bash
 # Start a goose ACP server reachable on the local network over TLS
-GOOSE_SERVER__SECRET_KEY='a-long-random-secret' \
-goose serve --platform desktop --enable-scheduler --host 0.0.0.0 --port 3000 --tls
+BCAIP_SERVER__SECRET_KEY='a-long-random-secret' \
+bcaip serve --platform desktop --enable-scheduler --host 0.0.0.0 --port 3000 --tls
 ```
 
-When TLS is enabled, `goose serve` prints a `GOOSED_CERT_FINGERPRINT=...` line on startup. goose Desktop can use this fingerprint to pin the server certificate. See [Running a Remote goose Server](/guides/remote-goose-server) for the full setup.
+When TLS is enabled, `bcaip serve` prints a `GOOSED_CERT_FINGERPRINT=...` line on startup. goose Desktop can use this fingerprint to pin the server certificate. See [Running a Remote goose Server](/guides/remote-goose-server) for the full setup.
 
 ## Recipe Configuration
 
@@ -482,23 +482,23 @@ These variables control recipe discovery and management.
 
 | Variable | Purpose | Values | Default |
 |----------|---------|---------|---------|
-| `GOOSE_RECIPE_PATH` | Additional directories to search for recipes | Colon-separated paths on Unix, semicolon-separated on Windows | None |
-| `GOOSE_RECIPE_GITHUB_REPO` | GitHub repository to search for recipes | Format: "owner/repo" (e.g., "aaif-goose/goose-recipes") | None |
-| `GOOSE_RECIPE_RETRY_TIMEOUT_SECONDS` | Global timeout for recipe success check commands | Integer (seconds) | Recipe-specific default |
-| `GOOSE_RECIPE_ON_FAILURE_TIMEOUT_SECONDS` | Global timeout for recipe on_failure commands | Integer (seconds) | Recipe-specific default |
+| `BCAIP_RECIPE_PATH` | Additional directories to search for recipes | Colon-separated paths on Unix, semicolon-separated on Windows | None |
+| `BCAIP_RECIPE_GITHUB_REPO` | GitHub repository to search for recipes | Format: "owner/repo" (e.g., "BezotCorp/ai-platform-recipes") | None |
+| `BCAIP_RECIPE_RETRY_TIMEOUT_SECONDS` | Global timeout for recipe success check commands | Integer (seconds) | Recipe-specific default |
+| `BCAIP_RECIPE_ON_FAILURE_TIMEOUT_SECONDS` | Global timeout for recipe on_failure commands | Integer (seconds) | Recipe-specific default |
 
 **Examples**
 
 ```bash
 # Add custom recipe directories
-export GOOSE_RECIPE_PATH="/path/to/my/recipes:/path/to/team/recipes"
+export BCAIP_RECIPE_PATH="/path/to/my/recipes:/path/to/team/recipes"
 
 # Configure GitHub recipe repository
-export GOOSE_RECIPE_GITHUB_REPO="myorg/goose-recipes"
+export BCAIP_RECIPE_GITHUB_REPO="myorg/goose-recipes"
 
 # Set global recipe timeouts
-export GOOSE_RECIPE_RETRY_TIMEOUT_SECONDS=300
-export GOOSE_RECIPE_ON_FAILURE_TIMEOUT_SECONDS=60
+export BCAIP_RECIPE_RETRY_TIMEOUT_SECONDS=300
+export BCAIP_RECIPE_ON_FAILURE_TIMEOUT_SECONDS=60
 ```
 
 ## Documentation Configuration
@@ -507,7 +507,7 @@ This variable controls where the `goose-doc-guide` skill reads goose documentati
 
 | Variable | Purpose | Values | Default |
 |----------|---------|---------|---------|
-| `GOOSE_DOCS_ROOT` | Documentation root for the `goose-doc-guide` skill, used for [offline/air-gapped docs](/guides/offline-docs) | Local path or HTTP(S) URL containing `goose-docs-map.md` and `docs/` | `https://goose-docs.ai` |
+| `BCAIP_DOCS_ROOT` | Documentation root for the `goose-doc-guide` skill, used for [offline/air-gapped docs](/guides/offline-docs) | Local path or HTTP(S) URL containing `goose-docs-map.md` and `docs/` | `https://goose-docs.ai` |
 
 ## Development & Testing
 
@@ -515,7 +515,7 @@ These variables are primarily used for development, testing, and debugging goose
 
 | Variable | Purpose | Values | Default |
 |----------|---------|---------|---------|
-| `GOOSE_PATH_ROOT` | Override the root directory for all goose data, config, and state files | Absolute path to directory | Platform-specific defaults |
+| `BCAIP_PATH_ROOT` | Override the root directory for all goose data, config, and state files | Absolute path to directory | Platform-specific defaults |
 
 **Default locations:**
 - macOS: `~/Library/Application Support/Block/goose/`
@@ -528,16 +528,16 @@ When set, goose creates `config/`, `data/`, and `state/` subdirectories under th
 
 ```bash
 # Temporary test environment
-export GOOSE_PATH_ROOT="/tmp/goose-test"
+export BCAIP_PATH_ROOT="/tmp/goose-test"
 
 # Isolated environment for a single command
-GOOSE_PATH_ROOT="/tmp/goose-isolated" goose run --recipe my-recipe.yaml
+BCAIP_PATH_ROOT="/tmp/goose-isolated" goose run --recipe my-recipe.yaml
 
 # CI/CD usage
-GOOSE_PATH_ROOT="$(mktemp -d)" goose run --recipe integration-test.yaml
+BCAIP_PATH_ROOT="$(mktemp -d)" goose run --recipe integration-test.yaml
 
 # Use with developer tools
-GOOSE_PATH_ROOT="/tmp/goose-test" ./scripts/goose-db-helper.sh status
+BCAIP_PATH_ROOT="/tmp/goose-test" ./scripts/goose-db-helper.sh status
 ```
 
 ## Variables Controlled by goose
@@ -546,7 +546,7 @@ These variables are automatically set by goose during command execution.
 
 | Variable | Purpose | Values | Default |
 |----------|---------|---------|---------|
-| `GOOSE_TERMINAL` | Indicates that a command is being executed by goose, enables [customizing shell behavior](#customizing-shell-behavior) | "1" when set | Unset |
+| `BCAIP_TERMINAL` | Indicates that a command is being executed by goose, enables [customizing shell behavior](#customizing-shell-behavior) | "1" when set | Unset |
 | `AGENT` | Generic agent identifier for cross-tool compatibility, enables tools and scripts to detect when they're being run by goose | "goose" when set | Unset |
 | `AGENT_SESSION_ID` | The current session ID for [session-isolated workflows](#using-session-ids-in-workflows), automatically available to STDIO extensions and the Developer extension shell commands | Session ID string (e.g., `20260217_5`) | Unset (only set in extension/shell contexts) |
 
@@ -563,10 +563,10 @@ This is most useful when using goose CLI, where shell commands are executed dire
 
 **How it works:**
 
-goose provides the `GOOSE_TERMINAL` and `AGENT` variables you can use to detect whether goose is the executing agent.
+goose provides the `BCAIP_TERMINAL` and `AGENT` variables you can use to detect whether goose is the executing agent.
 
 1. When goose runs commands:
-   - `GOOSE_TERMINAL` is automatically set to "1"
+   - `BCAIP_TERMINAL` is automatically set to "1"
    - `AGENT` is automatically set to "goose"
 2. Your shell configuration can detect this and change behavior while keeping your normal terminal usage unchanged
 
@@ -576,7 +576,7 @@ goose provides the `GOOSE_TERMINAL` and `AGENT` variables you can use to detect 
 # In ~/.zshenv (for zsh users) or ~/.bashrc (for bash users)
 
 # Block git commit when run by goose
-if [[ -n "$GOOSE_TERMINAL" ]]; then
+if [[ -n "$BCAIP_TERMINAL" ]]; then
   git() {
     if [[ "$1" == "commit" ]]; then
       echo "❌ BLOCKED: git commit is not allowed when run by goose"
@@ -589,7 +589,7 @@ fi
 
 ```bash
 # Guide goose toward better tool choices
-if [[ -n "$GOOSE_TERMINAL" ]]; then
+if [[ -n "$BCAIP_TERMINAL" ]]; then
   alias find="echo 'Use rg instead: rg --files | rg <pattern> for filenames, or rg <pattern> for content search'"
 fi
 ```

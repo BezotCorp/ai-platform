@@ -1,7 +1,7 @@
 use super::{CompletionCache, HintStatus};
-use bcaip_provider_types::goose_mode::GooseMode;
-use goose::agents::execute_commands::list_commands;
-use goose::config::Config;
+use bcaip::agents::execute_commands::list_commands;
+use bcaip::config::Config;
+use bcaip_provider_types::bcaip_mode::BcaipMode;
 use rustyline::completion::{Completer, FilenameCompleter, Pair};
 use rustyline::highlight::{CmdKind, Highlighter};
 use rustyline::{Context, Helper, Result};
@@ -9,14 +9,14 @@ use rustyline::{hint::Hinter, validate::Validator};
 use std::{borrow::Cow, sync::Arc};
 use strum::VariantNames;
 
-/// Completer for goose CLI commands
-pub struct GooseCompleter {
+/// Completer for BCAIP CLI commands
+pub struct BcaipCompleter {
     pub completion_cache: Arc<std::sync::RwLock<CompletionCache>>,
     filename_completer: FilenameCompleter,
 }
 
-impl GooseCompleter {
-    /// Create a new GooseCompleter with a reference to the Session's completion cache
+impl BcaipCompleter {
+    /// Create a new BcaipCompleter with a reference to the Session's completion cache
     pub fn new(completion_cache: Arc<std::sync::RwLock<CompletionCache>>) -> Self {
         Self {
             completion_cache,
@@ -82,7 +82,7 @@ impl GooseCompleter {
 
     /// Complete flags for the /mode command
     fn complete_mode_flags(&self, line: &str) -> Result<(usize, Vec<Pair>)> {
-        let modes = GooseMode::VARIANTS;
+        let modes = BcaipMode::VARIANTS;
 
         let parts: Vec<&str> = line.split_whitespace().collect();
 
@@ -122,7 +122,7 @@ impl GooseCompleter {
 
     /// Complete skill names for the /skills command
     fn complete_skill_names(&self, line: &str) -> Result<(usize, Vec<Pair>)> {
-        use goose::skills::list_installed_skills;
+        use bcaip::skills::list_installed_skills;
         let cwd = std::env::current_dir().unwrap_or_default();
         let skills = list_installed_skills(Some(&cwd));
         let skill_names: Vec<String> = skills.iter().map(|s| s.name.clone()).collect();
@@ -197,7 +197,7 @@ impl GooseCompleter {
         let current_provider = {
             let cache = self.completion_cache.read().unwrap();
             if cache.current_session_provider.is_empty() {
-                Config::global().get_goose_provider().unwrap_or_default()
+                Config::global().get_bcaip_provider().unwrap_or_default()
             } else {
                 cache.current_session_provider.clone()
             }
@@ -284,88 +284,88 @@ impl GooseCompleter {
         let prompt_info = cache.prompt_info.get(prompt_name).cloned();
 
         if let Some(info) = prompt_info
-            && let Some(args) = info.arguments {
-                // Find required arguments that haven't been provided yet
-                let existing_args: Vec<&str> = parts
-                    .iter()
-                    .skip(1)
-                    .filter_map(|part| {
-                        if part.contains('=') {
-                            Some(part.split('=').next().unwrap())
-                        } else {
-                            None
-                        }
-                    })
-                    .collect();
-
-                // Check if we're trying to complete a partial argument name
-                if let Some(last_part) = parts.last() {
-                    // ignore if last_part starts with = / \ for suggestions
-                    if let Some(c) = last_part.chars().next()
-                        && matches!(c, '=' | '/' | '\\') {
-                            return Ok((line.len(), vec![]));
-                        }
-
-                    // If the last part doesn't contain '=', it might be a partial argument name
-                    if !last_part.contains('=') {
-                        // Find arguments that match the prefix
-                        let matching_args: Vec<Pair> = args
-                            .iter()
-                            .filter(|arg| {
-                                arg.name.starts_with(last_part)
-                                    && !existing_args.contains(&arg.name.as_str())
-                            })
-                            .map(|arg| Pair {
-                                display: format!("{}=", arg.name),
-                                replacement: format!("{}=", arg.name),
-                            })
-                            .collect();
-
-                        if !matching_args.is_empty() {
-                            // Return matches for the partial argument name
-                            // The position is the start of the last word
-                            let pos = line.len() - last_part.len();
-                            return Ok((pos, matching_args));
-                        }
-
-                        // If we have a partial argument that doesn't match anything,
-                        // return an empty list rather than suggesting unrelated arguments
-                        if !last_part.is_empty() && *last_part != prompt_name {
-                            return Ok((line.len(), vec![]));
-                        }
+            && let Some(args) = info.arguments
+        {
+            // Find required arguments that haven't been provided yet
+            let existing_args: Vec<&str> = parts
+                .iter()
+                .skip(1)
+                .filter_map(|part| {
+                    if part.contains('=') {
+                        Some(part.split('=').next().unwrap())
+                    } else {
+                        None
                     }
+                })
+                .collect();
+
+            // Check if we're trying to complete a partial argument name
+            if let Some(last_part) = parts.last() {
+                // ignore if last_part starts with = / \ for suggestions
+                if let Some(c) = last_part.chars().next()
+                    && matches!(c, '=' | '/' | '\\')
+                {
+                    return Ok((line.len(), vec![]));
                 }
 
-                // If no partial match or no last part, suggest all required arguments
-                // Use a reference to avoid moving args
-                let mut candidates: Vec<_> = Vec::new();
-                for arg in &args {
-                    if arg.required.unwrap_or(false) && !existing_args.contains(&arg.name.as_str())
-                    {
-                        candidates.push(Pair {
+                // If the last part doesn't contain '=', it might be a partial argument name
+                if !last_part.contains('=') {
+                    // Find arguments that match the prefix
+                    let matching_args: Vec<Pair> = args
+                        .iter()
+                        .filter(|arg| {
+                            arg.name.starts_with(last_part)
+                                && !existing_args.contains(&arg.name.as_str())
+                        })
+                        .map(|arg| Pair {
                             display: format!("{}=", arg.name),
                             replacement: format!("{}=", arg.name),
-                        });
+                        })
+                        .collect();
+
+                    if !matching_args.is_empty() {
+                        // Return matches for the partial argument name
+                        // The position is the start of the last word
+                        let pos = line.len() - last_part.len();
+                        return Ok((pos, matching_args));
+                    }
+
+                    // If we have a partial argument that doesn't match anything,
+                    // return an empty list rather than suggesting unrelated arguments
+                    if !last_part.is_empty() && *last_part != prompt_name {
+                        return Ok((line.len(), vec![]));
                     }
                 }
+            }
 
-                if !candidates.is_empty() {
-                    return Ok((line.len(), candidates));
+            // If no partial match or no last part, suggest all required arguments
+            // Use a reference to avoid moving args
+            let mut candidates: Vec<_> = Vec::new();
+            for arg in &args {
+                if arg.required.unwrap_or(false) && !existing_args.contains(&arg.name.as_str()) {
+                    candidates.push(Pair {
+                        display: format!("{}=", arg.name),
+                        replacement: format!("{}=", arg.name),
+                    });
                 }
+            }
 
-                // If no required arguments left, suggest all optional ones
-                // Use a reference to avoid moving args
-                for arg in &args {
-                    if !arg.required.unwrap_or(true) && !existing_args.contains(&arg.name.as_str())
-                    {
-                        candidates.push(Pair {
-                            display: format!("{}=", arg.name),
-                            replacement: format!("{}=", arg.name),
-                        });
-                    }
-                }
+            if !candidates.is_empty() {
                 return Ok((line.len(), candidates));
             }
+
+            // If no required arguments left, suggest all optional ones
+            // Use a reference to avoid moving args
+            for arg in &args {
+                if !arg.required.unwrap_or(true) && !existing_args.contains(&arg.name.as_str()) {
+                    candidates.push(Pair {
+                        display: format!("{}=", arg.name),
+                        replacement: format!("{}=", arg.name),
+                    });
+                }
+            }
+            return Ok((line.len(), candidates));
+        }
 
         // No completions available
         Ok((line.len(), vec![]))
@@ -401,7 +401,7 @@ impl GooseCompleter {
     }
 }
 
-impl Completer for GooseCompleter {
+impl Completer for BcaipCompleter {
     type Candidate = Pair;
 
     fn complete(
@@ -439,9 +439,10 @@ impl Completer for GooseCompleter {
 
                 // Check if we might be typing a flag
                 if let Some(last_part) = parts.last()
-                    && last_part.starts_with('-') {
-                        return self.complete_prompt_flags(line);
-                    }
+                    && last_part.starts_with('-')
+                {
+                    return self.complete_prompt_flags(line);
+                }
 
                 // If we have a prompt name and need argument completion
                 if parts.len() >= 2 {
@@ -500,10 +501,10 @@ impl Completer for GooseCompleter {
 }
 
 // Implement the Helper trait which is required by rustyline
-impl Helper for GooseCompleter {}
+impl Helper for BcaipCompleter {}
 
 // Implement required traits with default implementations
-impl Hinter for GooseCompleter {
+impl Hinter for BcaipCompleter {
     type Hint = String;
 
     fn hint(&self, line: &str, _pos: usize, _ctx: &Context<'_>) -> Option<Self::Hint> {
@@ -522,7 +523,7 @@ impl Hinter for GooseCompleter {
 
         match cache.hint_status {
             HintStatus::Interrupted => {
-                Some("Interrupted, what should goose work on instead?".to_string())
+                Some("Interrupted, what should BCAIP work on instead?".to_string())
             }
             HintStatus::MaybeExit => {
                 Some("Press Ctrl+C again to exit, or type new instructions to continue".to_string())
@@ -535,7 +536,7 @@ impl Hinter for GooseCompleter {
     }
 }
 
-impl Highlighter for GooseCompleter {
+impl Highlighter for BcaipCompleter {
     fn highlight_prompt<'b, 's: 'b, 'p: 'b>(
         &'s self,
         prompt: &'p str,
@@ -559,7 +560,7 @@ impl Highlighter for GooseCompleter {
     }
 }
 
-impl Validator for GooseCompleter {
+impl Validator for BcaipCompleter {
     fn validate(
         &self,
         _ctx: &mut rustyline::validate::ValidationContext,

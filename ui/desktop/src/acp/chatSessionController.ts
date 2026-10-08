@@ -3,7 +3,7 @@ import type { AcpChatSessionController } from './acpChatSessionController';
 export type { AcpChatSessionController } from './acpChatSessionController';
 
 import { v7 as uuidv7 } from 'uuid';
-import type { GooseExtension } from '@aaif/goose-acp-client';
+import type { BcaipExtension } from '@bezotcorp/bcaip-acp-client';
 import { AppEvents } from '../constants/appEvents';
 import { ChatState } from '../types/chatState';
 import type { Session } from '../types/session';
@@ -75,10 +75,10 @@ async function forkSessionWithEditedMessage(
 
 async function createSession(
   cwd: string,
-  gooseExtensions: GooseExtension[] | undefined,
+  bcaipExtensions: BcaipExtension[] | undefined,
   recipe?: AcpRecipeOptions
 ): Promise<Session> {
-  const { sessionId, sessionInfo, meta } = await acpNewSession(cwd, gooseExtensions, recipe);
+  const { sessionId, sessionInfo, meta } = await acpNewSession(cwd, bcaipExtensions, recipe);
   const session = sessionInfoToSession(sessionInfo, meta);
 
   showExtensionLoadResults(meta.extensionResults);

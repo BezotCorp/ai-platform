@@ -6,7 +6,7 @@ use crate::formats::anthropic::{
     thinking_type_for_provider,
 };
 use crate::json;
-use crate::model::{ModelConfig, is_goose_internal_request_param};
+use crate::model::{ModelConfig, is_bcaip_internal_request_param};
 
 use crate::document_format::{
     ASSISTANT_ROLE_REASON, DocumentFormat, UNSUPPORTED_MEDIA_TYPE_REASON, convert_document,
@@ -533,7 +533,7 @@ pub fn create_request_for_provider(
 ) -> anyhow::Result<Value, Error> {
     if model_config.model_name.starts_with("o1-mini") {
         return Err(anyhow!(
-            "o1-mini model is not currently supported since goose uses tool calling and o1-mini does not support it. Please use o1 or o3 models instead."
+            "o1-mini model is not currently supported since BCAIP uses tool calling and o1-mini does not support it. Please use o1 or o3 models instead."
         ));
     }
 
@@ -625,7 +625,7 @@ pub fn create_request_for_provider(
         && let Some(obj) = payload.as_object_mut()
     {
         for (key, value) in params {
-            if is_goose_internal_request_param(key) {
+            if is_bcaip_internal_request_param(key) {
                 continue;
             }
             obj.insert(key.clone(), value.clone());

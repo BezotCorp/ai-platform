@@ -78,7 +78,7 @@ MaaS endpoints always use `/v1/chat/completions` and the model configured by `AZ
 
 ## Model metadata and pricing
 
-The deployments API provides the deployment name and underlying `modelName`, `modelVersion`, and `modelPublisher`. goose uses the underlying model name to look up a context window in its bundled model catalog. An explicit `GOOSE_CONTEXT_LIMIT` or session override still takes precedence.
+The deployments API provides the deployment name and underlying `modelName`, `modelVersion`, and `modelPublisher`. goose uses the underlying model name to look up a context window in its bundled model catalog. An explicit `BCAIP_CONTEXT_LIMIT` or session override still takes precedence.
 
 Azure pricing depends on region, SKU, offer, deployment type, and contract. The deployments API does not provide a reliable per-token price, so this provider does not attach a price to discovered deployments.
 

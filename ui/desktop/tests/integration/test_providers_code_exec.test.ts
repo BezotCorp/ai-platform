@@ -2,7 +2,7 @@
  * Provider smoke tests — code execution mode (JS batching).
  *
  * Each available (non-agentic) provider/model pair gets its own test that
- * spawns `goose run` with the memory + code_execution builtins and validates
+ * spawns `bcaip run` with the memory + code_execution builtins and validates
  * that the code_execution tool was invoked.
  */
 
@@ -30,14 +30,14 @@ const codeExecPattern =
   /(execute_typescript \| code_execution)|(get_function_details \| code_execution)|(tool calls? \| execute)|(▸.*execute.*tool call)|(▸ execute_typescript)/;
 
 testAll('invokes code_execution tool', async (tc, { expect }) => {
-  const testdir = fs.mkdtempSync(path.join(os.tmpdir(), 'goose-codeexec-'));
+  const testdir = fs.mkdtempSync(path.join(os.tmpdir(), 'bcaip-codeexec-'));
   try {
     const output = await runGoose(
       gooseBin,
       testdir,
       "Store a memory with category 'test' and data 'hello world', then retrieve all memories from category 'test'.",
       BUILTINS,
-      { GOOSE_PROVIDER: tc.provider, GOOSE_MODEL: tc.model },
+      { BCAIP_PROVIDER: tc.provider, BCAIP_MODEL: tc.model },
       55_000,
       (output) => codeExecPattern.test(output)
     );

@@ -258,7 +258,7 @@ When a `PreToolUse` hook blocks, goose does not run the tool and returns this me
 Tool call denied by policy hook `<plugin>`: <reason>. Do not retry; this is a policy denial, not a transient failure.
 ```
 
-A `Stop` hook that blocks forces the turn to keep going instead of ending. To prevent a misbehaving hook from looping forever, goose caps the number of consecutive `Stop` blocks; once the cap is hit, goose overrides the hook and ends the turn. Raise the cap with the `GOOSE_STOP_HOOK_BLOCK_CAP` environment variable.
+A `Stop` hook that blocks forces the turn to keep going instead of ending. To prevent a misbehaving hook from looping forever, goose caps the number of consecutive `Stop` blocks; once the cap is hit, goose overrides the hook and ends the turn. Raise the cap with the `BCAIP_STOP_HOOK_BLOCK_CAP` environment variable.
 
 ### stdout Is the Decision Channel
 
@@ -484,7 +484,7 @@ The example prints hook events to stderr and appends full payloads to:
 
 To disable a plugin, add its name to `disabledPlugins` in your goose settings file:
 
-```json title="~/.config/goose/settings.json"
+```json title="~/.config/bcaip/settings.json"
 {
   "disabledPlugins": ["session-logger"]
 }
@@ -493,7 +493,7 @@ To disable a plugin, add its name to `disabledPlugins` in your goose settings fi
 For project-specific settings, use:
 
 ```text
-<project>/.config/goose/settings.json
+<project>/.config/bcaip/settings.json
 ```
 
 A plugin listed in `disabledPlugins` is skipped during plugin discovery, so its hooks will not run.

@@ -199,10 +199,13 @@ fn json_candidates(text: &str) -> Vec<Value> {
     for (open, close) in [('{', '}'), ('[', ']')] {
         let starts = text.match_indices(open).map(|(idx, _)| idx);
         for start in starts {
+            let Some(suffix) = text.get(start..) else {
+                continue;
+            };
             let mut depth = 0i32;
             let mut in_string = false;
             let mut escaped = false;
-            for (offset, ch) in text[start..].char_indices() {
+            for (offset, ch) in suffix.char_indices() {
                 if escaped {
                     escaped = false;
                     continue;
@@ -224,7 +227,9 @@ fn json_candidates(text: &str) -> Vec<Value> {
                     depth -= 1;
                     if depth == 0 {
                         let end = start + offset + ch.len_utf8();
-                        if let Ok(value) = serde_json::from_str::<Value>(&text[start..end]) {
+                        if let Some(candidate) = text.get(start..end)
+                            && let Ok(value) = serde_json::from_str::<Value>(candidate)
+                        {
                             candidates.push(value);
                         }
                         break;

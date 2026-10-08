@@ -1,8 +1,8 @@
-use goose::agents::subagent_execution_tool::lib::TaskStatus;
-use goose::agents::subagent_execution_tool::notification_events::{
+use bcaip::agents::subagent_execution_tool::lib::TaskStatus;
+use bcaip::agents::subagent_execution_tool::notification_events::{
     TaskExecutionNotificationEvent, TaskInfo,
 };
-use goose::utils::safe_truncate;
+use bcaip::utils::safe_truncate;
 use serde_json::Value;
 use std::sync::atomic::{AtomicBool, Ordering};
 

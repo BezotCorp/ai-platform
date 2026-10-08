@@ -39,7 +39,7 @@ import { startGooseServe } from './gooseServe';
 import { getLoginShellPath } from './loginShellPath';
 import { GooseServeLeaseRegistry } from './gooseServeLeaseRegistry';
 import { normalizeAcpHttpBaseUrl } from './acp/url';
-import { expandTilde, sanitizeGoosePathRoot } from './utils/pathUtils';
+import { expandTilde, sanitizeBcaipPathRoot } from './utils/pathUtils';
 import log from './utils/logger';
 import { ensureWinShims } from './utils/winShims';
 import { addRecentDir, loadRecentDirs } from './utils/recentDirs';
@@ -367,8 +367,8 @@ function getConfiguredGooseLocale(): string | undefined {
     return language;
   }
 
-  if (process.env.GOOSE_LOCALE) {
-    return process.env.GOOSE_LOCALE;
+  if (process.env.BCAIP_LOCALE) {
+    return process.env.BCAIP_LOCALE;
   }
 
   try {
@@ -498,13 +498,13 @@ app.on('certificate-error', (event, _webContents, url, _error, certificate, call
 });
 
 runWhenReady(async () => {
-  appConfig.GOOSE_LOCALE = getConfiguredGooseLocale();
+  appConfig.BCAIP_LOCALE = getConfiguredGooseLocale();
 });
 
 // Main-process net.fetch and renderer WebSockets: pin to the exact cert once known.
 runWhenReady(async () => {
   installBackendCertificateVerifiers(
-    [session.defaultSession, session.fromPartition('persist:goose')],
+    [session.defaultSession, session.fromPartition('persist:bcaip')],
     {
       has: isTrustedHost,
       verify: verifyBackendCertificate,
@@ -942,10 +942,10 @@ const getBundledConfig = (): BundledConfig => {
   //needed when goose is bundled for a specific provider
   //{env-macro-end}//
   return {
-    defaultProvider: process.env.GOOSE_DEFAULT_PROVIDER,
-    defaultModel: process.env.GOOSE_DEFAULT_MODEL,
-    predefinedModels: process.env.GOOSE_PREDEFINED_MODELS,
-    version: process.env.GOOSE_VERSION,
+    defaultProvider: process.env.BCAIP_DEFAULT_PROVIDER,
+    defaultModel: process.env.BCAIP_DEFAULT_MODEL,
+    predefinedModels: process.env.BCAIP_PREDEFINED_MODELS,
+    version: process.env.BCAIP_VERSION,
   };
 };
 
@@ -954,16 +954,16 @@ const { defaultProvider, defaultModel, predefinedModels, version } = getBundledC
 const GENERATED_SECRET = crypto.randomBytes(32).toString('hex');
 
 const getExternalBackendUrlFromEnv = (): string | null => {
-  if (!process.env.GOOSE_EXTERNAL_BACKEND) {
+  if (!process.env.BCAIP_EXTERNAL_BACKEND) {
     return null;
   }
 
-  const configuredUrl = process.env.GOOSE_EXTERNAL_BACKEND_URL?.trim();
+  const configuredUrl = process.env.BCAIP_EXTERNAL_BACKEND_URL?.trim();
   if (configuredUrl) {
     return configuredUrl;
   }
 
-  return `http://${LOCALHOST_ADDRESS_IP}:${process.env.GOOSE_PORT || '3000'}`;
+  return `http://${LOCALHOST_ADDRESS_IP}:${process.env.BCAIP_PORT || '3000'}`;
 };
 
 const getExternalBackendFromEnv = (): ExternalBackend | null => {
@@ -972,10 +972,10 @@ const getExternalBackendFromEnv = (): ExternalBackend | null => {
     return null;
   }
 
-  const secret = process.env.GOOSE_SERVER__SECRET_KEY;
+  const secret = process.env.BCAIP_SERVER__SECRET_KEY;
   if (!secret) {
     throw new Error(
-      'GOOSE_SERVER__SECRET_KEY must be set when using GOOSE_EXTERNAL_BACKEND. ' +
+      'BCAIP_SERVER__SECRET_KEY must be set when using BCAIP_EXTERNAL_BACKEND. ' +
         'Set it to the same value on both the server and the desktop client.'
     );
   }
@@ -1030,21 +1030,21 @@ const getExternalBackendForCsp = (settings: Settings) => {
 };
 
 let appConfig = {
-  GOOSE_DEFAULT_PROVIDER: defaultProvider,
-  GOOSE_DEFAULT_MODEL: defaultModel,
-  GOOSE_PREDEFINED_MODELS: predefinedModels,
-  GOOSE_PATH_ROOT: sanitizeGoosePathRoot(process.env),
-  GOOSE_WORKING_DIR: '',
+  BCAIP_DEFAULT_PROVIDER: defaultProvider,
+  BCAIP_DEFAULT_MODEL: defaultModel,
+  BCAIP_PREDEFINED_MODELS: predefinedModels,
+  BCAIP_PATH_ROOT: sanitizeBcaipPathRoot(process.env),
+  BCAIP_WORKING_DIR: '',
   // Whether the window is bound to an external backend (fixed at window
   // creation via gooseServeLeases) and which URL it is bound to.
-  GOOSE_EXTERNAL_BACKEND: false,
-  GOOSE_EXTERNAL_BACKEND_URL: '',
-  GOOSE_EXTERNAL_BACKEND_SOURCE: '',
+  BCAIP_EXTERNAL_BACKEND: false,
+  BCAIP_EXTERNAL_BACKEND_URL: '',
+  BCAIP_EXTERNAL_BACKEND_SOURCE: '',
   // Start with the env-var override; the OS region locale is filled in after app.ready
   // (see updateLocaleFromSystem below) since getSystemLocale() cannot be called earlier.
-  GOOSE_LOCALE: process.env.GOOSE_LOCALE || undefined,
-  // If GOOSE_ALLOWLIST_WARNING env var is not set, defaults to false (strict blocking mode)
-  GOOSE_ALLOWLIST_WARNING: process.env.GOOSE_ALLOWLIST_WARNING === 'true',
+  BCAIP_LOCALE: process.env.BCAIP_LOCALE || undefined,
+  // If BCAIP_ALLOWLIST_WARNING env var is not set, defaults to false (strict blocking mode)
+  BCAIP_ALLOWLIST_WARNING: process.env.BCAIP_ALLOWLIST_WARNING === 'true',
 };
 
 const windowMap = new Map<number, BrowserWindow>();
@@ -1252,7 +1252,7 @@ const createChat = async (
         dir: workingDir,
         tls: true,
         env: {
-          GOOSE_PATH_ROOT: appConfig.GOOSE_PATH_ROOT,
+          BCAIP_PATH_ROOT: appConfig.BCAIP_PATH_ROOT,
         },
         loginShellPath,
         isPackaged: app.isPackaged,
@@ -1264,7 +1264,7 @@ const createChat = async (
       if (!gooseServeResult.certFingerprint) {
         await gooseServeResult.cleanup();
         throw new Error(
-          'goose serve started with TLS but did not return a certificate fingerprint'
+          'bcaip serve started with TLS but did not return a certificate fingerprint'
         );
       }
 
@@ -1274,18 +1274,18 @@ const createChat = async (
         localCertificateTrust.trust.fingerprint !== localCertFingerprint
       ) {
         await gooseServeResult.cleanup();
-        throw new Error('goose serve TLS certificate fingerprint did not match readiness probe');
+        throw new Error('bcaip serve TLS certificate fingerprint did not match readiness probe');
       }
       localCertificateTrust.trust.fingerprint = localCertFingerprint;
     } catch (error) {
       localCertificateTrust.release();
-      log.error('goose serve failed to start', error);
+      log.error('bcaip serve failed to start', error);
       dialog.showMessageBoxSync({
         type: 'error',
         title: 'Goose Failed to Start',
         message: 'The backend server failed to start.',
         detail: [
-          'Backend: goose serve',
+          'Backend: bcaip serve',
           'Readiness check: HTTPS GET /status',
           `Startup error:\n${errorMessage(error)}`,
         ].join('\n\n'),
@@ -1353,13 +1353,13 @@ const createChat = async (
         additionalArguments: [
           JSON.stringify({
             ...appConfig,
-            GOOSE_LOCALE: getConfiguredGooseLocale(),
-            GOOSE_WORKING_DIR: workingDir,
-            GOOSE_EXTERNAL_BACKEND: externalBackend !== null,
-            GOOSE_EXTERNAL_BACKEND_URL: externalBackend?.url ?? '',
-            GOOSE_EXTERNAL_BACKEND_SOURCE: externalBackend?.source ?? '',
+            BCAIP_LOCALE: getConfiguredGooseLocale(),
+            BCAIP_WORKING_DIR: workingDir,
+            BCAIP_EXTERNAL_BACKEND: externalBackend !== null,
+            BCAIP_EXTERNAL_BACKEND_URL: externalBackend?.url ?? '',
+            BCAIP_EXTERNAL_BACKEND_SOURCE: externalBackend?.source ?? '',
             REQUEST_DIR: dir,
-            GOOSE_VERSION: version,
+            BCAIP_VERSION: version,
             recipeDeeplink: recipeDeeplink,
             recipeId: recipeId,
             recipeParameters: recipeParameters,
@@ -1370,7 +1370,7 @@ const createChat = async (
               process.env.SECURITY_COMMAND_CLASSIFIER_ENABLED_OVERRIDE,
           }),
         ],
-        partition: 'persist:goose',
+        partition: 'persist:bcaip',
       },
     });
   } catch (error) {
@@ -1626,10 +1626,10 @@ const createLauncher = () => {
       additionalArguments: [
         JSON.stringify({
           ...appConfig,
-          GOOSE_LOCALE: getConfiguredGooseLocale(),
+          BCAIP_LOCALE: getConfiguredGooseLocale(),
         }),
       ],
-      partition: 'persist:goose',
+      partition: 'persist:bcaip',
     },
     skipTaskbar: true,
     alwaysOnTop: true,
@@ -1783,7 +1783,7 @@ const openDirectoryDialog = async (): Promise<OpenDialogReturnValue> => {
   if (currentWindow) {
     try {
       const currentWorkingDir = await currentWindow.webContents.executeJavaScript(
-        `window.appConfig ? window.appConfig.get('GOOSE_WORKING_DIR') : null`
+        `window.appConfig ? window.appConfig.get('BCAIP_WORKING_DIR') : null`
       );
 
       if (currentWorkingDir && typeof currentWorkingDir === 'string') {
@@ -2035,7 +2035,7 @@ ipcMain.handle('set-setting', (_event, key: SettingKey, value: unknown) => {
   fsSync.writeFileSync(SETTINGS_FILE, JSON.stringify(settings, null, 2));
 
   if (key === 'language') {
-    appConfig.GOOSE_LOCALE = getConfiguredGooseLocale();
+    appConfig.BCAIP_LOCALE = getConfiguredGooseLocale();
   }
 
   // Re-register shortcuts if keyboard shortcuts changed
@@ -2275,7 +2275,7 @@ ipcMain.handle('select-file-or-directory', async (_event, defaultPath?: string) 
 
 ipcMain.handle('select-recipe-file', async (event) => {
   const senderWindow = requireRegularRendererWindow(event);
-  const pathRoot = appConfig.GOOSE_PATH_ROOT;
+  const pathRoot = appConfig.BCAIP_PATH_ROOT;
   const recipeDirectory = pathRoot
     ? path.join(pathRoot, 'config', 'recipes')
     : path.join(os.homedir(), '.config', 'goose', 'recipes');
@@ -2500,7 +2500,7 @@ async function appMain() {
     }
   });
 
-  const rendererSession = session.fromPartition('persist:goose');
+  const rendererSession = session.fromPartition('persist:bcaip');
   await configureProxy(session.defaultSession, rendererSession);
 
   // Ensure Windows shims are available before any MCP processes are spawned
@@ -3077,7 +3077,7 @@ async function appMain() {
       }
 
       const launchingWorkingDir = await launchingWindow.webContents
-        .executeJavaScript(`window.appConfig ? window.appConfig.get('GOOSE_WORKING_DIR') : null`)
+        .executeJavaScript(`window.appConfig ? window.appConfig.get('BCAIP_WORKING_DIR') : null`)
         .catch((error) => {
           console.warn('Failed to get working directory from launching window:', error);
           return undefined;
@@ -3101,12 +3101,12 @@ async function appMain() {
           additionalArguments: [
             JSON.stringify({
               ...appConfig,
-              GOOSE_LOCALE: getConfiguredGooseLocale(),
-              GOOSE_WORKING_DIR: workingDir,
-              GOOSE_VERSION: version,
+              BCAIP_LOCALE: getConfiguredGooseLocale(),
+              BCAIP_WORKING_DIR: workingDir,
+              BCAIP_VERSION: version,
             }),
           ],
-          partition: 'persist:goose',
+          partition: 'persist:bcaip',
         },
       });
 
@@ -3186,11 +3186,11 @@ void app
   });
 
 async function getAllowList(): Promise<string[]> {
-  if (!process.env.GOOSE_ALLOWLIST) {
+  if (!process.env.BCAIP_ALLOWLIST) {
     return [];
   }
 
-  const response = await fetch(process.env.GOOSE_ALLOWLIST);
+  const response = await fetch(process.env.BCAIP_ALLOWLIST);
 
   if (!response.ok) {
     throw new Error(

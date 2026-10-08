@@ -1,0 +1,19 @@
+This is a Rust project with crates in the `crates` directory:
+
+- `bcaip`: the main BCAIP crate containing the core logic
+- `bcaip-bench`: benchmarking
+- `bcaip-cli`: the command-line interface, built on the `bcaip` crate
+- `bcaip-mcp`: the MCP servers that ship with BCAIP; the developer subsystem is of particular interest
+- `bcaip-server`: the server used by the desktop Electron application
+
+`ui/desktop` contains the Electron application written in TypeScript.
+
+Non-trivial features should be implemented in the `bcaip` crate and then called from `bcaip-cli` for CLI functionality.
+
+For the desktop application, add routes under `bcaip-server/src/routes`. You can then run `just generate-openapi` to regenerate the OpenAPI specification and update the files under `ui/desktop/src/api`. Once generated, the TypeScript application can call the functionality exposed by the server.
+
+Tips:
+
+- Check unstaged changes to understand ongoing work when starting.
+- Always verify that Rust code compiles, run `cargo fmt`, and run `cargo clippy --all-targets -- -D warnings`, as well as the relevant tests for the files being changed.
+- In `ui/desktop`, inspect the available lint and test commands and run the relevant checks.

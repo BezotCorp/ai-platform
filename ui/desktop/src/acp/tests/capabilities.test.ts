@@ -15,7 +15,7 @@ describe('ACP capabilities', () => {
     expect(
       hasLocalInferenceCapability(
         initializeResponseWithMeta({
-          goose: {
+          bcaip: {
             localInference: {},
           },
         })
@@ -27,7 +27,7 @@ describe('ACP capabilities', () => {
     expect(
       hasRecipeParameterScopesCapability(
         initializeResponseWithMeta({
-          goose: {
+          bcaip: {
             recipeParameterScopes: {},
           },
         })
@@ -38,7 +38,7 @@ describe('ACP capabilities', () => {
   it('treats missing or malformed scoped recipe-parameter metadata as unsupported', () => {
     expect(hasRecipeParameterScopesCapability(initializeResponseWithMeta())).toBe(false);
     expect(hasRecipeParameterScopesCapability(initializeResponseWithMeta({}))).toBe(false);
-    expect(hasRecipeParameterScopesCapability(initializeResponseWithMeta({ goose: {} }))).toBe(
+    expect(hasRecipeParameterScopesCapability(initializeResponseWithMeta({ bcaip: {} }))).toBe(
       false
     );
     expect(hasRecipeParameterScopesCapability(initializeResponseWithMeta({ goose: true }))).toBe(
@@ -49,7 +49,7 @@ describe('ACP capabilities', () => {
   it('treats missing local inference metadata as unsupported', () => {
     expect(hasLocalInferenceCapability(initializeResponseWithMeta())).toBe(false);
     expect(hasLocalInferenceCapability(initializeResponseWithMeta({}))).toBe(false);
-    expect(hasLocalInferenceCapability(initializeResponseWithMeta({ goose: {} }))).toBe(false);
+    expect(hasLocalInferenceCapability(initializeResponseWithMeta({ bcaip: {} }))).toBe(false);
   });
 
   it('ignores malformed Goose metadata', () => {

@@ -1,3 +1,3 @@
-import type { DictationLocalModelStatus } from '@aaif/goose-acp-client';
+import type { DictationLocalModelStatus } from '@bezotcorp/bcaip-acp-client';
 
 export type LocalDictationModel = DictationLocalModelStatus;

@@ -1,4 +1,4 @@
-import type { RecipeParamsResponseUnstable } from '@aaif/goose-acp-client';
+import type { RecipeParamsResponseUnstable } from '@bezotcorp/bcaip-acp-client';
 import type { AcpRecipeParamRequest } from './acpRecipeParamRequest';
 
 export interface PendingRecipeParamRequest {

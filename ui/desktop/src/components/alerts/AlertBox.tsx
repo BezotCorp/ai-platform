@@ -53,7 +53,7 @@ export const AlertBox = ({ alert, className }: AlertBoxProps): React.JSX.Element
   useEffect(() => {
     const loadThreshold = async (): Promise<void> => {
       try {
-        const threshold: unknown = await read('GOOSE_AUTO_COMPACT_THRESHOLD', false);
+        const threshold: unknown = await read('BCAIP_AUTO_COMPACT_THRESHOLD', false);
         if (threshold !== undefined && threshold !== null && typeof threshold === 'number') {
           setLoadedThreshold(threshold);
           setThresholdValue(Math.max(1, Math.min(99, Math.round(threshold * 100))));
@@ -80,7 +80,7 @@ export const AlertBox = ({ alert, className }: AlertBoxProps): React.JSX.Element
     try {
       const newThreshold: number = validThreshold / 100; // Convert percentage to decimal
 
-      await upsert('GOOSE_AUTO_COMPACT_THRESHOLD', newThreshold, false);
+      await upsert('BCAIP_AUTO_COMPACT_THRESHOLD', newThreshold, false);
 
       setIsEditingThreshold(false);
       setLoadedThreshold(newThreshold);

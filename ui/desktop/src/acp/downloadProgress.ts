@@ -1,3 +1,3 @@
-import type { LocalInferenceDownloadProgressDto } from '@aaif/goose-acp-client';
+import type { LocalInferenceDownloadProgressDto } from '@bezotcorp/bcaip-acp-client';
 
 export type DownloadProgress = LocalInferenceDownloadProgressDto;

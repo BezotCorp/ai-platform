@@ -1,14 +1,14 @@
 {
-  "name": "vscode-goose",
-  "displayName": "VS Code Goose",
-  "description": "codename Goose for VSCode",
+  "name": "vscode-bcaip",
+  "displayName": "VS Code BCAIP",
+  "description": "codename BCAIP for VSCode",
   "version": "0.1.0",
   "repository": {
     "type": "git",
-    "url": "https://github.com/block/vscode-goose"
+    "url": "https://github.com/block/vscode-bcaip"
   },
   "license": "Apache-2.0",
-  "icon": "resources/goose-icon.png",
+  "icon": "resources/bcaip-icon.png",
   "publisher": "block",
   "engines": {
     "vscode": "^1.95.0"
@@ -24,30 +24,31 @@
     "viewsContainers": {
       "activitybar": [
         {
-          "id": "goose",
-          "title": "Goose",
-          "icon": "resources/goose-icon-dark.svg"
+          "id": "bcaip",
+          "title": "BCAIP",
+          "icon": "resources/bcaip-icon.svg"
         }
       ]
     },
     "views": {
-      "goose": [
+      "bcaip": [
         {
+          "icon": "./resources/bcaip-icon.png",
           "type": "webview",
-          "id": "goose.chatView",
-          "name": ""
+          "id": "bcaip.chatView",
+          "name": "BCAIP"
         }
       ]
     },
     "configuration": {
-      "title": "Goose",
+      "title": "BCAIP",
       "properties": {
-        "goose.binaryPath": {
+        "bcaip.binaryPath": {
           "type": "string",
           "default": "",
-          "description": "Path to the goose binary. Leave empty for auto-detection."
+          "description": "Path to the BCAIP binary. Leave empty for auto-detection."
         },
-        "goose.logLevel": {
+        "bcaip.logLevel": {
           "type": "string",
           "enum": [
             "error",
@@ -56,27 +57,27 @@
             "debug"
           ],
           "default": "info",
-          "description": "Logging level for the Goose extension."
+          "description": "Logging level for the BCAIP extension."
         }
       }
     },
     "commands": [
       {
-        "command": "goose.showLogs",
-        "title": "Goose: Show Logs"
+        "command": "bcaip.showLogs",
+        "title": "BCAIP: Show Logs"
       },
       {
-        "command": "goose.restart",
-        "title": "Goose: Restart"
+        "command": "bcaip.restart",
+        "title": "BCAIP: Restart"
       },
       {
-        "command": "goose.sendSelectionToChat",
-        "title": "Send to Goose"
+        "command": "bcaip.sendSelectionToChat",
+        "title": "Send to BCAIP"
       }
     ],
     "keybindings": [
       {
-        "command": "goose.sendSelectionToChat",
+        "command": "bcaip.sendSelectionToChat",
         "key": "ctrl+shift+g",
         "mac": "cmd+shift+g",
         "when": "editorTextFocus"
@@ -85,7 +86,7 @@
     "menus": {
       "editor/context": [
         {
-          "command": "goose.sendSelectionToChat",
+          "command": "bcaip.sendSelectionToChat",
           "when": "editorTextFocus",
           "group": "navigation"
         }
@@ -94,19 +95,19 @@
   },
   "scripts": {
     "build": "pnpm run build:extension && pnpm run build:webview && pnpm run build:webview:css",
-    "build:extension": "esbuild ./src/extension/extension.ts --bundle --outdir=./dist --platform=node --target=node20 --format=cjs --external:vscode --sourcemap --tsconfig=tsconfig.json",
-    "build:webview": "esbuild ./src/webview/index.tsx --bundle --outdir=./dist/webview --entry-names=main --platform=browser --format=iife --minify --loader:.css=empty --tsconfig=tsconfig.webview.json",
-    "build:webview:css": "tailwindcss -i ./src/webview/styles.css -o ./dist/webview/styles.css --minify",
-    "dev": "esbuild ./src/extension/extension.ts --bundle --outdir=./dist --platform=node --target=node20 --format=cjs --external:vscode --sourcemap --tsconfig=tsconfig.json --watch",
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "lint": "biome lint",
-    "lint:fix": "biome lint --write",
-    "format": "biome format --write",
-    "check": "biome check",
-    "check:fix": "biome check --write",
-    "ci": "biome ci",
-    "package": "pnpm run build && vsce package --no-dependencies",
+    "build:extension": "pnpm exec esbuild ./src/extension/extension.ts --bundle --outdir=./dist --platform=node --target=node20 --format=cjs --external:vscode --sourcemap --tsconfig=tsconfig.json",
+    "build:webview": "pnpm exec esbuild ./src/webview/index.tsx --bundle --outdir=./dist/webview --entry-names=main --platform=browser --format=iife --minify --loader:.css=empty --tsconfig=tsconfig.webview.json",
+    "build:webview:css": "pnpm exec tailwindcss -i ./src/webview/styles.css -o ./dist/webview/styles.css --minify",
+    "dev": "pnpm exec esbuild ./src/extension/extension.ts --bundle --outdir=./dist --platform=node --target=node20 --format=cjs --external:vscode --sourcemap --tsconfig=tsconfig.json --watch",
+    "test": "pnpm exec vitest run",
+    "test:watch": "pnpm exec vitest",
+    "lint": "pnpm exec biome lint",
+    "lint:fix": "pnpm exec biome lint --write",
+    "format": "pnpm exec biome format --write",
+    "check": "pnpm exec biome check",
+    "check:fix": "pnpm exec biome check --write",
+    "ci": "pnpm exec biome ci",
+    "package": "pnpm run build && pnpm exec vsce package --no-dependencies",
     "clean": "rm -rf dist"
   },
   "dependencies": {

@@ -13,7 +13,7 @@ dist/
 
 # Binary executables
 bin/
-bin/goose
+bin/bcaip
 bin/*.exe
 
 # TypeScript

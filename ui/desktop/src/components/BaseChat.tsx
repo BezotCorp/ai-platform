@@ -33,7 +33,7 @@ import { Goose } from './icons';
 import EnvironmentBadge from './GooseSidebar/EnvironmentBadge';
 import SessionActionsHeader from './SessionActionsHeader';
 import { isAcpRecovering, subscribeToAcpRecovery } from '../acp/acpConnection';
-import type { LiveVoiceAvailabilityResponseUnstable } from '@aaif/goose-acp-client';
+import type { LiveVoiceAvailabilityResponseUnstable } from '@bezotcorp/bcaip-acp-client';
 import { acpGetLiveVoiceAvailability } from '../acp/liveVoice';
 import type { LiveVoiceController } from '../liveVoice/useLiveVoice';
 import type { NoMessageValues } from 'react-intl';
@@ -242,7 +242,7 @@ export default function BaseChat({
     liveVoice.phase,
     liveVoiceActiveInAnotherSession,
     liveVoiceChatBusy,
-    session?.goose_mode,
+    session?.bcaip_mode,
     sessionId,
     sessionLoaded,
   ]);

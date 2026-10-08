@@ -1,26 +1,26 @@
-# Building and Running goose with Docker
+# Building and Running bcaip with Docker
 
-This guide covers building Docker images for goose CLI for production use, CI/CD pipelines, and local development.
+This guide covers building Docker images for bcaip CLI for production use, CI/CD pipelines, and local development.
 
 ## Quick Start
 
 ### Using Pre-built Images
 
-The easiest way to use goose with Docker is to pull the pre-built image from GitHub Container Registry:
+The easiest way to use bcaip with Docker is to pull the pre-built image from GitHub Container Registry:
 
 ```bash
 # Pull the latest image
-docker pull ghcr.io/aaif-goose/goose:latest
+docker pull ghcr.io/BezotCorp/ai-platform:latest
 
-# Run goose CLI
-docker run --rm ghcr.io/aaif-goose/goose:latest --version
+# Run bcaip CLI
+docker run --rm ghcr.io/BezotCorp/ai-platform:latest --version
 
 # Run with LLM configuration
 docker run --rm \
-  -e GOOSE_PROVIDER=openai \
-  -e GOOSE_MODEL=gpt-4o \
+  -e BCAIP_PROVIDER=openai \
+  -e BCAIP_MODEL=gpt-4o \
   -e OPENAI_API_KEY=$OPENAI_API_KEY \
-  ghcr.io/aaif-goose/goose:latest run -t "Hello, world!"
+  ghcr.io/BezotCorp/ai-platform:latest run -t "Hello, world!"
 ```
 
 ## Building from Source
@@ -36,37 +36,37 @@ docker run --rm \
 1. Clone the repository:
 
 ```bash
-git clone https://github.com/aaif-goose/goose.git
-cd goose
+git clone https://github.com/BezotCorp/ai-platform.git
+cd bcaip
 ```
 
 1. Build the Docker image:
 
 ```bash
-docker build -t goose:local .
+docker build -t bcaip:local .
 ```
 
 The build process:
 
 - Uses a multi-stage build to minimize final image size
 - Compiles with optimizations (LTO, stripping, size optimization)
-- Results in a ~340MB image containing the `goose` CLI binary
+- Results in a ~340MB image containing the `bcaip` CLI binary
 
 ### Build Options
 
 For a development build with debug symbols:
 
 ```bash
-docker build --build-arg CARGO_PROFILE_RELEASE_STRIP=false -t goose:dev .
+docker build --build-arg CARGO_PROFILE_RELEASE_STRIP=false -t bcaip:dev .
 ```
 
 For multi-platform builds:
 
 ```bash
-docker buildx build --platform linux/amd64,linux/arm64 -t goose:multi .
+docker buildx build --platform linux/amd64,linux/arm64 -t bcaip:multi .
 ```
 
-## Running goose in Docker
+## Running bcaip in Docker
 
 ### CLI Mode
 
@@ -74,14 +74,14 @@ Basic usage:
 
 ```bash
 # Show help
-docker run --rm goose:local --help
+docker run --rm bcaip:local --help
 
 # Run a command
 docker run --rm \
-  -e GOOSE_PROVIDER=openai \
-  -e GOOSE_MODEL=gpt-4o \
+  -e BCAIP_PROVIDER=openai \
+  -e BCAIP_MODEL=gpt-4o \
   -e OPENAI_API_KEY=$OPENAI_API_KEY \
-  goose:local run -t "Explain Docker containers"
+  bcaip:local run -t "Explain Docker containers"
 ```
 
 With volume mounts for file access:
@@ -90,21 +90,21 @@ With volume mounts for file access:
 docker run --rm \
   -v $(pwd):/workspace \
   -w /workspace \
-  -e GOOSE_PROVIDER=openai \
-  -e GOOSE_MODEL=gpt-4o \
+  -e BCAIP_PROVIDER=openai \
+  -e BCAIP_MODEL=gpt-4o \
   -e OPENAI_API_KEY=$OPENAI_API_KEY \
-  goose:local run -t "Analyze the code in this directory"
+  bcaip:local run -t "Analyze the code in this directory"
 ```
 
 Interactive session mode with Databricks:
 
 ```bash
 docker run -it --rm \
-  -e GOOSE_PROVIDER=databricks \
-  -e GOOSE_MODEL=databricks-dbrx-instruct \
+  -e BCAIP_PROVIDER=databricks \
+  -e BCAIP_MODEL=databricks-dbrx-instruct \
   -e DATABRICKS_HOST="$DATABRICKS_HOST" \
   -e DATABRICKS_TOKEN="$DATABRICKS_TOKEN" \
-  goose:local session
+  bcaip:local session
 ```
 
 ### Docker Compose
@@ -115,37 +115,37 @@ Create a `docker-compose.yml`:
 version: '3.8'
 
 services:
-  goose:
-    image: ghcr.io/aaif-goose/goose:latest
+  bcaip:
+    image: ghcr.io/BezotCorp/ai-platform:latest
     environment:
-      - GOOSE_PROVIDER=${GOOSE_PROVIDER:-openai}
-      - GOOSE_MODEL=${GOOSE_MODEL:-gpt-4o}
+      - BCAIP_PROVIDER=${BCAIP_PROVIDER:-openai}
+      - BCAIP_MODEL=${BCAIP_MODEL:-gpt-4o}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
     volumes:
       - ./workspace:/workspace
-      - goose-config:/home/goose/.config/goose
+      - bcaip-config:/home/bcaip/.config/bcaip
     working_dir: /workspace
     stdin_open: true
     tty: true
 
 volumes:
-  goose-config:
+  bcaip-config:
 ```
 
 Run with:
 
 ```bash
-docker-compose run --rm goose session
+docker-compose run --rm bcaip session
 ```
 
 ## Configuration
 
 ### Environment Variables
 
-The Docker image accepts all standard goose environment variables:
+The Docker image accepts all standard bcaip environment variables:
 
-- `GOOSE_PROVIDER`: LLM provider (openai, anthropic, google, etc.)
-- `GOOSE_MODEL`: Model to use (gpt-4o, claude-sonnet-4, etc.)
+- `BCAIP_PROVIDER`: LLM provider (openai, anthropic, google, etc.)
+- `BCAIP_MODEL`: Model to use (gpt-4o, claude-sonnet-4, etc.)
 - Provider-specific API keys (OPENAI_API_KEY, ANTHROPIC_API_KEY, etc.)
 
 ### Persistent Configuration
@@ -154,8 +154,8 @@ Mount the configuration directory to persist settings:
 
 ```bash
 docker run --rm \
-  -v ~/.config/goose:/home/goose/.config/goose \
-  goose:local configure
+  -v ~/.config/bcaip:/home/bcaip/.config/bcaip \
+  bcaip:local configure
 ```
 
 ### Installing Additional Tools
@@ -167,17 +167,17 @@ The image runs as a non-root user by default. To install additional packages:
 docker run --rm \
   -u root \
   --entrypoint bash \
-  goose:local \
-  -c "apt-get update && apt-get install -y vim && goose --version"
+  bcaip:local \
+  -c "apt-get update && apt-get install -y vim && bcaip --version"
 
 # Or create a custom Dockerfile
-FROM ghcr.io/aaif-goose/goose:latest
+FROM ghcr.io/BezotCorp/ai-platform:latest
 USER root
 RUN apt-get update && apt-get install -y \
     vim \
     tmux \
     && rm -rf /var/lib/apt/lists/*
-USER goose
+USER bcaip
 ```
 
 ## CI/CD Integration
@@ -189,28 +189,28 @@ jobs:
   analyze:
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/aaif-goose/goose:latest
+      image: ghcr.io/BezotCorp/ai-platform:latest
       env:
-        GOOSE_PROVIDER: openai
-        GOOSE_MODEL: gpt-4o
+        BCAIP_PROVIDER: openai
+        BCAIP_MODEL: gpt-4o
         OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
     steps:
       - uses: actions/checkout@v4
-      - name: Run goose analysis
+      - name: Run bcaip analysis
         run: |
-          goose run -t "Review this codebase for security issues"
+          bcaip run -t "Review this codebase for security issues"
 ```
 
 ### GitLab CI
 
 ```yaml
 analyze:
-  image: ghcr.io/aaif-goose/goose:latest
+  image: ghcr.io/BezotCorp/ai-platform:latest
   variables:
-    GOOSE_PROVIDER: openai
-    GOOSE_MODEL: gpt-4o
+    BCAIP_PROVIDER: openai
+    BCAIP_MODEL: gpt-4o
   script:
-    - goose run -t "Generate documentation for this project"
+    - bcaip run -t "Generate documentation for this project"
 ```
 
 ## Image Details
@@ -220,17 +220,17 @@ analyze:
 - **Base image**: Debian Bookworm Slim (minimal runtime dependencies)
 - **Final size**: ~340MB
 - **Optimizations**: Link-Time Optimization (LTO), binary stripping, size optimization
-- **Binary included**: `/usr/local/bin/goose` (32MB)
+- **Binary included**: `/usr/local/bin/bcaip` (32MB)
 
 ### Security
 
-- Runs as non-root user `goose` (UID 1000)
+- Runs as non-root user `bcaip` (UID 1000)
 - Minimal attack surface with only essential runtime dependencies
 - Regular security updates via automated builds
 
 ### Included Tools
 
-The image includes essential tools for goose operation:
+The image includes essential tools for bcaip operation:
 
 - `git` - Version control operations
 - `curl` - HTTP requests
@@ -248,7 +248,7 @@ If you encounter permission errors when mounting volumes:
 docker run --rm \
   -v $(pwd):/workspace \
   -u $(id -u):$(id -g) \
-  goose:local run -t "List files"
+  bcaip:local run -t "List files"
 ```
 
 ### API Key Issues
@@ -265,7 +265,7 @@ For accessing local services from within the container:
 
 ```bash
 # Use host network mode
-docker run --rm --network host goose:local
+docker run --rm --network host bcaip:local
 ```
 
 ## Advanced Usage
@@ -275,7 +275,7 @@ docker run --rm --network host goose:local
 Override the default entrypoint for debugging:
 
 ```bash
-docker run --rm -it --entrypoint bash goose:local
+docker run --rm -it --entrypoint bash bcaip:local
 ```
 
 ### Resource Limits
@@ -286,7 +286,7 @@ Set memory and CPU limits:
 docker run --rm \
   --memory="2g" \
   --cpus="2" \
-  goose:local
+  bcaip:local
 ```
 
 ### Multi-stage Development
@@ -296,8 +296,8 @@ For development with hot reload:
 ```bash
 # Mount source code
 docker run --rm \
-  -v $(pwd):/usr/src/goose \
-  -w /usr/src/goose \
+  -v $(pwd):/usr/src/bcaip \
+  -w /usr/src/bcaip \
   rust:1.82-bookworm \
   cargo watch -x run
 ```
@@ -314,11 +314,11 @@ For production deployments:
 Example production Dockerfile:
 
 ```dockerfile
-FROM ghcr.io/aaif-goose/goose:v1.6.0
+FROM ghcr.io/BezotCorp/ai-platform:v1.6.0
 # Add any additional tools needed for your use case
 USER root
 RUN apt-get update && apt-get install -y your-tools && rm -rf /var/lib/apt/lists/*
-USER goose
+USER bcaip
 ```
 
 ## Contributing
@@ -333,6 +333,6 @@ When contributing Docker-related changes:
 
 ## Related Documentation
 
-- [goose in Docker Tutorial](documentation/docs/tutorials/goose-in-docker.md) - Step-by-step tutorial
-- [Installation Guide](https://goose-docs.ai/docs/getting-started/installation) - All installation methods
-- [Configuration Guide](https://goose-docs.ai/docs/guides/config-files) - Detailed configuration options
+- [BCAIP in Docker Tutorial](documentation/docs/tutorials/bcaip-in-docker.md) - Step-by-step tutorial
+- [Installation Guide](https://bcaip.bezotcorp.com/docs/getting-started/installation) - All installation methods
+- [Configuration Guide](https://bcaip.bezotcorp.com/docs/guides/config-files) - Detailed configuration options

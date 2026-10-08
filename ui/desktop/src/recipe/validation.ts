@@ -1,6 +1,6 @@
 import type { JsonSchema } from './jsonSchema';
 
-import { recipeDtoSchema } from '@aaif/goose-acp-client';
+import { recipeDtoSchema } from '@bezotcorp/bcaip-acp-client';
 import { z } from 'zod';
 
 

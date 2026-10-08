@@ -1,5 +1,5 @@
 use rand::seq::IndexedRandom;
-/// Extended list of playful thinking messages including both goose and general AI actions
+/// Extended list of playful thinking messages including both BCAIP and general AI actions
 const THINKING_MESSAGES: &[&str] = &[
     "Spreading wings",
     "Honking thoughtfully",

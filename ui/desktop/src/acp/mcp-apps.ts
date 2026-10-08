@@ -59,14 +59,14 @@ function acpApp(value: unknown): GooseApp | null {
 
 export async function listMcpApps(sessionId?: string): Promise<GooseApp[]> {
   const client = await getAcpClient();
-  const response = await client.goose.appsListUnstable(sessionId ? { sessionId } : {});
+  const response = await client.bcaip.appsListUnstable(sessionId ? { sessionId } : {});
   return (response.apps ?? []).map(acpApp).filter((app): app is GooseApp => !!app);
 }
 
 export async function exportMcpApp(name: string): Promise<string> {
   try {
     const client = await getAcpClient();
-    const response = await client.goose.appsExportUnstable({ name });
+    const response = await client.bcaip.appsExportUnstable({ name });
     return response.html;
   } catch (error) {
     throw normalizeAcpError(error, 'Failed to export app');
@@ -76,7 +76,7 @@ export async function exportMcpApp(name: string): Promise<string> {
 export async function importMcpApp(html: string): Promise<void> {
   try {
     const client = await getAcpClient();
-    await client.goose.appsImportUnstable({ html });
+    await client.bcaip.appsImportUnstable({ html });
   } catch (error) {
     throw normalizeAcpError(error, 'Failed to import app');
   }
@@ -85,7 +85,7 @@ export async function importMcpApp(html: string): Promise<void> {
 export async function deleteMcpApp(name: string): Promise<void> {
   try {
     const client = await getAcpClient();
-    await client.goose.appsDeleteUnstable({ name });
+    await client.bcaip.appsDeleteUnstable({ name });
   } catch (error) {
     throw normalizeAcpError(error, 'Failed to delete app');
   }
@@ -96,7 +96,7 @@ export async function listMcpAppTools(
   extensionName?: string
 ): Promise<McpAppTool[]> {
   const client = await getAcpClient();
-  const response = await client.goose.toolsListUnstable({ sessionId });
+  const response = await client.bcaip.toolsListUnstable({ sessionId });
   const tools = response.tools;
   if (!extensionName) return tools;
 
@@ -110,7 +110,7 @@ export async function readMcpAppResource(
   uri: string
 ): Promise<McpAppResourceResponse> {
   const client = await getAcpClient();
-  const response = await client.goose.resourcesReadUnstable({
+  const response = await client.bcaip.resourcesReadUnstable({
     sessionId,
     uri,
     extensionName,
@@ -126,7 +126,7 @@ export async function callMcpAppTool(
 ): Promise<CallToolResult> {
   const fullToolName = `${extensionName}__${name}`;
   const client = await getAcpClient();
-  const response = await client.goose.toolsCallUnstable({
+  const response = await client.bcaip.toolsCallUnstable({
     sessionId,
     extensionName,
     name: fullToolName,

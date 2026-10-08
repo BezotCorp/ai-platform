@@ -30,7 +30,7 @@ Trust is a **mutual, public-key allowlist** — WireGuard / SSH-known-hosts styl
 
 ## Concepts
 
-- **`ConnectionCard`** — the shareable, non-secret identity + reachability string (`goose+roam://…`). Encodes public key + relay URLs and exposes `fingerprint()`.
+- **`ConnectionCard`** — the shareable, non-secret identity + reachability string (`bcaip+roam://…`). Encodes public key + relay URLs and exposes `fingerprint()`.
 - **`TrustBook`** — the local, mutual allowlist of accepted peer keys, plus revocations. Access exists _only_ by accepting a key. Persisted atomically and re-read on each inbound connection, so `accept` / `revoke` take effect against a running `share` without a restart. Reload failure fails **closed**.
 - **`Directory`** — an out-of-band record of connections that actually happened (inbound and outbound), built purely from observed connections. No gossip.
 - **`PeerBook`** — a user-managed address book of remotes, by nickname; stores the peer's non-secret card.
@@ -80,7 +80,7 @@ On **each** machine, run:
 bcaip roam id
 ```
 
-and send the printed `goose+roam://…` card to the other side out of band.
+and send the printed `bcaip+roam://…` card to the other side out of band.
 
 On **machine A** (the host):
 
@@ -129,7 +129,7 @@ shows who connected.
 If session creation hangs on macOS, prefix the command with:
 
 ```bash
-GOOSE_DISABLE_KEYRING=1
+BCAIP_DISABLE_KEYRING=1
 ```
 
 The environment-variable name is retained for compatibility unless the corresponding configuration surface is renamed separately.
@@ -191,7 +191,7 @@ It ships with the platform but is inert unless the `roaming` CLI feature is buil
 
 The existing browser client for roaming lives in a separate upstream repository:
 
-[aaif-goose/goose-mobile](https://github.com/aaif-goose/goose-mobile/tree/main/mobile-web)
+[BezotCorp/ai-platform-mobile](https://github.com/BezotCorp/ai-platform-mobile/tree/main/mobile-web)
 
 Its `mobile-web/` application is a pure-browser React app that connects to a roaming host. iroh compiled to wasm runs _inside the browser tab_, driving the agent over ACP.
 
@@ -199,7 +199,7 @@ There is no Tauri application or local bridge; the tab itself is the roaming pee
 
 The stock iroh wasm build tunnels QUIC over WebSocket to the relay because its UDP transport is compiled out in browsers. A custom WebRTC transport could add direct paths later.
 
-It is fully decoupled from this crate. The `goose-roaming-web` wasm crate in that repository currently **mirrors** this crate's connection-card and frame wire format by copying its constants (`CARD_VERSION`, `MAX_FRAME_BYTES`, card bounds).
+It is fully decoupled from this crate. The BCAIP roaming web wasm crate in that repository currently **mirrors** this crate's connection-card and frame wire format by copying its constants (`CARD_VERSION`, `MAX_FRAME_BYTES`, card bounds).
 
 When the wire format changes here, the browser implementation must be updated in the same change. Drift will not fail to compile across repositories; it will break pairing at runtime.
 

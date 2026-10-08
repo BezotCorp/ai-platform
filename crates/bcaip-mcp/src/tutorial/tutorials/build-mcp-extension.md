@@ -48,6 +48,7 @@ already have one. This includes any necessary build tools or dependencies.
 - Python: Use `uv add` for all python package management, to keep `pyproject.toml` up to date
 - TypeScript: Initialize a project using `npm init -y`
 - Kotlin: Use the following `gradle init` command to initialize:
+
   ```bash
     gradle init \
       --type kotlin-application \
@@ -92,12 +93,12 @@ if __name__ == "__main__":
 TypeScript:
 
 ```typescript
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 
 const server = new McpServer({
-  name: "Extension Name",
-  version: "1.0.0",
+  name: 'Extension Name',
+  version: '1.0.0',
 });
 
 const transport = new StdioServerTransport();
@@ -136,18 +137,14 @@ def get_example(param: str) -> str:
 TypeScript:
 
 ```typescript
-server.resource(
-  "example",
-  new ResourceTemplate("example://{param}", { list: undefined }),
-  async (uri, { param }) => ({
-    contents: [
-      {
-        uri: uri.href,
-        text: `Data for ${param}`,
-      },
-    ],
-  }),
-);
+server.resource('example', new ResourceTemplate('example://{param}', { list: undefined }), async (uri, { param }) => ({
+  contents: [
+    {
+      uri: uri.href,
+      text: `Data for ${param}`,
+    },
+  ],
+}));
 ```
 
 Kotlin:
@@ -186,14 +183,9 @@ def example_tool(param: str) -> str:
 TypeScript:
 
 ```typescript
-server.tool(
-  "example-tool",
-  "example description for tool",
-  { param: z.string() },
-  async ({ param }) => ({
-    content: [{ type: "text", text: `Processed ${param}` }],
-  }),
-);
+server.tool('example-tool', 'example description for tool', { param: z.string() }, async ({ param }) => ({
+  content: [{ type: 'text', text: `Processed ${param}` }],
+}));
 ```
 
 Kotlin:
@@ -220,49 +212,49 @@ Help users test their MCP extension using these steps:
 
 ### 1. Initial Testing
 
-Instruct users to start a goose session with their extension.
+Instruct users to start a BCAIP session with their extension.
 
-**Important**: You cannot start the goose session for them, as it is interactive. You will have to let them
+**Important**: You cannot start the BCAIP session for them, as it is interactive. You will have to let them
 know to start it in a terminal. Make sure you include instructions on how to set up the environment
 
 ```bash
 # Python example
-goose session --with-extension "python server.py"
+bcaip session --with-extension "python server.py"
 
 # TypeScript example
-goose session --with-extension "node server.js"
+bcaip session --with-extension "node server.js"
 
 # Kotlin example
-goose session --with-extension "java -jar build/libs/extension.jar"
+bcaip session --with-extension "java -jar build/libs/extension.jar"
 ```
 
 Tell users to watch for startup errors. If the session fails to start, they should share the error message with you for debugging.
 
 Note:
-You can run a feedback loop using a headless goose session, however if the process hangs you get into a stuck action.
+You can run a feedback loop using a headless BCAIP session, however if the process hangs you get into a stuck action.
 Ask the user if they want you to do that, and let them know they will manually need to kill any stuck processes.
 
 ```bash
 # Python example
-goose run --with-extension "python server.py" --text "EXAMPLE PROMPT HERE"
+bcaip run --with-extension "python server.py" --text "EXAMPLE PROMPT HERE"
 
 # TypeScript example
-goose run --with-extension "node server.js" --text "EXAMPLE PROMPT HERE"
+bcaip run --with-extension "node server.js" --text "EXAMPLE PROMPT HERE"
 
 # Kotlin example
-goose run --with-extension "java -jar build/libs/extension.jar" --text "EXAMPLE PROMPT HERE"
+bcaip run --with-extension "java -jar build/libs/extension.jar" --text "EXAMPLE PROMPT HERE"
 ```
 
 ### 2. Testing Tools and Resources
 
 Once the session starts successfully, guide users to test their implementation:
 
-- For tools, they should ask goose to use the tool directly
-- For resources, they should ask goose to access the relevant data
+- For tools, they should ask BCAIP to use the tool directly
+- For resources, they should ask BCAIP to access the relevant data
 
 Example prompts they can use:
 
-```
+```text
 "Please use the example-tool with parameter 'test'"
 "Can you read the data from example://test-param"
 ```
@@ -298,22 +290,19 @@ def example_tool(param: str) -> str:
 TypeScript:
 
 ```typescript
-import * as fs from "fs";
+import * as fs from 'fs';
 
 function log(message: string) {
-  fs.appendFileSync(
-    "mcp_extension.log",
-    `${new Date().toISOString()} - ${message}\n`,
-  );
+  fs.appendFileSync('mcp_extension.log', `${new Date().toISOString()} - ${message}\n`);
 }
 
-server.tool("example-tool", { param: z.string() }, async ({ param }) => {
+server.tool('example-tool', { param: z.string() }, async ({ param }) => {
   log(`example-tool called with param: ${param}`);
   try {
     const result = `Processed ${param}`;
     log(`example-tool succeeded: ${result}`);
     return {
-      content: [{ type: "text", text: result }],
+      content: [{ type: 'text', text: result }],
     };
   } catch (error) {
     log(`example-tool failed: ${error}`);
@@ -359,7 +348,7 @@ server.addTool(
 
 When users encounter issues:
 
-1. First, check if there are any immediate error messages in the goose session
+1. First, check if there are any immediate error messages in the BCAIP session
 
 2. If the error isn't clear, guide them to:
 

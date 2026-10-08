@@ -13,24 +13,24 @@ Start by understanding the user's context and preferences:
 
 2. Discuss game preferences:
    - Suggest simple starter games they could build:
-     * Flappy Bird (default) - focuses on physics and collision
-     * Snake - focuses on grid-based movement and growth mechanics
-     * Pong - focuses on two-player interaction and ball physics
-     * Breakout - focuses on collision and scoring mechanics
+     - Flappy Bird (default) - focuses on physics and collision
+     - Snake - focuses on grid-based movement and growth mechanics
+     - Pong - focuses on two-player interaction and ball physics
+     - Breakout - focuses on collision and scoring mechanics
    - Let them suggest alternatives if they have something specific in mind
    - Help them understand the complexity of their choice and adjust if needed
 
 3. Choose technology stack:
    - Default suggestion: Python + Pygame (beginner-friendly, cross-platform)
    - Alternative suggestions based on user experience:
-     * JavaScript + Canvas (web-based, good for sharing)
-     * Lua + LÖVE (lightweight, good for learning)
-     * C# + MonoGame (good for Windows users/Unity transition)
+     - JavaScript + Canvas (web-based, good for sharing)
+     - Lua + LÖVE (lightweight, good for learning)
+     - C# + MonoGame (good for Windows users/Unity transition)
    - Consider factors like:
-     * Installation complexity on their OS
-     * Learning curve
-     * Available learning resources
-     * Their future goals in programming
+     - Installation complexity on their OS
+     - Learning curve
+     - Available learning resources
+     - Their future goals in programming
 
 ## Environment Setup
 
@@ -49,14 +49,16 @@ Guide them through setting up their development environment:
 3. Dependency Management:
    - Explain why dependency isolation is important
    - For Python: Guide through virtualenv setup:
+
      ```bash
      python -m venv env
      source env/bin/activate  # or env\Scripts\activate on Windows
      ```
+
    - Similar isolation for other languages:
-     * Node: package.json
-     * Rust: Cargo.toml
-     * etc.
+     - Node: package.json
+     - Rust: Cargo.toml
+     - etc.
 
 4. Game Framework:
    - Install and verify chosen framework
@@ -152,12 +154,13 @@ Suggest next steps based on their interests:
 - Suggest breaks at good stopping points
 - Celebrate small victories and progress
 - Be ready to troubleshoot common issues:
-  * Installation problems
-  * Framework-specific errors
-  * Game logic bugs
-  * Performance issues
+  - Installation problems
+  - Framework-specific errors
+  - Game logic bugs
+  - Performance issues
 
 Remember to:
+
 - Check understanding frequently
 - Provide context for new concepts
 - Relate to user's existing knowledge
@@ -166,13 +169,14 @@ Remember to:
 - Maintain a positive learning environment
 
 Default Implementation:
+
 - If user has no strong preferences, guide them through:
-  * Python + Pygame
-  * Flappy Bird clone
-  * virtualenv for dependency management
-  * git for version control
+  - Python + Pygame
+  - Flappy Bird clone
+  - virtualenv for dependency management
+  - git for version control
 - This combination provides:
-  * Minimal setup complexity
-  * Quick visible progress
-  * Clear next steps
-  * Manageable scope
+  - Minimal setup complexity
+  - Quick visible progress
+  - Clear next steps
+  - Manageable scope

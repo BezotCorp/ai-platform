@@ -100,23 +100,23 @@ fn main() {
     let scenario = std::env::var("MCP_CONFORMANCE_SCENARIO").ok();
     let script = script_for_scenario(scenario.as_deref());
 
-    let goose = std::env::var("GOOSE_BIN").unwrap_or_else(|_| "target/debug/goose".to_string());
+    let bcaip = std::env::var("BCAIP_BIN").unwrap_or_else(|_| "target/debug/bcaip".to_string());
     let path_root = tempfile::Builder::new()
         .prefix("bcaip-mcp-conformance-")
         .tempdir()
         .unwrap_or_else(|err| {
-            eprintln!("failed to create temporary GOOSE_PATH_ROOT: {err}");
+            eprintln!("failed to create temporary BCAIP_PATH_ROOT: {err}");
             std::process::exit(1);
         });
-    let mut child = Command::new(&goose)
+    let mut child = Command::new(&bcaip)
         .args(["mcp-probe", target, "--script", "-"])
-        .env("GOOSE_OAUTH_AUTOMATIC_CALLBACK", "1")
-        .env("GOOSE_DISABLE_KEYRING", "1")
-        .env("GOOSE_PATH_ROOT", path_root.path())
+        .env("BCAIP_OAUTH_AUTOMATIC_CALLBACK", "1")
+        .env("BCAIP_DISABLE_KEYRING", "1")
+        .env("BCAIP_PATH_ROOT", path_root.path())
         .stdin(Stdio::piped())
         .spawn()
         .unwrap_or_else(|err| {
-            eprintln!("failed to spawn {goose}: {err}");
+            eprintln!("failed to spawn {bcaip}: {err}");
             std::process::exit(1);
         });
 
@@ -125,8 +125,8 @@ fn main() {
         .take()
         .expect("stdin was piped")
         .write_all(script.to_string().as_bytes())
-        .expect("write probe script to goose stdin");
+        .expect("write probe script to BCAIP stdin");
 
-    let status = child.wait().expect("wait for goose");
+    let status = child.wait().expect("wait for BCAIP");
     std::process::exit(status.code().unwrap_or(1));
 }

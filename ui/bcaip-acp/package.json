@@ -1,0 +1,52 @@
+{
+  "name": "@bezotcorp/bcaip-acp",
+  "version": "0.1.0",
+  "description": "Install and resolve the BCAIP executable through npm",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/BezotCorp/ai-platform.git"
+  },
+  "keywords": [
+    "bcaip",
+    "ai",
+    "agent",
+    "acp",
+    "binary"
+  ],
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "bin": {
+    "bcaip": "./bin/bcaip.mjs"
+  },
+  "files": [
+    "bin",
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "test": "pnpm run build && node --test test/*.test.mjs",
+    "lint": "tsc --noEmit",
+    "format": "prettier --write src/ test/ bin/",
+    "prepack": "pnpm run build"
+  },
+  "optionalDependencies": {
+    "@bezotcorp/bcaip-binary-darwin-arm64": "workspace:*",
+    "@bezotcorp/bcaip-binary-darwin-x64": "workspace:*",
+    "@bezotcorp/bcaip-binary-linux-arm64": "workspace:*",
+    "@bezotcorp/bcaip-binary-linux-x64": "workspace:*",
+    "@bezotcorp/bcaip-binary-win32-x64": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.3",
+    "prettier": "^3.9.9",
+    "typescript": "~7.0.2"
+  }
+}

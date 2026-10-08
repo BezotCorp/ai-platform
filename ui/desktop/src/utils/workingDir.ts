@@ -1,12 +1,12 @@
 export const getInitialWorkingDir = (): string => {
   // Fall back to initial config from app startup
-  return (window.appConfig?.get('GOOSE_WORKING_DIR') as string) ?? '';
+  return (window.appConfig?.get('BCAIP_WORKING_DIR') as string) ?? '';
 };
 
 /**
  * Resolve the working directory for a new chat in the current window.
  *
- * GOOSE_WORKING_DIR is fixed when the window is created, so it goes stale when
+ * BCAIP_WORKING_DIR is fixed when the window is created, so it goes stale when
  * the user switches to an external backend (or changes the configured remote
  * directory) afterwards. The configured remote directory is only applied when
  * the window is actually bound to an external backend (fixed at window creation
@@ -14,15 +14,15 @@ export const getInitialWorkingDir = (): string => {
  * settings; otherwise the remote path would be sent to the local (or a
  * different remote) server, where it fails the cwd existence validation.
  * Editing the remote working directory in settings still takes effect for new
- * chats in the same window. Env-mode backends (GOOSE_EXTERNAL_BACKEND) always
+ * chats in the same window. Env-mode backends (BCAIP_EXTERNAL_BACKEND) always
  * use the configured directory (matching getActiveExternalBackend), while
  * settings-mode backends require the window-bound backend to still match.
  */
 export const getEffectiveWorkingDir = async (): Promise<string> => {
   const initial = getInitialWorkingDir();
-  const boundUrl = window.appConfig?.get('GOOSE_EXTERNAL_BACKEND_URL') as string | undefined;
-  const source = window.appConfig?.get('GOOSE_EXTERNAL_BACKEND_SOURCE') as string | undefined;
-  if (window.appConfig?.get('GOOSE_EXTERNAL_BACKEND') !== true || !boundUrl) {
+  const boundUrl = window.appConfig?.get('BCAIP_EXTERNAL_BACKEND_URL') as string | undefined;
+  const source = window.appConfig?.get('BCAIP_EXTERNAL_BACKEND_SOURCE') as string | undefined;
+  if (window.appConfig?.get('BCAIP_EXTERNAL_BACKEND') !== true || !boundUrl) {
     return initial;
   }
   try {

@@ -1,10 +1,10 @@
 use super::github_recipe::{
-    GOOSE_RECIPE_GITHUB_REPO_CONFIG_KEY, RecipeInfo, RecipeSource, list_github_recipes,
+    BCAIP_RECIPE_GITHUB_REPO_CONFIG_KEY, RecipeInfo, RecipeSource, list_github_recipes,
     retrieve_recipe_from_github,
 };
 use anyhow::Result;
-use goose::recipe::local_recipes::{list_local_recipes, load_local_recipe_file};
-use goose::{config::Config, recipe::read_recipe_file_content::RecipeFile};
+use bcaip::recipe::local_recipes::{list_local_recipes, load_local_recipe_file};
+use bcaip::{config::Config, recipe::read_recipe_file_content::RecipeFile};
 
 pub fn load_recipe_file(recipe_name: &str) -> Result<RecipeFile> {
     load_local_recipe_file(recipe_name).or_else(|e| {
@@ -18,7 +18,7 @@ pub fn load_recipe_file(recipe_name: &str) -> Result<RecipeFile> {
 
 fn configured_github_recipe_repo() -> Option<String> {
     let config = Config::global();
-    match config.get_param(GOOSE_RECIPE_GITHUB_REPO_CONFIG_KEY) {
+    match config.get_param(BCAIP_RECIPE_GITHUB_REPO_CONFIG_KEY) {
         Ok(Some(recipe_repo_full_name)) => Some(recipe_repo_full_name),
         _ => None,
     }

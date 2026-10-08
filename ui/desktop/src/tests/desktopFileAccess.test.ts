@@ -18,7 +18,7 @@ import {
 const tempDirectories: string[] = [];
 
 function makeTempDirectory(): string {
-  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'goose-desktop-file-access-'));
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'bcaip-desktop-file-access-'));
   tempDirectories.push(directory);
   return directory;
 }

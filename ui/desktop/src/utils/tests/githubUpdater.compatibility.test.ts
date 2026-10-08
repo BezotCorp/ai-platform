@@ -67,7 +67,7 @@ function mockRelease(metadata: unknown = macOS13Release, releaseAssets = assets)
   vi.stubGlobal(
     'fetch',
     vi.fn(async (url: string) => {
-      if (url === 'https://api.github.com/repos/aaif-goose/goose/releases/latest') {
+      if (url === 'https://api.github.com/repos/BezotCorp/ai-platform/releases/latest') {
         return new Response(JSON.stringify({ ...release, assets: releaseAssets }));
       }
       if (url === metadataUrl) {

@@ -174,7 +174,7 @@ The update command fetches the plugin from its original git source, replaces the
 
 To disable a plugin globally, add its name to `disabledPlugins` in your user goose settings file:
 
-```json title="~/.config/goose/settings.json"
+```json title="~/.config/bcaip/settings.json"
 {
   "disabledPlugins": ["my-plugin"]
 }
@@ -183,13 +183,13 @@ To disable a plugin globally, add its name to `disabledPlugins` in your user goo
 For project-specific settings, use:
 
 ```text
-<project>/.config/goose/settings.json
+<project>/.config/bcaip/settings.json
 ```
 
 For local-only project settings that should not be shared with teammates, use:
 
 ```text
-<project>/.config/goose/settings.local.json
+<project>/.config/bcaip/settings.local.json
 ```
 
 A disabled plugin is skipped during plugin discovery, so its skills are not loaded and its hooks do not run.

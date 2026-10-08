@@ -11,7 +11,7 @@ import {
 import { cloneMessage } from './adapter/shared';
 import { ChatState } from '../types/chatState';
 
-import type { GooseSessionNotificationUnstable } from '@aaif/goose-acp-client';
+import type { BcaipSessionNotificationUnstable } from '@bezotcorp/bcaip-acp-client';
 import type { SessionNotification } from '@agentclientprotocol/sdk';
 import type { TokenState } from '../types/tokenState';
 import type { Message } from '../types/message';
@@ -390,10 +390,10 @@ function createAcpChatSessionStoreInternal(): AcpChatSessionStoreInternal {
     return notify(notification.sessionId, entry);
   };
 
-  const applyAcpGooseSessionNotification: AcpChatSessionActions['applyAcpGooseSessionNotification'] =
+  const applyAcpBcaipSessionNotification: AcpChatSessionActions['applyAcpBcaipSessionNotification'] =
     (notification) => {
       const entry = getOrCreateEntry(notification.sessionId);
-      const changes = entry.adapter.applyGoose(notification);
+      const changes = entry.adapter.applyBcaip(notification);
       // Same session-load replay fast path as applyAcpSessionNotification.
       if (entry.chatState === ChatState.LoadingConversation && entry.lastSnapshot) {
         applyChatStateChanges(
@@ -483,7 +483,7 @@ function createAcpChatSessionStoreInternal(): AcpChatSessionStoreInternal {
     clearActivePromptAttempt,
     isCurrentPromptAttempt,
     applyAcpSessionNotification,
-    applyAcpGooseSessionNotification,
+    applyAcpBcaipSessionNotification,
     applyPermissionRequest,
     cancelPermissionRequest,
     applyElicitationRequest,
@@ -522,9 +522,9 @@ function actionsFromStore(store: AcpChatSessionStoreInternal): AcpChatSessionAct
     deleteSnapshot: (sessionId: string): void => store.deleteSnapshot(sessionId),
     applyAcpSessionNotification: (notification: SessionNotification): AcpChatSessionSnapshot =>
       store.applyAcpSessionNotification(notification),
-    applyAcpGooseSessionNotification: (
-      notification: GooseSessionNotificationUnstable
-    ): AcpChatSessionSnapshot => store.applyAcpGooseSessionNotification(notification),
+    applyAcpBcaipSessionNotification: (
+      notification: BcaipSessionNotificationUnstable
+    ): AcpChatSessionSnapshot => store.applyAcpBcaipSessionNotification(notification),
     applyPermissionRequest: (request: AcpPermissionRequest): AcpChatSessionSnapshot =>
       store.applyPermissionRequest(request),
     cancelPermissionRequest: (

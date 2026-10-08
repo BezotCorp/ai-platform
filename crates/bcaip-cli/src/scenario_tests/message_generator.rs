@@ -6,8 +6,8 @@ use base64::{
     engine::general_purpose,
 };
 use crate::scenario_tests::scenario_runner::SCENARIO_TESTS_DIR;
-use goose_provider_types::conversations::Message;
-use goose_provider_types::base::Provider;
+use bcaip_provider_types::conversations::Message;
+use bcaip_provider_types::base::Provider;
 pub type MessageGenerator<'a> = Box<dyn Fn(&dyn Provider) -> Message + 'a>;
 
 pub fn text(text: &str) -> MessageGenerator<'static> {

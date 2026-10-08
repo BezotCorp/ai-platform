@@ -25,12 +25,12 @@ path = "src/bin/mcp_conformance_driver.rs"
 
 [dependencies]
 clap_mangen = { version = "0.3", default-features = false }
-goose = { path = "../goose", default-features = false }
+bcaip = { path = "../bcaip", default-features = false }
 agent-client-protocol = { workspace = true, optional = true }
 agent-client-protocol-schema = { workspace = true }
 bcaip-mcp = { path = "../bcaip-mcp", default-features = false, optional = true }
-goose-providers = { path = "../goose-providers", default-features = false }
-goose-sdk-types = { path = "../goose-sdk-types", default-features = false }
+bcaip-providers = { path = "../bcaip-providers", default-features = false }
+bcaip-sdk-types = { path = "../bcaip-sdk-types", default-features = false }
 bcaip-agent = { path = "../bcaip-agent", default-features = false }
 bcaip-roaming = { path = "../bcaip-roaming", optional = true }
 rmcp = { workspace = true }
@@ -126,34 +126,34 @@ default = [
     "acp-http",
     "online-model-meta",
 ]
-online-model-meta = ["goose/online-model-meta"]
+online-model-meta = ["bcaip/online-model-meta"]
 roaming = [
     "dep:bcaip-roaming",
     "dep:qrcode",
     "dep:fs2",
     "dep:agent-client-protocol",
 ]
-code-mode = ["goose/code-mode"]
-tree-sitter = ["goose/tree-sitter"]
-live-voice = ["goose/live-voice"]
+code-mode = ["bcaip/code-mode"]
+tree-sitter = ["bcaip/tree-sitter"]
+live-voice = ["bcaip/live-voice"]
 local-inference = [
-    "goose/local-inference",
+    "bcaip/local-inference",
     "dep:bcaip-download-manager",
     "dep:bcaip-local-inference",
 ]
-aws-providers = ["goose/aws-providers"]
-cuda = ["goose/cuda", "local-inference"]
-vulkan = ["goose/vulkan", "local-inference"]
-mlx = ["goose/mlx", "local-inference"]
-telemetry = ["goose/telemetry"]
-otel = ["goose/otel"]
-system-keyring = ["goose/system-keyring"]
+aws-providers = ["bcaip/aws-providers"]
+cuda = ["bcaip/cuda", "local-inference"]
+vulkan = ["bcaip/vulkan", "local-inference"]
+mlx = ["bcaip/mlx", "local-inference"]
+telemetry = ["bcaip/telemetry"]
+otel = ["bcaip/otel"]
+system-keyring = ["bcaip/system-keyring"]
 update = ["dep:sigstore-verify", "dep:snap"]
 bundled-mcp = ["dep:bcaip-mcp", "bcaip-mcp/bundled-mcp"]
-scheduler = ["goose/scheduler"]
-platform-apps = ["goose/platform-apps"]
-chat-recall = ["goose/chat-recall"]
-acp-http = ["goose/acp-http"]
+scheduler = ["bcaip/scheduler"]
+platform-apps = ["bcaip/platform-apps"]
+chat-recall = ["bcaip/chat-recall"]
+acp-http = ["bcaip/acp-http"]
 portable-default = [
     "rustls-tls",
     "tree-sitter",
@@ -174,18 +174,18 @@ rustls-tls = [
     "reqwest/rustls",
     "axum-server/tls-rustls",
     "sigstore-verify?/rustls",
-    "goose/rustls-tls",
+    "bcaip/rustls-tls",
     "bcaip-mcp?/rustls-tls",
-    "goose-providers/rustls-tls",
+    "bcaip-providers/rustls-tls",
 ]
 native-tls = [
     "dep:axum-server",
     "reqwest/native-tls",
     "axum-server/tls-openssl",
     "sigstore-verify?/native-tls",
-    "goose/native-tls",
+    "bcaip/native-tls",
     "bcaip-mcp?/native-tls",
-    "goose-providers/native-tls",
+    "bcaip-providers/native-tls",
 ]
 [dev-dependencies]
 env-lock.workspace = true

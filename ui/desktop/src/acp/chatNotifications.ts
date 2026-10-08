@@ -1,7 +1,7 @@
 import type {
-  GooseSessionNotificationUnstable,
+  BcaipSessionNotificationUnstable,
   ProviderDeviceCodeNotificationUnstable,
-} from '@aaif/goose-acp-client';
+} from '@bezotcorp/bcaip-acp-client';
 import type { SessionNotification } from '@agentclientprotocol/sdk';
 import { AppEvents } from '../constants/appEvents';
 import { maybeHandlePlatformEvent } from '../utils/platformEvents';
@@ -46,8 +46,8 @@ function maybeHandleLivePlatformEvent(notification: SessionNotification): void {
   }
 }
 
-export function handleAcpGooseSessionNotification(
-  notification: GooseSessionNotificationUnstable
+export function handleAcpBcaipSessionNotification(
+  notification: BcaipSessionNotificationUnstable
 ): Promise<void> {
   if (notification.update.sessionUpdate === 'live_voice_interaction_ended') {
     publishLiveVoiceInteractionEnded({
@@ -57,7 +57,7 @@ export function handleAcpGooseSessionNotification(
     return Promise.resolve();
   }
 
-  acpChatSessionActions.applyAcpGooseSessionNotification(notification);
+  acpChatSessionActions.applyAcpBcaipSessionNotification(notification);
   return Promise.resolve();
 }
 

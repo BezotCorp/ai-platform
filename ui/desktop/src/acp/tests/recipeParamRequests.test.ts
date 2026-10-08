@@ -2,7 +2,7 @@
  * @vitest-environment jsdom
  */
 
-import type { RequestRecipeParamsUnstable } from '@aaif/goose-acp-client';
+import type { RequestRecipeParamsUnstable } from '@bezotcorp/bcaip-acp-client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 type RecipeParamRequestsModule = typeof import('../recipeParamRequests');

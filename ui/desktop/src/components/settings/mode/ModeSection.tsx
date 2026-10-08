@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { all_goose_modes, ModeSelectionItem } from './ModeSelectionItem';
+import { all_bcaip_modes, ModeSelectionItem } from './ModeSelectionItem';
 import { useConfig } from '../../ConfigContext';
 
 export const ModeSection = () => {
@@ -8,7 +8,7 @@ export const ModeSection = () => {
 
   const handleModeChange = async (newMode: string) => {
     try {
-      await upsert('GOOSE_MODE', newMode, false);
+      await upsert('BCAIP_MODE', newMode, false);
       setCurrentMode(newMode);
     } catch (error) {
       console.error('Error updating goose mode:', error);
@@ -17,15 +17,15 @@ export const ModeSection = () => {
   };
 
   useEffect(() => {
-    const mode = config.GOOSE_MODE as string | undefined;
+    const mode = config.BCAIP_MODE as string | undefined;
     if (mode) {
       setCurrentMode(mode);
     }
-  }, [config.GOOSE_MODE]);
+  }, [config.BCAIP_MODE]);
 
   return (
     <div className="space-y-1">
-      {all_goose_modes.map((mode) => (
+      {all_bcaip_modes.map((mode) => (
         <ModeSelectionItem
           key={mode.key}
           mode={mode}

@@ -1,6 +1,6 @@
 import type { LiveVoiceButtonProps } from './liveVoiceButtonProps';
 
-import type { LiveVoiceAvailabilityResponseUnstable } from '@aaif/goose-acp-client';
+import type { LiveVoiceAvailabilityResponseUnstable } from '@bezotcorp/bcaip-acp-client';
 import { AudioLines, LoaderCircle, Mic, MicOff, Square } from 'lucide-react';
 import { defineMessages, useIntl } from '../i18n';
 import { cn } from '../utils';

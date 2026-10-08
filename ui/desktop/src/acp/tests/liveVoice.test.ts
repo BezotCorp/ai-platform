@@ -20,7 +20,7 @@ describe('ACP Live voice', () => {
       message: 'Start Live voice',
     });
     vi.mocked(getAcpClient).mockResolvedValue({
-      goose: {
+      bcaip: {
         sessionLiveVoiceAvailabilityUnstable: sessionLiveVoiceAvailability,
       },
     } as unknown as Awaited<ReturnType<typeof getAcpClient>>);
@@ -31,7 +31,7 @@ describe('ACP Live voice', () => {
     });
     expect(sessionLiveVoiceAvailability).toHaveBeenCalledWith({
       sessionId: 'main-session',
-      _meta: { goose: { unrolledAgentLoop: true } },
+      _meta: { bcaip: { unrolledAgentLoop: true } },
     });
   });
 
@@ -41,7 +41,7 @@ describe('ACP Live voice', () => {
       message: 'Live voice is disabled',
     });
     vi.mocked(getAcpClient).mockResolvedValue({
-      goose: {
+      bcaip: {
         sessionLiveVoiceAvailabilityUnstable: sessionLiveVoiceAvailability,
       },
     } as unknown as Awaited<ReturnType<typeof getAcpClient>>);
@@ -51,7 +51,7 @@ describe('ACP Live voice', () => {
       message: 'Live voice is disabled',
     });
     expect(sessionLiveVoiceAvailability).toHaveBeenCalledWith({
-      _meta: { goose: { unrolledAgentLoop: true } },
+      _meta: { bcaip: { unrolledAgentLoop: true } },
     });
   });
 
@@ -62,7 +62,7 @@ describe('ACP Live voice', () => {
       message: 'Live voice is unavailable while Use Legacy Agent Loop is enabled',
     });
     vi.mocked(getAcpClient).mockResolvedValue({
-      goose: {
+      bcaip: {
         sessionLiveVoiceAvailabilityUnstable: sessionLiveVoiceAvailability,
       },
     } as unknown as Awaited<ReturnType<typeof getAcpClient>>);
@@ -71,7 +71,7 @@ describe('ACP Live voice', () => {
 
     expect(sessionLiveVoiceAvailability).toHaveBeenCalledWith({
       sessionId: 'main-session',
-      _meta: { goose: { unrolledAgentLoop: false } },
+      _meta: { bcaip: { unrolledAgentLoop: false } },
     });
   });
 
@@ -82,7 +82,7 @@ describe('ACP Live voice', () => {
     });
     const stop = vi.fn().mockResolvedValue({});
     vi.mocked(getAcpClient).mockResolvedValue({
-      goose: {
+      bcaip: {
         sessionLiveVoiceStartUnstable: start,
         sessionLiveVoiceStopUnstable: stop,
       },
@@ -96,7 +96,7 @@ describe('ACP Live voice', () => {
     expect(start).toHaveBeenCalledWith({
       sessionId: 'main-session',
       offerSdp: 'offer',
-      _meta: { goose: { unrolledAgentLoop: true } },
+      _meta: { bcaip: { unrolledAgentLoop: true } },
     });
     expect(stop).toHaveBeenCalledWith({
       sessionId: 'main-session',

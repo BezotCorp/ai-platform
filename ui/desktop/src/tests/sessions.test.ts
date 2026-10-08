@@ -2,7 +2,7 @@
  * @vitest-environment jsdom
  */
 
-import type { GooseExtension, GooseExtensionEntry } from '@aaif/goose-acp-client';
+import type { BcaipExtension, BcaipExtensionEntry } from '@bezotcorp/bcaip-acp-client';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AppEvents } from '../constants/events';
 
@@ -15,7 +15,7 @@ import type { ConfiguredExtensionEntry } from '../types/configuredExtensionEntry
 
 const mocks = vi.hoisted(() => ({
   createAcpSession: vi.fn(),
-  getConfiguredGooseExtensions: vi.fn(),
+  getConfiguredBcaipExtensions: vi.fn(),
   beginConfiguredRecipeParameterScope: vi.fn(),
   finishConfiguredRecipeParameterScope: vi.fn(),
   getAcpFeatureCapabilities: vi.fn(),
@@ -34,8 +34,8 @@ vi.mock('../acp/chatSessionController', () => ({
 }));
 
 vi.mock('../acp/extensions', () => ({
-  getConfiguredGooseExtensions: mocks.getConfiguredGooseExtensions,
-  gooseExtensionName: (extension: GooseExtension) => {
+  getConfiguredBcaipExtensions: mocks.getConfiguredBcaipExtensions,
+  bcaipExtensionName: (extension: BcaipExtension) => {
     if ('name' in extension) {
       return extension.name;
     }
@@ -107,7 +107,7 @@ function configuredExtension(name: string, enabled: boolean): ConfiguredExtensio
   };
 }
 
-function gooseExtension(name: string): GooseExtension {
+function gooseExtension(name: string): BcaipExtension {
   return {
     type: 'builtin',
     name,
@@ -115,7 +115,7 @@ function gooseExtension(name: string): GooseExtension {
   };
 }
 
-function gooseExtensionEntry(name: string): GooseExtensionEntry {
+function gooseExtensionEntry(name: string): BcaipExtensionEntry {
   return {
     extension: gooseExtension(name),
     enabled: true,
@@ -133,7 +133,7 @@ describe('sessions', () => {
 
     mocks.createAcpSession.mockResolvedValue(makeSession());
 
-    mocks.getConfiguredGooseExtensions.mockResolvedValue([
+    mocks.getConfiguredBcaipExtensions.mockResolvedValue([
       gooseExtensionEntry('developer'),
       gooseExtensionEntry('memory'),
     ]);
@@ -203,7 +203,7 @@ describe('sessions', () => {
 
       expect(result).toBeInstanceOf(Session);
 
-      expect(mocks.getConfiguredGooseExtensions).not.toHaveBeenCalled();
+      expect(mocks.getConfiguredBcaipExtensions).not.toHaveBeenCalled();
       expect(mocks.decodeRecipe).not.toHaveBeenCalled();
       expect(mocks.listSavedRecipes).not.toHaveBeenCalled();
       expect(mocks.requestRecipeConsent).not.toHaveBeenCalled();
@@ -222,7 +222,7 @@ describe('sessions', () => {
         extensionConfigs: [extensionConfig('developer')],
       });
 
-      expect(mocks.getConfiguredGooseExtensions).toHaveBeenCalledOnce();
+      expect(mocks.getConfiguredBcaipExtensions).toHaveBeenCalledOnce();
 
       expect(mocks.createAcpSession).toHaveBeenCalledWith('/work', [gooseExtension('developer')], {
         recipeId: undefined,
@@ -240,7 +240,7 @@ describe('sessions', () => {
         ],
       });
 
-      expect(mocks.getConfiguredGooseExtensions).not.toHaveBeenCalled();
+      expect(mocks.getConfiguredBcaipExtensions).not.toHaveBeenCalled();
 
       expect(mocks.createAcpSession).toHaveBeenCalledWith('/work', [], {
         recipeId: undefined,
@@ -257,7 +257,7 @@ describe('sessions', () => {
         ],
       });
 
-      expect(mocks.getConfiguredGooseExtensions).toHaveBeenCalledOnce();
+      expect(mocks.getConfiguredBcaipExtensions).toHaveBeenCalledOnce();
 
       expect(mocks.createAcpSession).toHaveBeenCalledWith('/work', [gooseExtension('developer')], {
         recipeId: undefined,
@@ -274,7 +274,7 @@ describe('sessions', () => {
         ],
       });
 
-      expect(mocks.getConfiguredGooseExtensions).not.toHaveBeenCalled();
+      expect(mocks.getConfiguredBcaipExtensions).not.toHaveBeenCalled();
 
       expect(mocks.createAcpSession).toHaveBeenCalledWith('/work', undefined, {
         recipeId: undefined,
@@ -288,7 +288,7 @@ describe('sessions', () => {
         allExtensions: [],
       });
 
-      expect(mocks.getConfiguredGooseExtensions).not.toHaveBeenCalled();
+      expect(mocks.getConfiguredBcaipExtensions).not.toHaveBeenCalled();
 
       expect(mocks.createAcpSession).toHaveBeenCalledWith('/work', undefined, {
         recipeId: undefined,
@@ -428,7 +428,7 @@ describe('sessions', () => {
     });
 
     it('finishes the recipe parameter scope when extension resolution fails', async () => {
-      mocks.getConfiguredGooseExtensions.mockRejectedValue(new Error('extension lookup failed'));
+      mocks.getConfiguredBcaipExtensions.mockRejectedValue(new Error('extension lookup failed'));
 
       await expect(
         createSession('/work', {

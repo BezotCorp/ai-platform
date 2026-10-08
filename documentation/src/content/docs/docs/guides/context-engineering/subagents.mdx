@@ -157,7 +157,7 @@ prompt: |
 
 **Place your recipe file where goose can find it**
 
-- Set [`GOOSE_RECIPE_PATH`](/guides/recipes/recipe-reference#recipe-location) environment variable to your recipe directory
+- Set [`BCAIP_RECIPE_PATH`](/guides/recipes/recipe-reference#recipe-location) environment variable to your recipe directory
 - Or place it in your current working directory
 
 **goose Prompt**
@@ -192,7 +192,7 @@ I'll use your code-reviewer recipe to create a specialized subagent for this ana
 
 External subagents let you bring in AI agents from other providers and platforms, enabling goose to coordinate and integrate your workflow with the broader ecosystem. In the below example, we use Codex as a subagent by running it as an MCP server:
 
-**[goose Configuration File](/guides/config-files)** (`.~/.config/goose/config.yaml `):
+**[goose Configuration File](/guides/config-files)** (`.~/.config/bcaip/config.yaml `):
 
 ```yaml
 subagent:
@@ -287,7 +287,7 @@ Subagents use the following pre-configured settings, but you can override any de
 
 | Parameter       | Default                                           | How to Customize                                                                                                                                                            |
 | --------------- | ------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Max Turns**   | 25                                                | Use natural language, set `GOOSE_SUBAGENT_MAX_TURNS`, or configure `settings.max_turns` in [recipes](/guides/recipes/recipe-reference#settings) or subagent tool calls |
+| **Max Turns**   | 25                                                | Use natural language, set `BCAIP_SUBAGENT_MAX_TURNS`, or configure `settings.max_turns` in [recipes](/guides/recipes/recipe-reference#settings) or subagent tool calls |
 | **Timeout**     | 5 minutes                                         | Request longer timeout in your prompt                                                                                                                                       |
 | **Extensions**  | Inherited from parent                             | Specify which extensions to use in your prompt                                                                                                                              |
 | **Return Mode** | All subagent information provided in main session | Specify how much detail you want in your prompt                                                                                                                             |
@@ -310,7 +310,7 @@ You can override any default by including the setting in your natural language r
 "Use a research subagent with 30 turns and 20-minute timeout to investigate quantum computing trends"
 ```
 
-**Environment variable:** Set `GOOSE_SUBAGENT_MAX_TURNS` to change the default max turns for all subagents. Similarly, `GOOSE_SUBAGENT_MODEL` and `GOOSE_SUBAGENT_PROVIDER` set defaults for the subagent model and provider; recipe [`settings`](/guides/recipes/recipe-reference#settings) take precedence over both.
+**Environment variable:** Set `BCAIP_SUBAGENT_MAX_TURNS` to change the default max turns for all subagents. Similarly, `BCAIP_SUBAGENT_MODEL` and `BCAIP_SUBAGENT_PROVIDER` set defaults for the subagent model and provider; recipe [`settings`](/guides/recipes/recipe-reference#settings) take precedence over both.
 
 ### Extension Control
 

@@ -1,10 +1,10 @@
 # bcaip-provider-types
 
 The provider contract and the conversation types that flow through it. This is the
-crate to depend on if you want to implement a provider, or to work with goose
+crate to depend on if you want to implement a provider, or to work with BCAIP
 messages without pulling in the whole agent.
 
-Provider implementations live in [`goose-providers`](../goose-providers), which
+Provider implementations live in [`bcaip-providers`](../bcaip-providers), which
 re-exports every module here.
 
 ## The `Provider` trait
@@ -55,5 +55,5 @@ returning `ProviderMetadata` with its `ConfigKey`s, models, and any
 | `formats`, `json`, `images`, `mcp_utils` | Wire-format conversion helpers                                                                                       |
 | `cache_semantics`, `thinking`            | Prompt caching and reasoning/thinking-block handling                                                                 |
 | `retry`                                  | `RetryConfig`                                                                                                        |
-| `permission`, `goose_mode`               | Tool-approval modes                                                                                                  |
+| `permission`, `bcaip_mode`               | Tool-approval modes                                                                                                  |
 | `request_log`, `utils`                   | Request logging and shared helpers                                                                                   |

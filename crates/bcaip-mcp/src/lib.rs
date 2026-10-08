@@ -8,12 +8,10 @@ use once_cell::sync::Lazy;
 ))]
 use rmcp::{ServerHandler, ServiceExt};
 use std::collections::HashMap;
-// NOTE: "Block" is kept here for backwards compatibility with existing
-// user config/data directories. Changing this would orphan existing installations.
 pub static APP_STRATEGY: Lazy<AppStrategyArgs> = Lazy::new(|| AppStrategyArgs {
-    top_level_domain: "Block".to_string(),
-    author: "Block".to_string(),
-    app_name: "goose".to_string(),
+    top_level_domain: "BezotCorp".to_string(),
+    author: "BezotCorp".to_string(),
+    app_name: "bcaip".to_string(),
 });
 
 #[cfg(feature = "autovisualiser")]
@@ -26,7 +24,7 @@ pub mod computercontroller;
     feature = "memory-server",
     feature = "tutorial-server"
 ))]
-pub mod mcp_server_runner;
+pub mod mc_command;
 #[cfg(feature = "memory-server")]
 mod memory;
 #[cfg(all(target_os = "macos", feature = "computer-controller"))]

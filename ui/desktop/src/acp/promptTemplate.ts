@@ -1,3 +1,3 @@
-import type { PromptTemplateEntry } from '@aaif/goose-acp-client';
+import type { PromptTemplateEntry } from '@bezotcorp/bcaip-acp-client';
 
 export type PromptTemplate = PromptTemplateEntry;

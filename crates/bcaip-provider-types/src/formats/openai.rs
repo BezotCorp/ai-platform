@@ -9,7 +9,7 @@ use crate::document_format::{
 use crate::errors::ProviderError;
 use crate::images::{ImageFormat, convert_image, detect_image_path, load_image_file};
 use crate::json::{parse_tool_arguments, truncation_error_message};
-use crate::model::{ModelConfig, is_goose_internal_request_param};
+use crate::model::{ModelConfig, is_bcaip_internal_request_param};
 use crate::thinking::{
     GEMINI_THOUGHT_SIGNATURE_KEY, ThinkFilter, ThinkingEffort, split_think_blocks,
 };
@@ -1716,7 +1716,7 @@ pub fn create_request_for_model_with_options_openai(
 ) -> anyhow::Result<Value, Error> {
     if model_config.model_name.starts_with("o1-mini") {
         return Err(anyhow!(
-            "o1-mini model is not currently supported since goose uses tool calling and o1-mini does not support it. Please use o1 or o3 models instead."
+            "o1-mini model is not currently supported since BCAIP uses tool calling and o1-mini does not support it. Please use o1 or o3 models instead."
         ));
     }
 
@@ -1771,7 +1771,7 @@ pub fn create_request_for_model_with_options_openai(
     }
 
     // Only emit max_tokens / max_completion_tokens when the user (via
-    // GOOSE_MAX_TOKENS) or a canonical model record has supplied a value.
+    // BCAIP_MAX_TOKENS) or a canonical model record has supplied a value.
     // For unknown models on OpenAI-compatible endpoints (e.g. llama_swap,
     // lmstudio) sending the historic 4096 default truncates non-trivial
     // responses; omitting the field lets the server use its own max.
@@ -1796,7 +1796,7 @@ pub fn create_request_for_model_with_options_openai(
         && let Some(obj) = payload.as_object_mut()
     {
         for (key, value) in params {
-            if !is_goose_internal_request_param(key) && !is_reserved_request_param_key(key) {
+            if !is_bcaip_internal_request_param(key) && !is_reserved_request_param_key(key) {
                 obj.insert(key.clone(), value.clone());
             }
         }
@@ -1840,8 +1840,8 @@ pub fn extract_reasoning_effort(model_name: &str) -> (String, Option<String>) {
 /// The Responses API is backwards-compatible with all OpenAI reasoning
 /// models, so every `o`-series (`o1`, `o3`, `o4`, …), `gpt-5`, and `gpt-6` variant
 /// routes here. The matcher intentionally scans the full model identifier so
-/// hosted aliases like `databricks-gpt-5.4`, `goose-o3-mini`, or
-/// `headless-goose-o3-mini` work without provider-specific normalization.
+/// hosted aliases like `databricks-gpt-5.4`, `bcaip-o3-mini`, or
+/// `headless-bcaip-o3-mini` work without provider-specific normalization.
 pub fn is_openai_responses_model(model_name: &str) -> bool {
     static RE: OnceLock<Regex> = OnceLock::new();
     let re = RE.get_or_init(|| {
@@ -1874,7 +1874,7 @@ pub fn is_xai_reasoning_model(model_name: &str) -> bool {
         || model_name.starts_with("grok-4-1-fast-reasoning")
 }
 
-/// Maps Goose's effort levels to values accepted by xAI Chat Completions.
+/// Maps BCAIP's effort levels to values accepted by xAI Chat Completions.
 pub fn xai_reasoning_effort_for_thinking(
     model_name: &str,
     effort: ThinkingEffort,

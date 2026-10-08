@@ -1,11 +1,12 @@
-use super::tool_mode::ToolMode;
+use crate::mlx::tool_mode::ToolMode;
 use crate::tool_emulation::{StreamingEmulatorParser, message_for_emulator_action};
 use crate::{
     native_tool_parsing::message_from_native_tool_text, thinking_output::ThinkingOutputFilter,
 };
-use goose_provider_types::conversations::ProviderUsage;
-use goose_provider_types::conversations::{Message, MessageContent};
-use goose_provider_types::errors::ProviderError;
+use bcaip_provider_types::conversations::ProviderUsage;
+use bcaip_provider_types::conversations::{Message, MessageContent};
+use bcaip_provider_types::errors::ProviderError;
+
 pub(crate) fn emit_generated_response(
     generated_text: &str,
     generation_prompt: &str,

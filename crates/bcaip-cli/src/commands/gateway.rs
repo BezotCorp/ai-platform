@@ -1,5 +1,5 @@
 use anyhow::Result;
-use goose::{execution::manager::AgentManager, gateway::manager::GatewayManager};
+use bcaip::{execution::manager::AgentManager, gateway::manager::GatewayManager};
 use std::sync::Arc;
 pub async fn handle_gateway_status() -> Result<()> {
     let agent_manager = AgentManager::instance().await?;
@@ -39,13 +39,13 @@ pub async fn handle_gateway_start(
     let agent_manager = AgentManager::instance().await?;
     let gateway_manager = Arc::new(GatewayManager::new(agent_manager)?);
 
-    let mut config = goose::gateway::GatewayConfig {
+    let mut config = bcaip::gateway::GatewayConfig {
         gateway_type,
         platform_config,
         max_sessions: 0,
     };
 
-    let gw = goose::gateway::create_gateway(&mut config)?;
+    let gw = bcaip::gateway::create_gateway(&mut config)?;
     gateway_manager.start_gateway(config, gw).await?;
 
     println!("Gateway started. Press Ctrl+C to stop.");

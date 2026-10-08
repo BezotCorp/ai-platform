@@ -29,4 +29,4 @@ goose is retiring its project-specific MCP server directory in favor of the [off
 - Do not create new server-specific tutorials solely to support a directory submission.
 - Existing entries and tutorials may be maintained or migrated as part of the transition.
 
-See [Discussion #10830](https://github.com/aaif-goose/goose/discussions/10830) for the decision and migration direction.
+See [Discussion #10830](https://github.com/BezotCorp/ai-platform/discussions/10830) for the decision and migration direction.

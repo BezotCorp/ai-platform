@@ -1,11 +1,11 @@
 /**
  * Component for displaying version-related blocking messages.
- * Shows guidance for installing or updating Goose when version requirements are not met.
+ * Shows guidance for installing or updating BCAIP when version requirements are not met.
  */
 
 import { createOpenExternalLinkMessage } from '../../shared/messages';
 import { postMessage } from '../bridge';
-import { GOOSE_PATH } from './icons/GooseWatermark';
+import { BCAIP_ICON_URL } from './icons/BcaipWatermark';
 
 export interface VersionBlockedViewProps {
   status: 'blocked_missing' | 'blocked_outdated';
@@ -13,7 +13,7 @@ export interface VersionBlockedViewProps {
   minimumVersion: string;
   installUrl?: string;
   updateUrl?: string;
-  /** Set when `goose.binaryPath` is configured but invalid */
+  /** Set when `bcaip.binaryPath` is configured but invalid */
   configuredPath?: string;
 }
 
@@ -35,7 +35,7 @@ export function VersionBlockedView({
         <div className="max-w-md text-center">
           <WarningIcon className="w-12 h-12 mx-auto mb-4 text-[var(--vscode-editorWarning-foreground)]" />
           <h2 className="text-lg font-medium text-[var(--vscode-foreground)] mb-3">
-            Goose Binary Path Invalid
+            BCAIP Binary Path Invalid
           </h2>
           <p className="text-sm text-[var(--vscode-descriptionForeground)] mb-2">
             The configured path{' '}
@@ -47,9 +47,9 @@ export function VersionBlockedView({
           <p className="text-sm text-[var(--vscode-descriptionForeground)]">
             Fix the{' '}
             <code className="font-mono text-[var(--vscode-textPreformat-foreground)]">
-              goose.binaryPath
+              bcaip.binaryPath
             </code>{' '}
-            setting, or clear it to use auto-detection, then run the "Goose: Restart" command to
+            setting, or clear it to use auto-detection, then run the "BCAIP: Restart" command to
             search again.
           </p>
         </div>
@@ -61,12 +61,17 @@ export function VersionBlockedView({
     return (
       <div className="flex flex-col items-center justify-center h-screen p-6">
         <div className="max-w-md text-center">
-          <GooseIcon className="w-12 h-12 mx-auto mb-4 text-[var(--vscode-foreground)] opacity-60" />
+          <img
+            src={BCAIP_ICON_URL}
+            alt=""
+            aria-hidden="true"
+            className="w-12 h-12 mx-auto mb-4 opacity-60"
+          />
           <h2 className="text-lg font-medium text-[var(--vscode-foreground)] mb-3">
-            Welcome to Goose
+            Welcome to BCAIP
           </h2>
           <p className="text-sm text-[var(--vscode-descriptionForeground)] mb-4">
-            To get started, you need to install Goose (version {minimumVersion} or higher) on your
+            To get started, you need to install BCAIP (version {minimumVersion} or higher) on your
             system.
           </p>
           {installUrl && (
@@ -89,10 +94,10 @@ export function VersionBlockedView({
       <div className="max-w-md text-center">
         <UpdateIcon className="w-12 h-12 mx-auto mb-4 text-[var(--vscode-editorWarning-foreground)]" />
         <h2 className="text-lg font-medium text-[var(--vscode-foreground)] mb-3">
-          Goose Update Required
+          BCAIP Update Required
         </h2>
         <p className="text-sm text-[var(--vscode-descriptionForeground)] mb-2">
-          This extension requires Goose version {minimumVersion} or higher.
+          This extension requires BCAIP version {minimumVersion} or higher.
         </p>
         {detectedVersion && (
           <p className="text-sm text-[var(--vscode-descriptionForeground)] mb-4">
@@ -112,14 +117,6 @@ export function VersionBlockedView({
         )}
       </div>
     </div>
-  );
-}
-
-function GooseIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 16 16" aria-hidden="true">
-      <path d={GOOSE_PATH} fill="currentColor" />
-    </svg>
   );
 }
 

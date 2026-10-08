@@ -1,6 +1,6 @@
 import { AppDate } from '../utils/appDate';
 import type { ExtensionData } from './extensionData';
-import type { GooseMode } from './gooseMode';
+import type { BcaipMode } from './bcaipMode';
 import type { Message } from './message';
 import type { ModelConfig } from './modelConfig';
 import type { SessionChanges } from './sessionChanges';
@@ -10,7 +10,7 @@ import type { Usage } from './usage';
 import type { Recipe } from '../recipe';
 
 /**
- * Application representation of a Goose session.
+ * Application representation of a BCAIP session.
  *
  * Serialized transport values enter through `SessionData`. Dates are converted
  * to `AppDate` immediately and remain strongly typed inside the application.
@@ -22,7 +22,7 @@ export class Session {
   private conversationValue?: Message[] | null;
   private createdAt: AppDate;
   private extensionData: ExtensionData;
-  private gooseMode?: GooseMode;
+  private bcaipMode?: BcaipMode;
   private sessionId: string;
   private lastMessageAt?: AppDate | null;
   private lastMessageSnippet?: string | null;
@@ -47,7 +47,7 @@ export class Session {
     this.conversationValue = data.conversation;
     this.createdAt = AppDate.fromString(data.created_at);
     this.extensionData = data.extension_data;
-    this.gooseMode = data.goose_mode;
+    this.bcaipMode = data.bcaip_mode;
     this.sessionId = data.id;
     this.lastMessageAt = Session.parseOptionalDate(data.last_message_at);
     this.lastMessageSnippet = data.last_message_snippet;
@@ -114,7 +114,7 @@ export class Session {
       conversation: this.conversationValue,
       created_at: this.createdAt.toISOString(),
       extension_data: this.extensionData,
-      goose_mode: this.gooseMode,
+      bcaip_mode: this.bcaipMode,
       id: this.sessionId,
       last_message_at: Session.serializeOptionalDate(this.lastMessageAt),
       last_message_snippet: this.lastMessageSnippet,
@@ -182,12 +182,12 @@ export class Session {
     this.extensionData = value;
   }
 
-  public get goose_mode(): GooseMode | undefined {
-    return this.gooseMode;
+  public get bcaip_mode(): BcaipMode | undefined {
+    return this.bcaipMode;
   }
 
-  public set goose_mode(value: GooseMode | undefined) {
-    this.gooseMode = value;
+  public set bcaip_mode(value: BcaipMode | undefined) {
+    this.bcaipMode = value;
   }
 
   public get id(): string {

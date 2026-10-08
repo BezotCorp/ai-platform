@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "bcaip-sdk"
+version = "0.1.0a11"
+description = "Python bindings for the BCAIP Development Kit (BDK)"
+readme = "README.md"
+requires-python = ">=3.9"
+license = "Apache-2.0"
+authors = [{ name = "BezotCorp", email = "contact@bezotcorp.com" }]
+keywords = ["bcaip", "bdk", "sdk", "ai", "agent", "uniffi"]
+
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Rust",
+]
+
+[project.urls]
+Homepage = "https://github.com/BezotCorp/ai-platform"
+Repository = "https://github.com/BezotCorp/ai-platform"
+Issues = "https://github.com/BezotCorp/ai-platform/issues"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+bcaip = ["*.so", "*.dylib", "*.dll", "py.typed"]

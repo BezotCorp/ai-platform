@@ -160,7 +160,7 @@
 /* ═══════════════════════════════════════════════════════════════════════════
    4. GOOSE DESKTOP UI ALIASES — @theme inline {}
    App-specific tokens that map to MCP spec tokens.
-   Not part of the MCP spec — only used by Goose components.
+   Not part of the MCP spec — only used by BCAIP components.
    ═══════════════════════════════════════════════════════════════════════════ */
 @theme inline {
   --font-serif: serif;
@@ -403,7 +403,7 @@
     opacity: 1 !important;
   }
 
-  /* Goose icon entrance animation */
+  /* BCAIP icon entrance animation */
   .goose-icon-entrance {
     animation: none !important;
     opacity: 1 !important;
@@ -721,7 +721,7 @@ pre:has(> code.bg-inline-code) {
   contain: layout style paint;
 }
 
-/* Goose icon animation to replace framer-motion */
+/* BCAIP icon animation to replace framer-motion */
 @keyframes goose-icon-entrance {
   from {
     opacity: 0;

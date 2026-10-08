@@ -1,7 +1,7 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
 import { ChatMessage, MessageStatus } from '../../../shared/types';
 import { useAutoScroll } from '../../hooks/useAutoScroll';
-import { GooseWatermark } from '../icons/GooseWatermark';
+import { BcaipWatermark } from '../icons/BcaipWatermark';
 import { MessageItem } from './MessageItem';
 
 interface MessageListProps {
@@ -59,7 +59,7 @@ export const MessageList = forwardRef<MessageListHandle, MessageListProps>(funct
         ref={containerRef}
         className="flex-1 min-h-0 overflow-y-auto flex items-center justify-center p-4"
       >
-        <GooseWatermark />
+        <BcaipWatermark />
       </div>
     );
   }

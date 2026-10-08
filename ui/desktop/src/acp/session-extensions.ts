@@ -2,11 +2,11 @@ import type { ExtensionConfig } from '../types/extensionConfig';
 import type { SessionExtension } from './sessionExtension';
 export type { SessionExtension } from './sessionExtension';
 import { getAcpClient } from './acpConnection';
-import { extensionConfigToGooseExtension, gooseExtensionToExtensionConfig } from './extensions';
+import { extensionConfigToBcaipExtension, bcaipExtensionToExtensionConfig } from './extensions';
 
 export async function getSessionExtensions(sessionId: string): Promise<SessionExtension[]> {
   const client = await getAcpClient();
-  const response = await client.goose.sessionExtensionsListUnstable({ sessionId });
+  const response = await client.bcaip.sessionExtensionsListUnstable({ sessionId });
   const extensionKeys = new Set<string>();
   const extensions: SessionExtension[] = [];
 
@@ -16,7 +16,7 @@ export async function getSessionExtensions(sessionId: string): Promise<SessionEx
     }
     extensionKeys.add(entry.extensionKey);
 
-    const config = gooseExtensionToExtensionConfig(entry.extension);
+    const config = bcaipExtensionToExtensionConfig(entry.extension);
     if (config) {
       extensions.push({ ...config, extensionKey: entry.extensionKey });
     }
@@ -29,12 +29,12 @@ export async function addSessionExtension(
   sessionId: string,
   config: ExtensionConfig
 ): Promise<void> {
-  const extension = extensionConfigToGooseExtension(config);
+  const extension = extensionConfigToBcaipExtension(config);
   if (!extension) {
     throw new Error(`Unsupported extension type for ACP: ${config.type}`);
   }
   const client = await getAcpClient();
-  await client.goose.sessionExtensionsAddUnstable({ sessionId, extension });
+  await client.bcaip.sessionExtensionsAddUnstable({ sessionId, extension });
 }
 
 export async function removeSessionExtension(
@@ -42,5 +42,5 @@ export async function removeSessionExtension(
   extensionKey: string
 ): Promise<void> {
   const client = await getAcpClient();
-  await client.goose.sessionExtensionsRemoveUnstable({ sessionId, extensionKey });
+  await client.bcaip.sessionExtensionsRemoveUnstable({ sessionId, extensionKey });
 }

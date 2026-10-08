@@ -4,11 +4,11 @@ use crate::recipes::print_recipe::{
 };
 use crate::recipes::search_recipe::load_recipe_file;
 use anyhow::Result;
-use goose::recipe::Recipe;
-use goose::recipe::build_recipe::{
+use bcaip::recipe::Recipe;
+use bcaip::recipe::build_recipe::{
     RecipeError, apply_values_to_parameters_without_file_expansion, build_recipe_from_template,
 };
-use goose::recipe::validate_recipe::parse_and_validate_parameters;
+use bcaip::recipe::validate_recipe::parse_and_validate_parameters;
 fn create_user_prompt_callback() -> impl Fn(&str, &str) -> Result<String> {
     |key: &str, description: &str| -> Result<String> {
         let input_value =

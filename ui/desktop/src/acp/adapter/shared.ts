@@ -9,7 +9,7 @@ import type { Message } from '../../types/message';
 
 import type { AcpChatStateChange } from './acpChatStateChange';
 import type { AdapterState } from './adapterState';
-import type { GooseMessageMeta } from './gooseMessageMeta';
+import type { BcaipMessageMeta } from './bcaipMessageMeta';
 import type { ToolIdentity } from './toolIdentity';
 export const DEFAULT_VISIBLE_MESSAGE_METADATA: Message['metadata'] = {
   userVisible: true,
@@ -32,47 +32,47 @@ export function cloneMessage(message: Message): Message {
   };
 }
 
-export function getGooseMessageMeta(update: { _meta?: unknown }): GooseMessageMeta {
+export function getBcaipMessageMeta(update: { _meta?: unknown }): BcaipMessageMeta {
   if (!isRecord(update._meta)) {
     return {};
   }
 
-  const goose = update._meta.goose;
-  if (!isRecord(goose)) {
+  const bcaip = update._meta.bcaip;
+  if (!isRecord(bcaip)) {
     return {};
   }
 
-  const outputTokenLimitReached = goose.outputTokenLimitReached === true;
+  const outputTokenLimitReached = bcaip.outputTokenLimitReached === true;
 
   return {
-    created: typeof goose.created === 'number' ? goose.created : undefined,
-    messageId: typeof goose.messageId === 'string' ? goose.messageId : undefined,
+    created: typeof bcaip.created === 'number' ? bcaip.created : undefined,
+    messageId: typeof bcaip.messageId === 'string' ? bcaip.messageId : undefined,
     outputTokenLimitReached: outputTokenLimitReached ? true : undefined,
-    fallbackContent: goose.fallbackContent === true ? true : undefined,
-    steer: goose.steer === true ? true : undefined,
+    fallbackContent: bcaip.fallbackContent === true ? true : undefined,
+    steer: bcaip.steer === true ? true : undefined,
   };
 }
 
-export function getGooseActiveRunId(update: { _meta?: unknown }): string | null | undefined {
+export function getBcaipActiveRunId(update: { _meta?: unknown }): string | null | undefined {
   if (!isRecord(update._meta)) {
     return undefined;
   }
 
-  const goose = update._meta.goose;
-  if (!isRecord(goose) || !('activeRunId' in goose)) {
+  const bcaip = update._meta.bcaip;
+  if (!isRecord(bcaip) || !('activeRunId' in bcaip)) {
     return undefined;
   }
 
-  return typeof goose.activeRunId === 'string' || goose.activeRunId === null
-    ? goose.activeRunId
+  return typeof bcaip.activeRunId === 'string' || bcaip.activeRunId === null
+    ? bcaip.activeRunId
     : undefined;
 }
 
-export function getGooseQueuedSteer(update: { _meta?: unknown }): string | undefined {
+export function getBcaipQueuedSteer(update: { _meta?: unknown }): string | undefined {
   if (!isRecord(update._meta)) return undefined;
-  const goose = update._meta.goose;
-  if (!isRecord(goose) || !isRecord(goose.queuedSteer)) return undefined;
-  return typeof goose.queuedSteer.messageId === 'string' ? goose.queuedSteer.messageId : undefined;
+  const bcaip = update._meta.bcaip;
+  if (!isRecord(bcaip) || !isRecord(bcaip.queuedSteer)) return undefined;
+  return typeof bcaip.queuedSteer.messageId === 'string' ? bcaip.queuedSteer.messageId : undefined;
 }
 
 export function rawInputToArguments(rawInput: unknown): Record<string, unknown> {
@@ -84,15 +84,15 @@ export function toolIdentity(update: ToolCall | ToolCallUpdate): ToolIdentity {
     return {};
   }
 
-  const goose = update._meta.goose;
-  if (!isRecord(goose) || !isRecord(goose.toolCall)) {
+  const bcaip = update._meta.bcaip;
+  if (!isRecord(bcaip) || !isRecord(bcaip.toolCall)) {
     return {};
   }
 
   return {
-    toolName: typeof goose.toolCall.toolName === 'string' ? goose.toolCall.toolName : undefined,
+    toolName: typeof bcaip.toolCall.toolName === 'string' ? bcaip.toolCall.toolName : undefined,
     extensionName:
-      typeof goose.toolCall.extensionName === 'string' ? goose.toolCall.extensionName : undefined,
+      typeof bcaip.toolCall.extensionName === 'string' ? bcaip.toolCall.extensionName : undefined,
   };
 }
 
@@ -103,5 +103,5 @@ export function isRecord(value: unknown): value is Record<string, unknown> {
 export type { AcpChatStateChange } from './acpChatStateChange';
 export type { AdapterState } from './adapterState';
 export type { ToolCallState } from './toolCallState';
-export type { GooseMessageMeta } from './gooseMessageMeta';
+export type { BcaipMessageMeta } from './bcaipMessageMeta';
 export type { ToolIdentity } from './toolIdentity';

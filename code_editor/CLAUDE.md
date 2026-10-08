@@ -51,4 +51,5 @@ that an rp1 skill addresses, briefly suggest it.
 - Do not suggest while an rp1 workflow is already running.
 - Only suggest when there is a clear match to the user's current activity.
 - For deeper questions about rp1, suggest the user invoke /guide.
+
 <!-- rp1:end:v0.7.1 -->

@@ -1,5 +1,5 @@
 use anyhow::{Result, anyhow};
-use goose::recipe::{Recipe, SubRecipe};
+use bcaip::recipe::{Recipe, SubRecipe};
 use std::path::PathBuf;
 
 use crate::{

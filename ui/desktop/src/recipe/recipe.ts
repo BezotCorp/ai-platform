@@ -1,4 +1,4 @@
-import type { RecipeDto } from '@aaif/goose-acp-client';
+import type { RecipeDto } from '@bezotcorp/bcaip-acp-client';
 
 export type Recipe = RecipeDto & {
   // TODO: Separate these from the raw recipe type

@@ -64,7 +64,7 @@ strictness: strict
 ### `src/webview/components/icons/`
 
 **Purpose**: Icon assets — file-type glyph and Goose watermark.
-**Key files**: `FileTypeIcon.tsx`, `GooseWatermark.tsx`.
+**Key files**: `FileTypeIcon.tsx`, `BcaipWatermark.tsx`.
 
 ### `src/test/mocks/`
 

@@ -253,7 +253,7 @@ export default function AppSettingsSection({
   const [language, setLanguage] = useState<LanguageSetting>('system');
   const [isDarkMode, setIsDarkMode] = useState<boolean>(false);
   const updateSectionRef = useRef<HTMLDivElement | null>(null);
-  const gooseVersion: unknown = window.appConfig.get('GOOSE_VERSION');
+  const gooseVersion: unknown = window.appConfig.get('BCAIP_VERSION');
   const shouldShowUpdates: boolean = !gooseVersion;
   const displayedVersion: string = typeof gooseVersion === 'string' ? gooseVersion : 'Development';
 
@@ -591,7 +591,7 @@ export default function AppSettingsSection({
             <Button
               onClick={() => {
                 window.open(
-                  'https://github.com/aaif-goose/goose/issues/new?template=bug_report.md',
+                  'https://github.com/BezotCorp/ai-platform/issues/new?template=bug_report.md',
                   '_blank'
                 );
               }}
@@ -603,7 +603,7 @@ export default function AppSettingsSection({
             <Button
               onClick={() => {
                 window.open(
-                  'https://github.com/aaif-goose/goose/issues/new?template=feature_request.md',
+                  'https://github.com/BezotCorp/ai-platform/issues/new?template=feature_request.md',
                   '_blank'
                 );
               }}
@@ -616,7 +616,7 @@ export default function AppSettingsSection({
         </CardContent>
       </Card>
 
-      {/* Version Section - only show if GOOSE_VERSION is set */}
+      {/* Version Section - only show if BCAIP_VERSION is set */}
       {!shouldShowUpdates && (
         <Card className="rounded-lg">
           <CardHeader className="pb-0">
@@ -637,7 +637,7 @@ export default function AppSettingsSection({
         </Card>
       )}
 
-      {/* Update Section - only show if GOOSE_VERSION is NOT set */}
+      {/* Update Section - only show if BCAIP_VERSION is NOT set */}
       {UPDATES_ENABLED && shouldShowUpdates && (
         <div ref={updateSectionRef}>
           <Card className="rounded-lg">

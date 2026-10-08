@@ -1,6 +1,6 @@
 import type { Recipe } from '../recipe';
 import type { ExtensionData } from './extensionData';
-import type { GooseMode } from './gooseMode';
+import type { BcaipMode } from './bcaipMode';
 import type { Message } from './message';
 import type { ModelConfig } from './modelConfig';
 import type { SessionType } from './sessionType';
@@ -19,7 +19,7 @@ export interface SessionData {
   conversation?: Message[] | null;
   created_at: string;
   extension_data: ExtensionData;
-  goose_mode?: GooseMode;
+  bcaip_mode?: BcaipMode;
   id: string;
   last_message_at?: string | null;
   last_message_snippet?: string | null;

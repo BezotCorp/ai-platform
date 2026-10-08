@@ -117,6 +117,6 @@ Evidence: `src/webview/bridge.ts:38-55`, `src/extension/webviewProvider.ts:105-1
 **Module System**: ESM only — `noCommonJs=error`, `noNamespace=error` (`biome.json:65-70`).
 **TS Safety**: `noVar=error`, `useConst=error`, `useAsConstAssertion=error` in TS override (`biome.json:157-169`).
 **Formatting Scope**: `package.json` excluded from formatter (`biome.json:25`).
-**CI / Release**: Conventional Commits enforced by commitlint + Husky; release-please automates SemVer + Release PRs; `vsce package --no-dependencies` builds VSIX from bundled `dist/`.
+**CI / Release**: Conventional Commits enforced by commitlint + Husky; release-please automates SemVer + Release PRs; `pnpm exec vsce package --no-dependencies` builds VSIX from bundled `dist/`.
 
 Evidence: `biome.json:5-27,65-70,109-122,157-169`, `AGENTS.md:9-11`, `.husky/*`, `commitlint.config.js`, `release-please-config.json`

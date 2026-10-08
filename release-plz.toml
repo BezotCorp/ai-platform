@@ -11,7 +11,7 @@ release = true
 version_group = "gdk"
 
 [[package]]
-name = "goose-sdk-types"
+name = "bcaip-sdk-types"
 release = true
 version_group = "gdk"
 
@@ -29,7 +29,7 @@ version_group = "gdk"
 semver_check = false
 
 [[package]]
-name = "goose-providers"
+name = "bcaip-providers"
 release = true
 version_group = "gdk"
 # Same as bcaip-local-inference: --all-features pulls in the cuda/vulkan
@@ -42,11 +42,11 @@ release = true
 version_group = "gdk"
 
 [[package]]
-name = "goose-context-management"
+name = "bcaip-context-management"
 release = true
 version_group = "gdk"
 
 [[package]]
-name = "goose-sdk"
+name = "bcaip-sdk"
 release = true
 version_group = "gdk"

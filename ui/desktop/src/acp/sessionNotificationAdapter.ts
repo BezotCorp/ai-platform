@@ -1,16 +1,13 @@
-import type { AcpElicitationRequest } from './acpElicitationRequest';
 import type { AcpSessionNotificationAdapter } from './acpSessionNotificationAdapter';
 export type { AcpSessionNotificationAdapter } from './acpSessionNotificationAdapter';
 
-import type { GooseSessionNotificationUnstable } from '@aaif/goose-acp-client';
 import type { SessionNotification } from '@agentclientprotocol/sdk';
 import type { Message } from '../types/message';
 import {
   applyElicitationRequest as applyElicitationRequestToState,
   applyElicitationStatus as applyElicitationStatusToState,
-  type ElicitationStatus,
 } from './adapter/elicitationStatus';
-import { applyGooseSessionNotification } from './adapter/gooseSessionNotifications';
+import { applyBcaipSessionNotification } from './adapter/bcaipSessionNotifications';
 import { applyContentChunk, applyThoughtChunk } from './adapter/streamedContentBlock';
 import {
   applyPermissionRequest as applyPermissionRequestToState,
@@ -20,12 +17,10 @@ import {
   type AcpChatStateChange,
   type AdapterState,
   cloneMessage,
-  getGooseActiveRunId,
-  getGooseQueuedSteer,
+  getBcaipActiveRunId,
+  getBcaipQueuedSteer,
 } from './adapter/shared';
 import { applyToolCall, applyToolCallUpdate } from './adapter/tools';
-
-import type { AcpPermissionRequest } from './acpPermissionRequest';
 
 export type { AcpChatStateChange } from './adapter/shared';
 
@@ -44,8 +39,8 @@ export function createAcpSessionNotificationAdapter(
     apply(notification) {
       return applyAcpSessionNotification(state, notification);
     },
-    applyGoose(notification) {
-      return applyGooseSessionNotification(state, notification);
+    applyBcaip(notification) {
+      return applyBcaipSessionNotification(state, notification);
     },
     applyPermissionRequest(request) {
       return applyPermissionRequestToState(state, request);
@@ -83,8 +78,8 @@ function applyAcpSessionNotification(
     case 'tool_call_update':
       return applyToolCallUpdate(state, update);
     case 'session_info_update': {
-      const activeRunId = getGooseActiveRunId(update);
-      const queuedSteerMessageId = getGooseQueuedSteer(update);
+      const activeRunId = getBcaipActiveRunId(update);
+      const queuedSteerMessageId = getBcaipQueuedSteer(update);
       const changes: AcpChatStateChange[] = [];
 
       if (update.title || activeRunId !== undefined) {

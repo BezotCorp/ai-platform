@@ -1,17 +1,17 @@
 use anyhow::{Result, anyhow};
-use console::style;
-use goose::config::Config;
-use goose::config::paths::Paths;
-use goose::session::{DB_NAME, SESSIONS_FOLDER};
+use bcaip::config::Config;
+use bcaip::config::paths::Paths;
+use bcaip::session::{DB_NAME, SESSIONS_FOLDER};
 use bcaip_provider_types::conversations::Message;
 use bcaip_provider_types::errors::ProviderError;
+use console::style;
 use std::time::Duration;
 use yaml_serde;
 fn print_aligned(label: &str, value: &str, width: usize) {
     println!("  {:<width$} {}", label, value, width = width);
 }
 
-use goose::config::base::CONFIG_YAML_NAME;
+use bcaip::config::base::CONFIG_YAML_NAME;
 use std::{fs, path::Path};
 fn check_path_status(path: &Path) -> String {
     if path.exists() {
@@ -54,7 +54,7 @@ enum ProviderCheckError {
 async fn check_provider(
     config: &Config,
 ) -> std::result::Result<ProviderCheckSuccess, ProviderCheckError> {
-    let (provider, model) = match (config.get_goose_provider(), config.get_goose_model()) {
+    let (provider, model) = match (config.get_bcaip_provider(), config.get_bcaip_model()) {
         (Ok(provider), Ok(model)) => (provider, model),
         (Err(e), _) => {
             return Err(ProviderCheckError::NotConfigured {
@@ -70,10 +70,10 @@ async fn check_provider(
         }
     };
 
-    let model_config = goose::model_config::model_config_from_user_config(&provider, &model)
+    let model_config = bcaip::model_config::model_config_from_user_config(&provider, &model)
         .map_err(|e| ProviderCheckError::InvalidModel(e.to_string()))?;
 
-    let provider_client = goose::providers::create(&provider, Vec::new())
+    let provider_client = bcaip::providers::create(&provider, Vec::new())
         .await
         .map_err(|e| {
             let error = e.to_string();
@@ -85,7 +85,7 @@ async fn check_provider(
 
     let test_msg = Message::user().with_text("Say 'ok'");
     let start = std::time::Instant::now();
-    goose::session_context::with_session_id(
+    bcaip::session_context::with_session_id(
         Some("check".to_string()),
         provider_client.complete(&model_config, "", &[test_msg], &[]),
     )
@@ -122,7 +122,7 @@ pub async fn handle_info(verbose: bool, check: bool) -> Result<()> {
         .unwrap_or(0)
         + 4;
 
-    println!("{}", style("goose Version:").cyan().bold());
+    println!("{}", style("BCAIP Version:").cyan().bold());
     print_aligned("Version:", env!("CARGO_PKG_VERSION"), label_padding);
     println!();
 
@@ -137,13 +137,13 @@ pub async fn handle_info(verbose: bool, check: bool) -> Result<()> {
     }
 
     if verbose {
-        println!("\n{}", style("goose Configuration:").cyan().bold());
+        println!("\n{}", style("BCAIP Configuration:").cyan().bold());
         let values = config.all_values()?;
         if values.is_empty() {
             println!("  No configuration values set");
             println!(
-                "  Run '{}' to configure goose",
-                style("goose configure").cyan()
+                "  Run '{}' to configure BCAIP",
+                style("bcaip configure").cyan()
             );
         } else {
             let sorted_values: std::collections::BTreeMap<_, _> =
@@ -184,7 +184,7 @@ pub async fn handle_info(verbose: bool, check: bool) -> Result<()> {
                 );
                 print_aligned(
                     "Hint:",
-                    &format!("Run '{}'", style("goose configure").cyan()),
+                    &format!("Run '{}'", style("bcaip configure").cyan()),
                     label_padding,
                 );
             }
@@ -213,7 +213,7 @@ pub async fn handle_info(verbose: bool, check: bool) -> Result<()> {
                         "Hint:",
                         &format!(
                             "Set the API key in your environment or run '{}'",
-                            style("goose configure").cyan()
+                            style("bcaip configure").cyan()
                         ),
                         label_padding,
                     );
@@ -227,7 +227,7 @@ pub async fn handle_info(verbose: bool, check: bool) -> Result<()> {
                         "Hint:",
                         &format!(
                             "Check the provider name and config, or run '{}'",
-                            style("goose configure").cyan()
+                            style("bcaip configure").cyan()
                         ),
                         label_padding,
                     );
@@ -244,7 +244,7 @@ pub async fn handle_info(verbose: bool, check: bool) -> Result<()> {
                         "Hint:",
                         &format!(
                             "Check your API key or run '{}'",
-                            style("goose configure").cyan()
+                            style("bcaip configure").cyan()
                         ),
                         label_padding,
                     );
@@ -260,7 +260,7 @@ pub async fn handle_info(verbose: bool, check: bool) -> Result<()> {
         }
 
         // Propagate non-zero exit status so automation (CI scripts, install
-        // checks, health probes) can rely on `goose info --check` as a
+        // checks, health probes) can rely on `bcaip info --check` as a
         // pre-flight verifier.
         if result.is_err() {
             return Err(anyhow!("provider check failed"));

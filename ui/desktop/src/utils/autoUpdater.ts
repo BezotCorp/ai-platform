@@ -340,7 +340,7 @@ export function setupAutoUpdater(tray?: Tray) {
   // Set the feed URL for GitHub releases
   const feedConfig = {
     provider: 'github' as const,
-    owner: 'aaif-goose',
+    owner: 'BezotCorp',
     repo: 'goose',
     releaseType: 'release' as const,
   };
@@ -356,13 +356,13 @@ export function setupAutoUpdater(tray?: Tray) {
     log.error('Error getting feed URL:', e);
   }
 
-  // Respect GOOSE_DISABLE_AUTO_DOWNLOAD env var (takes precedence over user setting)
+  // Respect BCAIP_DISABLE_AUTO_DOWNLOAD env var (takes precedence over user setting)
   const envDisabled =
-    process.env.GOOSE_DISABLE_AUTO_DOWNLOAD === '1' ||
-    process.env.GOOSE_DISABLE_AUTO_DOWNLOAD === 'true';
+    process.env.BCAIP_DISABLE_AUTO_DOWNLOAD === '1' ||
+    process.env.BCAIP_DISABLE_AUTO_DOWNLOAD === 'true';
   if (envDisabled) {
     autoDownloadDisabled = true;
-    log.info('Auto-download disabled via GOOSE_DISABLE_AUTO_DOWNLOAD environment variable');
+    log.info('Auto-download disabled via BCAIP_DISABLE_AUTO_DOWNLOAD environment variable');
   }
 
   // Configure auto-updater settings
@@ -720,7 +720,7 @@ async function githubAutoDownload(
 function updateTrayIcon(hasUpdate: boolean) {
   if (!trayRef) return;
 
-  if (process.env.GOOSE_VERSION) {
+  if (process.env.BCAIP_VERSION) {
     hasUpdate = false;
   }
 

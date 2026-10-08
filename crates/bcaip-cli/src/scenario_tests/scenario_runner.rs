@@ -5,15 +5,15 @@ use crate::{
         },
 };
 use dotenvy::dotenv;
-use goose_provider_types::conversations::Conversation;
+use bcaip_provider_types::conversations::Conversation;
 use crate::scenario_tests::provider_configs::{ProviderConfig, get_provider_configs};
 use anyhow::Result;
 use crate::session::CliSession;
-use goose::agents::{Agent, AgentConfig, GoosePlatform};
-use goose_provider_types::goose_mode::GooseMode;
-use goose::config::permission::PermissionManager;
-use goose::providers::{create, testprovider::TestProvider};
-use goose::{
+use bcaip::agents::{Agent, AgentConfig, BcaipPlatform};
+use bcaip_provider_types::bcaip_mode::BcaipMode;
+use bcaip::config::permission::PermissionManager;
+use bcaip::providers::{create, testprovider::TestProvider};
+use bcaip::{
     session::{
             SessionManager,
             SessionType,
@@ -59,7 +59,7 @@ pub async fn run_scenario<F>(
 where
     F: Fn(&ScenarioResult) -> Result<()> + Send + Sync + 'static,
 {
-    if let Ok(only_provider) = std::env::var("GOOSE_TEST_PROVIDER") {
+    if let Ok(only_provider) = std::env::var("BCAIP_TEST_PROVIDER") {
         let active_providers = get_provider_configs();
         let config = active_providers
             .iter()
@@ -146,8 +146,8 @@ async fn run_provider_scenario_with_validation<F>(
 where
     F: Fn(&ScenarioResult) -> Result<()>,
 {
-    use goose::config::ExtensionConfig;
-    goose::agents::moim::SKIP.with(|f| f.set(true));
+    use bcaip::config::ExtensionConfig;
+    bcaip::agents::moim::SKIP.with(|f| f.set(true));
 
     if let Ok(path) = dotenv() {
         println!("Loaded environment from {:?}", path);
@@ -213,9 +213,9 @@ where
         session_manager,
         permission_manager,
         None,
-        GooseMode::Auto,
+        BcaipMode::Auto,
         true,
-        GoosePlatform::GooseCli,
+        BcaipPlatform::BcaipCli,
     );
     let agent = Agent::with_config(agent_config);
     agent
@@ -242,15 +242,15 @@ where
             PathBuf::default(),
             "scenario-runner".to_string(),
             SessionType::Hidden,
-            GooseMode::default(),
+            BcaipMode::default(),
         )
         .await?;
 
     let scenario_model_config =
-        goose::model_config::model_config_from_user_config(&factory_name, config.model_name)?;
+        bcaip::model_config::model_config_from_user_config(&factory_name, config.model_name)?;
     agent
         .update_provider(
-            provider_arc as Arc<dyn goose_provider_types::base::Provider>,
+            provider_arc as Arc<dyn bcaip_provider_types::base::Provider>,
             scenario_model_config,
             &session.id,
         )

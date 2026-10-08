@@ -3,7 +3,7 @@ import type {
   SaveRecipeResponseUnstable,
   ScanRecipeResponseUnstable,
   RecipeListEntryDto,
-} from '@aaif/goose-acp-client';
+} from '@bezotcorp/bcaip-acp-client';
 import { getAcpClient } from './acpConnection';
 
 let inFlightListRecipes: Promise<RecipeListEntryDto[]> | null = null;
@@ -41,7 +41,7 @@ function normalizeAcpError(error: unknown, fallback: string): Error {
 export async function encodeRecipe(recipe: RecipeDto): Promise<string> {
   try {
     const client = await getAcpClient();
-    const response = await client.goose.recipesEncodeUnstable({ recipe });
+    const response = await client.bcaip.recipesEncodeUnstable({ recipe });
     return response.deeplink;
   } catch (error) {
     throw normalizeAcpError(error, 'Failed to encode recipe');
@@ -51,7 +51,7 @@ export async function encodeRecipe(recipe: RecipeDto): Promise<string> {
 export async function decodeRecipe(deeplink: string): Promise<RecipeDto> {
   try {
     const client = await getAcpClient();
-    const response = await client.goose.recipesDecodeUnstable({ deeplink });
+    const response = await client.bcaip.recipesDecodeUnstable({ deeplink });
     return response.recipe;
   } catch (error) {
     throw normalizeAcpError(error, 'Failed to decode recipe');
@@ -61,7 +61,7 @@ export async function decodeRecipe(deeplink: string): Promise<RecipeDto> {
 export async function scanRecipe(recipe: RecipeDto): Promise<ScanRecipeResponseUnstable> {
   try {
     const client = await getAcpClient();
-    return await client.goose.recipesScanUnstable({ recipe });
+    return await client.bcaip.recipesScanUnstable({ recipe });
   } catch (error) {
     throw normalizeAcpError(error, 'Failed to scan recipe');
   }
@@ -70,7 +70,7 @@ export async function scanRecipe(recipe: RecipeDto): Promise<ScanRecipeResponseU
 export async function parseRecipe(content: string): Promise<RecipeDto> {
   try {
     const client = await getAcpClient();
-    const response = await client.goose.recipesParseUnstable({ content });
+    const response = await client.bcaip.recipesParseUnstable({ content });
     return response.recipe;
   } catch (error) {
     throw normalizeAcpError(error, 'Failed to parse recipe');
@@ -83,7 +83,7 @@ export async function saveRecipe(
 ): Promise<SaveRecipeResponseUnstable> {
   try {
     const client = await getAcpClient();
-    return await client.goose.recipesSaveUnstable({
+    return await client.bcaip.recipesSaveUnstable({
       recipe,
       id,
     });
@@ -100,7 +100,7 @@ export async function listRecipes(): Promise<RecipeListEntryDto[]> {
 
   const listPromise = (async () => {
     const client = await getAcpClient();
-    const response = await client.goose.recipesListUnstable({});
+    const response = await client.bcaip.recipesListUnstable({});
     return response.recipes;
   })().catch((error) => {
     throw normalizeAcpError(error, 'Failed to list recipes');
@@ -120,7 +120,7 @@ export async function listRecipes(): Promise<RecipeListEntryDto[]> {
 export async function deleteRecipe(id: string): Promise<void> {
   try {
     const client = await getAcpClient();
-    await client.goose.recipesDeleteUnstable({ id });
+    await client.bcaip.recipesDeleteUnstable({ id });
   } catch (error) {
     throw normalizeAcpError(error, 'Failed to delete recipe');
   }
@@ -129,7 +129,7 @@ export async function deleteRecipe(id: string): Promise<void> {
 export async function scheduleRecipe(id: string, cronSchedule?: string | null): Promise<void> {
   try {
     const client = await getAcpClient();
-    await client.goose.recipesScheduleUnstable({ id, cron_schedule: cronSchedule });
+    await client.bcaip.recipesScheduleUnstable({ id, cron_schedule: cronSchedule });
   } catch (error) {
     throw normalizeAcpError(error, 'Failed to schedule recipe');
   }
@@ -141,7 +141,7 @@ export async function setRecipeSlashCommand(
 ): Promise<void> {
   try {
     const client = await getAcpClient();
-    await client.goose.recipesSlashCommandUnstable({ id, slash_command: slashCommand });
+    await client.bcaip.recipesSlashCommandUnstable({ id, slash_command: slashCommand });
   } catch (error) {
     throw normalizeAcpError(error, 'Failed to set recipe slash command');
   }
@@ -150,7 +150,7 @@ export async function setRecipeSlashCommand(
 export async function recipeToYaml(recipe: RecipeDto): Promise<string> {
   try {
     const client = await getAcpClient();
-    const response = await client.goose.recipesToYamlUnstable({ recipe });
+    const response = await client.bcaip.recipesToYamlUnstable({ recipe });
     return response.yaml;
   } catch (error) {
     throw normalizeAcpError(error, 'Failed to convert recipe to YAML');

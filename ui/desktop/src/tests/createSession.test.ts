@@ -7,8 +7,8 @@ import { createSession } from '../sessions';
 import type { ExtensionConfig } from '../types/extensionConfig';
 import { Session } from '../types/session';
 
-import type { GooseExtension, GooseExtensionEntry } from '@aaif/goose-acp-client';
-import { getConfiguredGooseExtensions } from '../acp/extensions';
+import type { BcaipExtension, BcaipExtensionEntry } from '@bezotcorp/bcaip-acp-client';
+import { getConfiguredBcaipExtensions } from '../acp/extensions';
 import { acpChatSessionController } from '../acp/chatSessionController';
 import { beginConfiguredRecipeParameterScope } from '../acp/recipeParamRequests';
 import { getAcpFeatureCapabilities } from '../acp/capabilities';
@@ -18,7 +18,7 @@ vi.mock('../acp/extensions', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../acp/extensions')>();
   return {
     ...actual,
-    getConfiguredGooseExtensions: vi.fn(),
+    getConfiguredBcaipExtensions: vi.fn(),
   };
 });
 
@@ -78,18 +78,18 @@ const configuredExtension = (name: string, enabled: boolean): ConfiguredExtensio
   enabled,
 });
 
-const gooseExtension = (name: string): GooseExtension => ({
+const gooseExtension = (name: string): BcaipExtension => ({
   type: 'builtin',
   name,
   description: `${name} extension`,
 });
 
-const gooseExtensionEntry = (name: string): GooseExtensionEntry => ({
+const gooseExtensionEntry = (name: string): BcaipExtensionEntry => ({
   extension: gooseExtension(name),
   enabled: true,
 });
 
-const mockedGetConfiguredGooseExtensions = vi.mocked(getConfiguredGooseExtensions);
+const mockedGetConfiguredBcaipExtensions = vi.mocked(getConfiguredBcaipExtensions);
 const mockedCreateAcpSession = vi.mocked(acpChatSessionController.createSession);
 const mockedBeginConfiguredRecipeParameterScope = vi.mocked(beginConfiguredRecipeParameterScope);
 const mockedGetAcpFeatureCapabilities = vi.mocked(getAcpFeatureCapabilities);
@@ -101,8 +101,8 @@ describe('createSession ACP session extensions', () => {
       hasAcceptedRecipeBefore: vi.fn(async () => true),
       recordRecipeHash: vi.fn(async () => true),
     });
-    mockedGetConfiguredGooseExtensions.mockReset();
-    mockedGetConfiguredGooseExtensions.mockResolvedValue([
+    mockedGetConfiguredBcaipExtensions.mockReset();
+    mockedGetConfiguredBcaipExtensions.mockResolvedValue([
       gooseExtensionEntry('developer'),
       gooseExtensionEntry('memory'),
     ]);
@@ -126,7 +126,7 @@ describe('createSession ACP session extensions', () => {
       extensionConfigs: [extensionConfig('developer')],
     });
 
-    expect(mockedGetConfiguredGooseExtensions).toHaveBeenCalledOnce();
+    expect(mockedGetConfiguredBcaipExtensions).toHaveBeenCalledOnce();
     expect(mockedCreateAcpSession).toHaveBeenCalledWith('/tmp', [gooseExtension('developer')], {
       recipeDeeplink: undefined,
       recipeId: undefined,
@@ -140,7 +140,7 @@ describe('createSession ACP session extensions', () => {
       allExtensions: [configuredExtension('developer', true), configuredExtension('memory', false)],
     });
 
-    expect(mockedGetConfiguredGooseExtensions).not.toHaveBeenCalled();
+    expect(mockedGetConfiguredBcaipExtensions).not.toHaveBeenCalled();
     expect(mockedCreateAcpSession).toHaveBeenCalledWith('/tmp', [], {
       recipeDeeplink: undefined,
       recipeId: undefined,
@@ -153,7 +153,7 @@ describe('createSession ACP session extensions', () => {
       allExtensions: [configuredExtension('developer', false)],
     });
 
-    expect(mockedGetConfiguredGooseExtensions).not.toHaveBeenCalled();
+    expect(mockedGetConfiguredBcaipExtensions).not.toHaveBeenCalled();
     expect(mockedCreateAcpSession).toHaveBeenCalledWith('/tmp', undefined, {
       recipeDeeplink: undefined,
       recipeId: undefined,
@@ -195,7 +195,7 @@ describe('createSession ACP session extensions', () => {
   });
 
   it('finishes the deeplink parameter scope when extension lookup fails', async () => {
-    mockedGetConfiguredGooseExtensions.mockRejectedValueOnce(new Error('extension lookup failed'));
+    mockedGetConfiguredBcaipExtensions.mockRejectedValueOnce(new Error('extension lookup failed'));
 
     await expect(
       createSession('/tmp', {

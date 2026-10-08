@@ -1,10 +1,11 @@
-use super::gemma4::{gemma4_messages, gemma4_messages_with_system, is_gemma4};
-use super::{mlx_error::mlx_error, tool_mode::ToolMode};
 use crate::extract_text_content;
+use crate::mlx::gemma4::{gemma4_messages, gemma4_messages_with_system, is_gemma4};
+use crate::mlx::mlx_error::mlx_error;
+use crate::mlx::tool_mode::ToolMode;
 use crate::tool_emulation::{build_emulator_tool_description, load_tiny_model_prompt};
-use goose_provider_types::formats::{format_messages, format_tools};
-use goose_provider_types::images::ImageFormat;
-use goose_provider_types::{conversations::Message, errors::ProviderError};
+use bcaip_provider_types::formats::{format_messages, format_tools};
+use bcaip_provider_types::images::ImageFormat;
+use bcaip_provider_types::{conversations::Message, errors::ProviderError};
 use safemlx_lm::models::LoadedModel;
 use safemlx_lm_utils::tokenizer::{Chat, Conversation, Role};
 use serde_json::json;

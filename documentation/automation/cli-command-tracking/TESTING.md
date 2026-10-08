@@ -18,7 +18,7 @@ This guide explains how to test the CLI command tracking automation locally and 
 cd /path/to/cli-command-tracking
 
 # Set the goose repository path
-export GOOSE_REPO=/path/to/goose
+export BCAIP_REPO=/path/to/goose
 
 # Create output directory
 mkdir -p output
@@ -177,8 +177,8 @@ ls -lh output/
    - Add `ANTHROPIC_API_KEY` secret
 
 4. **Set up variables** (optional):
-   - Add `GOOSE_PROVIDER` variable (default: anthropic)
-   - Add `GOOSE_MODEL` variable (default: claude-opus-4-5)
+   - Add `BCAIP_PROVIDER` variable (default: anthropic)
+   - Add `BCAIP_MODEL` variable (default: claude-opus-4-5)
 
 5. **Trigger workflow manually**:
    - Go to Actions → "Update CLI Documentation"

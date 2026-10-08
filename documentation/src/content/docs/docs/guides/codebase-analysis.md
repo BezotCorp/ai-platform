@@ -7,7 +7,7 @@ sidebar:
   order: 111
 ---
 
-The Analyze platform extension provides an `analyze` tool that helps you understand code structure, track symbol usage, and explore call graphs across your codebase. It is enabled by default and supports file types for [multiple programming languages](https://github.com/aaif-goose/goose/blob/main/crates/goose/src/agents/platform_extensions/analyze/languages.rs).
+The Analyze platform extension provides an `analyze` tool that helps you understand code structure, track symbol usage, and explore call graphs across your codebase. It is enabled by default and supports file types for [multiple programming languages](https://github.com/BezotCorp/ai-platform/blob/main/crates/goose/src/agents/platform_extensions/analyze/languages.rs).
 
 <details>
 <summary>Example analysis: Tracking a function across files</summary>

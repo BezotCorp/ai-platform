@@ -1,20 +1,20 @@
-//! Generate manpages for the goose CLI.
+//! Generate manpages for the BCAIP CLI.
 //!
 //! This binary generates ROFF-formatted manpages from the clap CLI definitions.
 //! Manpages are an essential part of the Linux/Unix ecosystem, providing users with
-//! offline documentation accessible via the `man` command (e.g., `man goose`).
+//! offline documentation accessible via the `man` command (e.g., `man bcaip`).
 //!
-//! When goose is packaged for Linux distributions (deb, rpm, etc.), the generated
+//! When BCAIP is packaged for Linux distributions (deb, rpm, etc.), the generated
 //! manpages should be installed to `/usr/share/man/man1/` so users can access help
 //! without an internet connection, following Unix conventions that have existed
 //! since the 1970s.
 //!
 //! Usage:
-//!   cargo run -p goose-cli --bin generate_manpages
+//!   cargo run -p bcaip-cli --bin generate_manpages
 //!   # or
 //!   just generate-manpages
 //!
-//! Output: target/man/goose.1, target/man/goose-session.1, etc.
+//! Output: target/man/bcaip.1, target/man/bcaip-session.1, etc.
 
 use bcaip_cli::Cli;
 use clap::CommandFactory;
@@ -111,14 +111,14 @@ fn generate_see_also(
 ) -> String {
     let mut references: Vec<String> = Vec::new();
 
-    // Always reference the main goose command if we're not it
-    if current_name != "goose" {
-        references.push("goose".to_string());
+    // Always reference the main BCAIP command if we're not it
+    if current_name != "bcaip" {
+        references.push("bcaip".to_string());
     }
 
     // Reference parent command if exists and not already added
     if let Some(parent) = parent_name
-        && parent != "goose"
+        && parent != "bcaip"
         && !references.contains(&parent.to_string())
     {
         references.push(parent.to_string());
@@ -126,12 +126,12 @@ fn generate_see_also(
 
     // For the main command, list immediate subcommands
     // For subcommands, list sibling commands
-    if current_name == "goose" {
+    if current_name == "bcaip" {
         // Add all immediate subcommands (skip hidden ones)
         for subcmd in cmd.get_subcommands() {
             let subcmd_name = subcmd.get_name();
             if subcmd_name != "help" && !subcmd.is_hide_set() {
-                let full_name = format!("goose-{}", subcmd_name);
+                let full_name = format!("bcaip-{}", subcmd_name);
                 if !references.contains(&full_name) {
                     references.push(full_name);
                 }

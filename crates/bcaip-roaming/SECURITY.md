@@ -20,7 +20,7 @@ Authorization is a local, public-key allowlist (`trust.rs`): a host admits an in
 
 ## Control is one-way by construction
 
-Although the transport is p2p, **control is never symmetric**. A node only exposes an ACP surface by calling `RoamingNode::share()`, which is what registers the `goose-acp/1` protocol handler — and the only callers are `bcaip roam share` and `bcaip serve --roam`.
+Although the transport is p2p, **control is never symmetric**. A node only exposes an ACP surface by calling `RoamingNode::share()`, which is what registers the `bcaip-acp/1` protocol handler — and the only callers are `bcaip roam share` and `bcaip serve --roam`.
 
 Pure clients (the browser webapp, `roam client` / `bridge` / `delegate`) bind an endpoint but never share: they register no accept handler, so a host dialing back at them finds no protocol to connect to. There is nothing to authorize or block — the surface does not exist on the client side.
 

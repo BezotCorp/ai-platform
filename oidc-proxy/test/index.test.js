@@ -67,9 +67,9 @@ function validPayload(overrides = {}) {
     iat: now - 10,
     exp: now + 300,
     jti: `test-jti-${++jtiCounter}`,
-    repository: 'aaif-goose/goose',
+    repository: 'BezotCorp/ai-platform',
     ref: 'refs/heads/main',
-    sub: 'repo:aaif-goose/goose:ref:refs/heads/main',
+    sub: 'repo:BezotCorp/ai-platform:ref:refs/heads/main',
     ...overrides,
   };
 }
@@ -133,7 +133,7 @@ function testEnv(overrides = {}) {
     UPSTREAM_URL: 'https://api.anthropic.com',
     UPSTREAM_AUTH_HEADER: 'x-api-key',
     UPSTREAM_API_KEY: 'sk-ant-real-key',
-    ALLOWED_REPOS: 'aaif-goose/goose',
+    ALLOWED_REPOS: 'BezotCorp/ai-platform',
     MAX_TOKEN_AGE_SECONDS: '1200',
     MAX_REQUESTS_PER_TOKEN: '200',
     RATE_LIMIT_PER_SECOND: '2',

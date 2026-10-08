@@ -16,7 +16,7 @@ vi.mock('../acpConnection', () => ({
 
 function createClient() {
   return {
-    goose: {
+    bcaip: {
       resourcesReadUnstable: vi.fn(),
       toolsCallUnstable: vi.fn(),
       toolsListUnstable: vi.fn(),
@@ -40,7 +40,7 @@ describe('ACP MCP app helpers', () => {
   });
 
   it('flattens ACP resource reads into the renderer resource shape', async () => {
-    client.goose.resourcesReadUnstable.mockResolvedValue({
+    client.bcaip.resourcesReadUnstable.mockResolvedValue({
       result: {
         contents: [
           {
@@ -62,7 +62,7 @@ describe('ACP MCP app helpers', () => {
 
     const resource = await readMcpAppResource('session-1', 'weather', 'ui://weather/panel');
 
-    expect(client.goose.resourcesReadUnstable).toHaveBeenCalledWith({
+    expect(client.bcaip.resourcesReadUnstable).toHaveBeenCalledWith({
       sessionId: 'session-1',
       extensionName: 'weather',
       uri: 'ui://weather/panel',
@@ -83,7 +83,7 @@ describe('ACP MCP app helpers', () => {
   });
 
   it('decodes blob resources as UTF-8 text', async () => {
-    client.goose.resourcesReadUnstable.mockResolvedValue({
+    client.bcaip.resourcesReadUnstable.mockResolvedValue({
       result: {
         contents: [
           {
@@ -101,7 +101,7 @@ describe('ACP MCP app helpers', () => {
   });
 
   it('prefixes app tool calls before sending them over ACP', async () => {
-    client.goose.toolsCallUnstable.mockResolvedValue({
+    client.bcaip.toolsCallUnstable.mockResolvedValue({
       content: [{ type: 'text', text: 'done' }],
       structuredContent: { ok: true },
       isError: false,
@@ -110,7 +110,7 @@ describe('ACP MCP app helpers', () => {
 
     const result = await callMcpAppTool('session-1', 'weather', 'refresh', { city: 'Amsterdam' });
 
-    expect(client.goose.toolsCallUnstable).toHaveBeenCalledWith({
+    expect(client.bcaip.toolsCallUnstable).toHaveBeenCalledWith({
       sessionId: 'session-1',
       extensionName: 'weather',
       name: 'weather__refresh',
@@ -125,7 +125,7 @@ describe('ACP MCP app helpers', () => {
   });
 
   it('maps and filters ACP tools for app host context', async () => {
-    client.goose.toolsListUnstable.mockResolvedValue({
+    client.bcaip.toolsListUnstable.mockResolvedValue({
       tools: [
         {
           name: 'weather__refresh',
@@ -149,7 +149,7 @@ describe('ACP MCP app helpers', () => {
 
     const tools = await listMcpAppTools('session-1', 'weather');
 
-    expect(client.goose.toolsListUnstable).toHaveBeenCalledWith({ sessionId: 'session-1' });
+    expect(client.bcaip.toolsListUnstable).toHaveBeenCalledWith({ sessionId: 'session-1' });
     expect(tools).toEqual([
       {
         name: 'weather__refresh',
@@ -166,7 +166,7 @@ describe('ACP MCP app helpers', () => {
   });
 
   it('lists apps through ACP', async () => {
-    client.goose.appsListUnstable.mockResolvedValue({
+    client.bcaip.appsListUnstable.mockResolvedValue({
       apps: [
         {
           uri: 'ui://apps/weather',
@@ -180,7 +180,7 @@ describe('ACP MCP app helpers', () => {
 
     const apps = await listMcpApps('session-1');
 
-    expect(client.goose.appsListUnstable).toHaveBeenCalledWith({ sessionId: 'session-1' });
+    expect(client.bcaip.appsListUnstable).toHaveBeenCalledWith({ sessionId: 'session-1' });
     expect(apps).toEqual([
       {
         uri: 'ui://apps/weather',
@@ -193,10 +193,10 @@ describe('ACP MCP app helpers', () => {
   });
 
   it('imports and exports apps through ACP', async () => {
-    client.goose.appsExportUnstable.mockResolvedValue({
+    client.bcaip.appsExportUnstable.mockResolvedValue({
       html: '<html><body>Weather</body></html>',
     });
-    client.goose.appsImportUnstable.mockResolvedValue({
+    client.bcaip.appsImportUnstable.mockResolvedValue({
       name: 'weather',
       message: 'ok',
     });
@@ -204,25 +204,25 @@ describe('ACP MCP app helpers', () => {
     await expect(exportMcpApp('weather')).resolves.toBe('<html><body>Weather</body></html>');
     await importMcpApp('<html><body>Weather</body></html>');
 
-    expect(client.goose.appsExportUnstable).toHaveBeenCalledWith({ name: 'weather' });
-    expect(client.goose.appsImportUnstable).toHaveBeenCalledWith({
+    expect(client.bcaip.appsExportUnstable).toHaveBeenCalledWith({ name: 'weather' });
+    expect(client.bcaip.appsImportUnstable).toHaveBeenCalledWith({
       html: '<html><body>Weather</body></html>',
     });
   });
 
   it('deletes apps through ACP', async () => {
-    client.goose.appsDeleteUnstable.mockResolvedValue({
+    client.bcaip.appsDeleteUnstable.mockResolvedValue({
       name: 'weather',
       message: 'App deleted',
     });
 
     await deleteMcpApp('weather');
 
-    expect(client.goose.appsDeleteUnstable).toHaveBeenCalledWith({ name: 'weather' });
+    expect(client.bcaip.appsDeleteUnstable).toHaveBeenCalledWith({ name: 'weather' });
   });
 
   it('normalizes ACP delete errors', async () => {
-    client.goose.appsDeleteUnstable.mockRejectedValue({
+    client.bcaip.appsDeleteUnstable.mockRejectedValue({
       error: { data: 'Cannot delete default app' },
     });
 
@@ -230,7 +230,7 @@ describe('ACP MCP app helpers', () => {
   });
 
   it('normalizes ACP export errors', async () => {
-    client.goose.appsExportUnstable.mockRejectedValue({
+    client.bcaip.appsExportUnstable.mockRejectedValue({
       error: { message: 'App not found' },
     });
 

@@ -1,6 +1,7 @@
 use crate::finalize_usage;
+use crate::llamacpp::StopSuffixTrimmer;
 use crate::llamacpp::inference_engine::{
-    GenerationContext, StopSuffixTrimmer, TokenAction, generation_loop, prepare_generation,
+    GenerationContext, TokenAction, generation_loop, prepare_generation,
 };
 use crate::{
     native_tool_format::NativeToolFormat, native_tool_parsing::message_from_native_tool_text,

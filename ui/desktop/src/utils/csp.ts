@@ -84,7 +84,7 @@ export function shouldUpgradeInsecureRequests(externalBackend?: ExternalBackendC
   }
 }
 
-// Documents goose serves into iframes (the MCP app proxy and guest pages)
+// Documents bcaip serves into iframes (the MCP app proxy and guest pages)
 // already carry a policy built from the app's declared domains. A second
 // header would intersect with it and block every declared resource domain.
 export function shouldApplyRendererCsp(resourceType: string): boolean {

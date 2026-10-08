@@ -40,7 +40,7 @@ For particularly large or complex tasks, consider breaking them into smaller ses
 
 If you use goose CLI and work with web development projects, you may encounter commands that cause goose to hang indefinitely. Commands like `npm run dev`, `python -m http.server`, or `webpack serve` start development servers that never exit on their own.
 
-You can prevent these issues by customizing your shell to handle these commands differently when goose runs them. See [Customizing Shell Behavior](/guides/environment-variables#customizing-shell-behavior) for details on using the `GOOSE_TERMINAL` environment variable.
+You can prevent these issues by customizing your shell to handle these commands differently when goose runs them. See [Customizing Shell Behavior](/guides/environment-variables#customizing-shell-behavior) for details on using the `BCAIP_TERMINAL` environment variable.
 
 ---
 
@@ -127,10 +127,10 @@ If you still receive authentication/keyring errors like the following, goose was
 Failed to save token: Failed to access keyring: <error message>
 ```
 
-To resolve this (or to proactively force file-based secret storage), set `GOOSE_DISABLE_KEYRING` to any value. This example sets it only while running `goose configure`:
+To resolve this (or to proactively force file-based secret storage), set `BCAIP_DISABLE_KEYRING` to any value. This example sets it only while running `goose configure`:
 
 ```bash
-GOOSE_DISABLE_KEYRING=1 goose configure
+BCAIP_DISABLE_KEYRING=1 goose configure
 ```
 
 If you prefer not to store secrets in `secrets.yaml`, set the token via environment variables instead.
@@ -154,7 +154,7 @@ You may need to uninstall goose or clear existing data before re-installing. goo
 
 **Data Locations**
 
-- **Logs and Config**: `~/.config/goose`
+- **Logs and Config**: `~/.config/bcaip`
 - **Application Data**: `~/Library/Application Support/Goose`
 - **Secrets**: macOS Keychain (credential named "goose").
 
@@ -168,7 +168,7 @@ You may need to uninstall goose or clear existing data before re-installing. goo
 3. Remove data directories:
 
 ```
-rm -rf ~/.config/goose
+rm -rf ~/.config/bcaip
 rm -rf ~/Library/Application\ Support/goose
 ```
 4. Delete the "goose" app from your Applications folder (if using goose Desktop).
@@ -178,7 +178,7 @@ rm -rf ~/Library/Application\ Support/goose
 
 - **Data/Sessions**: `~/.local/share/goose/`
 - **Logs**: `~/.local/state/goose/`
-- **Config**: `~/.config/goose/`
+- **Config**: `~/.config/bcaip/`
 - **Secrets**: System keyring (if available)
 
 #### Removal Steps
@@ -190,7 +190,7 @@ rm -rf ~/Library/Application\ Support/goose
 ```
 rm -rf ~/.local/share/goose/
 rm -rf ~/.local/state/goose/
-rm -rf ~/.config/goose/
+rm -rf ~/.config/bcaip/
 ```
 #### Windows
 
@@ -256,17 +256,17 @@ If you still receive keyring errors, use one of the following options:
   │  gemini-2.0-flash-exp
   ```
 
-- **If you need to disable the keyring**, set `GOOSE_DISABLE_KEYRING` to any value to force file-based secret storage. The actual value doesn't matter, only whether the variable is set.
+- **If you need to disable the keyring**, set `BCAIP_DISABLE_KEYRING` to any value to force file-based secret storage. The actual value doesn't matter, only whether the variable is set.
 
   This example sets it only while running `goose configure`:
 
   ```bash
-  GOOSE_DISABLE_KEYRING=1 goose configure
+  BCAIP_DISABLE_KEYRING=1 goose configure
   ```
 
 When the keyring is disabled (or cannot be accessed and goose falls back to file-based secret storage), secrets are stored here:
 
-- macOS/Linux: `~/.config/goose/secrets.yaml`
+- macOS/Linux: `~/.config/bcaip/secrets.yaml`
 - Windows: `%APPDATA%\Block\goose\config\secrets.yaml`
 
 See [Configuration Files](/guides/config-files) for details.
@@ -285,10 +285,10 @@ Keyring unavailable. Using file storage for secrets.
 
 Automatic fallback only applies to the current goose process. When you start a new session, goose will try to use the keyring again.
 
-If you need to force file-based secret storage (for example, in containers or headless environments), set `GOOSE_DISABLE_KEYRING` to any value:
+If you need to force file-based secret storage (for example, in containers or headless environments), set `BCAIP_DISABLE_KEYRING` to any value:
 
 ```bash
-GOOSE_DISABLE_KEYRING=1 goose configure
+BCAIP_DISABLE_KEYRING=1 goose configure
 ```
 
 See [Configuration Files](/guides/config-files) for `secrets.yaml` details.
@@ -350,7 +350,7 @@ Blocked malicious package: package-name@1.0.0 (npm). OSV MAL advisories: MAL-202
 Steps to resolve:
 1. **Find an alternative**: Look for similar extensions in the [extensions directory][extensions-directory] or [PulseMCP](https://www.pulsemcp.com/servers)
 2. **Optional verification**: Verify the source of the blocked extension or the package name/publisher
-3. **Report false positives**: If you believe this is an error, please [open an issue](https://github.com/aaif-goose/goose/issues)
+3. **Report false positives**: If you believe this is an error, please [open an issue](https://github.com/BezotCorp/ai-platform/issues)
 
 This security check only applies to locally-executed external extensions that use PyPI (`uvx`) or NPM (`npx`). The check uses real-time data from the OSV database; if the security service is unavailable, extensions will still install normally.
 

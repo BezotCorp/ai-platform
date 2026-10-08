@@ -1,6 +1,7 @@
+use crate::LocalInferenceBackend;
+use crate::llamacpp::LoadedModel;
 use crate::{StreamSender, llamacpp::LlamaCppBackend};
 use crate::{
-    backend::{BackendLoadedModel, LocalInferenceBackend},
     llamacpp::{
         chat_template::apply_chat_template, chat_template_params::ChatTemplateParams,
         chat_template_result::ChatTemplateResult,
@@ -11,10 +12,10 @@ use crate::{
 use bcaip_provider_types::errors::ProviderError;
 use bcaip_provider_types::request_log::{LoggerHandleExt, RequestLogHandle};
 use llama_cpp_2::model::{LlamaChatTemplate, LlamaModel};
-use llama_cpp_2::mtmd::{MtmdBitmap, MtmdContext, MtmdInputText};
+use llama_cpp_2::mtmd::{MtmdBitmap, MtmdInputText};
 use llama_cpp_2::sampling::LlamaSampler;
 use llama_cpp_2::{context::params::LlamaContextParams, llama_batch::LlamaBatch};
-use std::{any::Any, num::NonZeroU32};
+use std::num::NonZeroU32;
 pub(crate) struct GenerationContext<'a> {
     pub loaded: &'a LoadedModel,
     pub backend: &'a LlamaCppBackend,
@@ -28,19 +29,6 @@ pub(crate) struct GenerationContext<'a> {
     pub images: &'a [ExtractedImage],
 }
 
-pub(crate) struct LoadedModel {
-    pub model: LlamaModel,
-    pub templates: LoadedChatTemplates,
-    /// Multimodal context for vision models. None for text-only models.
-    pub mtmd_ctx: Option<MtmdContext>,
-}
-
-impl BackendLoadedModel for LoadedModel {
-    fn as_any_mut(&mut self) -> &mut dyn Any {
-        self
-    }
-}
-
 pub(crate) struct LoadedChatTemplates {
     pub default: Option<LlamaChatTemplate>,
     pub tool_use: Option<LlamaChatTemplate>,
@@ -52,67 +40,6 @@ pub(crate) struct PreparedGeneration<'model> {
     pub llama_ctx: llama_cpp_2::context::LlamaContext<'model>,
     pub prompt_token_count: usize,
     pub effective_ctx: usize,
-}
-
-pub(crate) struct StopSuffixTrimmer {
-    pending: String,
-    stops: Vec<String>,
-}
-
-impl StopSuffixTrimmer {
-    pub(crate) fn new(stops: &[String]) -> Self {
-        Self {
-            pending: String::new(),
-            stops: stops
-                .iter()
-                .filter(|stop| !stop.is_empty())
-                .cloned()
-                .collect(),
-        }
-    }
-
-    pub(crate) fn push(&mut self, chunk: &str) -> (String, bool) {
-        if self.stops.is_empty() {
-            return (chunk.to_string(), false);
-        }
-
-        self.pending.push_str(chunk);
-
-        if let Some(stop) = self
-            .stops
-            .iter()
-            .filter(|stop| self.pending.ends_with(stop.as_str()))
-            .max_by_key(|stop| stop.len())
-        {
-            let emit_len = self.pending.len() - stop.len();
-            let _stop = self.pending.split_off(emit_len);
-            let emit = std::mem::take(&mut self.pending);
-            return (emit, true);
-        }
-
-        let hold_len = self
-            .pending
-            .char_indices()
-            .map(|(idx, _)| idx)
-            .chain(std::iter::once(self.pending.len()))
-            .filter(|idx| {
-                self.pending
-                    .get(*idx..)
-                    .is_some_and(|suffix| self.stops.iter().any(|stop| stop.starts_with(suffix)))
-            })
-            .map(|idx| self.pending.len() - idx)
-            .max()
-            .unwrap_or(0);
-
-        let emit_len = self.pending.len() - hold_len;
-        let keep = self.pending.split_off(emit_len);
-        let emit = std::mem::replace(&mut self.pending, keep);
-        (emit, false)
-    }
-
-    pub(crate) fn finish(&mut self) -> String {
-        std::mem::take(&mut self.pending)
-    }
 }
 
 /// Estimate the maximum context length that can fit in available accelerator/CPU

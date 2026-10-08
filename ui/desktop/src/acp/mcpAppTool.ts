@@ -1,3 +1,3 @@
-import type { ToolListItem } from '@aaif/goose-acp-client';
+import type { ToolListItem } from '@bezotcorp/bcaip-acp-client';
 
 export type McpAppTool = ToolListItem;

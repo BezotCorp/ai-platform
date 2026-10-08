@@ -1,4 +1,6 @@
-use crate::{backend::BackendLoadedModel, resolved_model_paths::ResolvedModelPaths};
+use crate::{
+    local_generation_request::BackendLoadedModel, resolved_model_paths::ResolvedModelPaths,
+};
 use std::sync::Arc;
 use tokio::sync::{Mutex, Notify};
 

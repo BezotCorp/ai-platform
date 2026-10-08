@@ -30,7 +30,7 @@ import { toastError } from '../toastService';
 import { formatClockDisplay, type ClockDisplay } from '../utils/timeUtils';
 import { AppDate } from '../utils/appDate';
 import { acpGetLiveVoiceAvailability } from '../acp/liveVoice';
-import type { LiveVoiceAvailabilityResponseUnstable } from '@aaif/goose-acp-client';
+import type { LiveVoiceAvailabilityResponseUnstable } from '@bezotcorp/bcaip-acp-client';
 import { subscribeToAcpRecovery } from '../acp/acpConnection';
 import type { LiveVoiceController } from '../liveVoice/useLiveVoice';
 import type { NoMessageValues } from 'react-intl';
@@ -82,7 +82,7 @@ export default function Hub({
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const { time, meridiem, hour } = useClock();
 
-  // Re-resolve the working dir on mount: GOOSE_WORKING_DIR is fixed at window
+  // Re-resolve the working dir on mount: BCAIP_WORKING_DIR is fixed at window
   // creation, so a configured remote directory may have changed since then.
   useEffect(() => {
     let active = true;

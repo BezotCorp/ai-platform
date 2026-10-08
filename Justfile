@@ -16,14 +16,10 @@ check-everything:
     @echo ""
     @echo "✅ All style checks passed!"
 
-test-buzz:
-    node --test buzz/*.test.mjs
-    for file in buzz/create_github_manager buzz/create_issue_channel buzz/list_issue_work buzz/syncissues buzz/github_manager.mjs; do node --check "$file"; done
-
 # Default release command
 release-binary:
     @echo "Building release version..."
-    cargo build --release -p goose-cli --bin goose
+    cargo build --release -p bcaip-cli --bin bcaip
     @just copy-binary
 
 # Build Windows executable on a Windows host
@@ -34,7 +30,7 @@ release-windows:
 
 [windows]
 release-windows:
-    @powershell.exe -NoProfile -ExecutionPolicy Bypass -Command 'rustup target add x86_64-pc-windows-msvc; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; cargo build --release --target x86_64-pc-windows-msvc -p goose-cli --bin goose; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; Write-Host "Windows executable created at ./target/x86_64-pc-windows-msvc/release/goose.exe"'
+    @powershell.exe -NoProfile -ExecutionPolicy Bypass -Command 'rustup target add x86_64-pc-windows-msvc; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; cargo build --release --target x86_64-pc-windows-msvc -p bcaip-cli --bin bcaip; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; Write-Host "Windows executable created at ./target/x86_64-pc-windows-msvc/release/bcaip.exe"'
 
 # Build for Intel Mac
 release-intel:
@@ -44,24 +40,24 @@ release-intel:
 
 copy-binary BUILD_MODE="release":
     @rm -f ./ui/desktop/src/bin/goosed
-    @if [ -f ./target/{{BUILD_MODE}}/goose ]; then \
-        echo "Copying goose CLI binary from target/{{BUILD_MODE}}..."; \
-        rm -f ./ui/desktop/src/bin/goose; \
-        cp -p ./target/{{BUILD_MODE}}/goose ./ui/desktop/src/bin/; \
+    @if [ -f ./target/{{BUILD_MODE}}/bcaip ]; then \
+        echo "Copying bcaip CLI binary from target/{{BUILD_MODE}}..."; \
+        rm -f ./ui/desktop/src/bin/bcaip; \
+        cp -p ./target/{{BUILD_MODE}}/bcaip ./ui/desktop/src/bin/; \
     else \
-        echo "goose CLI binary not found in target/{{BUILD_MODE}}"; \
+        echo "bcaip CLI binary not found in target/{{BUILD_MODE}}"; \
         exit 1; \
     fi
 
 # Copy binary command for Intel build
 copy-binary-intel:
     @rm -f ./ui/desktop/src/bin/goosed
-    @if [ -f ./target/x86_64-apple-darwin/release/goose ]; then \
-        echo "Copying Intel goose CLI binary to ui/desktop/src/bin..."; \
-        rm -f ./ui/desktop/src/bin/goose; \
-        cp -p ./target/x86_64-apple-darwin/release/goose ./ui/desktop/src/bin/; \
+    @if [ -f ./target/x86_64-apple-darwin/release/bcaip ]; then \
+        echo "Copying Intel bcaip CLI binary to ui/desktop/src/bin..."; \
+        rm -f ./ui/desktop/src/bin/bcaip; \
+        cp -p ./target/x86_64-apple-darwin/release/bcaip ./ui/desktop/src/bin/; \
     else \
-        echo "Intel goose CLI binary not found."; \
+        echo "Intel bcaip CLI binary not found."; \
         exit 1; \
     fi
 
@@ -73,11 +69,11 @@ copy-binary-windows:
 
 [windows]
 copy-binary-windows:
-    @powershell.exe -NoProfile -ExecutionPolicy Bypass -Command 'if (Test-Path ./target/x86_64-pc-windows-msvc/release/goose.exe) { \
+    @powershell.exe -NoProfile -ExecutionPolicy Bypass -Command 'if (Test-Path ./target/x86_64-pc-windows-msvc/release/bcaip.exe) { \
         Write-Host "Copying Windows binary to ui/desktop/src/bin..."; \
         New-Item -ItemType Directory -Force "./ui/desktop/src/bin" | Out-Null; \
         Remove-Item -Path "./ui/desktop/src/bin/goosed.exe" -Force -ErrorAction SilentlyContinue; \
-        Copy-Item -Path "./target/x86_64-pc-windows-msvc/release/goose.exe" -Destination "./ui/desktop/src/bin/" -Force; \
+        Copy-Item -Path "./target/x86_64-pc-windows-msvc/release/bcaip.exe" -Destination "./ui/desktop/src/bin/" -Force; \
     } else { \
         Write-Host "Windows binary not found." -ForegroundColor Red; \
         exit 1; \
@@ -93,7 +89,7 @@ run-ui-playwright:
     #!/usr/bin/env sh
     just release-binary
     echo "Running UI with Playwright debugging..."
-    RUN_DIR="$HOME/goose-runs/$(date +%Y%m%d-%H%M%S)"
+    RUN_DIR="$HOME/bcaip-runs/$(date +%Y%m%d-%H%M%S)"
     mkdir -p "$RUN_DIR"
     echo "Using isolated directory: $RUN_DIR"
     cd ui/desktop && ENABLE_PLAYWRIGHT=true GOOSE_PATH_ROOT="$RUN_DIR" pnpm run start-gui
@@ -103,7 +99,7 @@ run-ui-only:
     cd ui/desktop && pnpm install && pnpm run start-gui
 
 debug-ui:
-    @echo "🚀 Starting goose frontend in external ACP backend mode"
+    @echo "🚀 Starting bcaip frontend in external ACP backend mode"
     cd ui/desktop && \
     export GOOSE_EXTERNAL_BACKEND=true && \
     export GOOSE_SERVER__SECRET_KEY="${GOOSE_SERVER__SECRET_KEY:-test}" && \
@@ -118,11 +114,11 @@ debug-ui:
 # 4. If not auto-detected, click "Configure" and add: localhost:9229
 
 debug-ui-main-process:
-	@echo "🔍 Starting goose UI with main process debugging enabled"
-	@just release-binary
-	cd ui/desktop && \
-	pnpm install && \
-	pnpm run start-gui-debug
+        @echo "🔍 Starting bcaip UI with main process debugging enabled"
+        @just release-binary
+        cd ui/desktop && \
+        pnpm install && \
+        pnpm run start-gui-debug
 
 # Package the desktop app locally for testing (macOS)
 # Applies ad-hoc code signing with entitlements (needed for mic access, etc.)
@@ -149,14 +145,14 @@ run-docs:
 # Run server
 run-server:
     @echo "Running external ACP backend..."
-    GOOSE_SERVER__SECRET_KEY="${GOOSE_SERVER__SECRET_KEY:-test}" cargo run -p goose-cli --bin goose -- serve --platform desktop --enable-scheduler --host 127.0.0.1 --port 3000
+    GOOSE_SERVER__SECRET_KEY="${GOOSE_SERVER__SECRET_KEY:-test}" cargo run -p bcaip-cli --bin bcaip -- serve --platform desktop --enable-scheduler --host 127.0.0.1 --port 3000
 
 # Check if checked-in ACP artifacts are up-to-date and the docs can be rendered
 check-acp-artifacts: generate-acp-types generate-acp-docs
     #!/usr/bin/env bash
     set -e
     echo "🔍 Checking generated ACP artifacts are up-to-date..."
-    if ! git diff --exit-code crates/goose/acp-schema.json crates/goose/acp-meta.json ui/goose-acp-client/src/generated/; then
+    if ! git diff --exit-code crates/bcaip/acp-schema.json crates/bcaip/acp-meta.json ui/bcaip-acp-client/src/generated/; then
       echo ""
       echo "❌ ACP generated files are out of date!"
       echo ""
@@ -167,7 +163,7 @@ check-acp-artifacts: generate-acp-types generate-acp-docs
 
 # Build the lean ACP binary
 build-lean:
-    cargo build -p goose --bin goose-acp \
+    cargo build -p bcaip --bin bcaip-acp \
       --profile lean \
       --no-default-features \
       --features native-tls,online-model-meta
@@ -188,7 +184,7 @@ check-lean-size: build-lean
     esac
     max_bytes="${GOOSE_LEAN_MAX_BYTES:-$default_max_bytes}"
 
-    binary="target/lean/goose-acp"
+    binary="target/lean/bcaip-acp"
     bytes=$(wc -c < "$binary" | tr -d '[:space:]')
     mib=$(awk -v bytes="$bytes" 'BEGIN { printf "%.2f", bytes / 1024 / 1024 }')
     printf '%s: %s bytes (%s MiB)\n' "$binary" "$bytes" "$mib"
@@ -201,13 +197,13 @@ check-lean-size: build-lean
 # Generate ACP JSON schema from Rust types
 generate-acp-schema:
     @echo "Generating ACP schema..."
-    cd crates/goose && cargo run --features code-mode,local-inference,aws-providers,telemetry,otel,rustls-tls,system-keyring --bin generate-acp-schema
-    @echo "ACP schema generated: crates/goose/acp-schema.json, crates/goose/acp-meta.json"
+    cd crates/bcaip && cargo run --features code-mode,local-inference,aws-providers,telemetry,otel,rustls-tls,system-keyring --bin generate-acp-schema
+    @echo "ACP schema generated: crates/bcaip/acp-schema.json, crates/bcaip/acp-meta.json"
 
 # Generate ACP TypeScript types from JSON schema (requires generate-acp-schema first)
 generate-acp-types: generate-acp-schema
     @echo "Generating ACP TypeScript types..."
-    cd ui/goose-acp-client && npx tsx generate-schema.ts
+    cd ui/bcaip-acp-client && npx tsx generate-schema.ts
     @echo "ACP TypeScript types generated for the ACP client package."
 
 # Generate ACP documentation from the existing JSON schema and metadata
@@ -219,13 +215,13 @@ generate-acp-docs:
 # Build ACP client TypeScript package (schema + types + compile)
 build-acp-client: generate-acp-types
     @echo "Compiling ACP TypeScript..."
-    cd ui/goose-acp-client && pnpm run build:ts
+    cd ui/bcaip-acp-client && pnpm run build:ts
     @echo "ACP client package built."
 
 # Generate manpages for the CLI
 generate-manpages:
     @echo "Generating manpages..."
-    cargo run -p goose-cli --bin generate_manpages
+    cargo run -p bcaip-cli --bin generate_manpages
     @echo "Manpages generated at target/man/"
 
 # make GUI with latest binary
@@ -351,9 +347,9 @@ prepare-release version:
         Cargo.toml \
         Cargo.lock \
         ui/desktop/package.json \
-        ui/goose-acp-client/package.json \
-        ui/goose-acp/package.json \
-        ui/goose-binary/*/package.json \
+        ui/bcaip-acp-client/package.json \
+        ui/bcaip-acp/package.json \
+        ui/bcaip-binary/*/package.json \
         ui/pnpm-lock.yaml \
         crates/bcaip-provider-types/src/canonical/data/canonical_models.json \
         crates/bcaip-provider-types/src/canonical/data/provider_metadata.json
@@ -466,7 +462,7 @@ win-total-rls *allparam:
 
 # Build the binaries the MCP conformance driver needs.
 mcp-conformance-build:
-  cargo build -p goose-cli --bin goose --bin mcp_conformance_driver
+  cargo build -p bcaip-cli --bin bcaip --bin mcp_conformance_driver
 
 # suite: all, core, extensions, backcompat, auth, metadata, draft, sep-835
 # build: "false" reuses the existing target/debug binaries instead of rebuilding
@@ -474,7 +470,7 @@ mcp-conformance-build:
 # Example: just mcp-conformance 2025-11-25 auth
 # Example: just mcp-conformance 2025-11-25 auth 0.2.0-alpha.10
 # Example: just mcp-conformance 2025-11-25 auth 0.2.0-alpha.10 false
-# Example: just mcp-conformance 2025-11-25 all 0.2.0-alpha.10 true crates/goose-cli/tests/mcp-conformance/expected-failures-2025-11-25-0.2.0-alpha.10.yaml
+# Example: just mcp-conformance 2025-11-25 all 0.2.0-alpha.10 true crates/bcaip-cli/tests/mcp-conformance/expected-failures-2025-11-25-0.2.0-alpha.10.yaml
 [doc("Run an MCP client conformance suite against Goose.")]
 mcp-conformance version="2025-11-25" suite="all" conformance_version="0.2.0-alpha.10" build="true" baseline="":
   #!/usr/bin/env bash
@@ -492,8 +488,8 @@ mcp-conformance version="2025-11-25" suite="all" conformance_version="0.2.0-alph
   GOOSE_DISABLE_KEYRING=1 npx -y @modelcontextprotocol/conformance@{{conformance_version}} client --command "target/debug/mcp_conformance_driver" --spec-version "{{version}}" --suite "{{suite}}" ${baseline_args[@]+"${baseline_args[@]}"}
 
 build-test-tools:
-  cargo build -p goose-test
+  cargo build -p bcaip-test
 
 record-mcp-tests: build-test-tools
-  GOOSE_RECORD_MCP=1 cargo test --package goose --test mcp_integration_test
-  git add crates/goose/tests/mcp_replays/
+  GOOSE_RECORD_MCP=1 cargo test --package bcaip --test mcp_integration_test
+  git add crates/bcaip/tests/mcp_replays/

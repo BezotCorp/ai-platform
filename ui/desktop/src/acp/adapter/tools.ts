@@ -11,8 +11,8 @@ import {
   type AcpChatStateChange,
   type AdapterState,
   DEFAULT_VISIBLE_MESSAGE_METADATA,
-  type GooseMessageMeta,
-  getGooseMessageMeta,
+  type BcaipMessageMeta,
+  getBcaipMessageMeta,
   isRecord,
   messagesChange,
   rawInputToArguments,
@@ -26,7 +26,7 @@ import type { ToolResultValue } from './toolResultValue';
 export function applyToolCall(state: AdapterState, update: ToolCall): AcpChatStateChange[] {
   updateToolCallState(state, update);
 
-  const gooseMeta = getGooseMessageMeta(update);
+  const gooseMeta = getBcaipMessageMeta(update);
   const message = getOrCreateAssistantMessageForUpdate(state, gooseMeta);
 
   if (
@@ -74,7 +74,7 @@ export function applyToolCallUpdate(
     return messagesChange(state);
   }
 
-  const gooseMeta = getGooseMessageMeta(update);
+  const gooseMeta = getBcaipMessageMeta(update);
   const message = getOrCreateToolResponseMessageForUpdate(state, gooseMeta);
   const identity = toolIdentity(update);
   const metadata = toolResponseMetadata(toolCallState, identity);
@@ -116,7 +116,7 @@ function mergeToolCallState(
 
 function getOrCreateAssistantMessageForUpdate(
   state: AdapterState,
-  gooseMeta: GooseMessageMeta
+  gooseMeta: BcaipMessageMeta
 ): Message {
   const existing = findMessageForChunk(state, 'assistant', gooseMeta.messageId, gooseMeta.created);
   if (existing) {
@@ -136,7 +136,7 @@ function getOrCreateAssistantMessageForUpdate(
 
 function getOrCreateToolResponseMessageForUpdate(
   state: AdapterState,
-  gooseMeta: GooseMessageMeta
+  gooseMeta: BcaipMessageMeta
 ): Message {
   if (gooseMeta.messageId) {
     const existing = state.messages.find(
@@ -334,12 +334,12 @@ function mcpAppMetadata(update: ToolCallUpdate): DesktopMcpAppMeta | undefined {
     return undefined;
   }
 
-  const goose = update._meta.goose;
-  if (!isRecord(goose) || !isRecord(goose.mcpApp)) {
+  const bcaip = update._meta.bcaip;
+  if (!isRecord(bcaip) || !isRecord(bcaip.mcpApp)) {
     return undefined;
   }
 
-  const resourceUri = goose.mcpApp.resourceUri;
+  const resourceUri = bcaip.mcpApp.resourceUri;
   if (typeof resourceUri !== 'string') {
     return undefined;
   }
@@ -349,11 +349,11 @@ function mcpAppMetadata(update: ToolCallUpdate): DesktopMcpAppMeta | undefined {
       resourceUri,
     },
     extensionName:
-      typeof goose.mcpApp.extensionName === 'string' ? goose.mcpApp.extensionName : undefined,
-    toolName: typeof goose.mcpApp.toolName === 'string' ? goose.mcpApp.toolName : undefined,
+      typeof bcaip.mcpApp.extensionName === 'string' ? bcaip.mcpApp.extensionName : undefined,
+    toolName: typeof bcaip.mcpApp.toolName === 'string' ? bcaip.mcpApp.toolName : undefined,
     toolNameIsActual:
-      typeof goose.mcpApp.toolNameIsActual === 'boolean'
-        ? goose.mcpApp.toolNameIsActual
+      typeof bcaip.mcpApp.toolNameIsActual === 'boolean'
+        ? bcaip.mcpApp.toolNameIsActual
         : undefined,
   };
 }

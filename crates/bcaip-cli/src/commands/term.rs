@@ -1,9 +1,9 @@
 use crate::session::{SessionBuilderConfig, build_session};
 use anyhow::{Result, anyhow};
-use chrono;
-use goose::config::Config;
-use goose::session::{SessionManager, SessionType};
+use bcaip::config::Config;
+use bcaip::session::{SessionManager, SessionType};
 use bcaip_provider_types::conversations::{Message, MessageContent, MessageMetadata};
+use chrono;
 use rmcp::model::Role;
 
 use clap::ValueEnum;
@@ -37,25 +37,25 @@ impl Shell {
 
 static BASH_CONFIG: ShellConfig = ShellConfig {
     script_template: r#"export AGENT_SESSION_ID="{session_id}"
-alias @goose='{goose_bin} term run'
-alias @g='{goose_bin} term run'
+alias @bcaip='{bcaip_bin} term run'
+alias @g='{bcaip_bin} term run'
 
-goose_preexec() {
-    [[ "$1" =~ ^goose\ term ]] && return
-    [[ "$1" =~ ^(@goose|@g)($|[[:space:]]) ]] && return
-    ('{goose_bin}' term log "$1" &) 2>/dev/null
+bcaip_preexec() {
+    [[ "$1" =~ ^bcaip\ term ]] && return
+    [[ "$1" =~ ^(@bcaip|@g)($|[[:space:]]) ]] && return
+    ('{bcaip_bin}' term log "$1" &) 2>/dev/null
 }
 
-if [[ -z "$goose_preexec_installed" ]]; then
-    goose_preexec_installed=1
-    trap 'goose_preexec "$BASH_COMMAND"' DEBUG
+if [[ -z "$bcaip_preexec_installed" ]]; then
+    bcaip_preexec_installed=1
+    trap 'bcaip_preexec "$BASH_COMMAND"' DEBUG
 fi{command_not_found_handler}"#,
     command_not_found: Some(
         r#"
 
 command_not_found_handle() {
-    echo "🪿 Command '$1' not found. Asking goose..."
-    '{goose_bin}' term run "$@"
+    echo "🪿 Command '$1' not found. Asking BCAIP..."
+    '{bcaip_bin}' term run "$@"
     return 0
 }"#,
     ),
@@ -63,23 +63,23 @@ command_not_found_handle() {
 
 static ZSH_CONFIG: ShellConfig = ShellConfig {
     script_template: r#"export AGENT_SESSION_ID="{session_id}"
-alias @goose='{goose_bin} term run'
-alias @g='{goose_bin} term run'
+alias @bcaip='{bcaip_bin} term run'
+alias @g='{bcaip_bin} term run'
 
-goose_preexec() {
-    [[ "$1" =~ ^goose\ term ]] && return
-    [[ "$1" =~ ^(@goose|@g)($|[[:space:]]) ]] && return
-    ('{goose_bin}' term log "$1" &) 2>/dev/null
+bcaip_preexec() {
+    [[ "$1" =~ ^bcaip\ term ]] && return
+    [[ "$1" =~ ^(@bcaip|@g)($|[[:space:]]) ]] && return
+    ('{bcaip_bin}' term log "$1" &) 2>/dev/null
 }
 
 autoload -Uz add-zsh-hook
-add-zsh-hook preexec goose_preexec{command_not_found_handler}"#,
+add-zsh-hook preexec bcaip_preexec{command_not_found_handler}"#,
     command_not_found: Some(
         r#"
 
 command_not_found_handler() {
-    echo "🪿 Command '$1' not found. Asking goose..."
-    '{goose_bin}' term run "$@"
+    echo "🪿 Command '$1' not found. Asking BCAIP..."
+    '{bcaip_bin}' term run "$@"
     return 0
 }"#,
     ),
@@ -87,24 +87,24 @@ command_not_found_handler() {
 
 static FISH_CONFIG: ShellConfig = ShellConfig {
     script_template: r#"set -gx AGENT_SESSION_ID "{session_id}"
-function @goose; {goose_bin} term run $argv; end
-function @g; {goose_bin} term run $argv; end
+function @bcaip; {bcaip_bin} term run $argv; end
+function @g; {bcaip_bin} term run $argv; end
 
-function goose_preexec --on-event fish_preexec
-    string match -q -r '^goose term' -- $argv[1]; and return
-    string match -q -r '^(@goose|@g)($|\s)' -- $argv[1]; and return
-    {goose_bin} term log "$argv[1]" 2>/dev/null &
+function bcaip_preexec --on-event fish_preexec
+    string match -q -r '^bcaip term' -- $argv[1]; and return
+    string match -q -r '^(@bcaip|@g)($|\s)' -- $argv[1]; and return
+    {bcaip_bin} term log "$argv[1]" 2>/dev/null &
 end"#,
     command_not_found: None,
 };
 
 static NU_CONFIG: ShellConfig = ShellConfig {
     script_template: r#"$env.AGENT_SESSION_ID = "{session_id}"
-def --wrapped @goose [...args] { run-external "{goose_bin}" "term" "run" ...$args }
-def --wrapped @g [...args] { run-external "{goose_bin}" "term" "run" ...$args }
+def --wrapped @bcaip [...args] { run-external "{bcaip_bin}" "term" "run" ...$args }
+def --wrapped @g [...args] { run-external "{bcaip_bin}" "term" "run" ...$args }
 
-if (($env | get -o GOOSE_NU_PREEXEC_INSTALLED | default false) != true) {
-    $env.GOOSE_NU_PREEXEC_INSTALLED = true
+if (($env | get -o BCAIP_NU_PREEXEC_INSTALLED | default false) != true) {
+    $env.BCAIP_NU_PREEXEC_INSTALLED = true
     $env.config.hooks.pre_execution = (
         $env.config.hooks.pre_execution
         | append {||
@@ -112,13 +112,13 @@ if (($env | get -o GOOSE_NU_PREEXEC_INSTALLED | default false) != true) {
             if ($line | is-empty) {
                 return
             }
-            if ($line =~ '^goose term(\s|$)') {
+            if ($line =~ '^bcaip term(\s|$)') {
                 return
             }
-            if ($line =~ '^(@goose|@g)(\s|$)') {
+            if ($line =~ '^(@bcaip|@g)(\s|$)') {
                 return
             }
-            job spawn { run-external "{goose_bin}" "term" "log" $line | complete | ignore } | ignore
+            job spawn { run-external "{bcaip_bin}" "term" "log" $line | complete | ignore } | ignore
         }
     )
 }
@@ -127,8 +127,8 @@ if (($env | get -o GOOSE_NU_PREEXEC_INSTALLED | default false) != true) {
         r#"
 $env.config.hooks.command_not_found = {|command_name|
     let prompt = (try { commandline | str trim } catch { $command_name })
-    print $"🪿 Command '($command_name)' not found. Asking goose..."
-    run-external "{goose_bin}" "term" "run" $prompt | complete | ignore
+    print $"🪿 Command '($command_name)' not found. Asking BCAIP..."
+    run-external "{bcaip_bin}" "term" "run" $prompt | complete | ignore
     null
 }"#,
     ),
@@ -136,14 +136,14 @@ $env.config.hooks.command_not_found = {|command_name|
 
 static POWERSHELL_CONFIG: ShellConfig = ShellConfig {
     script_template: r#"$env:AGENT_SESSION_ID = "{session_id}"
-function @goose {{ & '{goose_bin}' term run @args }}
-function @g {{ & '{goose_bin}' term run @args }}
+function @bcaip {{ & '{bcaip_bin}' term run @args }}
+function @g {{ & '{bcaip_bin}' term run @args }}
 
 Set-PSReadLineKeyHandler -Chord Enter -ScriptBlock {{
     $line = $null
     [Microsoft.PowerShell.PSConsoleReadLine]::GetBufferState([ref]$line, [ref]$null)
-    if ($line -notmatch '^goose term' -and $line -notmatch '^(@goose|@g)($|\s)') {{
-        Start-Job -ScriptBlock {{ & '{goose_bin}' term log $using:line }} | Out-Null
+    if ($line -notmatch '^bcaip term' -and $line -notmatch '^(@bcaip|@g)($|\s)') {{
+        Start-Job -ScriptBlock {{ & '{bcaip_bin}' term log $using:line }} | Out-Null
     }}
     [Microsoft.PowerShell.PSConsoleReadLine]::AcceptLine()
 }}"#,
@@ -153,14 +153,14 @@ Set-PSReadLineKeyHandler -Chord Enter -ScriptBlock {{
 fn render_term_init_script(
     shell: Shell,
     session_id: &str,
-    goose_bin: &str,
+    bcaip_bin: &str,
     with_command_not_found: bool,
 ) -> String {
     let config = shell.config();
     let command_not_found_handler = if with_command_not_found {
         config
             .command_not_found
-            .map(|handler| handler.replace("{goose_bin}", goose_bin))
+            .map(|handler| handler.replace("{bcaip_bin}", bcaip_bin))
             .unwrap_or_default()
     } else {
         String::new()
@@ -169,7 +169,7 @@ fn render_term_init_script(
     config
         .script_template
         .replace("{session_id}", session_id)
-        .replace("{goose_bin}", goose_bin)
+        .replace("{bcaip_bin}", bcaip_bin)
         .replace("{command_not_found_handler}", &command_not_found_handler)
 }
 
@@ -196,9 +196,9 @@ pub async fn handle_term_init(
             let session = session_manager
                 .create_session(
                     working_dir,
-                    "Goose Term Session".to_string(),
+                    "BCAIP Term Session".to_string(),
                     SessionType::Terminal,
-                    Config::global().get_goose_mode().unwrap_or_default(),
+                    Config::global().get_bcaip_mode().unwrap_or_default(),
                 )
                 .await?;
 
@@ -214,13 +214,13 @@ pub async fn handle_term_init(
         }
     };
 
-    let goose_bin = std::env::current_exe()
+    let bcaip_bin = std::env::current_exe()
         .map(|p| p.to_string_lossy().into_owned())
-        .unwrap_or_else(|_| "goose".to_string());
+        .unwrap_or_else(|_| "bcaip".to_string());
 
     println!(
         "{}",
-        render_term_init_script(shell, &session.id, &goose_bin, with_command_not_found)
+        render_term_init_script(shell, &session.id, &bcaip_bin, with_command_not_found)
     );
     Ok(())
 }
@@ -228,7 +228,7 @@ pub async fn handle_term_init(
 pub async fn handle_term_log(command: String) -> Result<()> {
     let session_id = std::env::var("AGENT_SESSION_ID").map_err(|_| {
         anyhow!(
-            "AGENT_SESSION_ID not set. Initialize terminal integration with `goose term init <shell>` and reload your shell first."
+            "AGENT_SESSION_ID not set. Initialize terminal integration with `bcaip term init <shell>` and reload your shell first."
         )
     })?;
 
@@ -265,7 +265,7 @@ pub async fn handle_term_run(prompt: Vec<String>) -> Result<()> {
     let session_id = std::env::var("AGENT_SESSION_ID").map_err(|_| {
         anyhow!(
             "AGENT_SESSION_ID not set.\n\n\
-             Initialize terminal integration with `goose term init <shell>` in your shell profile, \
+             Initialize terminal integration with `bcaip term init <shell>` in your shell profile, \
              then restart or reload that shell."
         )
     })?;
@@ -325,7 +325,7 @@ pub async fn handle_term_run(prompt: Vec<String>) -> Result<()> {
     Ok(())
 }
 
-/// Handle `goose term info` - print compact session info for prompt integration
+/// Handle `bcaip term info` - print compact session info for prompt integration
 pub async fn handle_term_info() -> Result<()> {
     let session_id = match std::env::var("AGENT_SESSION_ID") {
         Ok(id) => id,
@@ -339,15 +339,15 @@ pub async fn handle_term_info() -> Result<()> {
         .and_then(|s| s.usage.total_tokens)
         .unwrap_or(0) as usize;
 
-    let config = goose::config::Config::global();
+    let config = bcaip::config::Config::global();
     let model_name = session
         .as_ref()
         .and_then(|session| session.model_config.as_ref())
         .map(|model| model.model_name.clone())
-        .or_else(|| config.get_goose_model().ok())
+        .or_else(|| config.get_bcaip_model().ok())
         .map(|name| {
             let short = name.rsplit('/').next().unwrap_or(&name);
-            if let Some(stripped) = short.strip_prefix("goose-") {
+            if let Some(stripped) = short.strip_prefix("bcaip-") {
                 stripped.to_string()
             } else {
                 short.to_string()
@@ -360,7 +360,7 @@ pub async fn handle_term_info() -> Result<()> {
         .and_then(|session| {
             let provider_name = session.provider_name.as_deref()?;
             let model = session.model_config.as_ref()?;
-            goose::context_limit::get_local_context_limit(provider_name, &model.model_name).ok()
+            bcaip::context_limit::get_local_context_limit(provider_name, &model.model_name).ok()
         })
         .unwrap_or(bcaip_provider_types::model::DEFAULT_CONTEXT_LIMIT);
 

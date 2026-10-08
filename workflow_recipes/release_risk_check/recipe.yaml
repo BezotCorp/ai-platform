@@ -27,7 +27,7 @@ instructions: |
   - **Security inspection** (`crates/goose/src/tool_inspection.rs`) — detects prompt injection and destructive operations. Disabling or weakening = injection attacks succeed.
   - **ACP permission flow** (`crates/goose/src/acp/server/elicitation.rs`, `crates/goose/src/acp/provider.rs`) — user approval and permission request handling. If broken, agent executes without user consent.
   - **Session database** (`crates/goose/src/session/session_manager.rs`) — stores all conversations in SQLite. Schema changes risk data loss.
-  - **ACP authentication** (`crates/goose/src/acp/transport/auth.rs`, `crates/goose-cli/src/cli.rs`) — access control for `goose serve`.
+  - **ACP authentication** (`crates/goose/src/acp/transport/auth.rs`, `crates/goose-cli/src/cli.rs`) — access control for `bcaip serve`.
 
   **HIGH — changes here affect core functionality:**
   - **Agent loop** (`crates/goose/src/agents/`) — message routing, turn limits, conversation compaction.

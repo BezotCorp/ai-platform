@@ -4,7 +4,7 @@ import { Switch } from '../../ui/switch';
 import { defineMessages, useIntl } from '../../../i18n';
 import type { NoMessageValues } from 'react-intl';
 
-const LIVE_VOICE_ENABLED_CONFIG_KEY = 'GOOSE_LIVE_VOICE_ENABLED';
+const LIVE_VOICE_ENABLED_CONFIG_KEY = 'BCAIP_LIVE_VOICE_ENABLED';
 
 const i18n = defineMessages<{
   readonly "title": NoMessageValues;

@@ -428,9 +428,9 @@ export async function prepareUpdateInstall(options: {
 }
 
 export class GitHubUpdater {
-  private readonly owner = process.env.GITHUB_OWNER || 'aaif-goose';
+  private readonly owner = process.env.GITHUB_OWNER || 'BezotCorp';
   private readonly repo = process.env.GITHUB_REPO || 'goose';
-  private readonly bundleName = process.env.GOOSE_BUNDLE_NAME || 'Goose';
+  private readonly bundleName = process.env.BCAIP_BUNDLE_NAME || 'Goose';
   private readonly apiUrl = `${GITHUB_API_ADDRESS}/repos/${this.owner}/${this.repo}/releases/latest`;
 
   async checkForUpdates(): Promise<UpdateCheckResult> {

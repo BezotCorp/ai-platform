@@ -140,8 +140,8 @@ export const ModelAndProviderProvider: React.FC<ModelAndProviderProviderProps> =
   );
 
   const getFallbackModelAndProvider = useCallback(async () => {
-    const provider = window.appConfig.get('GOOSE_DEFAULT_PROVIDER') as string;
-    const model = window.appConfig.get('GOOSE_DEFAULT_MODEL') as string;
+    const provider = window.appConfig.get('BCAIP_DEFAULT_PROVIDER') as string;
+    const model = window.appConfig.get('BCAIP_DEFAULT_MODEL') as string;
     if (provider && model) {
       try {
         await acpSaveDefaults(provider, model);
@@ -172,7 +172,7 @@ export const ModelAndProviderProvider: React.FC<ModelAndProviderProviderProps> =
 
   const getCurrentModelAndProviderForDisplay = useCallback(async () => {
     const modelProvider = await getCurrentModelAndProvider();
-    const gooseModel = modelProvider.model;
+    const bcaipModel = modelProvider.model;
     const gooseProvider = modelProvider.provider;
 
     // lookup display name
@@ -181,11 +181,11 @@ export const ModelAndProviderProvider: React.FC<ModelAndProviderProviderProps> =
     try {
       metadata = await getProviderMetadata(String(gooseProvider));
     } catch {
-      return { model: gooseModel, provider: gooseProvider };
+      return { model: bcaipModel, provider: gooseProvider };
     }
     const providerDisplayName = metadata.display_name;
 
-    return { model: gooseModel, provider: providerDisplayName };
+    return { model: bcaipModel, provider: providerDisplayName };
   }, [getCurrentModelAndProvider]);
 
   const getCurrentModelDisplayName = useCallback(async () => {

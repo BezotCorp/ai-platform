@@ -100,7 +100,7 @@ pub fn chat_span(
     purpose: &'static str,
 ) -> tracing::Span {
     let span = tracing::info_span!(
-        target: "goose::state_machine",
+        target: "bcaip::state_machine",
         "chat",
         "gen_ai.operation.name" = "chat",
         "gen_ai.provider.name" = %provider.get_name(),
@@ -112,7 +112,7 @@ pub fn chat_span(
         "gen_ai.response.id" = tracing::field::Empty,
         "gen_ai.usage.input_tokens" = tracing::field::Empty,
         "gen_ai.usage.output_tokens" = tracing::field::Empty,
-        "goose.chat.purpose" = purpose,
+        "bcaip.chat.purpose" = purpose,
         "error.type" = tracing::field::Empty,
         session.id = %session_id,
     );
@@ -281,7 +281,7 @@ fn cancellation_response(persisted: &[Message], pending: &[Message]) -> Option<M
 
 fn inference_span(provider: &dyn Provider, model_config: &ModelConfig) -> tracing::Span {
     let span = tracing::info_span!(
-        target: "goose::state_machine",
+        target: "bcaip::state_machine",
         "chat",
         "gen_ai.operation.name" = "chat",
         "gen_ai.provider.name" = %provider.get_name(),

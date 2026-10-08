@@ -1,0 +1,6 @@
+SectionIndex(
+    root_path: "/",
+    documents: [
+        "home.ron",
+    ],
+)

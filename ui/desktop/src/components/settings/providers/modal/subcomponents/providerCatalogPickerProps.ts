@@ -1,4 +1,4 @@
-import type { ProviderTemplateDto } from '@aaif/goose-acp-client';
+import type { ProviderTemplateDto } from '@bezotcorp/bcaip-acp-client';
 
 export interface ProviderCatalogPickerProps {
   onSelect: (template: ProviderTemplateDto) => void;

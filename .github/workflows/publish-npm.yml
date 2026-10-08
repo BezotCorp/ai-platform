@@ -1,4 +1,4 @@
-name: Goose ACP npm release
+name: BCAIP ACP npm release
 
 on:
   workflow_run:
@@ -11,7 +11,7 @@ on:
   workflow_dispatch:
     inputs:
       release_tag:
-        description: Versioned Goose release to package, for example v1.49.0
+        description: Versioned BCAIP release to package, for example v1.49.0
         required: true
         type: string
       publish:

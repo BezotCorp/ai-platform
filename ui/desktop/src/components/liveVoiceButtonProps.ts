@@ -1,4 +1,4 @@
-import type { LiveVoiceAvailabilityResponseUnstable } from '@aaif/goose-acp-client';
+import type { LiveVoiceAvailabilityResponseUnstable } from '@bezotcorp/bcaip-acp-client';
 import { type LiveVoicePhase } from '../liveVoice/useLiveVoice';
 
 export interface LiveVoiceButtonProps {

@@ -57,7 +57,7 @@ Skills can be stored globally, per-project, or in installed plugins:
 Place a `SKILL.md` file inside a named subdirectory. For example, a global skill called
 `code-review` goes in `~/.agents/skills/code-review/SKILL.md`.
 
-> **Backward compatibility:** goose also discovers skills from `.goose/skills/`,
+> **Backward compatibility:** goose also discovers skills from `.bcaip/skills/`,
 > `.claude/skills/`, `~/.claude/skills/`, and platform-specific config directories,
 > but `agents/skills/` is the recommended standard.
 

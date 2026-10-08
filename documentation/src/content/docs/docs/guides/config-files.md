@@ -10,7 +10,7 @@ sidebar:
 
 goose uses YAML [configuration files](#configuration-files) to manage settings and extensions. The primary config file is located at:
 
-* macOS/Linux: `~/.config/goose/config.yaml`
+* macOS/Linux: `~/.config/bcaip/config.yaml`
 * Windows: `%APPDATA%\Block\goose\config\config.yaml`
 
 The configuration files allow you to set default behaviors, configure language models, set tool permissions, and manage extensions. While many settings can also be set using [environment variables](/guides/environment-variables), the config files provide a persistent way to maintain your preferences.
@@ -40,7 +40,7 @@ providers:
     configured: true
 ```
 
-`GOOSE_PROVIDER` and `GOOSE_MODEL` are still supported as environment variables and override the config file for that process. Older config files that use flat `GOOSE_PROVIDER` and `GOOSE_MODEL` keys are read for compatibility and migrated when goose updates the provider settings.
+`BCAIP_PROVIDER` and `BCAIP_MODEL` are still supported as environment variables and override the config file for that process. Older config files that use flat `BCAIP_PROVIDER` and `BCAIP_MODEL` keys are read for compatibility and migrated when goose updates the provider settings.
 
 ## Global Settings
 
@@ -48,30 +48,30 @@ The following settings can be configured at the root level of your config.yaml f
 
 | Setting | Purpose | Values | Default | Required |
 |---------|---------|---------|---------|-----------|
-| `GOOSE_TEMPERATURE` | Model response randomness | Float between 0.0 and 1.0 | Model-specific | No |
-| `GOOSE_MAX_TOKENS` | Maximum number of tokens for each model response (truncates longer responses) | Positive integer | Model-specific | No |
-| `GOOSE_CACHE_TTL` | Anthropic prompt-cache TTL; `1h` keeps the cached prefix alive across idle gaps at a higher cache-write rate. Headless runs always use `5m` | "5m", "1h" | "5m" | No |
-| `GOOSE_MODE` | [Tool execution behavior](/guides/managing-tools/goose-permissions) | "auto", "approve", "chat", "smart_approve" | "auto" | No |
-| `GOOSE_MAX_TURNS` | [Maximum number of turns](/guides/sessions/smart-context-management#maximum-turns) allowed without user input | Integer (e.g., 10, 50, 100) | 1000 | No |
-| `GOOSE_TOOLSHIM` | Enable tool interpretation | true/false | false | No |
-| `GOOSE_TOOLSHIM_OLLAMA_MODEL` | Model for tool interpretation | Model name (e.g., "llama3.2") | System default | No |
-| `GOOSE_INPUT_LIMIT` | Override input token limit for Ollama (maps to `num_ctx`) | Positive integer | Model default | No |
-| `GOOSE_CLI_MIN_PRIORITY` | Tool output verbosity | Float between 0.0 and 1.0 | 0.0 | No |
-| `GOOSE_CLI_THEME` | [Theme](/guides/goose-cli-commands#themes) for CLI response markdown | "light", "dark", "ansi" | "ansi" | No |
-| `GOOSE_CLI_LIGHT_THEME` | Custom syntax highlighting theme for light mode | [bat theme name](https://github.com/sharkdp/bat#adding-new-themes) | "GitHub" | No |
-| `GOOSE_CLI_DARK_THEME` | Custom syntax highlighting theme for dark mode | [bat theme name](https://github.com/sharkdp/bat#adding-new-themes) | "zenburn" | No |
-| `GOOSE_CLI_SHOW_COST` | Show estimated cost for token use in the CLI | true/false | false | No |
-| `GOOSE_CLI_BELL` | Ring the terminal bell when an interactive turn finishes or tool approval is required | true/false | false | No |
-| `GOOSE_ALLOWLIST` | URL for allowed extensions | Valid URL | None | No |
-| `GOOSE_DOCS_ROOT` | Documentation root used by `goose-doc-guide` (e.g. for offline/air-gapped docs) | Local path or HTTP(S) URL containing `goose-docs-map.md` and `docs/` | `https://goose-docs.ai` | No |
-| `GOOSE_RECIPE_GITHUB_REPO` | GitHub repository for recipes | Format: "org/repo" | None | No |
-| `GOOSE_AUTO_COMPACT_THRESHOLD` | Set the percentage threshold at which goose [automatically compacts your session](/guides/sessions/smart-context-management#automatic-compaction). | Float between 0.0 and 1.0 (disabled at 0.0)| 0.8 | No |
+| `BCAIP_TEMPERATURE` | Model response randomness | Float between 0.0 and 1.0 | Model-specific | No |
+| `BCAIP_MAX_TOKENS` | Maximum number of tokens for each model response (truncates longer responses) | Positive integer | Model-specific | No |
+| `BCAIP_CACHE_TTL` | Anthropic prompt-cache TTL; `1h` keeps the cached prefix alive across idle gaps at a higher cache-write rate. Headless runs always use `5m` | "5m", "1h" | "5m" | No |
+| `BCAIP_MODE` | [Tool execution behavior](/guides/managing-tools/goose-permissions) | "auto", "approve", "chat", "smart_approve" | "auto" | No |
+| `BCAIP_MAX_TURNS` | [Maximum number of turns](/guides/sessions/smart-context-management#maximum-turns) allowed without user input | Integer (e.g., 10, 50, 100) | 1000 | No |
+| `BCAIP_TOOLSHIM` | Enable tool interpretation | true/false | false | No |
+| `BCAIP_TOOLSHIM_OLLAMA_MODEL` | Model for tool interpretation | Model name (e.g., "llama3.2") | System default | No |
+| `BCAIP_INPUT_LIMIT` | Override input token limit for Ollama (maps to `num_ctx`) | Positive integer | Model default | No |
+| `BCAIP_CLI_MIN_PRIORITY` | Tool output verbosity | Float between 0.0 and 1.0 | 0.0 | No |
+| `BCAIP_CLI_THEME` | [Theme](/guides/goose-cli-commands#themes) for CLI response markdown | "light", "dark", "ansi" | "ansi" | No |
+| `BCAIP_CLI_LIGHT_THEME` | Custom syntax highlighting theme for light mode | [bat theme name](https://github.com/sharkdp/bat#adding-new-themes) | "GitHub" | No |
+| `BCAIP_CLI_DARK_THEME` | Custom syntax highlighting theme for dark mode | [bat theme name](https://github.com/sharkdp/bat#adding-new-themes) | "zenburn" | No |
+| `BCAIP_CLI_SHOW_COST` | Show estimated cost for token use in the CLI | true/false | false | No |
+| `BCAIP_CLI_BELL` | Ring the terminal bell when an interactive turn finishes or tool approval is required | true/false | false | No |
+| `BCAIP_ALLOWLIST` | URL for allowed extensions | Valid URL | None | No |
+| `BCAIP_DOCS_ROOT` | Documentation root used by `goose-doc-guide` (e.g. for offline/air-gapped docs) | Local path or HTTP(S) URL containing `goose-docs-map.md` and `docs/` | `https://goose-docs.ai` | No |
+| `BCAIP_RECIPE_GITHUB_REPO` | GitHub repository for recipes | Format: "org/repo" | None | No |
+| `BCAIP_AUTO_COMPACT_THRESHOLD` | Set the percentage threshold at which goose [automatically compacts your session](/guides/sessions/smart-context-management#automatic-compaction). | Float between 0.0 and 1.0 (disabled at 0.0)| 0.8 | No |
 | `SECURITY_PROMPT_ENABLED` | Enable [prompt injection detection](/guides/security/prompt-injection-detection) to identify potentially harmful commands | true/false | false | No |
 | `SECURITY_PROMPT_THRESHOLD` | Sensitivity threshold for prompt injection detection (higher = stricter) | Float between 0.01 and 1.0 | 0.8 | No |
 | `SECURITY_PROMPT_CLASSIFIER_ENABLED` | Enable ML-based prompt injection detection for advanced threat identification | true/false | false | No |
 | `SECURITY_PROMPT_CLASSIFIER_ENDPOINT` | Classification endpoint URL for ML-based prompt injection detection | URL (e.g., "https://api.example.com/classify") | None | No |
 | `SECURITY_PROMPT_CLASSIFIER_TOKEN` | Authentication token for `SECURITY_PROMPT_CLASSIFIER_ENDPOINT` | String | None | No |
-| `GOOSE_TELEMETRY_ENABLED` | Enable [anonymous usage data](/guides/usage-data) collection | true/false | false | No |
+| `BCAIP_TELEMETRY_ENABLED` | Enable [anonymous usage data](/guides/usage-data) collection | true/false | false | No |
 
 Additional [environment variables](/guides/environment-variables) may also be supported in config.yaml.
 
@@ -87,21 +87,21 @@ providers:
     enabled: true
     model: claude-sonnet-4-5-20250929
     configured: true
-GOOSE_TEMPERATURE: 0.7
+BCAIP_TEMPERATURE: 0.7
 
 # Tool Configuration
-GOOSE_MODE: "smart_approve"
-GOOSE_TOOLSHIM: true
-GOOSE_CLI_MIN_PRIORITY: 0.2
+BCAIP_MODE: "smart_approve"
+BCAIP_TOOLSHIM: true
+BCAIP_CLI_MIN_PRIORITY: 0.2
 
 # Recipe Configuration
-GOOSE_RECIPE_GITHUB_REPO: "aaif-goose/goose-recipes"
+BCAIP_RECIPE_GITHUB_REPO: "BezotCorp/ai-platform-recipes"
 
 # Documentation Configuration
-GOOSE_DOCS_ROOT: "/path/to/goose-docs"
+BCAIP_DOCS_ROOT: "/path/to/goose-docs"
 
 # Search Path Configuration
-GOOSE_SEARCH_PATHS:
+BCAIP_SEARCH_PATHS:
   - "/usr/local/bin"
   - "~/custom/tools"
   - "/opt/homebrew/bin"
@@ -189,10 +189,10 @@ Use the `available_tools` field to limit which tools are loaded from an extensio
 
 ## Search Path Configuration
 
-Extensions may need to execute external commands or tools. Goose builds the command search path from any `GOOSE_SEARCH_PATHS` entries, built-in fallback paths, and then your system PATH. You can add additional search directories in your config file:
+Extensions may need to execute external commands or tools. Goose builds the command search path from any `BCAIP_SEARCH_PATHS` entries, built-in fallback paths, and then your system PATH. You can add additional search directories in your config file:
 
 ```yaml
-GOOSE_SEARCH_PATHS:
+BCAIP_SEARCH_PATHS:
   - "/usr/local/bin"
   - "~/custom/tools"
   - "/opt/homebrew/bin"
@@ -244,7 +244,7 @@ goose does not read provider API keys from `config.yaml`. A key placed there is 
 - If goose is using file-based secret storage, secrets are stored in a separate `secrets.yaml` file (in plain text). This can happen when:
 
   - Your environment does not provide a desktop keyring service (for example: headless servers, CI/CD, containers)
-  - You disable the keyring explicitly (via [GOOSE_DISABLE_KEYRING](/guides/environment-variables#security-and-privacy))
+  - You disable the keyring explicitly (via [BCAIP_DISABLE_KEYRING](/guides/environment-variables#security-and-privacy))
   - goose cannot access the keyring and falls back to file-based secret storage
 
   For troubleshooting keyring failures and automatic fallback behavior, see [Known Issues](/troubleshooting/known-issues#keyring-cannot-be-accessed-automatic-fallback).

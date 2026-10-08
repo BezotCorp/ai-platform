@@ -1,7 +1,7 @@
 import type { CronPickerProps } from './cronPickerProps';
 
 import React, { useState, useEffect } from 'react';
-import type { ScheduledJobDto } from '@aaif/goose-acp-client';
+import type { ScheduledJobDto } from '@bezotcorp/bcaip-acp-client';
 import { errorMessage } from '../../utils/conversionUtils';
 import { defineMessages, useIntl } from '../../i18n';
 import {

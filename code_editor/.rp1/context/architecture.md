@@ -54,7 +54,7 @@ graph TB
         PRW["pr-checks.yml"]
         MainW["ci.yml"]
         RP["release-please"]
-        VSCE["vsce package --no-deps"]
+        VSCE["pnpm exec vsce package --no-deps"]
         MP["VS Code Marketplace"]
     end
 
@@ -91,7 +91,7 @@ graph TB
 - **Gated Activation** — Multi-stage: binary discovery → version validation (>= 1.16.0) → subprocess spawn → ACP `initialize`. Each stage can block UI with actionable status. Evidence: `binaryDiscovery.ts`, `versionChecker.ts`, `subprocessManager.ts`.
 - **Typed Async Error Handling (fp-ts)** — `Either`/`TaskEither` for recoverable async failures instead of thrown exceptions. Evidence: `src/shared/errors.ts`, `package.json` (fp-ts `^2.16.0`).
 - **Sandboxed Webview with Ready-Sync Queue** — Ready handshake + queued outbox so extension-originated events are not dropped before the React app mounts. Evidence: `src/extension/webviewProvider.ts`.
-- **Conventional Commits + release-please automation** — Every push to main runs release-please; merging the Release PR auto-tags `vscode-v*`, builds VSIX with `vsce --no-dependencies`, publishes to Marketplace. Evidence: `commitlint.config.js`, `.husky/*`, `release-please-config.json`, `.github/workflows/ci.yml`.
+- **Conventional Commits + release-please automation** — Every push to main runs release-please; merging the Release PR auto-tags `vscode-v*`, builds VSIX with `pnpm exec vsce package --no-dependencies`, publishes to Marketplace. Evidence: `commitlint.config.js`, `.husky/*`, `release-please-config.json`, `.github/workflows/ci.yml`.
 
 ## Component Architecture
 
@@ -182,8 +182,8 @@ sequenceDiagram
 3. release-please opens/updates a Release PR bumping `package.json` and the manifest.
 4. Merging the Release PR tags `vscode-v<version>` and triggers the release job.
 5. Job runs `pnpm install --frozen-lockfile`, `pnpm run build`.
-6. Job runs `vsce package --no-yarn --no-dependencies -o dist/vscode-goose-<v>.vsix`.
-7. `gh release upload` attaches VSIX; `vsce publish --packagePath` ships to the Marketplace when `VSCE_PAT` is set.
+6. Job runs `pnpm exec vsce package --no-dependencies -o dist/vscode-goose-<v>.vsix`.
+7. `gh release upload` attaches VSIX; `pnpm exec vsce publish --packagePath` ships to the Marketplace when `VSCE_PAT` is set.
 
 ## Integration Points
 
@@ -191,9 +191,9 @@ sequenceDiagram
 
 - **Goose ACP Subprocess** — external AI agent; JSON-RPC 2.0 over stdin/stdout (ndjson). Methods: `initialize`, `session/{new,load,prompt,cancel}`. Notification: `session/update`. Min version 1.16.0. Context chips → `resource_link` blocks. Spec: agentclientprotocol.com.
 - **VS Code Extension API** — in-process host (engines `^1.95.0`). Contributes: viewsContainer `goose`, view `goose.chatView`, commands (`showLogs`, `restart`, `sendSelectionToChat`), `editor/context` menu, keybinding Cmd/Ctrl+Shift+G. Settings: `goose.binaryPath`, `goose.logLevel`. `workspace.findFiles` for @ picker.
-- **GitHub Actions CI** — two workflows. `ci.yml`: release-please + lint/test/build on push to `main`. `pr-checks.yml`: lint/test/build on PR. Both use Node.js and pnpm with the workspace lockfile. Release packaging uses `vsce`.
+- **GitHub Actions CI** — two workflows. `ci.yml`: release-please + lint/test/build on push to `main`. `pr-checks.yml`: lint/test/build on PR. Both use Node.js and pnpm with the workspace lockfile. Release packaging uses `pnpm exec vsce`.
 - **release-please** — `googleapis/release-please-action@v4`. Config: `release-please-config.json` with `tag-separator vscode-v`, `include-component-in-tag=false`, `extra-files=['package.json']`, `bootstrap-sha` pinned. Manifest: `.release-please-manifest.json` tracks `.` at `0.2.1`. Uses `RELEASE_PLEASE_PAT`.
-- **VS Code Marketplace** — public distribution. Publisher `block`. Packaging `vsce package --no-dependencies` (dependencies are included in the esbuild bundles). Publish gated on `VSCE_PAT`.
+- **VS Code Marketplace** — public distribution. Publisher `block`. Packaging `pnpm exec vsce package --no-dependencies` (dependencies are included in the esbuild bundles). Publish gated on `VSCE_PAT`.
 - **Husky + commitlint** — `.husky/pre-commit` + `.husky/commit-msg` installed by `prepare: 'husky'`. `commitlint.config.js` uses `@commitlint/config-conventional` — required for release-please bump detection.
 - **Biome** — lint + format (single-tool replacement). Invoked via `pnpm exec biome`. `biome.json` ignores `node_modules`, `dist`, `out`, `.vscode-test`, `*.vsix`, `package-lock.json`, and `package.json`.
 
@@ -229,5 +229,5 @@ sequenceDiagram
 - **Environment**: VS Code engines `^1.95.0` on the user's machine; spawns the local goose binary as a child process.
 - **Distribution**: VS Code Marketplace (publisher `block`) + GitHub Releases with tag prefix `vscode-v`, driven by release-please.
 - **Build toolchain**: esbuild for both extension (CJS, node target, `vscode` external) and webview (minified IIFE); Tailwind CSS v4 via `@tailwindcss/cli`; TypeScript for type-checking only.
-- **Packaging**: `vsce package --no-dependencies` — relies on bundled `dist/*`. `.vscodeignore` whitelists `dist/extension.js(.map)`, `dist/webview/**`, `resources/**`, `package.json`, `README.md`, `LICENSE`; excludes `src/`, `node_modules/`, `docs/`, `.rp1/`, `biome.json`, lockfiles, `*.test.ts`.
+- **Packaging**: `pnpm exec vsce package --no-dependencies` — relies on bundled `dist/*`. `.vscodeignore` whitelists `dist/extension.js(.map)`, `dist/webview/**`, `resources/**`, `package.json`, `README.md`, `LICENSE`; excludes `src/`, `node_modules/`, `docs/`, `.rp1/`, `biome.json`, lockfiles, `*.test.ts`.
 - **CI**: `ci.yml` (main + release) and `pr-checks.yml` (PR) using Node.js and pnpm with frozen-lockfile installs.

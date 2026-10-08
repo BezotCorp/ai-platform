@@ -22,41 +22,41 @@ use std::{env, fs};
 fn asset_name() -> &'static str {
     #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
     {
-        "goose-aarch64-apple-darwin.tar.bz2"
+        "bcaip-aarch64-apple-darwin.tar.bz2"
     }
     #[cfg(all(target_os = "macos", target_arch = "x86_64"))]
     {
-        "goose-x86_64-apple-darwin.tar.bz2"
+        "bcaip-x86_64-apple-darwin.tar.bz2"
     }
     #[cfg(all(target_os = "linux", target_arch = "x86_64", target_env = "gnu"))]
     {
-        "goose-x86_64-unknown-linux-gnu.tar.bz2"
+        "bcaip-x86_64-unknown-linux-gnu.tar.bz2"
     }
     #[cfg(all(target_os = "linux", target_arch = "aarch64", target_env = "gnu"))]
     {
-        "goose-aarch64-unknown-linux-gnu.tar.bz2"
+        "bcaip-aarch64-unknown-linux-gnu.tar.bz2"
     }
     #[cfg(all(target_os = "linux", target_arch = "x86_64", target_env = "musl"))]
     {
-        "goose-x86_64-unknown-linux-musl.tar.bz2"
+        "bcaip-x86_64-unknown-linux-musl.tar.bz2"
     }
     #[cfg(all(target_os = "linux", target_arch = "aarch64", target_env = "musl"))]
     {
-        "goose-aarch64-unknown-linux-musl.tar.bz2"
+        "bcaip-aarch64-unknown-linux-musl.tar.bz2"
     }
     // RISC-V builds compile with this asset name, but update() rejects the
     // platform until release artifacts are published. See update() below.
     #[cfg(all(target_os = "linux", target_arch = "riscv64", target_env = "gnu"))]
     {
-        "goose-riscv64gc-unknown-linux-gnu.tar.bz2"
+        "bcaip-riscv64gc-unknown-linux-gnu.tar.bz2"
     }
     #[cfg(all(target_os = "windows", target_arch = "x86_64", feature = "cuda"))]
     {
-        "goose-x86_64-pc-windows-msvc-cuda.zip"
+        "bcaip-x86_64-pc-windows-msvc-cuda.zip"
     }
     #[cfg(all(target_os = "windows", target_arch = "x86_64", not(feature = "cuda")))]
     {
-        "goose-x86_64-pc-windows-msvc.zip"
+        "bcaip-x86_64-pc-windows-msvc.zip"
     }
 }
 
@@ -64,11 +64,11 @@ fn asset_name() -> &'static str {
 fn binary_name() -> &'static str {
     #[cfg(target_os = "windows")]
     {
-        "goose.exe"
+        "bcaip.exe"
     }
     #[cfg(not(target_os = "windows"))]
     {
-        "goose"
+        "bcaip"
     }
 }
 
@@ -80,7 +80,7 @@ fn binary_name() -> &'static str {
 fn sha256_hex(data: &[u8]) -> String {
     let mut hasher = Sha256::new();
     hasher.update(data);
-    goose::utils::bytes_to_hex(hasher.finalize())
+    bcaip::utils::bytes_to_hex(hasher.finalize())
 }
 
 #[derive(serde::Deserialize)]
@@ -126,7 +126,7 @@ fn should_retry_attestations_without_token(status: StatusCode, token: Option<&st
 
 async fn fetch_attestations(digest: &str, token: Option<&str>) -> Result<Vec<serde_json::Value>> {
     let url = format!(
-        "https://api.github.com/repos/aaif-goose/goose/attestations/sha256:{digest}\
+        "https://api.github.com/repos/BezotCorp/ai-platform/attestations/sha256:{digest}\
          ?per_page=30&predicate_type=https://slsa.dev/provenance/v1"
     );
 
@@ -167,7 +167,7 @@ async fn fetch_attestations(digest: &str, token: Option<&str>) -> Result<Vec<ser
 async fn fetch_bundle(client: &reqwest::Client, url: &str) -> Result<serde_json::Value> {
     let resp = client
         .get(url)
-        .header("User-Agent", "goose-cli")
+        .header("User-Agent", "bcaip-cli")
         .send()
         .await
         .context("Failed to fetch attestation bundle")?;
@@ -207,7 +207,7 @@ async fn fetch_attestations_response(
         .get(url)
         .header("Accept", "application/vnd.github+json")
         .header("X-GitHub-Api-Version", "2022-11-28")
-        .header("User-Agent", "goose-cli");
+        .header("User-Agent", "bcaip-cli");
 
     if let Some(value) = token.and_then(authorization_header_value) {
         req = req.header(AUTHORIZATION, value);
@@ -300,7 +300,7 @@ async fn verify_provenance(archive_data: &[u8], tag: &str) -> Result<()> {
     ))
 }
 
-/// Update the goose binary to the latest release.
+/// Update the BCAIP binary to the latest release.
 ///
 /// Downloads the platform-appropriate archive from GitHub releases, verifies
 /// its SLSA provenance via Sigstore, extracts it with path-traversal
@@ -324,7 +324,8 @@ pub async fn update(canary: bool, reconfigure: bool) -> Result<()> {
     {
         let tag = if canary { "canary" } else { "stable" };
         let asset = asset_name();
-        let url = format!("https://github.com/aaif-goose/goose/releases/download/{tag}/{asset}");
+        let url =
+            format!("https://github.com/BezotCorp/ai-platform/releases/download/{tag}/{asset}");
 
         println!("Downloading {asset} from {tag} release...");
 
@@ -376,17 +377,17 @@ pub async fn update(canary: bool, reconfigure: bool) -> Result<()> {
         #[cfg(target_os = "windows")]
         copy_dlls(&extracted_binary, &current_exe)?;
 
-        println!("goose updated successfully (verified with Sigstore SLSA provenance).");
+        println!("BCAIP updated successfully (verified with Sigstore SLSA provenance).");
 
         // --- Reconfigure if requested -------------------------------------------
         if reconfigure {
-            println!("Running goose configure...");
+            println!("Running bcaip configure...");
             let status = Command::new(current_exe)
                 .arg("configure")
                 .status()
-                .context("Failed to run goose configure")?;
+                .context("Failed to run bcaip configure")?;
             if !status.success() {
-                eprintln!("Warning: goose configure exited with {status}");
+                eprintln!("Warning: bcaip configure exited with {status}");
             }
         }
 
@@ -496,12 +497,12 @@ fn extract_tar_bz2(data: &[u8], dest: &Path) -> Result<()> {
 /// Find the binary inside the extracted archive.
 ///
 /// The archive may place it in:
-///   1. A `goose-package/` subdirectory (Windows releases)
+///   1. A `bcaip-package/` subdirectory (Windows releases)
 ///   2. Directly at the top level
 ///   3. In some other single subdirectory
 fn find_binary(extract_dir: &Path, binary_name: &str) -> Option<PathBuf> {
-    // 1. Check goose-package subdir (matches download_cli.sh / download_cli.ps1)
-    let package_dir = extract_dir.join("goose-package");
+    // 1. Check bcaip-package subdir (matches download_cli.sh / download_cli.ps1)
+    let package_dir = extract_dir.join("bcaip-package");
     if package_dir.is_dir() {
         let p = package_dir.join(binary_name);
         if p.exists() {
@@ -549,7 +550,7 @@ fn replace_binary(new_binary: &Path, current_exe: &Path) -> Result<()> {
         if old_exe.exists() {
             fs::remove_file(&old_exe).with_context(|| {
                 format!(
-                    "Failed to remove old backup {}. Is another goose process running?",
+                    "Failed to remove old backup {}. Is another BCAIP process running?",
                     old_exe.display()
                 )
             })?;
@@ -558,7 +559,7 @@ fn replace_binary(new_binary: &Path, current_exe: &Path) -> Result<()> {
         // Rename the running binary out of the way
         fs::rename(current_exe, &old_exe).with_context(|| {
             format!(
-                "Failed to rename running binary to {}. Try closing Goose Desktop if it's open.",
+                "Failed to rename running binary to {}. Try closing BCAIP Desktop if it's open.",
                 old_exe.display()
             )
         })?;

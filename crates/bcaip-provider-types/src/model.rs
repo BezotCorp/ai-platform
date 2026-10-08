@@ -24,9 +24,9 @@ const INHERITED_SESSION_PARAM_KEYS: &[&str] = &[
     "preserve_unsigned_thinking",
 ];
 
-/// Request params goose consumes itself: formats that forward unknown params into
+/// Request params BCAIP consumes itself: formats that forward unknown params into
 /// the payload must skip these, or the provider gets an unrecognized wire parameter.
-pub fn is_goose_internal_request_param(key: &str) -> bool {
+pub fn is_bcaip_internal_request_param(key: &str) -> bool {
     matches!(
         key,
         "thinking_effort"

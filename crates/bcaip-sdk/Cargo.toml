@@ -1,0 +1,70 @@
+[package]
+name = "bcaip-sdk"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "The BCAIP Development Kit (BDK) for Rust, with optional uniffi bindings for Python/Kotlin"
+
+[lib]
+name = "bcaip_sdk"
+crate-type = ["cdylib", "staticlib", "rlib"]
+
+[[bin]]
+name = "bcaip-uniffi-bindgen"
+path = "src/bin/uniffi-bindgen.rs"
+required-features = ["uniffi"]
+
+[features]
+default = []
+uniffi = [
+    "dep:uniffi",
+    "dep:bcaip-context-management",
+    "dep:thiserror",
+    "dep:anyhow",
+    "dep:bcaip-providers",
+    "dep:bcaip-provider-types",
+    "dep:futures",
+    "dep:serde_json",
+    "dep:tokio",
+    "dep:rmcp",
+    "dep:base64",
+]
+
+[dependencies]
+bcaip-sdk-types = { path = "../bcaip-sdk-types" }
+agent-client-protocol = { workspace = true }
+agent-client-protocol-schema = { workspace = true }
+
+uniffi = { version = "0.32.2", features = ["cli"], optional = true }
+thiserror = { version = "2.0.21", optional = true }
+bcaip-providers = { path = "../bcaip-providers", features = [
+    "rustls-tls",
+], optional = true }
+bcaip-provider-types = { path = "../bcaip-provider-types", optional = true }
+bcaip-context-management = { path = "../bcaip-context-management", optional = true }
+futures = { workspace = true, optional = true }
+serde_json = { workspace = true, optional = true }
+tokio = { workspace = true, features = [
+    "rt-multi-thread",
+    "sync",
+], optional = true }
+anyhow = { workspace = true, optional = true }
+rmcp = { workspace = true, optional = true }
+base64 = { workspace = true, optional = true }
+
+[dev-dependencies]
+tokio = { workspace = true, features = [
+    "rt-multi-thread",
+    "macros",
+    "process",
+    "io-std",
+    "io-util",
+] }
+tokio-util = { workspace = true, features = ["compat", "rt"] }
+
+[package.metadata.cargo-machete]
+# Used to provide extras imports for agent-client-protocol
+ignored = ["agent-client-protocol-schema"]

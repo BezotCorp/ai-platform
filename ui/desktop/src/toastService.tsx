@@ -188,7 +188,7 @@ function ToastErrorContent({
       <div className="flex-none flex items-center gap-2">
         {showRecovery && (
           <Button onClick={() => startNewSession(recoverHints, setView, getInitialWorkingDir())}>
-            Ask goose
+            Ask BCAIP
           </Button>
         )}
         {hasBoth && (

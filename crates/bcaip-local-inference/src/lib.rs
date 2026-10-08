@@ -7,12 +7,13 @@ pub mod paths;
 pub mod prompt_template;
 pub mod provider_utils;
 
-mod backend;
 mod dir_type;
 mod explicit_model_path;
 #[cfg(feature = "hf-hub")]
 pub mod hf_models;
 mod llamacpp;
+mod local_generation_request;
+mod local_inference_backend;
 #[cfg(feature = "hf-hub")]
 pub mod management;
 mod mlx;
@@ -29,6 +30,8 @@ pub(crate) mod thinking_output;
 mod tool_emulation;
 mod tool_parsing;
 
+pub(crate) use local_inference_backend::LocalInferenceBackend;
+
 use bcaip_provider_types::Message;
 use bcaip_provider_types::base::{MessageStream, Provider, ProviderDescriptor, ProviderMetadata};
 use bcaip_provider_types::conversations::{
@@ -44,7 +47,6 @@ pub use llamacpp::LlamaCppBackend;
 use anyhow::{Result, bail};
 use async_stream::try_stream;
 use async_trait::async_trait;
-use backend::LocalInferenceBackend;
 use explicit_model_path::ExplicitModelPath;
 
 use llamacpp::LLAMACPP_BACKEND_ID;
@@ -304,7 +306,7 @@ fn configured_draft_model(
         .draft_model
         .clone()
         .or_else(|| {
-            config_resolver::string_param("GOOSE_LOCAL_DRAFT_MODEL")
+            config_resolver::string_param("BCAIP_LOCAL_DRAFT_MODEL")
                 .ok()
                 .flatten()
         })
@@ -750,7 +752,7 @@ impl Provider for LocalInferenceProvider {
         if let Some(false) = model_config
             .request_param::<bool>("enable_thinking")
             .or_else(|| {
-                config_resolver::bool_param("GOOSE_LOCAL_ENABLE_THINKING")
+                config_resolver::bool_param("BCAIP_LOCAL_ENABLE_THINKING")
                     .ok()
                     .flatten()
             })
@@ -944,7 +946,7 @@ impl Provider for LocalInferenceProvider {
 
                 let message_id = Uuid::new_v4().to_string();
 
-                let request = backend::LocalGenerationRequest {
+                let request = local_generation_request::LocalGenerationRequest {
                     model_name,
                     system: &system,
                     messages: &messages,

@@ -29,17 +29,17 @@ log "Starting node setup (common)."
 # this is harmless on Linux, where these paths are typically already present.
 export PATH="/usr/sbin:/sbin:${PATH}"
 
-if [ -n "${GOOSE_PATH_ROOT:-}" ]; then
-    RESOLVED_GOOSE_CONFIG_DIR="${GOOSE_PATH_ROOT}/config"
-elif [ -n "${GOOSE_CONFIG_DIR:-}" ]; then
-    log "GOOSE_CONFIG_DIR is deprecated for desktop shims; prefer GOOSE_PATH_ROOT."
-    RESOLVED_GOOSE_CONFIG_DIR="${GOOSE_CONFIG_DIR}"
+if [ -n "${BCAIP_PATH_ROOT:-}" ]; then
+    RESOLVED_BCAIP_CONFIG_DIR="${BCAIP_PATH_ROOT}/config"
+elif [ -n "${BCAIP_CONFIG_DIR:-}" ]; then
+    log "BCAIP_CONFIG_DIR is deprecated for desktop shims; prefer BCAIP_PATH_ROOT."
+    RESOLVED_BCAIP_CONFIG_DIR="${BCAIP_CONFIG_DIR}"
 else
-    RESOLVED_GOOSE_CONFIG_DIR="${HOME}/.config/goose"
+    RESOLVED_BCAIP_CONFIG_DIR="${HOME}/.config/bcaip"
 fi
-MCP_HERMIT_DIR="${RESOLVED_GOOSE_CONFIG_DIR}/mcp-hermit"
-mkdir -p "${RESOLVED_GOOSE_CONFIG_DIR}"
-HERMIT_SETUP_LOCK_DIR="${RESOLVED_GOOSE_CONFIG_DIR}/.mcp-hermit-setup.lock"
+MCP_HERMIT_DIR="${RESOLVED_BCAIP_CONFIG_DIR}/mcp-hermit"
+mkdir -p "${RESOLVED_BCAIP_CONFIG_DIR}"
+HERMIT_SETUP_LOCK_DIR="${RESOLVED_BCAIP_CONFIG_DIR}/.mcp-hermit-setup.lock"
 HERMIT_SETUP_LOCK_TIMEOUT=300
 HERMIT_SETUP_LOCK_STARTED_AT=$(date +%s)
 while ! mkdir "${HERMIT_SETUP_LOCK_DIR}" 2>/dev/null; do
@@ -54,7 +54,7 @@ trap 'rm -rf "${HERMIT_SETUP_LOCK_DIR}"; log "An error occurred. Exiting with st
 trap 'rm -rf "${HERMIT_SETUP_LOCK_DIR}"' EXIT
 
 # One-time cleanup for existing Linux users to fix locking issues
-CLEANUP_MARKER="${RESOLVED_GOOSE_CONFIG_DIR}/.mcp-hermit-cleanup-v1"
+CLEANUP_MARKER="${RESOLVED_BCAIP_CONFIG_DIR}/.mcp-hermit-cleanup-v1"
 if [[ "$(uname -s)" == "Linux" ]] && [ ! -f "${CLEANUP_MARKER}" ]; then
     log "Performing one-time cleanup of old mcp-hermit directory to fix locking issues."
     if [ -d "${MCP_HERMIT_DIR}" ]; then
@@ -169,17 +169,17 @@ rm -rf "${HERMIT_SETUP_LOCK_DIR}"
 trap 'log "An error occurred. Exiting with status $?."' ERR
 trap - EXIT
 
-log "Checking for GOOSE_NPM_REGISTRY and GOOSE_NPM_CERT environment variables for custom npm registry setup..."
-# Check if GOOSE_NPM_REGISTRY is set and accessible
-if [ -n "${GOOSE_NPM_REGISTRY:-}" ] && curl -s --head --fail "${GOOSE_NPM_REGISTRY}" >/dev/null; then
-    log "Checking custom goose registry availability: ${GOOSE_NPM_REGISTRY}"
-    log "${GOOSE_NPM_REGISTRY} is accessible. Using it for npm registry."
-    export NPM_CONFIG_REGISTRY="${GOOSE_NPM_REGISTRY}"
+log "Checking for BCAIP_NPM_REGISTRY and BCAIP_NPM_CERT environment variables for custom npm registry setup..."
+# Check if BCAIP_NPM_REGISTRY is set and accessible
+if [ -n "${BCAIP_NPM_REGISTRY:-}" ] && curl -s --head --fail "${BCAIP_NPM_REGISTRY}" >/dev/null; then
+    log "Checking custom goose registry availability: ${BCAIP_NPM_REGISTRY}"
+    log "${BCAIP_NPM_REGISTRY} is accessible. Using it for npm registry."
+    export NPM_CONFIG_REGISTRY="${BCAIP_NPM_REGISTRY}"
 
-    # Check if GOOSE_NPM_CERT is set and accessible
-    if [ -n "${GOOSE_NPM_CERT:-}" ] && curl -s --head --fail "${GOOSE_NPM_CERT}" >/dev/null; then
-        log "Downloading certificate from: ${GOOSE_NPM_CERT}"
-        curl -sSL -o "${MCP_HERMIT_DIR}/cert.pem" "${GOOSE_NPM_CERT}"
+    # Check if BCAIP_NPM_CERT is set and accessible
+    if [ -n "${BCAIP_NPM_CERT:-}" ] && curl -s --head --fail "${BCAIP_NPM_CERT}" >/dev/null; then
+        log "Downloading certificate from: ${BCAIP_NPM_CERT}"
+        curl -sSL -o "${MCP_HERMIT_DIR}/cert.pem" "${BCAIP_NPM_CERT}"
         if [ $? -eq 0 ]; then
             log "Certificate downloaded successfully."
             export NODE_EXTRA_CA_CERTS="${MCP_HERMIT_DIR}/cert.pem"
@@ -187,11 +187,11 @@ if [ -n "${GOOSE_NPM_REGISTRY:-}" ] && curl -s --head --fail "${GOOSE_NPM_REGIST
             log "Unable to download the certificate. Skipping certificate setup."
         fi
     else
-        log "GOOSE_NPM_CERT is either not set or not accessible. Skipping certificate setup."
+        log "BCAIP_NPM_CERT is either not set or not accessible. Skipping certificate setup."
     fi
 
 else
-    log "GOOSE_NPM_REGISTRY is either not set or not accessible. Falling back to default npm registry."
+    log "BCAIP_NPM_REGISTRY is either not set or not accessible. Falling back to default npm registry."
     export NPM_CONFIG_REGISTRY="https://registry.npmjs.org/"
 fi
 

@@ -1,4 +1,4 @@
-import type { SourceEntry, SourceTypeKey } from '@aaif/goose-acp-client';
+import type { SourceEntry, SourceTypeKey } from '@bezotcorp/bcaip-acp-client';
 import { getAcpClient } from './acpConnection';
 
 const SKILL_SOURCE_TYPES: SourceTypeKey[] = ['skill', 'builtinSkill'];
@@ -26,7 +26,7 @@ async function loadSkillSources(projectDir: string): Promise<SourceEntry[]> {
   const client = await getAcpClient();
   const responses = await Promise.all(
     SKILL_SOURCE_TYPES.map((type) =>
-      client.goose.sourcesListUnstable({
+      client.bcaip.sourcesListUnstable({
         type,
         projectDir,
       })

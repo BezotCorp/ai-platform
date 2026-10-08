@@ -41,7 +41,7 @@ const i18n = defineMessages<{
   },
 });
 
-const TELEMETRY_CONFIG_KEY = 'GOOSE_TELEMETRY_ENABLED';
+const TELEMETRY_CONFIG_KEY = 'BCAIP_TELEMETRY_ENABLED';
 
 export default function TelemetryConsentPrompt(): React.JSX.Element | null {
   const intl = useIntl();
@@ -55,7 +55,7 @@ export default function TelemetryConsentPrompt(): React.JSX.Element | null {
 
     void (async (): Promise<void> => {
       try {
-        const provider: unknown = await read('GOOSE_PROVIDER', false);
+        const provider: unknown = await read('BCAIP_PROVIDER', false);
         if (!provider || provider === '') return;
 
         const telemetryValue: unknown = await read(TELEMETRY_CONFIG_KEY, false);

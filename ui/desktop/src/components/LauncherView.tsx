@@ -8,7 +8,7 @@ const messages = defineMessages<{
 }>({
   placeholder: {
     id: 'launcher.placeholder',
-    defaultMessage: 'Ask goose anything...',
+    defaultMessage: 'Ask BCAIP anything...',
   },
 });
 

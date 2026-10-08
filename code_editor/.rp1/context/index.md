@@ -28,7 +28,7 @@ vscode-goose is a VS Code extension that provides a thin UI bridge over ACP (Age
 | Error Model       | fp-ts `TaskEither<GooseError, T>`                                                          |
 | Tech Stack        | VS Code API `^1.95.0`, React 19, Tailwind 4, fp-ts 2, react-markdown                       |
 | Runtime / Tooling | Node.js + pnpm, esbuild, Vitest, Biome 2 (lint+format), Husky + commitlint, release-please |
-| Packaging         | `vsce package --no-dependencies` → VSIX, tag prefix `vscode-v`, publisher `block`          |
+| Packaging         | `pnpm exec vsce package --no-dependencies` → VSIX, tag prefix `vscode-v`, publisher `block` |
 
 ## KB File Manifest
 

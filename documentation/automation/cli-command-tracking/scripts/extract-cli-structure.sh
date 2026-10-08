@@ -10,7 +10,7 @@ set -e
 set -o pipefail
 
 VERSION=${1:-"HEAD"}
-GOOSE_REPO=${GOOSE_REPO:-"$HOME/Development/goose"}
+BCAIP_REPO=${BCAIP_REPO:-"$HOME/Development/goose"}
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 # Create a temporary directory
@@ -32,8 +32,8 @@ download_release_binary() {
     echo "Downloading goose $version from GitHub releases..." >&2
 
     # Use the official download script with custom bin dir and specific version
-    curl -fsSL "https://github.com/aaif-goose/goose/releases/download/stable/download_cli.sh" |
-        CONFIGURE=false GOOSE_BIN_DIR="$bin_dir" GOOSE_VERSION="$version" bash >&2 2>&1 || {
+    curl -fsSL "https://github.com/BezotCorp/ai-platform/releases/download/stable/download_cli.sh" |
+        CONFIGURE=false BCAIP_BIN_DIR="$bin_dir" BCAIP_VERSION="$version" bash >&2 2>&1 || {
         echo "Error: Failed to download goose $version" >&2
         return 1
     }
@@ -46,12 +46,12 @@ build_from_source() {
     local version=$1
     local safe_version=${version//\//-}
 
-    if [ ! -d "$GOOSE_REPO" ]; then
-        echo "Error: GOOSE_REPO directory not found: $GOOSE_REPO" >&2
+    if [ ! -d "$BCAIP_REPO" ]; then
+        echo "Error: BCAIP_REPO directory not found: $BCAIP_REPO" >&2
         exit 1
     fi
 
-    cd "$GOOSE_REPO"
+    cd "$BCAIP_REPO"
 
     if [ "$version" = "HEAD" ]; then
         echo "Building goose from HEAD..." >&2
@@ -59,7 +59,7 @@ build_from_source() {
             echo "Error: Failed to build goose from HEAD" >&2
             return 1
         }
-        echo "$GOOSE_REPO/target/release/goose"
+        echo "$BCAIP_REPO/target/release/goose"
     else
         # Verify version exists
         if ! git rev-parse "$version" >/dev/null 2>&1; then
@@ -79,7 +79,7 @@ build_from_source() {
         cd "$worktree_dir"
         cargo build --release --quiet >&2 2>&1 || {
             echo "Error: Failed to build goose from $version" >&2
-            cd "$GOOSE_REPO"
+            cd "$BCAIP_REPO"
             git worktree remove "$worktree_dir" 2>/dev/null || true
             return 1
         }
@@ -89,7 +89,7 @@ build_from_source() {
         local temp_bin="$TEMP_DIR/goose-$safe_version-bin"
         cp "$bin_path" "$temp_bin"
 
-        cd "$GOOSE_REPO"
+        cd "$BCAIP_REPO"
         git worktree remove "$worktree_dir" 2>/dev/null || true
 
         echo "$temp_bin"
@@ -98,18 +98,18 @@ build_from_source() {
 
 # Get the goose binary
 if is_release_tag "$VERSION"; then
-    GOOSE_BIN=$(download_release_binary "$VERSION")
+    BCAIP_BIN=$(download_release_binary "$VERSION")
 else
-    GOOSE_BIN=$(build_from_source "$VERSION")
+    BCAIP_BIN=$(build_from_source "$VERSION")
 fi
 
-if [ -z "$GOOSE_BIN" ] || [ ! -x "$GOOSE_BIN" ]; then
+if [ -z "$BCAIP_BIN" ] || [ ! -x "$BCAIP_BIN" ]; then
     echo "Error: Goose binary not found or not executable" >&2
     exit 1
 fi
 
-echo "Using binary: $GOOSE_BIN" >&2
-echo "Binary version: $($GOOSE_BIN --version 2>&1)" >&2
+echo "Using binary: $BCAIP_BIN" >&2
+echo "Binary version: $($BCAIP_BIN --version 2>&1)" >&2
 
 # Run the Python extraction script
-python3 "$SCRIPT_DIR/extract-cli-structure.py" "$GOOSE_BIN" "$VERSION"
+python3 "$SCRIPT_DIR/extract-cli-structure.py" "$BCAIP_BIN" "$VERSION"

@@ -71,17 +71,17 @@
     "description": "Inject persistent instructions into goose's working memory every turn",
     "command": "",
     "link": "https://github.com/BezotCorp/ai-platform/tree/main/crates/bcaip-mcp/src/agents/platform_extensions/tom.rs",
-    "installation_notes": "This is a built-in platform extension that comes with goose and is enabled by default. Configure via GOOSE_MOIM_MESSAGE_TEXT or GOOSE_MOIM_MESSAGE_FILE environment variables.",
+    "installation_notes": "This is a built-in platform extension that comes with goose and is enabled by default. Configure via BCAIP_MOIM_MESSAGE_TEXT or BCAIP_MOIM_MESSAGE_FILE environment variables.",
     "is_builtin": true,
     "endorsed": true,
     "environmentVariables": [
       {
-        "name": "GOOSE_MOIM_MESSAGE_TEXT",
+        "name": "BCAIP_MOIM_MESSAGE_TEXT",
         "description": "Literal text injected into working memory each turn",
         "required": false
       },
       {
-        "name": "GOOSE_MOIM_MESSAGE_FILE",
+        "name": "BCAIP_MOIM_MESSAGE_FILE",
         "description": "Path to a file whose contents are injected (supports ~/)",
         "required": false
       }

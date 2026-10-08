@@ -38,7 +38,7 @@ import {
 } from '../../ui/dropdown-menu';
 import { acpDeleteSession, acpExportSession, acpForkSession, acpImportSession, acpListSessions, acpRenameSession } from '../../../acp/sessions';
 import type { SessionListItem } from '../../../acp/sessionListItem';
-import type { SessionExportFormatKey } from '@aaif/goose-acp-client';
+import type { SessionExportFormatKey } from '@bezotcorp/bcaip-acp-client';
 import { acpChatSessionActions } from '../../../acp/chatSessionStore';
 import { cancelAcpPermissionRequestsForSession } from '../../../acp/permissionRequests';
 import { cancelAcpElicitationRequestsForSession } from '../../../acp/elicitationRequests';

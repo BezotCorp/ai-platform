@@ -8,7 +8,7 @@ import type { ExtensionLoadResult } from '../types/extensionLoadResult';
 export const MAX_ERROR_MESSAGE_LENGTH = 70;
 
 /**
- * Creates recovery hints for the "Ask goose" feature when extension loading fails
+ * Creates recovery hints for the "Ask BCAIP" feature when extension loading fails
  */
 export function createExtensionRecoverHints(errorMsg: string): string {
   return (

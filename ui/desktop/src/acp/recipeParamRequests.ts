@@ -1,7 +1,7 @@
 import type {
   RecipeParamsResponseUnstable,
   RequestRecipeParamsUnstable,
-} from '@aaif/goose-acp-client';
+} from '@bezotcorp/bcaip-acp-client';
 import { v7 as uuidv7 } from 'uuid';
 
 import type { AcpRecipeParamRequest } from './acpRecipeParamRequest';

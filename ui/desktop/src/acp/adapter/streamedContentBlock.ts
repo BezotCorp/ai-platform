@@ -8,7 +8,7 @@ import {
   type AcpChatStateChange,
   type AdapterState,
   DEFAULT_VISIBLE_MESSAGE_METADATA,
-  getGooseMessageMeta,
+  getBcaipMessageMeta,
   messagesChange,
 } from './shared';
 
@@ -27,7 +27,7 @@ export function applyContentChunk(
     return [];
   }
 
-  const gooseMeta = getGooseMessageMeta(update);
+  const gooseMeta = getBcaipMessageMeta(update);
   const messageId = update.messageId ?? gooseMeta.messageId;
   const existing = findMessageForChunk(state, role, messageId, gooseMeta.created);
 
@@ -86,7 +86,7 @@ export function applyThoughtChunk(
     return [];
   }
 
-  const gooseMeta = getGooseMessageMeta(update);
+  const gooseMeta = getBcaipMessageMeta(update);
   const messageId = update.messageId ?? gooseMeta.messageId;
   let message = findMessageForChunk(state, 'assistant', messageId, gooseMeta.created);
 

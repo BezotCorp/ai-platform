@@ -44,7 +44,7 @@ describe('ACP providers', () => {
       models: [{ id: 'glm-future', name: 'glm-future', recommended: true }],
     };
     const client = {
-      goose: {
+      bcaip: {
         providersListUnstable: vi
           .fn()
           .mockResolvedValueOnce({ entries: [entry] })
@@ -66,7 +66,7 @@ describe('ACP providers', () => {
     expect(setup[0].metadata.config_keys[0].name).toBe('ZAI_CODING_PLAN_API_KEY');
 
     const refreshed = await acpRefreshProviderDetails('zai_coding_plan');
-    expect(client.goose.providersInventoryRefreshUnstable).toHaveBeenCalledWith({
+    expect(client.bcaip.providersInventoryRefreshUnstable).toHaveBeenCalledWith({
       providerIds: ['zai_coding_plan'],
     });
     expect(refreshed.provider.metadata.known_models.map((model) => model.name)).toEqual([
@@ -150,7 +150,7 @@ describe('ACP providers', () => {
   it('rechecks an uninstalled ACP adapter without trying to start it', async () => {
     const entry = providerEntry({ configured: false, available: false });
     const client = {
-      goose: {
+      bcaip: {
         providersListUnstable: vi.fn().mockResolvedValue({ entries: [entry] }),
         providersReadinessCheckUnstable: vi.fn(),
         providersInventoryRefreshUnstable: vi.fn(),
@@ -164,8 +164,8 @@ describe('ACP providers', () => {
 
     expect(result.provider.is_configured).toBe(false);
     expect(result.connectionChecked).toBe(false);
-    expect(client.goose.providersInventoryRefreshUnstable).not.toHaveBeenCalled();
-    expect(client.goose.providersReadinessCheckUnstable).not.toHaveBeenCalled();
+    expect(client.bcaip.providersInventoryRefreshUnstable).not.toHaveBeenCalled();
+    expect(client.bcaip.providersReadinessCheckUnstable).not.toHaveBeenCalled();
   });
 
   it('keeps compatibility providers in inventory but omits them from setup lists', async () => {
@@ -182,7 +182,7 @@ describe('ACP providers', () => {
       configured: false,
     });
     const client = {
-      goose: {
+      bcaip: {
         providersListUnstable: vi
           .fn()
           .mockImplementation(({ providerIds }: { providerIds?: string[] }) => ({
@@ -218,7 +218,7 @@ describe('ACP providers', () => {
     const agent = providerEntry({ providerId: 'cursor-agent', acp: false });
     const acp = providerEntry({ providerId: 'pi-acp', acp: true });
     const client = {
-      goose: {
+      bcaip: {
         providersListUnstable: vi.fn().mockResolvedValue({ entries: [custom, agent, acp] }),
       },
     };
@@ -239,7 +239,7 @@ describe('ACP providers', () => {
       models: [{ id: 'claude-sonnet', name: 'Claude Sonnet', recommended: true }],
     });
     const client = {
-      goose: {
+      bcaip: {
         providersListUnstable: vi
           .fn()
           .mockResolvedValueOnce({ entries: [installed] })
@@ -273,7 +273,7 @@ describe('ACP providers', () => {
       models: [{ id: 'claude-sonnet', name: 'Claude Sonnet', recommended: true }],
     });
     const client = {
-      goose: {
+      bcaip: {
         providersConfigSaveUnstable: vi.fn().mockResolvedValue({
           status: {},
           refresh: { started: ['claude-acp'], skipped: [] },
@@ -302,11 +302,11 @@ describe('ACP providers', () => {
 
     expect(checked.provider.is_configured).toBe(false);
     expect(checked.provider.metadata.known_models).toEqual([]);
-    expect(client.goose.providersConfigSaveUnstable).toHaveBeenCalledWith({
+    expect(client.bcaip.providersConfigSaveUnstable).toHaveBeenCalledWith({
       providerId: 'claude-acp',
       fields: [],
     });
-    expect(client.goose.providersListUnstable).toHaveBeenCalledWith({
+    expect(client.bcaip.providersListUnstable).toHaveBeenCalledWith({
       providerIds: ['claude-acp'],
     });
     expect(enabled.is_configured).toBe(true);
@@ -318,7 +318,7 @@ describe('ACP providers', () => {
   it('surfaces an ACP authentication failure without using model refresh as readiness', async () => {
     const installed = providerEntry({ configured: true });
     const client = {
-      goose: {
+      bcaip: {
         providersListUnstable: vi.fn().mockResolvedValue({ entries: [installed] }),
         providersReadinessCheckUnstable: vi.fn().mockResolvedValue({
           providerId: 'claude-acp',
@@ -336,14 +336,14 @@ describe('ACP providers', () => {
 
     expect(result.connectionChecked).toBe(true);
     expect(result.readinessError).toBe('OAuth session expired');
-    expect(client.goose.providersInventoryRefreshUnstable).not.toHaveBeenCalled();
+    expect(client.bcaip.providersInventoryRefreshUnstable).not.toHaveBeenCalled();
   });
 
   it('stops polling provider inventory when the setup screen closes', async () => {
     const installed = providerEntry({ configured: true });
     const refreshing = providerEntry({ configured: true, refreshing: true });
     const client = {
-      goose: {
+      bcaip: {
         providersListUnstable: vi
           .fn()
           .mockResolvedValueOnce({ entries: [installed] })
@@ -364,11 +364,11 @@ describe('ACP providers', () => {
     const controller = new AbortController();
 
     const refresh = acpRefreshProviderDetails('claude-acp', controller.signal);
-    await vi.waitFor(() => expect(client.goose.providersListUnstable).toHaveBeenCalledTimes(2));
+    await vi.waitFor(() => expect(client.bcaip.providersListUnstable).toHaveBeenCalledTimes(2));
     controller.abort();
 
     await expect(refresh).rejects.toMatchObject({ name: 'AbortError' });
-    expect(client.goose.providersListUnstable).toHaveBeenCalledTimes(2);
+    expect(client.bcaip.providersListUnstable).toHaveBeenCalledTimes(2);
   });
 });
 
@@ -402,7 +402,7 @@ describe('ACP provider runtime validation', () => {
 
   it('rejects an unsupported provider type at runtime', async () => {
     const client = {
-      goose: {
+      bcaip: {
         providersListUnstable: vi.fn().mockResolvedValue({
           entries: [
             providerEntry({
@@ -424,7 +424,7 @@ describe('ACP provider runtime validation', () => {
 
   it('returns a supported thinking effort value', async () => {
     const client = {
-      goose: {
+      bcaip: {
         preferencesReadUnstable: vi.fn().mockResolvedValue({
           values: [
             {
@@ -445,7 +445,7 @@ describe('ACP provider runtime validation', () => {
 
   it('returns null for an unsupported thinking effort value', async () => {
     const client = {
-      goose: {
+      bcaip: {
         preferencesReadUnstable: vi.fn().mockResolvedValue({
           values: [
             {

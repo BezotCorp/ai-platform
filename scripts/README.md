@@ -42,7 +42,7 @@ The script:
 1. Parses the provider:model pairs and benchmark suites
 2. Determines whether to use the debug or release binary
 3. For each provider:model pair:
-   - Sets the `GOOSE_PROVIDER` and `GOOSE_MODEL` environment variables
+   - Sets the `BCAIP_PROVIDER` and `BCAIP_MODEL` environment variables
    - Runs the benchmark with the specified suites
    - Analyzes the results for failures
 4. Generates a summary of all benchmark runs

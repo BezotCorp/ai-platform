@@ -1,11 +1,11 @@
-use super::completion::GooseCompleter;
+use super::completion::BcaipCompleter;
 use super::paste::{
     PasteAwareEnterHandler, PasteCaptureHandler, PasteState, read_paste_aware_input,
 };
 use super::{CompletionCache, HintStatus};
 use anyhow::Result;
-use bcaip_provider_types::goose_mode::GooseMode;
-use goose::config::Config;
+use bcaip::config::Config;
+use bcaip_provider_types::bcaip_mode::BcaipMode;
 use rustyline::Editor;
 use shlex;
 use std::{collections::HashMap, sync::Arc};
@@ -21,7 +21,7 @@ pub enum InputResult {
     Retry,
     ListPrompts(Option<String>),
     PromptCommand(PromptCommandOptions),
-    GooseMode(String),
+    BcaipMode(String),
     Model(ModelCommandOptions),
     Clear,
     New,
@@ -85,13 +85,13 @@ impl rustyline::ConditionalEventHandler for CtrlCHandler {
 }
 
 /// The Ctrl-modified character that inserts a newline instead of submitting the
-/// prompt. Configurable via `GOOSE_CLI_NEWLINE_KEY`, defaulting to `j` (Ctrl+J).
+/// prompt. Configurable via `BCAIP_CLI_NEWLINE_KEY`, defaulting to `j` (Ctrl+J).
 /// Characters already bound to other actions are rejected: `m` (Ctrl+M is Enter)
 /// and `c` (Ctrl+C interrupts), both of which would otherwise shadow the paste
 /// and interrupt handlers.
 pub fn get_newline_key() -> char {
     Config::global()
-        .get_param::<String>("GOOSE_CLI_NEWLINE_KEY")
+        .get_param::<String>("BCAIP_CLI_NEWLINE_KEY")
         .ok()
         .and_then(|s| s.chars().next())
         .map(|c| c.to_ascii_lowercase())
@@ -101,8 +101,8 @@ pub fn get_newline_key() -> char {
 
 /// Determine whether the editor should be used for every prompt.
 ///
-/// When `goose_prompt_editor` is configured, defaults to `true` (backward compat).
-/// Users can override by explicitly setting `goose_prompt_editor_always` to `false`.
+/// When `bcaip_prompt_editor` is configured, defaults to `true`.
+/// Users can override by explicitly setting `bcaip_prompt_editor_always` to `false`.
 /// When no editor is configured, defaults to `false`.
 fn should_use_editor_always(
     prompt_editor: Option<&str>,
@@ -113,16 +113,16 @@ fn should_use_editor_always(
 }
 
 pub fn get_input(
-    editor: &mut Editor<GooseCompleter, rustyline::history::DefaultHistory>,
+    editor: &mut Editor<BcaipCompleter, rustyline::history::DefaultHistory>,
     conversation_messages: Option<&Vec<String>>,
 ) -> Result<InputResult> {
     let config = Config::global();
-    let prompt_editor = config.get_goose_prompt_editor().ok().flatten();
-    let editor_always_override = config.get_goose_prompt_editor_always().ok().flatten();
+    let prompt_editor = config.get_bcaip_prompt_editor().ok().flatten();
+    let editor_always_override = config.get_bcaip_prompt_editor_always().ok().flatten();
     let editor_always = should_use_editor_always(prompt_editor.as_deref(), editor_always_override);
 
     if editor_always
-        && let Ok(Some(editor_cmd)) = config.get_goose_prompt_editor()
+        && let Ok(Some(editor_cmd)) = config.get_bcaip_prompt_editor()
         && !editor_cmd.is_empty()
     {
         let messages = extract_recent_messages(conversation_messages);
@@ -287,7 +287,7 @@ fn handle_slash_command(input: &str) -> Option<InputResult> {
         s if s.starts_with(CMD_BUILTIN) => Some(InputResult::AddBuiltin(
             s.get(CMD_BUILTIN.len()..).unwrap_or("").to_string(),
         )),
-        s if s.starts_with(CMD_MODE) => Some(InputResult::GooseMode(
+        s if s.starts_with(CMD_MODE) => Some(InputResult::BcaipMode(
             s.get(CMD_MODE.len()..).unwrap_or("").to_string(),
         )),
         s if s == CMD_MODEL => Some(InputResult::Model(ModelCommandOptions::default())),
@@ -407,7 +407,7 @@ fn parse_prompt_command(args: &str) -> Option<InputResult> {
 }
 
 fn help_text() -> String {
-    let modes = GooseMode::VARIANTS.join(", ");
+    let modes = BcaipMode::VARIANTS.join(", ");
     let newline_key = get_newline_key().to_ascii_uppercase();
     let additional_builtin_help = additional_builtin_help();
     let additional_builtin_help = if additional_builtin_help.is_empty() {
@@ -426,13 +426,13 @@ fn help_text() -> String {
 /builtin <names> - Add builtin extensions by name (comma-separated)
 /prompts [--extension <name>] - List all available prompts, optionally filtered by extension
 /prompt <n> [--info] [key=value...] - Get prompt info or execute a prompt
-/mode <name> - Set the goose mode to use ({modes})
+/mode <name> - Set the BCAIP mode to use ({modes})
 /model [name] - Show the current model, or switch models for this session while keeping the same provider
 /model --provider <name> [model] - Switch to a different provider (optionally specifying a model)
 /compact - Compact the current conversation to reduce context length while preserving key information.
 {additional_builtin_help}/status - Show session status: model, provider, mode, and token usage.
 /edit [text] - Open your prompt editor to compose a message. Optionally pre-fill with text.
-               Uses $GOOSE_PROMPT_EDITOR, $VISUAL, or $EDITOR (in that order).
+               Uses $BCAIP_PROMPT_EDITOR, $VISUAL, or $EDITOR (in that order).
 /skills - List available skills or enable skills by name (usage: /skills [<name>...])
 /? or /help - Display this help message
 /clear - Clears the current chat history
@@ -440,10 +440,10 @@ fn help_text() -> String {
 
 Navigation:
 Enter - Send message
-Ctrl+{newline_key} - Add a newline (configurable via GOOSE_CLI_NEWLINE_KEY)
+Ctrl+{newline_key} - Add a newline (configurable via BCAIP_CLI_NEWLINE_KEY)
 Ctrl+C - Clear current line if text is entered, otherwise exit the session
 Up/Down arrows - Navigate through command history
-GOOSE_CLI_BELL=true - Ring the terminal bell when goose finishes a turn or needs approval"
+BCAIP_CLI_BELL=true - Ring the terminal bell when BCAIP finishes a turn or needs approval"
     )
 }
 
@@ -451,7 +451,7 @@ fn additional_builtin_help() -> String {
     const DOCUMENTED_BUILTINS: &[&str] =
         &["prompts", "prompt", "compact", "clear", "skills", "status"];
 
-    goose::agents::execute_commands::list_commands()
+    bcaip::agents::execute_commands::list_commands()
         .iter()
         .filter(|command| !DOCUMENTED_BUILTINS.contains(&command.name))
         .map(|command| format!("/{} - {}", command.name, command.description))
@@ -481,9 +481,9 @@ fn print_editor_help() {
   /edit opens your configured editor for composing prompts.
   Use '/edit some text' to pre-fill the editor with initial text.
   Previous conversation is included as markdown headings for context.
-  Configure editor: goose configure set goose_prompt_editor \"vim\"
-  Falls back to $VISUAL or $EDITOR if goose_prompt_editor is not set.
-  When goose_prompt_editor is set, the editor is used for every prompt by default.
-  To use inline prompts with on-demand /edit: goose configure set goose_prompt_editor_always false"
+  Configure editor: bcaip configure set bcaip_prompt_editor \"vim\"
+  Falls back to $VISUAL or $EDITOR if bcaip_prompt_editor is not set.
+  When bcaip_prompt_editor is set, the editor is used for every prompt by default.
+  To use inline prompts with on-demand /edit: bcaip configure set bcaip_prompt_editor_always false"
     );
 }

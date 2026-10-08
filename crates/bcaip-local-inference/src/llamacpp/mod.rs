@@ -5,27 +5,23 @@ mod inference_emulated_tools;
 mod inference_engine;
 mod inference_native_tools;
 mod llama_cpp_backend;
+mod loaded_model;
 mod python_separators;
+mod stop_suffix_trimmer;
 
 pub use llama_cpp_backend::LlamaCppBackend;
+pub(crate) use loaded_model::LoadedModel;
+pub(crate) use stop_suffix_trimmer::StopSuffixTrimmer;
 
 use anyhow::Result;
 use llama_cpp_2::model::{LlamaChatTemplate, LlamaModel};
-use llama_cpp_2::{LlamaBackendDeviceType, LogOptions, list_llama_ggml_backend_devices};
-use llama_cpp_2::{llama_backend::LlamaBackend, model::params::LlamaModelParams};
-use std::{ffi::CStr, path::PathBuf};
+use llama_cpp_2::{LlamaBackendDeviceType, list_llama_ggml_backend_devices};
+use std::ffi::CStr;
 
-use self::inference_emulated_tools::{
-    build_emulator_tool_description, generate_with_emulated_tools, load_tiny_model_prompt,
-};
-use self::inference_engine::{GenerationContext, LoadedChatTemplates, LoadedModel};
-use self::inference_native_tools::generate_with_native_tools;
+use self::inference_engine::LoadedChatTemplates;
 use self::{chat_template::apply_chat_template, chat_template_params::ChatTemplateParams};
-use crate::backend::{BackendLoadedModel, LocalGenerationRequest, LocalInferenceBackend};
 use crate::model::{ChatTemplate, ModelSettings, ToolCallingMode};
-use crate::{ResolvedModelPaths, build_openai_messages_json, build_openai_text_messages_json};
-use crate::{multimodal::ExtractedImage, tool_parsing::compact_tools_json};
-use bcaip_provider_types::{errors::ProviderError, formats::format_tools};
+use bcaip_provider_types::errors::ProviderError;
 pub(crate) const LLAMACPP_BACKEND_ID: &str = "llamacpp";
 
 const CODE_EXECUTION_TOOL: &str = "code_execution__execute_typescript";
@@ -173,7 +169,7 @@ fn missing_chat_template_error(
 
     ProviderError::ExecutionError(format!(
         "Model {model_id} does not contain GGUF tokenizer.chat_template metadata required for {context}.{architecture}{tool_use_note} \
-         Goose cannot safely infer the correct prompt format from architecture alone. Select a \
+         BCAIP cannot safely infer the correct prompt format from architecture alone. Select a \
          llama.cpp built-in chat template name, configure a custom inline chat template containing \
          the full Jinja template source, or use a GGUF that includes tokenizer.chat_template metadata."
     ))

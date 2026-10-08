@@ -2,7 +2,7 @@ import type { SchedulesViewProps } from './schedulesViewProps';
 
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router';
-import type { ScheduledJobDto } from '@aaif/goose-acp-client';
+import type { ScheduledJobDto } from '@bezotcorp/bcaip-acp-client';
 import {
   acpListSchedules,
   acpCreateSchedule,

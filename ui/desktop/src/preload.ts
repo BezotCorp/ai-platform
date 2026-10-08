@@ -165,7 +165,7 @@ const electronAPI: ElectronApi = {
     return ipcRenderer.invoke('open-external', url);
   },
   getVersion: (): string => {
-    return config.GOOSE_VERSION || ipcRenderer.sendSync('get-app-version') || '';
+    return config.BCAIP_VERSION || ipcRenderer.sendSync('get-app-version') || '';
   },
   checkForUpdates: (): Promise<{ updateInfo: unknown; error: string | null }> => {
     return ipcRenderer.invoke('check-for-updates');
@@ -211,15 +211,15 @@ const electronAPI: ElectronApi = {
 
 function getAppLocale(): unknown {
   try {
-    return ipcRenderer.sendSync('get-app-locale') ?? config.GOOSE_LOCALE;
+    return ipcRenderer.sendSync('get-app-locale') ?? config.BCAIP_LOCALE;
   } catch {
-    return config.GOOSE_LOCALE;
+    return config.BCAIP_LOCALE;
   }
 }
 
 const appConfigAPI: AppConfigApi = {
-  get: (key: string) => (key === 'GOOSE_LOCALE' ? getAppLocale() : config[key]),
-  getAll: () => ({ ...config, GOOSE_LOCALE: getAppLocale() }),
+  get: (key: string) => (key === 'BCAIP_LOCALE' ? getAppLocale() : config[key]),
+  getAll: () => ({ ...config, BCAIP_LOCALE: getAppLocale() }),
 };
 // Expose the APIs
 contextBridge.exposeInMainWorld('electron', electronAPI);

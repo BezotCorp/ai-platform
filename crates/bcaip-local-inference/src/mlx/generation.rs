@@ -1,13 +1,13 @@
-use super::{
-    mlx_error::mlx_error, mlx_generation::MlxGeneration, mlx_stream_emitter::MlxStreamEmitter,
-    sampling::prng_key,
-};
+use crate::mlx::mlx_error::mlx_error;
+use crate::mlx::mlx_generation::MlxGeneration;
+use crate::mlx::mlx_stream_emitter::MlxStreamEmitter;
 use crate::model::ModelSettings;
-use goose_provider_types::errors::ProviderError;
+use bcaip_provider_types::errors::ProviderError;
 use safemlx::transforms::eval;
 use safemlx::{Array, Stream};
 use safemlx_lm::models::LoadedModel;
 use safemlx_lm_utils::tokenizer::Tokenizer;
+
 pub(crate) fn generate_single_model(
     model: &mut LoadedModel,
     tokenizer: &Tokenizer,

@@ -2,7 +2,7 @@ import Link from "~/components/Link";
 import { IconDownload } from "~/components/icons/download";
 import { useState, useEffect } from "react";
 
-const FALLBACK_URL = "https://github.com/aaif-goose/goose/releases/latest";
+const FALLBACK_URL = "https://github.com/BezotCorp/ai-platform/releases/latest";
 
 const isStandardLinuxAsset = (asset) => !asset.name.includes('-vulkan');
 
@@ -38,8 +38,8 @@ const LinuxDesktopInstallButtons = () => {
       try {
         const arch = await detectLinuxArch();
         const tokens = ARCH_ASSET_TOKENS[arch];
-        const cacheKey = `goose-release-cache-${arch}`;
-        const cacheTimeKey = `goose-release-cache-time-${arch}`;
+        const cacheKey = `bcaip-release-cache-${arch}`;
+        const cacheTimeKey = `bcaip-release-cache-time-${arch}`;
 
         // Check cache first (1 hour expiry)
         const cached = localStorage.getItem(cacheKey);
@@ -53,7 +53,7 @@ const LinuxDesktopInstallButtons = () => {
         }
 
         // Fetch latest release from GitHub API
-        const response = await fetch('https://api.github.com/repos/aaif-goose/goose/releases/latest');
+        const response = await fetch('https://api.github.com/repos/BezotCorp/ai-platform/releases/latest');
         if (!response.ok) throw new Error('API request failed');
 
         const release = await response.json();
@@ -91,7 +91,7 @@ const LinuxDesktopInstallButtons = () => {
 
   return (
     <div>
-      <p>Click one of the buttons below to download goose Desktop for Linux:</p>
+      <p>Click one of the buttons below to download BCAIP Desktop for Linux:</p>
       <div className="pill-button" style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
         <Link
           className="button button--primary button--lg"

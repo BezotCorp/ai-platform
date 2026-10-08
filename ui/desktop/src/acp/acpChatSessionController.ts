@@ -1,4 +1,4 @@
-import type { GooseExtension } from '@aaif/goose-acp-client';
+import type { BcaipExtension } from '@bezotcorp/bcaip-acp-client';
 import type { Session } from '../types/session';
 import type { Message } from '../types/message';
 import type { ImageData } from '../types/imageData';
@@ -9,7 +9,7 @@ import type { AcpSubmitMessageOptions } from './acpSubmitMessageOptions';
 export interface AcpChatSessionController {
   createSession(
     cwd: string,
-    gooseExtensions: GooseExtension[] | undefined,
+    bcaipExtensions: BcaipExtension[] | undefined,
     recipe?: AcpRecipeOptions
   ): Promise<Session>;
   loadSession(sessionId: string, options?: AcpLoadSessionOptions): Promise<void>;

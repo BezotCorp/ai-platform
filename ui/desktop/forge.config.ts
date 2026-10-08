@@ -2,7 +2,7 @@ import { FusesPlugin } from '@electron-forge/plugin-fuses';
 import { FuseV1Options, FuseVersion } from '@electron/fuses';
 import { resolve } from 'node:path';
 
-const isLinuxVulkanBuild = process.env.GOOSE_DESKTOP_LINUX_VARIANT === 'vulkan';
+const isLinuxVulkanBuild = process.env.BCAIP_DESKTOP_LINUX_VARIANT === 'vulkan';
 
 let cfg = {
   asar: true,
@@ -35,9 +35,9 @@ let cfg = {
       },
     ],
     // Usage descriptions for macOS TCC (Transparency, Consent, and Control)
-    NSMicrophoneUsageDescription: 'Goose needs access to your microphone for voice dictation.',
+    NSMicrophoneUsageDescription: 'BCAIP needs access to your microphone for voice dictation.',
     NSAppleEventsUsageDescription:
-      'Goose needs access to send Apple Events to control other apps on your behalf.',
+      'BCAIP needs access to send Apple Events to control other apps on your behalf.',
   },
 };
 
@@ -64,8 +64,8 @@ export default {
       name: '@electron-forge/publisher-github',
       config: {
         repository: {
-          owner: process.env.GITHUB_OWNER || 'aaif-goose',
-          name: process.env.GITHUB_REPO || 'goose',
+          owner: process.env.GITHUB_OWNER || 'BezotCorp',
+          name: process.env.GITHUB_REPO || 'ai-platform',
         },
         prerelease: false,
         draft: true,
@@ -86,10 +86,10 @@ export default {
     {
       name: '@electron-forge/maker-deb',
       config: {
-        name: 'Goose',
-        bin: 'Goose',
+        name: 'BCAIP',
+        bin: 'BCAIP',
         maintainer: 'AAIF (Agentic AI Foundation)',
-        homepage: 'https://goose-docs.ai/',
+        homepage: 'https://github.com/BezotCorp/ai-platform',
         categories: ['Development'],
         desktopTemplate: './forge.deb.desktop',
         options: {
@@ -102,10 +102,10 @@ export default {
     {
       name: '@electron-forge/maker-rpm',
       config: {
-        name: 'Goose',
-        bin: 'Goose',
+        name: 'BCAIP',
+        bin: 'BCAIP',
         maintainer: 'AAIF (Agentic AI Foundation)',
-        homepage: 'https://goose-docs.ai/',
+        homepage: 'https://github.com/BezotCorp/ai-platform',
         categories: ['Development'],
         desktopTemplate: './forge.rpm.desktop',
         options: {
@@ -126,10 +126,10 @@ export default {
             scalable: 'src/images/icon.svg',
             '512x512': 'src/images/icon-512.png',
           },
-          homepage: 'https://goose-docs.ai/',
+          homepage: 'https://github.com/BezotCorp/ai-platform',
           runtimeVersion: '25.08',
           baseVersion: '25.08',
-          bin: 'Goose',
+          bin: 'BCAIP',
           modules: [
             {
               name: 'libbz2-shim',

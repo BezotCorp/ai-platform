@@ -1,3 +1,3 @@
-import type { DictationDownloadProgress } from '@aaif/goose-acp-client';
+import type { DictationDownloadProgress } from '@bezotcorp/bcaip-acp-client';
 
 export type LocalDictationDownloadProgress = DictationDownloadProgress;

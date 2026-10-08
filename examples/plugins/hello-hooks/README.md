@@ -41,7 +41,7 @@ tail ~/.agents/plugins/hello-hooks/last-event.log
 ```
 
 To turn the plugin off, add it to `disabledPlugins` in
-`~/.config/goose/settings.json`:
+`~/.config/bcaip/settings.json`:
 
 ```json
 { "disabledPlugins": ["hello-hooks"] }

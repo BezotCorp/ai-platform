@@ -19,8 +19,8 @@ vi.mock('../acp/chatSessionController', () => ({
   acpChatSessionController: { createSession: mocks.controllerCreateSession },
 }));
 vi.mock('../acp/extensions', () => ({
-  getConfiguredGooseExtensions: vi.fn(async () => []),
-  gooseExtensionName: vi.fn(),
+  getConfiguredBcaipExtensions: vi.fn(async () => []),
+  bcaipExtensionName: vi.fn(),
 }));
 vi.mock('../acp/capabilities', () => ({
   getAcpFeatureCapabilities: vi.fn(async () => ({ recipeParameterScopes: true })),

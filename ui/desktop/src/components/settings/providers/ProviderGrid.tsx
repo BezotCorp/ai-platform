@@ -2,7 +2,7 @@ import React, { memo, useMemo, useCallback, useState } from 'react';
 import { ProviderCard } from './subcomponents/ProviderCard';
 import CardContainer from './subcomponents/CardContainer';
 import ProviderConfigurationModal from './modal/ProviderConfigurationModal';
-import type { CustomProviderConfigDto } from '@aaif/goose-acp-client';
+import type { CustomProviderConfigDto } from '@bezotcorp/bcaip-acp-client';
 import type { UpdateCustomProviderRequest } from '../../../types/updateCustomProviderRequest';
 import type { ProviderDetails } from '../../../types/providerDetails';
 import {

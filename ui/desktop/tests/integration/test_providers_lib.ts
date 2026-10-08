@@ -140,14 +140,14 @@ function getProviders(): ProviderConfig[] {
       models: ['gpt-4.1'],
       available: () =>
         hasEnv('GITHUB_COPILOT_TOKEN') ||
-        hasFile(path.join(os.homedir(), '.config/goose/github_copilot_token.json')),
+        hasFile(path.join(os.homedir(), '.config/bcaip/github_copilot_token.json')),
     },
     {
       provider: 'chatgpt_codex',
       models: ['gpt-5.4'],
       available: () =>
         hasEnv('CHATGPT_CODEX_TOKEN') ||
-        hasFile(path.join(os.homedir(), '.config/goose/chatgpt_codex/tokens.json')),
+        hasFile(path.join(os.homedir(), '.config/bcaip/chatgpt_codex/tokens.json')),
     },
     {
       provider: 'claude-code',
@@ -212,19 +212,19 @@ function shouldSkipProvider(provider: string): boolean {
 }
 
 // ---------------------------------------------------------------------------
-// Build goose binary
+// Build BCAIP binary
 // ---------------------------------------------------------------------------
 
 export function buildGoose(): string {
   if (!process.env.SKIP_BUILD) {
-    console.error('Building goose...');
-    execSync('cargo build --bin goose', { stdio: 'inherit' });
+    console.error('Building BCAIP...');
+    execSync('cargo build --bin bcaip', { stdio: 'inherit' });
     console.error('');
   } else {
     console.error('Skipping build (SKIP_BUILD is set)...');
     console.error('');
   }
-  return path.resolve(process.cwd(), '..', '..', 'target/debug/goose');
+  return path.resolve(process.cwd(), '..', '..', 'target/debug/bcaip');
 }
 
 // ---------------------------------------------------------------------------
@@ -357,7 +357,7 @@ export function providerTest(cases: TestCase[]) {
 }
 
 // ---------------------------------------------------------------------------
-// Utility: run goose binary and capture output
+// Utility: run BCAIP binary and capture output
 // ---------------------------------------------------------------------------
 
 export function runGoose(
@@ -375,7 +375,7 @@ export function runGoose(
       ['run', '--text', prompt, '--with-builtin', builtins],
       {
         cwd,
-        env: { ...process.env, ...env, GOOSE_MODE: 'auto' },
+        env: { ...process.env, ...env, BCAIP_MODE: 'auto' },
         stdio: ['ignore', 'pipe', 'pipe'],
       }
     );
@@ -387,7 +387,7 @@ export function runGoose(
       if (!settled) {
         settled = true;
         child.kill('SIGKILL');
-        reject(new Error(`goose timed out after ${timeoutMs}ms\n\nPartial output:\n${output}`));
+        reject(new Error(`BCAIP timed out after ${timeoutMs}ms\n\nPartial output:\n${output}`));
       }
     }, timeoutMs);
 

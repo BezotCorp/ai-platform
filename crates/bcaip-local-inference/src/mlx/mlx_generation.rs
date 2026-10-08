@@ -1,4 +1,4 @@
-use goose_provider_types::conversations::DraftStats;
+use bcaip_provider_types::conversations::DraftStats;
 pub(crate) struct MlxGeneration {
     pub(crate) generated_ids: Vec<u32>,
     pub(crate) generated_text: String,

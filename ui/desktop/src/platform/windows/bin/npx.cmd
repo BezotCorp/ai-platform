@@ -1,15 +1,15 @@
 @ECHO OFF
 SETLOCAL EnableDelayedExpansion
 
-if not defined GOOSE_NODE_DIR (
-    SET "GOOSE_NODE_DIR=%LOCALAPPDATA%\Goose\node"
+if not defined BCAIP_NODE_DIR (
+    SET "BCAIP_NODE_DIR=%LOCALAPPDATA%\Goose\node"
 )
 SET "NODE_VERSION=22.14.0"
 
 REM === Check for previously downloaded portable Node.js (matching version) ===
-if exist "%GOOSE_NODE_DIR%\node-v%NODE_VERSION%.installed" (
-    SET "PATH=%GOOSE_NODE_DIR%;!PATH!"
-    "%GOOSE_NODE_DIR%\npx.cmd" %*
+if exist "%BCAIP_NODE_DIR%\node-v%NODE_VERSION%.installed" (
+    SET "PATH=%BCAIP_NODE_DIR%;!PATH!"
+    "%BCAIP_NODE_DIR%\npx.cmd" %*
     exit /b !errorlevel!
 )
 
@@ -27,19 +27,19 @@ if errorlevel 1 (
 )
 
 REM Clean previous version and install to Goose directory
-rmdir /s /q "%GOOSE_NODE_DIR%" >nul 2>&1
-mkdir "%GOOSE_NODE_DIR%" >nul 2>&1
-xcopy /s /e /q /y "%NODE_EXTRACT%\node-v%NODE_VERSION%-win-x64\*" "%GOOSE_NODE_DIR%\" >nul 2>&1
+rmdir /s /q "%BCAIP_NODE_DIR%" >nul 2>&1
+mkdir "%BCAIP_NODE_DIR%" >nul 2>&1
+xcopy /s /e /q /y "%NODE_EXTRACT%\node-v%NODE_VERSION%-win-x64\*" "%BCAIP_NODE_DIR%\" >nul 2>&1
 
 REM Clean up
 del "%NODE_ZIP%" >nul 2>&1
 rmdir /s /q "%NODE_EXTRACT%" >nul 2>&1
 
-if exist "%GOOSE_NODE_DIR%\npx.cmd" (
-    echo.>"%GOOSE_NODE_DIR%\node-v%NODE_VERSION%.installed"
-    SET "PATH=%GOOSE_NODE_DIR%;!PATH!"
+if exist "%BCAIP_NODE_DIR%\npx.cmd" (
+    echo.>"%BCAIP_NODE_DIR%\node-v%NODE_VERSION%.installed"
+    SET "PATH=%BCAIP_NODE_DIR%;!PATH!"
     echo [Goose] Node.js v%NODE_VERSION% ready. 1>&2
-    "%GOOSE_NODE_DIR%\npx.cmd" %*
+    "%BCAIP_NODE_DIR%\npx.cmd" %*
     exit /b !errorlevel!
 )
 

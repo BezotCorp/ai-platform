@@ -1,7 +1,7 @@
 .vite/
 out
 src/bin/goosed
-src/bin/goose-npm/
+src/bin/bcaip-npm/
 /src/bin/*.exe
 /src/bin/*.cmd
 /src/platform/windows/bin/*.dll

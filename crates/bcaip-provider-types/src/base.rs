@@ -1,9 +1,9 @@
 use crate::{
     Modality,
+    bcaip_mode::BcaipMode,
     canonical::{CanonicalModelRegistry, ProviderSetupMetadata, map_to_canonical_model},
     conversations::{Message, MessageContentBlock, ProviderUsage, Usage},
     errors::ProviderError,
-    goose_mode::GooseMode,
     maybe_send::{MaybeSend, MaybeSync},
     model::ModelConfig,
     model_mapping::recommended_models_from_registry,
@@ -654,7 +654,7 @@ pub trait Provider: MaybeSend + MaybeSync {
     }
 
     /// Whether the provider manages its own conversation context (e.g. CLI
-    /// wrappers like Claude Code or Gemini CLI). When true, goose-side
+    /// wrappers like Claude Code or Gemini CLI). When true, BCAIP-side
     /// context management such as tool-pair summarization is skipped because
     /// the provider's internal state is the source of truth.
     fn manages_own_context(&self) -> bool {
@@ -692,7 +692,7 @@ pub trait Provider: MaybeSend + MaybeSync {
         ))
     }
 
-    async fn update_mode(&self, _session_id: &str, _mode: GooseMode) -> Result<(), ProviderError> {
+    async fn update_mode(&self, _session_id: &str, _mode: BcaipMode) -> Result<(), ProviderError> {
         Ok(())
     }
 

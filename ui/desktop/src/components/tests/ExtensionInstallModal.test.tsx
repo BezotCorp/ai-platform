@@ -50,7 +50,7 @@ describe('ExtensionInstallModal', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockElectron.getConfig.mockReturnValue({
-      GOOSE_ALLOWLIST_WARNING: false,
+      BCAIP_ALLOWLIST_WARNING: false,
     });
   });
 
@@ -93,7 +93,7 @@ describe('ExtensionInstallModal', () => {
 
     it('should handle warning mode', async () => {
       mockElectron.getConfig.mockReturnValue({
-        GOOSE_ALLOWLIST_WARNING: true,
+        BCAIP_ALLOWLIST_WARNING: true,
       });
       mockElectron.getAllowedExtensions.mockResolvedValue(['uvx allowed-package']);
 

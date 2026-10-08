@@ -20,7 +20,7 @@ show_usage() {
   echo "  -h, --help               Show this help message"
   echo ""
   echo "Environment:"
-  echo "  GOOSE_BIN                Optional goose binary path"
+  echo "  BCAIP_BIN                Optional goose binary path"
   echo "  SKIP_BUILD               Skip cargo build when set"
 }
 
@@ -126,15 +126,15 @@ fi
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
-if [[ -z "${SKIP_BUILD:-}" && -z "${GOOSE_BIN:-}" ]]; then
+if [[ -z "${SKIP_BUILD:-}" && -z "${BCAIP_BIN:-}" ]]; then
   echo "Building goose..."
   (cd "$REPO_ROOT" && cargo build -p goose-cli --features local-inference --bin goose)
   echo ""
 fi
 
-GOOSE_BIN="${GOOSE_BIN:-$REPO_ROOT/target/debug/goose}"
-if [[ ! -x "$GOOSE_BIN" ]]; then
-  echo "Error: goose binary not found or not executable: $GOOSE_BIN"
+BCAIP_BIN="${BCAIP_BIN:-$REPO_ROOT/target/debug/goose}"
+if [[ ! -x "$BCAIP_BIN" ]]; then
+  echo "Error: goose binary not found or not executable: $BCAIP_BIN"
   exit 1
 fi
 
@@ -142,7 +142,7 @@ mkdir -p "$OUTPUT_DIR"
 
 EXISTING_MODELS_FILE="$OUTPUT_DIR/existing-models.txt"
 RESULTS_FILE="$OUTPUT_DIR/results.tsv"
-"$GOOSE_BIN" lm list | awk 'NR > 2 && $4 == "✓" { print $1 }' >"$EXISTING_MODELS_FILE"
+"$BCAIP_BIN" lm list | awk 'NR > 2 && $4 == "✓" { print $1 }' >"$EXISTING_MODELS_FILE"
 printf "status\tmodel_id\tdetail\n" >"$RESULTS_FILE"
 
 TEMP_HF_CACHE_ROOT=""
@@ -153,7 +153,7 @@ cleanup_temp_models() {
   local cleanup_failed=false
 
   for model_id in "${TEMP_MODELS[@]}"; do
-    if ! "$GOOSE_BIN" lm delete "$model_id" >/dev/null 2>&1; then
+    if ! "$BCAIP_BIN" lm delete "$model_id" >/dev/null 2>&1; then
       cleanup_failed=true
     fi
   done
@@ -219,7 +219,7 @@ else
 
   SEARCH_JSON="$OUTPUT_DIR/search.json"
   echo "Finding recommended local models..."
-  "$GOOSE_BIN" "${SEARCH_ARGS[@]}" >"$SEARCH_JSON"
+  "$BCAIP_BIN" "${SEARCH_ARGS[@]}" >"$SEARCH_JSON"
 
   while IFS= read -r model_row; do
     MODELS+=("$model_row")
@@ -286,9 +286,9 @@ download_once() {
   if [[ -n "$cache_root" ]]; then
     HF_HUB_CACHE="$cache_root/hub" \
       HF_XET_CACHE="$cache_root/xet" \
-      "$GOOSE_BIN" lm download "$download_id"
+      "$BCAIP_BIN" lm download "$download_id"
   else
-    "$GOOSE_BIN" lm download "$download_id"
+    "$BCAIP_BIN" lm download "$download_id"
   fi
 }
 
@@ -327,8 +327,8 @@ run_model() {
   local log_file="$2"
 
   if [[ "$RUN_TIMEOUT" -eq 0 ]]; then
-    GOOSE_MODE=auto GOOSE_PROVIDER=local GOOSE_MODEL="$model_id" \
-      "$GOOSE_BIN" run --no-profile --text "$INSTRUCTION" 2>&1 | tee "$log_file"
+    BCAIP_MODE=auto BCAIP_PROVIDER=local BCAIP_MODEL="$model_id" \
+      "$BCAIP_BIN" run --no-profile --text "$INSTRUCTION" 2>&1 | tee "$log_file"
     return "${PIPESTATUS[0]}"
   fi
 
@@ -353,8 +353,8 @@ run_model() {
     exit($status & 127 ? 128 + ($status & 127) : $status >> 8);
   ' \
     "$RUN_TIMEOUT" \
-    env GOOSE_MODE=auto GOOSE_PROVIDER=local GOOSE_MODEL="$model_id" \
-    "$GOOSE_BIN" run --no-profile --text "$INSTRUCTION" 2>&1 | tee "$log_file"
+    env BCAIP_MODE=auto BCAIP_PROVIDER=local BCAIP_MODEL="$model_id" \
+    "$BCAIP_BIN" run --no-profile --text "$INSTRUCTION" 2>&1 | tee "$log_file"
   return "${PIPESTATUS[0]}"
 }
 
@@ -435,7 +435,7 @@ for row in "${MODELS[@]}"; do
   fi
 
   if [[ "$KEEP_DOWNLOADS" = false && "$downloaded" = true && "$existed_before" = false ]]; then
-    if "$GOOSE_BIN" lm delete "$model_id" 2>&1 | tee "$delete_log"; then
+    if "$BCAIP_BIN" lm delete "$model_id" 2>&1 | tee "$delete_log"; then
       untrack_temp_model "$model_id"
       echo "Unregistered $model_id; its temporary cache will be removed at exit"
     else

@@ -33,7 +33,7 @@ impl TutorialServer {
         let available_tutorials = Self::get_available_tutorials();
 
         let instructions = formatdoc! {r#"
-            Because the tutorial extension is enabled, be aware that the user may be new to using goose
+            Because the tutorial extension is enabled, be aware that the user may be new to using BCAIP
             or looking for help with specific features. Proactively offer relevant tutorials when appropriate.
 
             Available tutorials:
@@ -105,7 +105,7 @@ impl ServerHandler for TutorialServer {
     fn get_info(&self) -> ServerConfig {
         InitializeResult::new(ServerCapabilities::builder().enable_tools().build())
             .with_server_info(Implementation::new(
-                "goose-tutorial",
+                "bcaip-tutorial",
                 env!("CARGO_PKG_VERSION"),
             ))
             .with_instructions(self.instructions.clone())

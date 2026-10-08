@@ -21,10 +21,10 @@ describe('getEffectiveWorkingDir', () => {
 
   const mockWindow = (externalBackend: boolean, boundUrl: string, source = 'settings') => {
     appConfigGetMock.mockImplementation((key: string) => {
-      if (key === 'GOOSE_EXTERNAL_BACKEND') return externalBackend;
-      if (key === 'GOOSE_EXTERNAL_BACKEND_URL') return boundUrl;
-      if (key === 'GOOSE_EXTERNAL_BACKEND_SOURCE') return source;
-      if (key === 'GOOSE_WORKING_DIR') return '/Users/johannes/home/workspace';
+      if (key === 'BCAIP_EXTERNAL_BACKEND') return externalBackend;
+      if (key === 'BCAIP_EXTERNAL_BACKEND_URL') return boundUrl;
+      if (key === 'BCAIP_EXTERNAL_BACKEND_SOURCE') return source;
+      if (key === 'BCAIP_WORKING_DIR') return '/Users/johannes/home/workspace';
       return undefined;
     });
   };

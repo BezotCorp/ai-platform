@@ -1,3 +1,3 @@
-import type { RecipeParameterDto } from '@aaif/goose-acp-client';
+import type { RecipeParameterDto } from '@bezotcorp/bcaip-acp-client';
 
 export type Parameter = RecipeParameterDto;

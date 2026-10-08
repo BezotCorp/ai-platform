@@ -1,4 +1,4 @@
-import type { GooseSessionNotificationUnstable } from '@aaif/goose-acp-client';
+import type { BcaipSessionNotificationUnstable } from '@bezotcorp/bcaip-acp-client';
 import type { RequestPermissionRequest, SessionNotification } from '@agentclientprotocol/sdk';
 import { describe, expect, it } from 'vitest';
 import type { Message } from '../../types/message';
@@ -31,8 +31,8 @@ function acpUpdate(update: SessionNotification['update']): SessionNotification {
 }
 
 function gooseUpdate(
-  update: GooseSessionNotificationUnstable['update']
-): GooseSessionNotificationUnstable {
+  update: BcaipSessionNotificationUnstable['update']
+): BcaipSessionNotificationUnstable {
   return {
     sessionId: SESSION_ID,
     update,
@@ -174,7 +174,7 @@ describe('createAcpSessionNotificationAdapter', () => {
           acpUpdate({
             sessionUpdate: 'agent_message_chunk',
             content: { type: 'text', text: 'Partial response' },
-            _meta: { goose: { messageId: 'msg-1' } },
+            _meta: { bcaip: { messageId: 'msg-1' } },
           })
         );
 
@@ -184,7 +184,7 @@ describe('createAcpSessionNotificationAdapter', () => {
               sessionUpdate: 'agent_message_chunk',
               content: { type: 'text', text: OUTPUT_TOKEN_LIMIT_FALLBACK_TEXT },
               _meta: {
-                goose: {
+                bcaip: {
                   messageId: 'msg-1',
                   outputTokenLimitReached: true,
                   fallbackContent: true,
@@ -223,7 +223,7 @@ describe('createAcpSessionNotificationAdapter', () => {
               sessionUpdate: 'user_message_chunk',
               content: { type: 'text', text: 'hel' },
               _meta: {
-                goose: {
+                bcaip: {
                   messageId: 'steer-1',
                   steer: true,
                 },
@@ -247,7 +247,7 @@ describe('createAcpSessionNotificationAdapter', () => {
               sessionUpdate: 'user_message_chunk',
               content: { type: 'text', text: 'lo' },
               _meta: {
-                goose: {
+                bcaip: {
                   messageId: 'steer-1',
                   steer: true,
                 },
@@ -265,7 +265,7 @@ describe('createAcpSessionNotificationAdapter', () => {
               sessionUpdate: 'user_message_chunk',
               content: { type: 'image', data: 'base64-image', mimeType: 'image/png' },
               _meta: {
-                goose: {
+                bcaip: {
                   messageId: 'steer-1',
                   steer: true,
                 },
@@ -298,7 +298,7 @@ describe('createAcpSessionNotificationAdapter', () => {
               sessionUpdate: 'user_message_chunk',
               content: { type: 'text', text: 'ha' },
               _meta: {
-                goose: {
+                bcaip: {
                   messageId: 'steer-1',
                   steer: true,
                 },
@@ -316,7 +316,7 @@ describe('createAcpSessionNotificationAdapter', () => {
               sessionUpdate: 'user_message_chunk',
               content: { type: 'text', text: 'ha' },
               _meta: {
-                goose: {
+                bcaip: {
                   messageId: 'steer-1',
                   steer: true,
                 },
@@ -364,7 +364,7 @@ describe('createAcpSessionNotificationAdapter', () => {
               sessionUpdate: 'agent_thought_chunk',
               content: { type: 'text', text: 'Truncated thinking' },
               _meta: {
-                goose: {
+                bcaip: {
                   messageId: 'thought-1',
                   outputTokenLimitReached: true,
                 },
@@ -384,7 +384,7 @@ describe('createAcpSessionNotificationAdapter', () => {
           acpUpdate({
             sessionUpdate: 'agent_thought_chunk',
             content: { type: 'text', text: 'Truncated ' },
-            _meta: { goose: { messageId: 'thought-1' } },
+            _meta: { bcaip: { messageId: 'thought-1' } },
           })
         );
 
@@ -394,7 +394,7 @@ describe('createAcpSessionNotificationAdapter', () => {
               sessionUpdate: 'agent_thought_chunk',
               content: { type: 'text', text: 'thinking' },
               _meta: {
-                goose: {
+                bcaip: {
                   messageId: 'thought-1',
                   outputTokenLimitReached: true,
                 },
@@ -426,7 +426,7 @@ describe('createAcpSessionNotificationAdapter', () => {
             rawInput: { path: 'README.md' },
             locations: [{ path: 'README.md', line: 1 }],
             _meta: {
-              goose: {
+              bcaip: {
                 toolCall: {
                   extensionName: 'developer',
                   toolName: 'read_file',
@@ -471,7 +471,7 @@ describe('createAcpSessionNotificationAdapter', () => {
               },
             ],
             _meta: {
-              goose: {
+              bcaip: {
                 mcpApp: {
                   resourceUri: 'ui://app/resource',
                   extensionName: 'developer',
@@ -861,12 +861,12 @@ describe('createAcpSessionNotificationAdapter', () => {
     });
   });
 
-  describe('applyGoose', () => {
+  describe('applyBcaip', () => {
     it('maps usage updates into token state', () => {
       const adapter = createAcpSessionNotificationAdapter();
 
       expect(
-        adapter.applyGoose(
+        adapter.applyBcaip(
           gooseUpdate({
             sessionUpdate: 'usage_update',
             used: 42,
@@ -894,7 +894,7 @@ describe('createAcpSessionNotificationAdapter', () => {
     it('maps status messages and keeps later id-less chunks separate', () => {
       const adapter = createAcpSessionNotificationAdapter();
 
-      const noticeStateChanges = adapter.applyGoose(
+      const noticeStateChanges = adapter.applyBcaip(
         gooseUpdate({
           sessionUpdate: 'status_message',
           status: { type: 'notice', message: 'Checking files' },
@@ -916,7 +916,7 @@ describe('createAcpSessionNotificationAdapter', () => {
       expect(messages).toHaveLength(2);
       expect(firstContent(messages[1])).toMatchObject({ type: 'text', text: 'Result' });
 
-      const progressStateChanges = adapter.applyGoose(
+      const progressStateChanges = adapter.applyBcaip(
         gooseUpdate({
           sessionUpdate: 'status_message',
           status: { type: 'progress', message: 'Still working' },
@@ -944,7 +944,7 @@ describe('createAcpSessionNotificationAdapter', () => {
             },
           ],
           _meta: {
-            goose: {
+            bcaip: {
               toolCall: {
                 toolName: 'edit_file',
               },
@@ -1019,7 +1019,7 @@ describe('createAcpSessionNotificationAdapter', () => {
         acpUpdate({
           sessionUpdate: 'session_info_update',
           _meta: {
-            goose: {
+            bcaip: {
               queuedSteer: { messageId: 'steer-msg-1', runId: 'run-1' },
             },
           },
@@ -1036,7 +1036,7 @@ describe('createAcpSessionNotificationAdapter', () => {
           sessionUpdate: 'session_info_update',
           title: 'New Title',
           _meta: {
-            goose: {
+            bcaip: {
               queuedSteer: { messageId: 'steer-msg-2', runId: 'run-2' },
             },
           },

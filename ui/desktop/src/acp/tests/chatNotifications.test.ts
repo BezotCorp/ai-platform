@@ -10,7 +10,7 @@ import { ChatState } from '../../types/chatState';
 import { Session } from '../../types/session';
 import { maybeHandlePlatformEvent } from '../../utils/platformEvents';
 import {
-  handleAcpGooseSessionNotification,
+  handleAcpBcaipSessionNotification,
   handleAcpSessionNotification,
 } from '../chatNotifications';
 
@@ -23,7 +23,7 @@ vi.mock('../chatSessionStore', () => ({
   },
   acpChatSessionActions: {
     applyAcpSessionNotification: vi.fn(),
-    applyAcpGooseSessionNotification: vi.fn(),
+    applyAcpBcaipSessionNotification: vi.fn(),
   },
 }));
 
@@ -197,7 +197,7 @@ describe('handleAcpSessionNotification', () => {
     const listener = vi.fn();
     const unsubscribe = subscribeToLiveVoiceInteractionEnded(listener);
 
-    await handleAcpGooseSessionNotification({
+    await handleAcpBcaipSessionNotification({
       sessionId: SESSION_ID,
       update: {
         sessionUpdate: 'live_voice_interaction_ended',
@@ -214,7 +214,7 @@ describe('handleAcpSessionNotification', () => {
         outcome: 'failed',
       },
     });
-    expect(acpChatSessionActions.applyAcpGooseSessionNotification).not.toHaveBeenCalled();
+    expect(acpChatSessionActions.applyAcpBcaipSessionNotification).not.toHaveBeenCalled();
     unsubscribe();
   });
 });

@@ -50,7 +50,7 @@ Recipes package tools, goals, and instructions into reusable workflows that othe
    - $activities
    settings:                      # Additional settings
      goose_provider: $provider    # Provider to use for this recipe
-     goose_model: $model          # Specific model to use for this recipe
+     bcaip_model: $model          # Specific model to use for this recipe
      temperature: $temperature    # Model temperature setting for this recipe (0.0 to 1.0)
    retry:                         # Automated retry logic with success validation
      max_retries: $max_retries    # Maximum number of retry attempts
@@ -94,7 +94,7 @@ Recipes package tools, goals, and instructions into reusable workflows that othe
    - "Verify {{ style_guide }} compliance"
    settings:                     
      goose_provider: "anthropic"   
-     goose_model: "claude-3-7-sonnet-latest"          
+     bcaip_model: "claude-3-7-sonnet-latest"          
      temperature: 0.7 
    parameters:
    - key: project_name
@@ -270,8 +270,8 @@ Recipes package tools, goals, and instructions into reusable workflows that othe
      <Tab label="Using config file">
 
        Add to your config file:
-       ```yaml title="~/.config/goose/config.yaml"
-       GOOSE_RECIPE_GITHUB_REPO: "owner/repo"
+       ```yaml title="~/.config/bcaip/config.yaml"
+       BCAIP_RECIPE_GITHUB_REPO: "owner/repo"
        ```
 
      </Tab>
@@ -284,7 +284,7 @@ Recipes package tools, goals, and instructions into reusable workflows that othe
 
        **Basic Usage** - Run once and exit (see [run options](/guides/goose-cli-commands#run-options) and [recipe commands](/guides/goose-cli-commands#recipe) for more):
        ```sh
-       # Using recipe file in current directory or [`GOOSE_RECIPE_PATH`](/guides/environment-variables#recipe-configuration) directories
+       # Using recipe file in current directory or [`BCAIP_RECIPE_PATH`](/guides/environment-variables#recipe-configuration) directories
        goose run --recipe recipe.yaml
 
        # Using full path

@@ -7,7 +7,7 @@ import PermissionRulesModal from '../../permission/PermissionRulesModal';
 import { defineMessages, useIntl } from '../../../../i18n';
 import type { NoMessageValues } from 'react-intl';
 
-import type { GooseMode } from '../ModeSelectionItem/gooseMode';
+import type { BcaipMode } from '../ModeSelectionItem/bcaipMode';
 const i18n = defineMessages<{
   readonly "autonomousLabel": NoMessageValues;
   readonly "autonomousDescription": NoMessageValues;
@@ -53,7 +53,7 @@ const i18n = defineMessages<{
 });
 
 
-export const all_goose_modes: GooseMode[] = [
+export const all_bcaip_modes: BcaipMode[] = [
   {
     key: 'auto',
     labelDescriptor: i18n.autonomousLabel,
@@ -155,4 +155,4 @@ export const ModeSelectionItem = forwardRef<HTMLDivElement, ModeSelectionItemPro
 
 ModeSelectionItem.displayName = 'ModeSelectionItem';
 
-export type { GooseMode } from '../ModeSelectionItem/gooseMode';
+export type { BcaipMode } from '../ModeSelectionItem/bcaipMode';

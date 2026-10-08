@@ -159,8 +159,8 @@ vi.mock('react-router', () => ({
 // Mock electron API
 const mockElectron = {
   getConfig: vi.fn().mockReturnValue({
-    GOOSE_ALLOWLIST_WARNING: false,
-    GOOSE_WORKING_DIR: '/test/dir',
+    BCAIP_ALLOWLIST_WARNING: false,
+    BCAIP_WORKING_DIR: '/test/dir',
   }),
   logInfo: vi.fn(),
   on: vi.fn(),
@@ -176,7 +176,7 @@ const mockElectron = {
 // Mock appConfig
 const mockAppConfig = {
   get: vi.fn((key: string): string | null => {
-    if (key === 'GOOSE_WORKING_DIR') return '/test/dir';
+    if (key === 'BCAIP_WORKING_DIR') return '/test/dir';
     return null;
   }),
 };
@@ -221,7 +221,7 @@ describe('App Component - Brand New State', () => {
     mockNavigate.mockClear();
     mockSetSearchParams.mockClear();
     mockAppConfig.get.mockImplementation((key: string): string | null => {
-      if (key === 'GOOSE_WORKING_DIR') return '/test/dir';
+      if (key === 'BCAIP_WORKING_DIR') return '/test/dir';
       return null;
     });
 
@@ -242,9 +242,9 @@ describe('App Component - Brand New State', () => {
   it('should redirect to "/" when app is brand new (no provider configured)', async () => {
     // Mock no provider configured
     mockElectron.getConfig.mockReturnValue({
-      GOOSE_DEFAULT_PROVIDER: null,
-      GOOSE_DEFAULT_MODEL: null,
-      GOOSE_ALLOWLIST_WARNING: false,
+      BCAIP_DEFAULT_PROVIDER: null,
+      BCAIP_DEFAULT_MODEL: null,
+      BCAIP_ALLOWLIST_WARNING: false,
     });
 
     render(<AppInner />, { wrapper: AppInnerTestWrapper });
@@ -262,9 +262,9 @@ describe('App Component - Brand New State', () => {
   it('should handle deep links correctly when app is brand new', async () => {
     // Mock no provider configured
     mockElectron.getConfig.mockReturnValue({
-      GOOSE_DEFAULT_PROVIDER: null,
-      GOOSE_DEFAULT_MODEL: null,
-      GOOSE_ALLOWLIST_WARNING: false,
+      BCAIP_DEFAULT_PROVIDER: null,
+      BCAIP_DEFAULT_MODEL: null,
+      BCAIP_ALLOWLIST_WARNING: false,
     });
 
     // Set up search params to simulate view=settings deep link
@@ -283,9 +283,9 @@ describe('App Component - Brand New State', () => {
   it('should not redirect when provider is configured', async () => {
     // Mock provider configured
     mockElectron.getConfig.mockReturnValue({
-      GOOSE_DEFAULT_PROVIDER: 'openai',
-      GOOSE_DEFAULT_MODEL: 'gpt-4',
-      GOOSE_ALLOWLIST_WARNING: false,
+      BCAIP_DEFAULT_PROVIDER: 'openai',
+      BCAIP_DEFAULT_MODEL: 'gpt-4',
+      BCAIP_ALLOWLIST_WARNING: false,
     });
 
     render(<AppInner />, { wrapper: AppInnerTestWrapper });
@@ -301,7 +301,7 @@ describe('App Component - Brand New State', () => {
 
   it('shows the scoped-parameter incompatibility before returning home', async () => {
     mockAppConfig.get.mockImplementation((key: string): string | null => {
-      if (key === 'GOOSE_WORKING_DIR') return '/test/dir';
+      if (key === 'BCAIP_WORKING_DIR') return '/test/dir';
       if (key === 'recipeDeeplink') return 'goose://recipe?url=example';
       return null;
     });
@@ -321,9 +321,9 @@ describe('App Component - Brand New State', () => {
 
   it('should navigate home when the main process emits new-chat', async () => {
     mockElectron.getConfig.mockReturnValue({
-      GOOSE_DEFAULT_PROVIDER: 'openai',
-      GOOSE_DEFAULT_MODEL: 'gpt-4',
-      GOOSE_ALLOWLIST_WARNING: false,
+      BCAIP_DEFAULT_PROVIDER: 'openai',
+      BCAIP_DEFAULT_MODEL: 'gpt-4',
+      BCAIP_ALLOWLIST_WARNING: false,
     });
 
     render(<AppInner />, { wrapper: AppInnerTestWrapper });

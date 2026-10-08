@@ -15,7 +15,7 @@ services:
       - ~/.ssh:/root/.ssh:ro
     working_dir: /root/workspace
     environment:
-      - GOOSE_HOME=/root/.goose
+      - BCAIP_HOME=/root/.goose
       # Set default editor
       - EDITOR=vim
       # Preserve git author info
@@ -23,8 +23,8 @@ services:
       - GIT_AUTHOR_EMAIL=${GIT_AUTHOR_EMAIL:-goose@example.com}
       # Set GOOGLE_API_KEY to your own API key
       - GOOGLE_API_KEY="XXX"
-      - GOOSE_PROVIDER=google
-      - GOOSE_MODEL=gemini-2.0-flash-exp
+      - BCAIP_PROVIDER=google
+      - BCAIP_MODEL=gemini-2.0-flash-exp
       - DBUS_SESSION_BUS_ADDRESS
       - GNOME_KEYRING_CONTROL
       - SSH_AUTH_SOCK

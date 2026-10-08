@@ -1,8 +1,8 @@
-//! The roaming host adapter: serve goose's **full** ACP surface to each
+//! The roaming host adapter: serve BCAIP's **full** ACP surface to each
 //! connecting peer.
 //!
 //! Roaming is just an authenticated p2p ACP transport. This adapter is the thin
-//! seam that hands an authorized iroh stream straight to goose's real
+//! seam that hands an authorized iroh stream straight to BCAIP's real
 //! `acp::server::serve`, so a connected client gets the entire ACP surface —
 //! `session/new`, `session/list`, `session/load`, `session/prompt` — backed by
 //! the host's own `SessionManager`. Anything "session-shaped" is therefore plain
@@ -16,10 +16,10 @@ use futures::future::BoxFuture;
 use futures::io::{AsyncRead, AsyncWrite};
 use std::sync::Arc;
 
+use bcaip::acp::{server::serve, server_factory::AcpServer};
 use bcaip_roaming::{AcpStreamServer, EndpointId};
-use goose::acp::{server::serve, server_factory::AcpServer};
 
-/// An [`AcpStreamServer`] that serves goose's full ACP surface, a fresh agent
+/// An [`AcpStreamServer`] that serves BCAIP's full ACP surface, a fresh agent
 /// per connection.
 pub struct FullAcpBridge {
     server: Arc<AcpServer>,
@@ -27,7 +27,7 @@ pub struct FullAcpBridge {
     /// Host-controlled working directory for sessions created over roaming.
     /// The connector's machine-local absolute path is meaningless on this
     /// host, so every roaming agent gets this instead — even when the shared
-    /// `AcpServer` (e.g. `goose serve`) leaves `session_cwd` unset for its
+    /// `AcpServer` (e.g. `bcaip serve`) leaves `session_cwd` unset for its
     /// local clients.
     session_cwd: std::path::PathBuf,
 }

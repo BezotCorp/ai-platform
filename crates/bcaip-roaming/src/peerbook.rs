@@ -106,7 +106,7 @@ impl PeerBook {
     ///
     /// Mirrors [`crate::TrustBook::update`]: atomic replacement protects
     /// readers from partial JSON but not writers from lost updates — two
-    /// concurrent `goose roam peers`/pairing commands each load the whole
+    /// concurrent `bcaip roam peers`/pairing commands each load the whole
     /// book, mutate, and save, so the last writer clobbers the other's add,
     /// remove, or rename. The lock is held on a sidecar `.lock` file and
     /// auto-releases if the holder dies.

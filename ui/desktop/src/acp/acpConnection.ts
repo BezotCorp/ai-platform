@@ -1,22 +1,22 @@
-import type { GooseAcpCallbacks } from './gooseAcpCallbacks';
-import { DEFAULT_GOOSE_MCP_HOST_CAPABILITIES } from '@aaif/goose-acp-client';
+import type { BcaipAcpCallbacks } from './bcaipAcpCallbacks';
+import { DEFAULT_BCAIP_MCP_HOST_CAPABILITIES } from '@bezotcorp/bcaip-acp-client';
 import { methods, PROTOCOL_VERSION, type InitializeResponse } from '@agentclientprotocol/sdk';
 import { createWebSocketStream } from '@agentclientprotocol/sdk/experimental/ws-client';
 import packageJson from '../../package.json';
-import { GOOSE_SERVE_EXITED_USER_MESSAGE } from '../gooseServeLeaseRegistry';
+import { BCAIP_SERVE_EXITED_USER_MESSAGE } from '../bcaipServeLeaseRegistry';
 import {
-  handleAcpGooseSessionNotification,
+  handleAcpBcaipSessionNotification,
   handleAcpProviderDeviceCodeNotification,
   handleAcpSessionNotification,
 } from './chatNotifications';
 import { requestAcpElicitation } from './elicitationRequests';
-import { connectGooseAcpClient, type GooseAcpClient } from './gooseAcpClient';
+import { connectBcaipAcpClient, type BcaipAcpClient } from './bcaipAcpClient';
 import { requestAcpPermission } from './permissionRequests';
 import { requestAcpRecipeParams } from './recipeParamRequests';
 
 import type { AcpRecoveryListener } from './acpRecoveryListener';
 type AcpConnection = {
-  client: GooseAcpClient;
+  client: BcaipAcpClient;
   initializeResponse: InitializeResponse;
 };
 
@@ -31,7 +31,7 @@ let connectionGeneration = 0;
 export let recovering = false;
 const recoveryListeners = new Set<AcpRecoveryListener>();
 
-export async function getAcpClient(): Promise<GooseAcpClient> {
+export async function getAcpClient(): Promise<BcaipAcpClient> {
   return (await getConnection()).client;
 }
 
@@ -132,7 +132,7 @@ async function openConnection(generation: number): Promise<AcpConnection> {
 
   // Electron treats an explicitly passed undefined protocol as a subprotocol.
   const stream = createWebSocketStream(wsUrl, { protocols: [] });
-  const client = connectGooseAcpClient(stream, createClientCallbacks());
+  const client = connectBcaipAcpClient(stream, createClientCallbacks());
 
   try {
     const initializeResponse = await withTimeout(
@@ -144,8 +144,8 @@ async function openConnection(generation: number): Promise<AcpConnection> {
         clientCapabilities: {
           elicitation: { form: {} },
           _meta: {
-            goose: {
-              mcpHostCapabilities: DEFAULT_GOOSE_MCP_HOST_CAPABILITIES,
+            bcaip: {
+              mcpHostCapabilities: DEFAULT_BCAIP_MCP_HOST_CAPABILITIES,
               customNotifications: true,
               recipeParameterRequests: true,
             },
@@ -204,20 +204,20 @@ async function retryWithBackoff(generation: number): Promise<AcpConnection> {
 }
 
 function isGooseServeExitedError(error: unknown): boolean {
-  return error instanceof Error && error.message.includes(GOOSE_SERVE_EXITED_USER_MESSAGE);
+  return error instanceof Error && error.message.includes(BCAIP_SERVE_EXITED_USER_MESSAGE);
 }
 
 function delay(delayMs: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, delayMs));
 }
 
-function createClientCallbacks(): GooseAcpCallbacks {
+function createClientCallbacks(): BcaipAcpCallbacks {
   return {
     requestPermission: requestAcpPermission,
     createElicitation: requestAcpElicitation,
     unstable_sessionRecipeRequestParams: requestAcpRecipeParams,
     sessionUpdate: handleAcpSessionNotification,
-    unstable_sessionUpdate: handleAcpGooseSessionNotification,
+    unstable_sessionUpdate: handleAcpBcaipSessionNotification,
     unstable_providerDeviceCode: handleAcpProviderDeviceCodeNotification,
   };
 }

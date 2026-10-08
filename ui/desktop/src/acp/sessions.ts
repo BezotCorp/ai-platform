@@ -6,10 +6,10 @@ import {
   type NewSessionRequest,
   type SessionInfo,
 } from '@agentclientprotocol/sdk';
-import type { GooseExtension, SessionExportFormatKey } from '@aaif/goose-acp-client';
+import type { BcaipExtension, SessionExportFormatKey } from '@bezotcorp/bcaip-acp-client';
 import { getAcpClient } from './acpConnection';
 import { Session } from '../types/session';
-import type { GooseSessionInfoMeta } from './gooseSessionInfoMeta';
+import type { GooseSessionInfoMeta } from './bcaipSessionInfoMeta';
 import { SessionListItem } from './sessionListItem';
 import type { SessionListPage } from './sessionListPage';
 import type { LoadSessionMeta } from './loadSessionMeta';
@@ -287,7 +287,7 @@ export async function acpListRecentSessions(maxSessions: number): Promise<Sessio
 
 export async function acpGetSessionListItem(sessionId: string): Promise<SessionListItem> {
   const client = await getAcpClient();
-  const response = await client.goose.sessionInfoUnstable({ sessionId });
+  const response = await client.bcaip.sessionInfoUnstable({ sessionId });
   return sessionInfoToListItem(response.session);
 }
 
@@ -314,7 +314,7 @@ export function isAcpSessionLoadInFlight(sessionId: string): boolean {
 
 async function loadAcpSession(sessionId: string): Promise<AcpLoadSessionResult> {
   const client = await getAcpClient();
-  const initialSessionInfoResponse = await client.goose.sessionInfoUnstable({ sessionId });
+  const initialSessionInfoResponse = await client.bcaip.sessionInfoUnstable({ sessionId });
   const initialSessionInfo = initialSessionInfoResponse.session;
   const response = await client.connection.agent.request(methods.agent.session.load, {
     sessionId,
@@ -322,7 +322,7 @@ async function loadAcpSession(sessionId: string): Promise<AcpLoadSessionResult> 
     mcpServers: [],
   });
   // Loading can populate missing provider/model metadata.
-  const sessionInfoResponse = await client.goose.sessionInfoUnstable({ sessionId });
+  const sessionInfoResponse = await client.bcaip.sessionInfoUnstable({ sessionId });
 
   return {
     sessionInfo: sessionInfoResponse.session,
@@ -332,19 +332,19 @@ async function loadAcpSession(sessionId: string): Promise<AcpLoadSessionResult> 
 }
 
 /**
- * `gooseExtensions` is three-valued: `undefined` leaves the key out so the backend
+ * `bcaipExtensions` is three-valued: `undefined` leaves the key out so the backend
  * uses the configured set, while `[]` asks for a session with no extensions. The
  * backend already distinguishes the two, so the client has to as well.
  */
 export async function acpNewSession(
   cwd: string,
-  gooseExtensions: GooseExtension[] | undefined,
+  bcaipExtensions: BcaipExtension[] | undefined,
   recipe?: AcpRecipeOptions
 ): Promise<AcpNewSessionResult> {
   const client = await getAcpClient();
   const meta: Record<string, unknown> = { client: 'goose-desktop' };
-  if (gooseExtensions !== undefined) {
-    meta.enabledExtensions = gooseExtensions;
+  if (bcaipExtensions !== undefined) {
+    meta.enabledExtensions = bcaipExtensions;
   }
   if (recipe?.recipeId) {
     meta.recipeId = recipe.recipeId;
@@ -357,7 +357,7 @@ export async function acpNewSession(
   const request: NewSessionRequest = { cwd, mcpServers: [], _meta: meta };
   const response = await client.connection.agent.request(methods.agent.session.new, request);
   const sessionId = String(response.sessionId);
-  const sessionInfoResponse = await client.goose.sessionInfoUnstable({ sessionId });
+  const sessionInfoResponse = await client.bcaip.sessionInfoUnstable({ sessionId });
 
   return {
     sessionId,
@@ -378,12 +378,12 @@ export async function acpCloseSession(sessionId: string): Promise<void> {
 
 export async function acpRenameSession(sessionId: string, title: string): Promise<void> {
   const client = await getAcpClient();
-  await client.goose.sessionRenameUnstable({ sessionId, title });
+  await client.bcaip.sessionRenameUnstable({ sessionId, title });
 }
 
 export async function acpUpdateWorkingDir(sessionId: string, workingDir: string): Promise<void> {
   const client = await getAcpClient();
-  await client.goose.sessionWorkingDirUpdateUnstable({ sessionId, workingDir });
+  await client.bcaip.sessionWorkingDirUpdateUnstable({ sessionId, workingDir });
 }
 
 export async function acpTruncateSessionConversation(
@@ -391,7 +391,7 @@ export async function acpTruncateSessionConversation(
   truncateFrom: number
 ): Promise<void> {
   const client = await getAcpClient();
-  await client.goose.sessionConversationTruncateUnstable({ sessionId, truncateFrom });
+  await client.bcaip.sessionConversationTruncateUnstable({ sessionId, truncateFrom });
 }
 
 export async function acpForkSession(
@@ -399,7 +399,7 @@ export async function acpForkSession(
   conversationBefore?: number
 ): Promise<string> {
   const client = await getAcpClient();
-  const sessionInfo = await client.goose.sessionInfoUnstable({ sessionId });
+  const sessionInfo = await client.bcaip.sessionInfoUnstable({ sessionId });
   const { cwd } = sessionInfo.session;
   const request: ForkSessionRequest = { sessionId, cwd };
   if (conversationBefore !== undefined) {
@@ -414,11 +414,11 @@ export async function acpExportSession(
   format: SessionExportFormatKey = 'json'
 ): Promise<string> {
   const client = await getAcpClient();
-  const response = await client.goose.sessionExportUnstable({ sessionId, format });
+  const response = await client.bcaip.sessionExportUnstable({ sessionId, format });
   return response.data;
 }
 
 export async function acpImportSession(input: string): Promise<void> {
   const client = await getAcpClient();
-  await client.goose.sessionImportUnstable({ input });
+  await client.bcaip.sessionImportUnstable({ input });
 }

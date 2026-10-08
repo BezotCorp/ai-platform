@@ -1,3 +1,3 @@
-import type { DictationProviderStatusEntry } from '@aaif/goose-acp-client';
+import type { DictationProviderStatusEntry } from '@bezotcorp/bcaip-acp-client';
 
 export type DictationProviders = Record<string, DictationProviderStatusEntry>;
